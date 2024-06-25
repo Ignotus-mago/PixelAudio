@@ -1,7 +1,7 @@
 /**
  *
  */
-package net.paulhertz.scanner;
+package net.paulhertz.pixelaudio;
 
 
 import java.awt.Color;

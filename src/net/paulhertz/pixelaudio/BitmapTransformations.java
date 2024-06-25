@@ -1,4 +1,4 @@
-package net.paulhertz.scanner;
+package net.paulhertz.pixelaudio;
 
 /**
  * Provides static methods for rotating and reflecting bitmap pixel arrays using index remapping. The "pixel" arrays

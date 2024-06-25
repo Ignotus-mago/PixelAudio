@@ -1,4 +1,4 @@
-package net.paulhertz.scanner;
+package net.paulhertz.pixelaudio;
 
 import java.util.ArrayList;
 import java.util.Arrays;

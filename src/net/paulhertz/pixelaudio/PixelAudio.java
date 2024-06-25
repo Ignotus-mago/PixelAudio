@@ -1,4 +1,4 @@
-package net.paulhertz.scanner;
+package net.paulhertz.pixelaudio;
 
 
 import processing.core.PApplet;
@@ -12,10 +12,7 @@ import processing.core.PApplet;
  * @example Hello
  */
 
-public class PixelScanner {
-	/* list of available scanner types */
-	public enum ScannerType {HILBERT, MOORE, ZIGZAG, CUSTOM}
-
+public class PixelAudio {
 	// myParent is a reference to the parent sketch
 	// we make it static so it's available to other classes
 	static PApplet myParent;
@@ -32,7 +29,7 @@ public class PixelScanner {
 	 * @example Hello
 	 * @param theParent the parent PApplet
 	 */
-	public PixelScanner(PApplet theParent) {
+	public PixelAudio(PApplet theParent) {
 		myParent = theParent;
 		welcome();
 	}

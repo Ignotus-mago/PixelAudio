@@ -24,7 +24,7 @@
  * in horizontal scanline rows and vertical columns.
  *
  */
-package net.paulhertz.scanner;
+package net.paulhertz.pixelaudio;
 
 /**
  * @author Ignotus_Mago

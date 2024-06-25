@@ -1,4 +1,4 @@
-package net.paulhertz.scanner;
+package net.paulhertz.pixelaudio;
 
 import processing.core.PConstants;
 import processing.core.PGraphics;

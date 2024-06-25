@@ -1,4 +1,4 @@
-package net.paulhertz.scanner;
+package net.paulhertz.pixelaudio;
 
 //Adapted from Christian Maher's code at https://cmaher.github.io/posts/working-with-simplex-noise/
 
