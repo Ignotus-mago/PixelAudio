@@ -2,4 +2,6 @@ PixelAudio is a Processing Library that provides various classes for moving betw
 
 Here's a sample video created with the previous PixelScanner library (https://vimeo.com/767814419), part of my project for [150 Media Stream](https://150mediastream.com/). An early demo of features for PixelAudio can be found here: (https://vimeo.com/880911064).
 
+The PixelAudioMapper class and the PixelMapGen class and its subclasses provide most of the functionality. PixelMapGen provides a framework for creating mappings between audio sample and pixel data arrays. PixelMapGen subclasses plug in to PixelAudioMapper, which can read and write pixel and audio data while remaining independent of the mappings and the actual audio and image formats. It should be relatively easy to write your own PixelMapGen child class and have it immediately available to play with through PixelAudioMapper's methods.
+
 The PixelAudio library replaces an earlier library, PixelScanner, that was never released in a public version. It can still be found on my GitHub pages, with some of the code in PixelAudio included. Many of PixelScanner's classes have vanished from PixelAudio, replaced by a better scheme for class functionality with far less duplication of code. I expect to release PixelAudio in early November 2024 as part of an artist residency at Experimental Sound Studio, Chicago.
