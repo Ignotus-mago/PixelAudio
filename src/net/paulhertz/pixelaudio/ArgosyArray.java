@@ -15,13 +15,13 @@ public class ArgosyArray {
 	/** number of pixels in a shiftLeft animation Step */
 	int animStep;
 	/** colors for argosy units */
-	int[] argosyColors = {PixelScanner.myParent.color(255, 255), PixelScanner.myParent.color(0, 255) };
+	int[] argosyColors = {PixelAudio.myParent.color(255, 255), PixelAudio.myParent.color(0, 255) };
 	/** scaling for number of units in gap between argosies */
 	float argosyGapScale = 55.0f;
 	/** number of pixels in the gap between argosy patterns */
 	int argosyGap;
 	/** color of pixels in the gap */
-	int argosyGapColor = PixelScanner.myParent.color(127, 255);
+	int argosyGapColor = PixelAudio.myParent.color(127, 255);
 	/** how many times to repeat the pattern */
 	int argosyReps = 0;
 	/** margin on either side of the argosy patterns */

@@ -20,7 +20,7 @@ public class ImageTransform {
   public ImageTransform(int w, int h) {
     this.itw = w;
     this.ith = h;
-    this.itGraf = PixelScanner.myParent.createGraphics(itw, ith);
+    this.itGraf = PixelAudio.myParent.createGraphics(itw, ith);
   }
 
   /**
