@@ -13,15 +13,19 @@ public class HilbertGen extends PixelMapGen {
 			   + "Width and height must be equal powers of 2. You can also call HilbertGen(int depth) and width and height will equal Math.pow(2, depth). ";
 
 	public HilbertGen(int width, int height) {
-		super(width, height);						// necessary first call
-		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// really handy to calculate depth before we generate the Hilbert curve
-		this.doXYSwap = (this.depth % 2 == 1);		// a value to preserve symmetry and orientation when depth is odd
+		super(width, height);									// necessary first call
+		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// calculate depth before we generate the Hilbert curve
+		this.doXYSwap = (this.depth % 2 == 1);					// a value to preserve symmetry and orientation when depth is odd
 		// System.out.println("> HilbertGen "+ width +", "+ height +", depth  = "+ depth + ", swap = "+ doXYSwap);
-		this.generate();
+		this.generate();										// last of all, once all parameters are set, go ahead and generate coordinates and LUTs.
 	}
 
 	public HilbertGen(int depth) {
-		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)) );
+		super( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)) );
+		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// calculate depth before we generate the Hilbert curve
+		this.doXYSwap = (this.depth % 2 == 1);					// a value to preserve symmetry and orientation when depth is odd
+		// System.out.println("> HilbertGen "+ width +", "+ height +", depth  = "+ depth + ", swap = "+ doXYSwap);
+		this.generate();										// last of all, once all parameters are set, go ahead and generate coordinates and LUTs.
 	}
 	
 
