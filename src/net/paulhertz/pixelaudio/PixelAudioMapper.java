@@ -336,7 +336,25 @@ public class PixelAudioMapper {
 	// Names and calls won't change, but change the documentation, too.
 	// E.g., mapImgToSig(int[] img, float[] sig);
 	// I've been doing this but it should be part of the review before publication.
+	
+	
+	public int[] remapPixels(int[] img, int[] lut) {
+		int[] newPixels = new int[img.length];
+		for (int i = 0; i < img.length; i++) {
+			newPixels[i] = img[lut[i]];
+		}
+		return newPixels;
+	}
 
+	
+	public float[] remapSamples(float[] sig, int[] lut) {
+		float[] newSignal = new float[sig.length];
+		for (int i = 0; i < sig.length; i++) {
+			newSignal[i] = sig[lut[i]];
+		}
+		return newSignal;
+	}
+	
 	/**
 	 * Map signal values to the image using all channels (effectively, grayscale).
 	 * On completion, img[] contains new values. The img array and the sig array
