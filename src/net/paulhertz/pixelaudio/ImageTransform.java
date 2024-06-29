@@ -79,7 +79,7 @@ public class ImageTransform {
 	 * @param type   the ImageTransformType (ROT90CW, ROT90CCW, ROT180, FLIPX, FLIPY)
 	 * @return       a transformed PImage from the PGraphics instance used for transforms
 	 */
-	public PImage transform(PImage img, ImageTransformType type) {
+	public PImage transform(PImage img, AffineTransformType type) {
 		// the methods called will set itGraf width and height to image width and height
 		switch (type) {
 		case ROT90CW: {
@@ -125,7 +125,7 @@ public class ImageTransform {
 	 * @param c      the background color for the image (affects the alpha channel of the output)
 	 * @return       a transformed PImage from the PGraphics instance used for transforms
 	 */
-	public PImage transform(PImage img, ImageTransformType type, int c) {
+	public PImage transform(PImage img, AffineTransformType type, int c) {
 		// the methods called will set itGraf width and height to image width and height
 		switch (type) {
 		case ROT90CW: {

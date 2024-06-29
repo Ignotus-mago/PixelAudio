@@ -5,7 +5,7 @@ package net.paulhertz.pixelaudio;
  * do not necessarily contain color values--they can contain any integer value, and it will not be changed by the operations.
  * 
  */
-public class BitmapTransformations {
+public class BitmapTransforms {
 	
 	
 	// ------------- STATIC METHODS FOR ROTATION AND REFLECTION ------------- //

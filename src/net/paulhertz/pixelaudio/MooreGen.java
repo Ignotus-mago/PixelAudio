@@ -3,8 +3,8 @@ package net.paulhertz.pixelaudio;
 import java.util.ArrayList;
 
 public class MooreGen extends PixelMapGen {
+	/** recursion depth */
 	public int depth;
-	private boolean doXYSwap;
 
 	public final static String description = "MooreGen generates a Moore curve over a square bitmap starting at (width/2 - 1, 0) and ending at (width/2, 0). "
 			   + "Width and height must be equal powers of 2. You can also call MooreGen(int depth) and width and height will equal Math.pow(2, depth). ";
@@ -13,7 +13,6 @@ public class MooreGen extends PixelMapGen {
 	public MooreGen(int width, int height) {
 		super(width, height);
 		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// really handy to calculate depth before we generate the Moore curve
-		this.doXYSwap = (this.depth % 2 == 1);					// a value to preserve symmetry and orientation when depth is odd
 		// System.out.println("> MooreGen "+ width +", "+ height +", depth  = "+ depth + ", swap = "+ doXYSwap);
 		this.generate();
 	}
@@ -63,14 +62,17 @@ public class MooreGen extends PixelMapGen {
 	}
 	
 	
+	/**
+	 * @return		an ArrayList<int[]> of x, y coordinate pairs that are the points traversed by a generalized space-filling curve over a bitmap of dimensions w * h.
+	 */
 	private ArrayList<int[]> generateCoordinates() {
 		return this.generateMooreCoordinates(this.getSize());
 	}
 
 	/**
 	 * 
-	 * @param n
-	 * @return
+	 * @param n		the number of coordinate pairs to generate.
+	 * @return		an ArrayList<int[]> of x, y coordinate pairs that are the points traversed by a generalized space-filling curve over a bitmap of dimensions w * h.
 	 */
 	private ArrayList<int[]> generateMooreCoordinates(int n) {
 	    ArrayList<int[]> mooreCoordinates = new ArrayList<>(n);
