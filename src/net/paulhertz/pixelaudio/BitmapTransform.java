@@ -1,5 +1,6 @@
 package net.paulhertz.pixelaudio;
 
+import java.util.Arrays;
 import processing.core.PImage;
 import processing.core.PConstants;
 
@@ -22,7 +23,7 @@ import processing.core.PConstants;
  */
 public class BitmapTransform {
 
-	public static PImage bitmapTransform(PImage img, AffineTransformType type) {
+	public static PImage imageTransform(PImage img, AffineTransformType type) {
 		switch (type) {
 		case ROT90: {
 			img = BitmapTransform.rotate90(img);
@@ -63,6 +64,72 @@ public class BitmapTransform {
 	}
 
 	
+	public static int[] pixelsTransform(int[] pixels, int width, int height, AffineTransformType type) {
+		switch (type) {
+		case ROT90: {
+			return BitmapTransform.rotate90(pixels, width, height);
+		}
+		case ROT90CCW: {
+			return BitmapTransform.rotate90CCW(pixels, width, height);
+		}
+		case ROT180: {
+			return BitmapTransform.rotate180(pixels, width, height);
+		}
+		case FLIPX: {
+			return BitmapTransform.flipX(pixels, width, height);
+		}
+		case FLIPY: {
+			return BitmapTransform.flipY(pixels, width, height);
+		}
+		case FLIPX90: {
+			return BitmapTransform.flipX90(pixels, width, height);		// secondary diagonal
+		}
+		case FLIPX90CCW: {
+			return BitmapTransform.flipX90CCW(pixels, width, height);  // primary diagonal
+		}
+		case NADA: {
+			return Arrays.copyOf(pixels, pixels.length);
+		}
+		default: {
+			return Arrays.copyOf(pixels, pixels.length);
+		}
+		}
+	}
+
+	
+	public static int[] getIndexMap(int w, int h, AffineTransformType type) {
+		switch (type) {
+		case ROT90: {
+			return rotate90Map(w, h);
+		}
+		case ROT90CCW: {
+			return rotate90CCWMap(w, h);
+		}
+		case ROT180: {
+			return rotate180Map(w, h);
+		}
+		case FLIPX: {
+			return flipXMap(w, h);
+		}
+		case FLIPY: {
+			return flipYMap(w, h);
+		}
+		case FLIPX90CCW: {
+			return flipX90CCWMap(w, h);
+		}
+		case FLIPX90: {
+			return flipX90Map(w, h);
+		}
+		case NADA: {
+			return nadaMap(w, h);
+		}
+		default: {
+			return nadaMap(w, h);
+		}
+		}
+	}
+	
+
 	// ------------- STATIC METHODS FOR ROTATION AND REFLECTION ------------- //
 	
 
@@ -192,7 +259,7 @@ public class BitmapTransform {
 	
 	public static PImage rotate180(PImage img) {
 		img.loadPixels();
-		img.pixels = rotate90(img.pixels, img.width, img.height);
+		img.pixels = rotate180(img.pixels, img.width, img.height);
 		img.updatePixels();
         return img;
 	}
@@ -237,39 +304,6 @@ public class BitmapTransform {
 	
 	// ------------- STATIC METHODS FOR INDEX MAP GENERATION ------------- //
 	
-	public static int[] getIndexMap(int w, int h, AffineTransformType type) {
-		switch (type) {
-		case ROT90: {
-			return rotate90Map(w, h);
-		}
-		case ROT90CCW: {
-			return rotate90CCWMap(w, h);
-		}
-		case ROT180: {
-			return rotate180Map(w, h);
-		}
-		case FLIPX: {
-			return flipXMap(w, h);
-		}
-		case FLIPY: {
-			return flipYMap(w, h);
-		}
-		case FLIPX90CCW: {
-			return flipX90CCWMap(w, h);
-		}
-		case FLIPX90: {
-			return flipX90Map(w, h);
-		}
-		case NADA: {
-			return nadaMap(w, h);
-		}
-		default: {
-			return nadaMap(w, h);
-		}
-		}
-	}
-	
-
 	public static int[] rotate90Map(int width, int height) {
 		int[] newPixels = new int[width * height];
 		for (int y = 0; y < height; y++) {
