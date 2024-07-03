@@ -11,43 +11,47 @@ import java.util.Arrays;
 
 /**
  * <p>
- * PixelAudioMapper is the parent class for child classes that map a 1D "signal" array of
- * floating point numbers to a 2D "image" array of integers. It makes assumptions about the
+ * PixelAudioMapper maps between 1D "signal" arrays formatted as floating point audio samples
+ * and 2D "image" arrays formatted as RGBA integer pixel data. It makes assumptions about the
  * range of values in these arrays, detailed below. This class specifically handles the one-to-one
- * mapping between the signal and the image arrays. The mapping is handled by lookup tables
- * created by a separate mapping generator class. If you think of the signal as a space-filling
- * curve that visits each pixel in the image, one lookup table is a list of index numbers of
- * each pixel it visits, in the order it traverses them. It uses the table to "look up" the
- * pixels in the image array. There is a similar lookup table for the image that allows you
- * to look up the corresponding value in the signal array.
+ * mapping between signal and image arrays. The mapping is handled by lookup tables created by 
+ * a separate mapping generator class, <code>PixelMapGen</code>. If you think of the signal traversing
+ * a space-filling curve that visits each pixel in the image, one lookup table, <code>signalToImageLUT</code>, 
+ * lists the index numbers of each pixel the curve visits in the image, in the order that it traverses them. 
+ * It uses the table to "look up" the pixel in the image's pixel array. There is a similar 
+ * lookup table for the image, <code>imageToSignalLUT</code>, that lets you look up the signal value
+ * corresponding to each pixel in the image. 
  * </p>
  * <p>
  * Some typical uses for this class include:
  * <ul>
  * 	  <li> Reading an audio file or audio stream into the signal array and then writing its
- *		transcoded values to the image array for display as a visualization.</li>
+ *		   values, transcoded to RGB integer values, to the image array for display as a visualization.</li>
  *	  <li> Using interaction with an image to trigger audio events at precise locations in a signal.</li>
  *    <li> Running audio filters on an image-as-signal and writing the results to the image.</li>
  *    <li> Running image algorithms on a signal-as-image and writing the results back to the signal.</li>
  *    <li> Synthesizing image data and audio and then animating the data while interactively
- *      triggering audio events. </li>
+ *         triggering audio events. </li>
  *  </p>
  *
  * <h2>DATA REPRESENTATION</h2>
  * <p>
  * For the sake of generality, the enclosing types for image and audio data are implemented outside
- * this class. In Processing, PImage wraps image data. I have been using the minim library for audio,
- * (https://code.compartmental.net/minim/) but the built-in audio in Processing 4 is definitely an option.
+ * this class. In Processing, PImage wraps image data. PImage and other image classes such as Java's 
+ * BufferedImage class typically store color pixel data in an array of RGB or RGBA integer formatted values. 
+ * Audio samples are often represented as floating point values in the range [-1.0, 1.0]. Audio classes 
+ * let you use a variety of formats, particularly when reading from files, and provide methods for
+ * transcoding values to other formats. I have been using the minim library for audio, (https://code.compartmental.net/minim/).
+ * The built-in audio in Processing 4 is definitely also an option. 
+ * 
  * </p><p>
- * Within this class, image pixels are represented as an array of ints, and audio samples are represented
+ * Within PixelAudioMapper, image pixels are represented as an array of ints, and audio samples are represented
  * as an array of floats. Processing.core.PImage.pixels can provide the int array. Whatever audio class
  * you use can provide the float array.
  * </p><p>
- * The image array contains standard 24- or 32-bit RGB or RGBA pixel data, in row major order,
- * with (0,0) at upper left corner. The signal array contains values in the range [-1.0,1.0],
- * a standard format for audio values. It is up to the implementation to devise methods to convert
- * values from signal to image and vice versa: unless my default methods suit your purpose,
- * you should override the transcode() methods.
+ * PixelAudioMapper expects image arrays to contain standard 24- or 32-bit RGB or RGBA pixel data, in row major order,
+ * with (0,0) at upper left corner. It expects signal array to contain values in the range [-1.0,1.0],
+ * a standard format for audio values. 
  * </p>
  * <p>
  * <h3>Image</h3>
