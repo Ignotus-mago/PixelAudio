@@ -4,15 +4,11 @@ PImage img;
 // fShapeSquare.png is an opaque square, fShapeRect.png is a rectangle.
 String imgFilename = "fShapeSquare.png";      
 BitmapTransform bTrans;
-int startWidth;
-int startHeight;
 PixelAudio pixelaudio;
 
 public void setup() {
   size(1024, 1024);
   img = loadImage(imgFilename);
-  startWidth = img.width;
-  startHeight = img.height;
   pixelaudio = new PixelAudio(this);
   showHelp();
 }

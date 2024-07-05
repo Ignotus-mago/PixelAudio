@@ -37,7 +37,7 @@ import java.util.Arrays;
  * <h2>DATA REPRESENTATION</h2>
  * <p>
  * PixelAudioMapper requires image arrays to contain standard 24- or 32-bit RGB or RGBA pixel data, in row major order,
- * with (0,0) at upper left corner. It requires signal arrays to contain values in the range [-1.0,1.0],
+ * with (0,0) at upper left corner. It requires signal arrays to contain values in the range [-1.0, 1.0],
  * a standard format for audio samples. 
  * </p><p>
  * For the sake of generality, the enclosing classes for image and audio data remain external to
@@ -63,7 +63,7 @@ import java.util.Arrays;
  * <h3>Signal</h3>
  * <pre>
  *	 Array with same cardinality as image data array {0..(w * h - 1)}
- *	 Default data format: floating point values in the range {-1.0..1.0}
+ *	 Default data format: floating point values in the range  [-1.0, 1.0]
  * </pre>
  *
  * <h2>LOOKUP TABLES</h2>
@@ -204,6 +204,12 @@ import java.util.Arrays;
  * modify the audio buffer. Library examples will provide some suggestions for this strategy.
  * </p>
  *
+ * <p>
+ * <h3>Note: Representing ranges</h3>
+ * I am following the convention from mathematical notation of representing closed ranges with [] and open ranges with ().
+ * I occasionally lapse into the alternate notations {0..(h * w - 1)} or [0, 255]. When values are integers, it should be 
+ * understood that the range covers only integer values. Floating point values are continuous, to the limits of digital computation. 
+ * </p>
  */
 public class PixelAudioMapper {
 	// necessary instance variables
@@ -357,7 +363,7 @@ public class PixelAudioMapper {
 	 * On completion, img[] contains new values. The img array and the sig array
 	 * must be the same size.
 	 *
-	 * @param sig an array of floats in the audio range (-1..1)
+	 * @param sig an array of floats in the audio range  [-1.0, 1.0]
 	 * @param img an array of RGB pixel values
 	 */
 	public void mapSigToImg(float[] sig, int[] img) {
@@ -369,7 +375,7 @@ public class PixelAudioMapper {
 	 * On completion, img[] contains new values.
 	 * The img array and the sig array must be the same size.
 	 *
-	 * @param sig			an array of floats in the audio range (-1..1)
+	 * @param sig			an array of floats in the audio range  [-1.0, 1.0]
 	 * @param img			an array of RGB pixel values
 	 * @param toChannel		the channel to write transcoded values to
 	 */
@@ -383,7 +389,7 @@ public class PixelAudioMapper {
 	 * the brightness channel in the HSB color space. On completion, sig[] contains new values.
 	 * The img array and the sig array must be the same size.
 	 *
-	 * @param sig			an array of floats in the audio range (-1..1)
+	 * @param sig			an array of floats in the audio range  [-1.0, 1.0]
 	 * @param img			an array of RGB pixel values
 	 */
 	public void mapImgToSig(int[] img, float[] sig) {
@@ -395,7 +401,7 @@ public class PixelAudioMapper {
 	 * a value from specified color channel of the image. On completion, sig[] contains new values.
 	 * The img array and the sig array must be the same size.
 	 *
-	 * @param sig			an array of floats in the audio range (-1..1)
+	 * @param sig			an array of floats in the audio range [-1.0, 1.0]
 	 * @param img			an array of RGB pixel values
 	 * @param fromChannel	the color channel to get a value from
 	 */
@@ -405,10 +411,10 @@ public class PixelAudioMapper {
 
 	/**
 	 * Writes transcoded pixel values directly to the signal, without using a LUT to redirect. V
-	 * Values are calculated with the standard luminosity equation, gray = 0.3 * red + 0.59 * green + 0.11 * blue.
+	 * Values are calculated with the standard luminosity equation, <code>gray = 0.3 * red + 0.59 * green + 0.11 * blue</code>.
 	 *
-	 * @param img		an array of RGB pixel values, source
-	 * @param sig		an array of audio samples in the range (-1.0..1.0), target
+	 * @param img		source array of RGB pixel values
+	 * @param sig		target array of audio samples in the range [-1.0, 1.0]
 	 */
 	public void writeImgToSig(int[] img, float[] sig) {
 		this.pullPixelAudio(img, sig, ChannelNames.ALL);
@@ -416,7 +422,7 @@ public class PixelAudioMapper {
 
 	/**
 	 * @param img			an array of RGB pixel values, source
-	 * @param sig			an array of audio samples in the range (-1.0..1.0), target
+	 * @param sig			an array of audio samples in the range [-1.0, 1.0], target
 	 * @param fromChannel	channel in RGB or HSB color space, from ChannelNames enum
 	 */
 	public void writeImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
@@ -424,7 +430,7 @@ public class PixelAudioMapper {
 	 }
 
 	/**
-	 * @param sig		an array of audio samples in the range (-1.0..1.0), source
+	 * @param sig		an array of audio samples in the range [-1.0, 1.0], source
 	 * @param img		an array of RGB pixel values, target
 	 */
 	public void writeSigToImg(float[] sig, int[] img) {
@@ -432,7 +438,7 @@ public class PixelAudioMapper {
 	 }
 
 	 /**
-	 * @param sig			an array of audio samples in the range (-1.0..1.0), source
+	 * @param sig			an array of audio samples in the range [-1.0, 1.0], source
 	 * @param img			an array of RGB pixel values, target
 	 * @param toChannel		channel in RGB or HSB color space, from ChannelNames enum
 	 */
@@ -450,9 +456,9 @@ public class PixelAudioMapper {
 	 */
 
 	 /**
-	 * Converts a float value in the range (-1.0, 1.0) to an int value in the range [0..255].
+	 * Converts a float value in the range  [-1.0, 1.0] to an int value in the range [0..255].
 	 *
-	 * @param val	a float value in the range (-1.0, 1.0)
+	 * @param val	a float value in the range  [-1.0, 1.0]
 	 * @return		an int mapped to the range [0..255]
 	 */
 	public int transcode(float val) {
@@ -461,10 +467,10 @@ public class PixelAudioMapper {
 	 }
 
 	 /**
-	 * Converts an int value in the range [0..255] to a float value in the range (-1.0, 1.0).
+	 * Converts an int value in the range [0..255] to a float value in the range [-1.0, 1.0].
 	 *
 	 * @param val	an int int he range [0..255]
-	 * @return		a float mapped to the range (-1.0, 1.0)
+	 * @return		a float mapped to the range [-1.0, 1.0]
 	 */
 	public float transcode(int val) {
 		 float vout = map(val, 0, 255, -1.0f, 1.0f);
@@ -479,7 +485,7 @@ public class PixelAudioMapper {
 	 * When the small array, sprout, is inserted, it is indexed from 0..sprout.length. The larger array,
 	 * img or sig, is indexed from read or write point pos to pos + length.
 	 *
-	 * All float[] arrays should contain audio range values (-1.0f..1.0f).
+	 * All float[] arrays should contain audio range values [-1.0, 1.0].
 	 * All int[] arrays should contain RGB pixel values.
 	 *
 	 */
@@ -1284,7 +1290,7 @@ public class PixelAudioMapper {
 	 * Breaks a Processing color into R, G and B values in an array.
 	 *
 	 * @param rgb a Processing color as a 32-bit integer
-	 * @return an array of integers in the intRange 0..255 for 3 primary color
+	 * @return an array of integers in the range [0, 255] for 3 primary color
 	 *         components: {R, G, B}
 	 */
 	static public final int[] rgbComponents(int rgb) {
@@ -1299,7 +1305,7 @@ public class PixelAudioMapper {
 	 * Breaks a Processing color into R, G, B and A values in an array.
 	 *
 	 * @param argb a Processing color as a 32-bit integer
-	 * @return an array of integers in the intRange 0..255 for 3 primary color
+	 * @return an array of integers in the intRange [0, 255] for 3 primary color
 	 *         components: {R, G, B} plus alpha
 	 */
 	static public final int[] rgbaComponents(int argb) {
@@ -1335,10 +1341,10 @@ public class PixelAudioMapper {
 	 * Creates a Processing ARGB color from r, g, b, and alpha channel values. Note the order
 	 * of arguments, the same as the Processing color(value1, value2, value3, alpha) method.
 	 *
-	 * @param r red component 0..255
-	 * @param g green component 0..255
-	 * @param b blue component 0..255
-	 * @param a alpha component 0..255
+	 * @param r red component [0, 255]
+	 * @param g green component [0, 255]
+	 * @param b blue component [0, 255]
+	 * @param a alpha component [0, 255]
 	 * @return a 32-bit integer with bytes in Processing format ARGB.
 	 */
 	static public final int composeColor(int r, int g, int b, int a) {
@@ -1349,9 +1355,9 @@ public class PixelAudioMapper {
 	 * Creates an opaque Processing RGB color from r, g, b values. Note the order
 	 * of arguments, the same as the Processing color(value1, value2, value3) method.
 	 *
-	 * @param r red component 0..255
-	 * @param g green component 0..255
-	 * @param b blue component 0..255
+	 * @param r red component [0, 255]
+	 * @param g green component [0, 255]
+	 * @param b blue component [0, 255]
 	 * @return a 32-bit integer with bytes in Processing format ARGB.
 	 */
 	static public final int composeColor(int r, int g, int b) {
@@ -1361,7 +1367,7 @@ public class PixelAudioMapper {
 	/**
 	 * Creates a Processing ARGB color from r, g, b, values in an array.
 	 *
-	 * @param comp 	array of 3 integers in range 0..255, for red, green and blue
+	 * @param comp 	array of 3 integers in range [0, 255], for red, green and blue
 	 *             	components of color alpha value is assumed to be 255
 	 * @return a 32-bit integer with bytes in Processing format ARGB.
 	 */
@@ -1393,6 +1399,7 @@ public class PixelAudioMapper {
 	// -------- HSB <---> RGB -------- //
 
 	/**
+	 * Extracts the hue component from an RGB value. The result is in the range (0, 1).
 	 * @param rgb	The RGB color from which we will obtain the hue component in the HSB color model.
 	 * @return		A floating point number in the range (0..1) that can be multiplied by 360 to get the hue angle.
 	 */
@@ -1402,8 +1409,9 @@ public class PixelAudioMapper {
 	}
 
 	/**
+	 * Extracts the saturation component from an RGB value. The result is in the range (0, 1).
 	 * @param rgb	The RGB color from which we will obtain the hue component in the HSB color model.
-	 * @return		A floating point number in the range (0..1) representing the saturation component of an HSB color.
+	 * @return		A floating point number in the range (0, 1) representing the saturation component of an HSB color.
 	 */
 	public float saturation(int rgb) {
 		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);
@@ -1411,8 +1419,9 @@ public class PixelAudioMapper {
 	}
 
 	/**
+	 * Extracts the brightness component from an RGB value. The result is in the range (0, 1).
 	 * @param rgb	The RGB color from which we will obtain the hue component in the HSB color model.
-	 * @return		A floating point number in the range (0..1) representing the brightness component of an HSB color.
+	 * @return		A floating point number in the range (0, 1) representing the brightness component of an HSB color.
 	 */
 	public float brightness(int rgb) {
 		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);
@@ -1477,7 +1486,7 @@ public class PixelAudioMapper {
 	// ------------- AUDIO <---> IMAGE ------------- //
 
 	/**
-	 * Converts a pixel channel value to an audio sample value, mapping the result to (-1.0..1.0).
+	 * Converts a pixel channel value to an audio sample value, mapping the result to  [-1.0, 1.0].
 	 *
 	 * @param rgb		an RGB pixel value
 	 * @param chan		channel to extract from the RGB pixel value
@@ -1526,7 +1535,7 @@ public class PixelAudioMapper {
 
 
 	/**
-	 * Converts a pixel channel value to an audio sample value, mapping the result to (-1.0..1.0).
+	 * Converts a pixel channel value to an audio sample value, mapping the result to  [-1.0, 1.0].
 	 *
 	 * @param rgbPixels		an array of RGB pixel values
 	 * @param samples		an array of audio samples whose values will be set from rgbPixels, which may be null.
@@ -1595,7 +1604,7 @@ public class PixelAudioMapper {
 	}
 
      /**
-	 * Converts a pixel channel value to an audio sample value, mapping the result to (-1.0..1.0).
+	 * Converts a pixel channel value to an audio sample value, mapping the result to  [-1.0, 1.0].
 	 * A lookup table is used to redirect the indexing of the pixel values.
 	 *
 	 * @param rgbPixels		an array of RGB pixel values
@@ -1669,15 +1678,16 @@ public class PixelAudioMapper {
 	/**
 	 * Extracts a selected channel from an array of rgb values.
 	 *
-	 * From https://docs.oracle.com/javase/8/docs/api/, java.awt.Color, entry for getHSBColor():
-	 *
-	 * The s and b components should be floating-point values between zero and one (numbers in the range 0.0-1.0).
+	 * The values returned are within the ranges expected for the channel requested: (0..1) for HSB and [0, 255] for RGB.
+	 * If you want to use RGB channels as signal values, you'll need to map their range to  [-1.0, 1.0]. If you want to 
+	 * use them as integer values, you'll need to typecast them, for examnple: <code>int redValue = (int) floatArray[i];</code>
+	 * 
+	 * @see https://docs.oracle.com/javase/8/docs/api/
+	 * 
+	 * <p>From java.awt.Color, entry for getHSBColor(): "The s and b components should be floating-point values between zero and one (numbers in the range 0.0-1.0).
 	 * The h component can be any floating-point number. The floor of this number is subtracted from it to create
 	 * a fraction between 0 and 1. This fractional number is then multiplied by 360 to produce the hue angle in
-	 * the HSB color model.
-	 *
-	 * The values returned are within the ranges expected for the channel requested: (0..1) for HSB and [0, 255] for RGB.
-	 * If you want to use RGB channels as signal values, you'll need to map their range to (-1.0..1.0).
+	 * the HSB color model."</p>
 	 *
 	 * @param rgbPixels rgb values in an array of int
 	 * @param chan      the channel to extract, a value from the ChannelNames enum
@@ -1764,19 +1774,19 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Replaces a specified channel in an array of pixel values, rgbPixels, with a value derived
+	 * <p>Replaces a specified channel in an array of pixel values, rgbPixels, with a value derived
 	 * from an array of floats, buf, that represent audio samples. Upon completion, the pixel array
-	 * rgbPixels contains the new values, always in the RGB color space.
+	 * rgbPixels contains the new values, always in the RGB color space.</p>
 	 *
-	 * Both arrays, rgbPixels and buf, must be the same size.
+	 * <p>Both arrays, rgbPixels and buf, must be the same size.</p>
 	 *
-	 * In the HSB color space, values are assumed to be floats in the range (0..1), so the values
+	 * <p>In the HSB color space, values are assumed to be floats in the range (0..1), so the values
 	 * from buf need to be mapped to the correct ranges for HSB or RGB [0, 255]. We do some minimal
 	 * limiting of values derived from buf[], but it is the caller's responsibility to constrain them
-	 * to the audio range (-1..1).
+	 * to the audio range  [-1.0, 1.0].</p>
 	 *
 	 * @param rgbPixels an array of pixel values
-	 * @param buf       an array of floats in the range (-1..1)
+	 * @param buf       an array of floats in the range  [-1.0, 1.0]
 	 * @param chan      the channel to replace
 	 * @return			rgbPixels with new values
 	 */
@@ -1840,22 +1850,23 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Replaces a specified channel in an array of pixel values, rgbPixels, with a value derived
+	 * <p>Replaces a specified channel in an array of pixel values, rgbPixels, with a value derived
 	 * from an array of floats, buf, that represent audio samples. The supplied lookup table, lut,
 	 * is intended to redirect the indexing of rgbPixels following the signal path. We are stepping
 	 * through the buf array (the signal), so rgbPixels employs imageToSignalLUT to find where each
 	 * index i into buf is pointing in the image pixels array, which is rgbPixels.  Upon completion,
 	 * the pixel array rgbPixels contains the new values, always in the RGB color space.
-	 *
+	 *</p>
+	 <p>
 	 * All three arrays, rgbPixels, buf, and lut must be the same size.
-	 *
+	 *</p><p>
 	 * In the HSB color space, values are assumed to be floats in the range (0..1), so the values
 	 * from buf need to be mapped to the correct ranges for HSB or RGB [0, 255]. We do some minimal
 	 * limiting of values derived from buf[], but it is the caller's responsibility to constrain them
-	 * to the audio range (-1..1).
+	 * to the audio range  [-1.0, 1.0].</p>
 	 *
 	 * @param rgbPixels an array of pixel values
-	 * @param buf       an array of floats in the range (-1..1)
+	 * @param buf       an array of floats in the range  [-1.0, 1.0]
 	 * @param lut		a lookup table to redirect the indexing of the buf, typically imageToPixelsLUT
 	 * @param chan      the channel to replace
 	 * @return			rgbPixels with new values

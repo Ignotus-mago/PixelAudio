@@ -4,16 +4,16 @@ import processing.core.PConstants;
 import processing.core.PGraphics;
 import processing.core.PImage;
 
-// what do we do about the background?
 /**
- * 
+ *
  * <p>Provides static methods for rotating and reflecting Processing images of type
  * <code>PImage</code> using a <code>PGraphics</code> instance. The
  * <code>PGraphics</code> width and height affect scaling of the
  * <code>PImage</code>. No-args constructor defaults to a 1024 x 1024 image
  * size.</p>
  * 
- * <p>BitmapTransform's methods are faster and more generalized than those in
+ * <p>Most or all of the functionality required for the PixelAudo library is now in BitmapTransform. 
+ * BitmapTransform's methods are faster and more generalized than those in
  * ImageTransform, but they do not provide scaling or rotation by angles other
  * than 90 degrees, nor do they tap into Processing's off-screen graphics
  * environment.</p>
@@ -21,6 +21,10 @@ import processing.core.PImage;
  * @see AffineTransformType
  * @see BitmapTransform
  * 
+ * @TODO new example code to demo use of PGraphics. There are some lurking errors and problems. See Issue #6 in GitHub repo: 
+ * https://github.com/Ignotus-mago/PixelAudio/issues/6
+ *  
+ *  
  *
  */
 public class ImageTransform {
