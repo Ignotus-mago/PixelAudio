@@ -218,7 +218,7 @@ public class PixelAudioMapper {
 	/** image height */
 	protected int height;
 	/** pixel array and signal array length, equal to w * h */
-	protected int len;
+	protected int mapSize;
 	/** Lookup table to go from the signal to the image: index values over {0..(h * w - 1)}
 	 * point to a corresponding index position in the image array img.pixels[] */
 	protected int signalToImageLUT[];
@@ -245,7 +245,7 @@ public class PixelAudioMapper {
 		this.generator = gen;
 		this.width = gen.getWidth();
 		this.height = gen.getHeight();
-		this.len = gen.getSize();
+		this.mapSize = gen.getSize();
 		this.signalToImageLUT = gen.getPixelMapCopy();
 		this.imageToSignalLUT = gen.getSampleMapCopy();
 	}
@@ -267,7 +267,7 @@ public class PixelAudioMapper {
 
 	/** @return the length of the signal array (== length of image pixel array and the LUTs) */
 	public int getSize() {
-		return this.len;
+		return this.mapSize;
 	}
 
 	/** @return a string representation of our data, possibly partial */

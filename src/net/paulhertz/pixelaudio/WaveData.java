@@ -4,6 +4,7 @@
 package net.paulhertz.pixelaudio;
 
 import processing.core.PConstants;
+import java.util.ArrayList;
 
 /**
  * 
@@ -156,6 +157,14 @@ public class WaveData {
 		else
 			this.isMuted = true;
 	}
+	
+	public static ArrayList<WaveData> waveDataListCopy(ArrayList<WaveData> wdList) {
+		ArrayList<WaveData> wdListCopy = new ArrayList<WaveData>();
+		for (WaveData wd : wdList) {
+			wdListCopy.add(wd.clone());
+		}
+		return wdListCopy;
+	}
 
 	public WaveData clone() {
 		return new WaveData(this.freq, this.amp, this.phase, this.dc, this.phaseCycles, this.waveColor, this.animSteps);
@@ -180,5 +189,6 @@ public class WaveData {
 		sb.append("mute: " + muted);
 		return sb.toString();
 	}
+	
 	
 }
