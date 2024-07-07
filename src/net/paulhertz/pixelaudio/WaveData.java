@@ -74,7 +74,7 @@ public class WaveData {
 	 * @param steps		number of frames for animation
 	 */
 	public WaveData(float f, float a, float p, float dc, float cycles, int c, int steps) {
-		this(f, a, p, cycles, dc, c, steps, WaveData.phaseScalesTwoPI);
+		this(f, a, p, dc, cycles, c, steps, WaveData.phaseScalesTwoPI);
 	}
 
 	/**
@@ -89,7 +89,7 @@ public class WaveData {
 	 * @param steps		number of frames for animation
 	 */
 	public WaveData(float f, float a, float p, float dc, float cycles, int c) {
-		this(f, a, p, cycles, dc, c, WaveData.defaultAnimSteps, WaveData.phaseScalesTwoPI);
+		this(f, a, p, dc, cycles, c, WaveData.defaultAnimSteps, WaveData.phaseScalesTwoPI);
 	}
 
 	public WaveData() {

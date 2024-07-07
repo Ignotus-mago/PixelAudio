@@ -642,10 +642,9 @@ public class PixelAudioMapper {
 
 
 	/**
-	 * Inserts elements from a source array of RGB pixel values into a target array of RGB pixel values
-	 * following the signal path.
+	 * Inserts elements from a source array of RGB pixel values in signal order into a target array of RGB pixel values (PImage.pixels, typically).
 	 *
-	 * @param sprout	source array of RGB values to insert into target array img
+	 * @param sprout	source array of RGB values to insert into target array img, in signal order
 	 * @param img		target array of RGB values
 	 * @param x			x coordinate in image from which img pixel array was derived
 	 * @param y			y coordinate in image from which img pixel array was derived
@@ -655,7 +654,7 @@ public class PixelAudioMapper {
 		int pos = x + y * this.width;
 		int j = 0;
 		for (int i = pos; i < pos + length; i++) {
-			img[imageToSignalLUT[i]] = sprout[j++];
+			img[signalToImageLUT[i]] = sprout[j++];
 		}
 	}
 
@@ -1218,6 +1217,27 @@ public class PixelAudioMapper {
 		return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
 	}
 
+	/**
+	 * Processing's PApplet.constrain method, copied for convenience.
+	 * @param 	amt
+	 * @param 	low
+	 * @param 	high
+	 * @return 	amt clipped to low and high, closed interval
+	 */
+	static public final int constrain(int amt, int low, int high) {
+		return (amt < low) ? low : ((amt > high) ? high : amt);
+	}
+
+	/**
+	 * Processing's PApplet.constrain method, copied for convenience.
+	 * @param 	amt
+	 * @param 	low
+	 * @param 	high
+	 * @return 	amt clipped to low and high, closed interval
+	 */
+	static public final float constrain(float amt, float low, float high) {
+		return (amt < low) ? low : ((amt > high) ? high : amt);
+	}
 
 	// array rotation
 

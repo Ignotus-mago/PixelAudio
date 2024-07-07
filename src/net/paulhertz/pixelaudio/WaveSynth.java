@@ -20,6 +20,8 @@ public class WaveSynth {
 	// ------ WaveSYnth control variables ----- //
 	public float gain = 1.0f;
 	public float gamma = 1.0f;
+	public int[] gammaTable;
+	public boolean useGammaTable = true;
 	public boolean isScaleHisto = false;
 	public int histoLow = 1;
 	public int histoHigh = 254;
@@ -57,7 +59,7 @@ public class WaveSynth {
 		this.w = mapper.getWidth();
 		this.h = mapper.getHeight();
 		this.mapSize = w * h;
-		this.mapImage = PixelAudio.myParent.createGraphics(w, h);
+		this.mapImage = PixelAudio.myParent.createImage(w, h, PConstants.RGB);
 		this.colorSignal = new int[mapSize];
 		this.mapSignal = new float[mapSize];
 	}
@@ -97,6 +99,13 @@ public class WaveSynth {
 
 	public void setGamma(float gamma) {
 		this.gamma = gamma;
+		if (gamma != 1.0) {
+			this.gammaTable = new int[256];
+			for (int i = 0; i < gammaTable.length; i++) {
+				float c = i/(float)(gammaTable.length - 1);
+				gammaTable[i] = (int) Math.round(Math.pow(c, gamma) * (gammaTable.length - 1));
+			}
+		}
 	}
 
 	public boolean isScaleHisto() {
@@ -129,6 +138,11 @@ public class WaveSynth {
 
 	public void setAnimSteps(int animSteps) {
 		this.animSteps = animSteps;
+		if (this.waveDataList != null) {
+			for (WaveData wd : this.waveDataList) {
+				wd.phaseInc = (wd.phaseCycles * PConstants.TWO_PI) / this.animSteps;
+			}
+		}
 	}
 
 	public int getStep() {
@@ -230,15 +244,16 @@ public class WaveSynth {
 		}
 		// write scanSignal's pixel color values to scanImage pixels
 		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, 0, mapSize);
+		// mapImage.pixels = this.colorSignal;
 		this.mapImage.updatePixels();
 		// set our internal step variable, just a tracker for now
 		this.setStep(frame);
 	}
 	
 	
-	public int renderPixel(int frame, int scanIndex) {
-		// scanIndex += blockInc;
-		// if (scanIndex % 65536 == 0) println("----->>> scanIndex = "+ scanIndex +",
+	public int renderPixel(int frame, int pos) {
+		// pos += blockInc;
+		// if (pos % 65536 == 0) println("----->>> pos = "+ pos +",
 		// blockX, blockY "+ blockX, blockY );
 		float freqShift = 1.0f;
 		// float freqShift = isRandomFreqShift ? noiseAt(scanIndex % width, floor(scanIndex / width)) : 1;
@@ -247,11 +262,11 @@ public class WaveSynth {
 			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED)
 				continue;
 			// ::::: sample amplitude = sin(initial phase + phase shift + frequency * i * (TWO_PI/n)) :::::
-			// wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / scanlen; 
+			// wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / mapSize; 
 			// Instead of incrementing phase at each step, we subtract (frame * phase increment)
-			// from the initial phase. (And yes, I have forgotten what the reasons were for subtracting)
-			// instead of adding, we subtract so that animation data files give the same result as before.)
-			float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * scanIndex * mapInc) + woff)
+			// from the initial phase. (instead of adding, we subtract so that animation data files 
+			// give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.)
+			float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff)
 					* wscale + wd.dc;
 			weights[j] = val * wd.amp * this.gain;
 		}
@@ -268,15 +283,25 @@ public class WaveSynth {
 		}
 		// gamma correction
 		if (this.gamma != 1.0) {
-			r = (float) Math.pow((r / 255.0), this.gamma) * 255;
-			g = (float) Math.pow((g / 255.0), this.gamma) * 255;
-			b = (float) Math.pow((b / 255.0), this.gamma) * 255;
+			if (useGammaTable) {
+				r = PixelAudioMapper.constrain(r, 0, 255);
+				r = gammaTable[(int)r];
+				g = PixelAudioMapper.constrain(g, 0, 255);
+				g = gammaTable[(int)g];
+				b = PixelAudioMapper.constrain(b, 0, 255);
+				b = gammaTable[(int)b];
+			}
+			else {
+				r = (float) Math.pow((r / 255.0), this.gamma) * 255;
+				g = (float) Math.pow((g / 255.0), this.gamma) * 255;
+				b = (float) Math.pow((b / 255.0), this.gamma) * 255;
+			}
 		}
 		// linear stretch, if you want it, adjust hi and lo to suit
 		if (this.isScaleHisto) {
-			r = processing.core.PApplet.constrain(PixelAudioMapper.map(r, this.histoLow, this.histoHigh, 1, 254), 0, 254);
-			g = processing.core.PApplet.constrain(PixelAudioMapper.map(g, this.histoLow, this.histoHigh, 1, 254), 0, 254);
-			b = processing.core.PApplet.constrain(PixelAudioMapper.map(b, this.histoLow, this.histoHigh, 1, 254), 0, 254);
+			r = PixelAudioMapper.constrain(PixelAudioMapper.map(r, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+			g = PixelAudioMapper.constrain(PixelAudioMapper.map(g, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+			b = PixelAudioMapper.constrain(PixelAudioMapper.map(b, this.histoLow, this.histoHigh, 1, 254), 0, 255);
 		}
 		return PixelAudioMapper.composeColor((int) r, (int) g, (int) b, 255);
 	}	
