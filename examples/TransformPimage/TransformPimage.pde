@@ -2,7 +2,7 @@ import net.paulhertz.pixelaudio.*;
 
 PImage img;
 // fShapeSquare.png is an opaque square, fShapeRect.png is a rectangle.
-String imgFilename = "fShapeSquare.png";      
+String imgFilename = "fShapeRect.png";      
 BitmapTransform bTrans;
 PixelAudio pixelaudio;
 
