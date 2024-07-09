@@ -5,7 +5,7 @@ HilbertGen hGen;
 MooreGen mGen;
 PixelAudioMapper mapper;
 ArrayList<WaveData> wdList;
-WaveSynth synth;
+WaveSynth wavesynth;
 int imageWidth = 1024;
 int imageHeight = 1024;
 PImage synthImage;
@@ -24,15 +24,9 @@ public void setup() {
   mGen = new MooreGen(1024, 1024);
   mapper = new PixelAudioMapper(mGen);
   wdList = initWaveDataList();
-  synth = new WaveSynth(mapper, wdList);
-  synth.setGain(0.8);
-  synth.setGamma(myGamma);
-  synth.setScaleHisto(false);
-  synth.setAnimSteps(this.animSteps);
-  synth.prepareAnimation();
-  synth.renderFrame(0);
-  synthImage = synth.mapImage;
-  // showHelp();
+  wavesynth = initWaveSynth();
+  synthImage = wavesynth.mapImage;
+  showHelp();
 }
 
 public ArrayList<WaveData> initWaveDataList() {
@@ -55,6 +49,17 @@ public ArrayList<WaveData> initWaveDataList() {
   return list;
 }
 
+public WaveSynth initWaveSynth() {
+  WaveSynth synth = new WaveSynth(mapper, wdList);
+  synth.setGain(0.8);
+  synth.setGamma(myGamma);
+  synth.setScaleHisto(false);
+  synth.setAnimSteps(this.animSteps);
+  synth.prepareAnimation();
+  synth.renderFrame(0);
+  return synth;
+}
+
 public void draw() {
   image(synthImage, 0, 0);
   stepAnimation();
@@ -63,33 +68,33 @@ public void draw() {
 public void stepAnimation() {
   step += 1;
   step %= animSteps;
-  synth.renderFrame(step);
+  wavesynth.renderFrame(step);
 }
 
 public void keyPressed() {
   switch (key) {
   case '1':
     myGamma = 1.0;
-    synth.setGamma(myGamma);
+    wavesynth.setGamma(myGamma);
     break;
   case '2':
     myGamma = 1.4;
-    synth.setGamma(myGamma);
+    wavesynth.setGamma(myGamma);
     break;
   case '3':
     myGamma = 1.8;
-    synth.setGamma(myGamma);
+    wavesynth.setGamma(myGamma);
     break;
   case '4':
     myGamma = 0.5;
-    synth.setGamma(myGamma);
+    wavesynth.setGamma(myGamma);
     break;
   case 'g':
     makeGammaTable(myGamma);
     break;
   case 't':
-    synth.useGammaTable = !synth.useGammaTable;
-    if (synth.useGammaTable) println("-- using gamma table");
+    wavesynth.useGammaTable = !wavesynth.useGammaTable;
+    if (wavesynth.useGammaTable) println("-- using gamma table");
     else println("-- calculating gamma ");
     break;
   case 'h':
@@ -101,6 +106,13 @@ public void keyPressed() {
 }
 
 public void showHelp() {
+  println("press '1' to set gamma to 1.0.");
+  println("press '2' to set gamma to 1.4.");
+  println("press '3' to set gamma to 1.8.");
+  println("press '4' to set gamma to 0.5.");
+  println("press 'g' to print the lookup table for current gamma to console.");
+  println("press 't' to change gamma calculation between table lookup and calculation.");
+  println("press 'h' to show Help.");
 }
 
 public void makeGammaTable(float gamma) {
