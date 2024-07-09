@@ -71,6 +71,61 @@ public class PixelAudio {
 	}
 
 
+	//------------- LERP, MAP, CONSTRAIN -------------//
+
+
+	// lerp and map
+
+	/**
+	 * Processing's PApplet.constrain method, copied for convenience.
+	 * @param 	amt
+	 * @param 	low
+	 * @param 	high
+	 * @return 	amt clipped to low and high, closed interval
+	 */
+	static public final float constrain(float amt, float low, float high) {
+		return (amt < low) ? low : ((amt > high) ? high : amt);
+	}
+
+
+	/**
+	 * Processing's PApplet.constrain method, copied for convenience.
+	 * @param 	amt
+	 * @param 	low
+	 * @param 	high
+	 * @return 	amt clipped to low and high, closed interval
+	 */
+	static public final int constrain(int amt, int low, int high) {
+		return (amt < low) ? low : ((amt > high) ? high : amt);
+	}
+
+
+	/**
+	 * Processing's map method, but with no error checking
+	 * @param value
+	 * @param start1
+	 * @param stop1
+	 * @param start2
+	 * @param stop2
+	 * @return
+	 */
+	static public final float map(float value, float start1, float stop1, float start2, float stop2) {
+		return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+	}
+
+
+	/**
+	 * Good old lerp.
+	 * @param a		first bound, typically a minimum value
+	 * @param b		second bound, typically a maximum value
+	 * @param f		scaling value, from 0..1 to interpolate between a and b, but can go over or under
+	 * @return		a value between a and b, scaled by f (if 0 <= f >= 1).
+	 */
+	static public final float lerp(float a, float b, float f) {
+	    return a + f * (b - a);
+	}
+
+
 
 
 }
