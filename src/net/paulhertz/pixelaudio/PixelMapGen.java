@@ -10,17 +10,54 @@ import java.util.Arrays;
  * Keeping the LUT generation class outside PixelAudioMapper removes dependencies on the particular mapping.</p>
  *
  * <p> The PixelAudioMapper class handles the combinatorial math for mapping between two arrays whose elements are in one-to-one correspondence
- * but in different orders. PixelMapGen, generates the mapping between the two arrays. PixelAudioMapper, as its name suggests,
+ * but in different orders. PixelMapGen generates the mapping between the two arrays. PixelAudioMapper, as its name suggests,
  * considers one array to be floating point audio samples and other to be RGBA integer pixel data, but of course the relationship is
  * completely arbitrary as far as the mapping goes. The mapping was given its own class precisely because it is generalizable, though
  * PixelMapGen does assume that the cardinality of its arrays can be factored by width and height.</p>
  * 
- * PLAN
- *
- * <p>Create a PixelMapGen instance with assigned width and height, and LUTs created by the generate() process.
- * Initialize a PixelAudioMapper instance with the PixelMapGen instance, using copies of PixelMapGen resources.
- * In this way, decouple PixelAudioMapper instances from PixelMapGen in all later method calls.
- * But don't enforce this usage pattern with class structure, just make it the recommended practice (and see where that gets you).</p>
+ * <p>The following short program shows the typical initialization of PixelAudio classes in Processing:
+ *   <pre>
+ *   import net.paulhertz.pixelaudio.*;
+ *   
+ *   PixelAudio pixelaudio;
+ *   HilbertGen hGen;
+ *   PixelAudioMapper mapper;
+ *   PImage mapImage;
+ *   int[] colors;
+ *   
+ *   public void setup() {
+ *     size(512, 512);
+ *     pixelaudio = new PixelAudio(this);
+ *     hGen = new HilbertGen(width, height);
+ *     mapper = new PixelAudioMapper(hGen);
+ *     mapImage = createImage(width, height, RGB);
+ *     mapImage.loadPixels();
+ *     mapper.plantPixels(getColors(), mapImage.pixels, 0, 0, mapper.getSize());
+ *     mapImage.updatePixels();
+ *   }
+ *   
+ *   public int[] getColors() {
+ *     int[] colorWheel = new int[mapper.getSize()];
+ *     pushStyle();
+ *     colorMode(HSB, colorWheel.length, 100, 100);
+ *     int h = 0;
+ *     for (int i = 0; i < colorWheel.length; i++) {
+ *       colorWheel[i] = color(h, 66, 66);
+ *       h++;
+ *     }
+ *     popStyle();
+ *     return colorWheel;
+ *   }
+ *   
+ *   public void draw() {
+ *     image(mapImage, 0, 0);
+ *   } 
+ *   </pre>
+ * 
+ * <p>If you create your own PixelMapGen subclass, please follow the convention of generating the first coordinate at (0,0). This
+ * allows for consistent behavior when coordinates and LUTs undergo the transforms implemented in the BitmapTransform class.</p>
+ * 
+ * 
  *
  *
  */
@@ -28,9 +65,10 @@ public abstract class PixelMapGen {
 	public int w;
 	public int h;
 	public int size;
-	public int[] pixelMap;
-	public int[] sampleMap;
+	public int[] pixelMap;				// signalToImageLUT source for PixelAudioMapper, value at signal index returns index to pixel in bitmap
+	public int[] sampleMap;				// imageToSignalLUT source for PixelAudioMapper, value at bitmap index returns index to sample in signal
 	public ArrayList<int[]> coords;
+	public AffineTransformType type = AffineTransformType.NADA;
 	public final static String description = "Declare the description variable in your class and describe your PixelMapGen.";
 
 
