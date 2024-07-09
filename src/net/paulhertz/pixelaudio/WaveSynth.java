@@ -284,11 +284,11 @@ public class WaveSynth {
 		// gamma correction
 		if (this.gamma != 1.0) {
 			if (useGammaTable) {
-				r = PixelAudioMapper.constrain(r, 0, 255);
+				r = PixelAudio.constrain(r, 0, 255);
 				r = gammaTable[(int)r];
-				g = PixelAudioMapper.constrain(g, 0, 255);
+				g = PixelAudio.constrain(g, 0, 255);
 				g = gammaTable[(int)g];
-				b = PixelAudioMapper.constrain(b, 0, 255);
+				b = PixelAudio.constrain(b, 0, 255);
 				b = gammaTable[(int)b];
 			}
 			else {
@@ -299,9 +299,9 @@ public class WaveSynth {
 		}
 		// linear stretch, if you want it, adjust hi and lo to suit
 		if (this.isScaleHisto) {
-			r = PixelAudioMapper.constrain(PixelAudioMapper.map(r, this.histoLow, this.histoHigh, 1, 254), 0, 255);
-			g = PixelAudioMapper.constrain(PixelAudioMapper.map(g, this.histoLow, this.histoHigh, 1, 254), 0, 255);
-			b = PixelAudioMapper.constrain(PixelAudioMapper.map(b, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+			r = PixelAudio.constrain(PixelAudio.map(r, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+			g = PixelAudio.constrain(PixelAudio.map(g, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+			b = PixelAudio.constrain(PixelAudio.map(b, this.histoLow, this.histoHigh, 1, 254), 0, 255);
 		}
 		return PixelAudioMapper.composeColor((int) r, (int) g, (int) b, 255);
 	}	

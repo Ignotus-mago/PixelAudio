@@ -61,7 +61,7 @@ public class HilbertGen extends PixelMapGen {
 			p = loc[0] + loc[1] * w;
 			this.pixelMap[i++] = p;
 		}
-		for (i = 0; i < w * h - 1; i++) {
+		for (i = 0; i < w * h; i++) {
 			this.sampleMap[this.pixelMap[i]] = i;
 		}
 		return pixelMap;
