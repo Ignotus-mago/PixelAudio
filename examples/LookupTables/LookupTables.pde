@@ -3,22 +3,22 @@ import net.paulhertz.pixelaudio.*;
 PixelAudio pixelaudio;      // our library
 HilbertGen hGen;            // a Hilbert curve generator
 MooreGen mGen;              // a Moore curve generator 
-DiagonalZigzagGen zGen;
-PixelMapGen gen;
-PixelAudioMapper mapper;
-int[] spectrum;
-ArrayList<int[]> coords;
-int[] imageLUT;
-int[] signalLUT;
+DiagonalZigzagGen zGen;     // diagonal zigzag generator
+PixelMapGen gen;            // variable for the generator
+PixelAudioMapper mapper;    // PixelAUdioMapper, does stuff with pixels (here) and audio samples (elsewhere)
+int[] spectrum;             // an array of values for our mapper 
+ArrayList<int[]> coords;    // local copy of generator coordinates
+int[] imageLUT;             // the imageToSignalLUT from mapper, also the sampleMap field from the generator
+int[] signalLUT;            // the signalToImageLUT from mapper, also the pixelMap field from the generator
 
-int imageWidth = 1024;
-int imageHeight = 1024;
-int genW = 8;
-int genH = 8;
-int drawingScale = 1;
-int offset = 0;
-int bigTextSize = 64;
-int smallTextSize = 32;
+int imageWidth = 1024;      // for Moore and Hilbert curves, simplest to use equal powers of 2
+int imageHeight = 1024;     // for imageWidth and imageHeight
+int genW = 8;               // the width of the generator, must be a power of 2 for Hilbert and Moore generators
+int genH = 8;               // the height of the generator, must be a power of 2 for Hilbert and Moore generators
+int drawingScale = 1;       // scaling of drawing
+int offset = 0;             // offset of big text
+int bigTextSize = 64;       // big text size
+int smallTextSize = 32;     // small text size
 
 
 public void settings() {
@@ -28,7 +28,7 @@ public void settings() {
 public void setup() {
   pixelaudio = new PixelAudio(this);
   hGen = new HilbertGen(genW, genH);
-  zGen = new DiagonalZigzagGen(genW, genH);
+  zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.ROT180);
   mGen = new MooreGen(genW, genH);
   initMapper(hGen);
   // printLUTs();
@@ -72,9 +72,9 @@ public void keyPressed() {
     println("\n"+ mapper.getGeneratorDescription());
     break;
   case 'g':
-    if (gen == zGen) { gen = hGen; }
-    else { gen = zGen; }
-    initMapper(gen);
+    if (gen == zGen) { gen = hGen; initMapper(gen); break;}
+    if (gen == hGen) {gen = mGen; initMapper(gen); break;}
+    if (gen == mGen) {gen = zGen;initMapper(gen);}
     break;
   case 'l': case 'L':
       printLUTs();

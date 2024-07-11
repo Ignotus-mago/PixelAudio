@@ -19,15 +19,23 @@ public class MooreGen extends PixelMapGen {
 			   + "Width and height must be equal powers of 2. You can also call MooreGen(int depth) and width and height will equal Math.pow(2, depth). ";
 
 
-	public MooreGen(int width, int height) {
-		super(width, height);
+	public MooreGen(int width, int height, AffineTransformType type) {
+		super(width, height, type);
 		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// really handy to calculate depth before we generate the Moore curve
 		// System.out.println("> MooreGen "+ width +", "+ height +", depth  = "+ depth + ", swap = "+ doXYSwap);
 		this.generate();
 	}
 
+	public MooreGen(int width, int height) {
+		this(width, height, AffineTransformType.NADA);
+	}
+
 	public MooreGen(int depth) {
-		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)) );
+		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)), AffineTransformType.NADA);
+	}
+
+	public MooreGen(int depth, AffineTransformType type) {
+		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)), type );
 	}
 
 

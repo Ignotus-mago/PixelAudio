@@ -12,6 +12,11 @@ public class DiagonalZigzagGen extends PixelMapGen {
 
 
 
+	public DiagonalZigzagGen(int width, int height, AffineTransformType type) {
+		super(width, height, type);
+		this.generate();
+	}
+
 	public DiagonalZigzagGen(int width, int height) {
 		super(width, height);
 		this.generate();
