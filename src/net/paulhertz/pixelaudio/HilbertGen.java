@@ -47,8 +47,8 @@ public class HilbertGen extends PixelMapGen {
 
 	@Override
 	public boolean validate(int width, int height) {
-		if (width < 4) {
-			System.out.println("HilbertGen Error: 4 is the minimum value for width and height, 2 is the minimum value for depth.");
+		if (width < 2) {
+			System.out.println("HilbertGen Error: 2 is the minimum value for width and height, 1 is the minimum value for depth.");
 			return false;
 		}
 		if (width != height) {
@@ -76,9 +76,18 @@ public class HilbertGen extends PixelMapGen {
 
 	private ArrayList<int[]> generateHilbertCoordinates(int n) {
 		ArrayList<int[]> coordinates = new ArrayList<>(n);
-		for (int i = 0; i < n; i++) {
-			int[] xy = d2xy(n, i);
-			coordinates.add(xy);
+		if (n == 4) {
+			coordinates.add(new int[] { 0, 0 });
+			coordinates.add(new int[] { 0, 1 });
+			coordinates.add(new int[] { 1, 1 });
+			coordinates.add(new int[] { 1, 0 });
+			// System.out.println("-- Hilbert n == 4");
+		} 
+		else {
+			for (int i = 0; i < n; i++) {
+				int[] xy = d2xy(n, i);
+				coordinates.add(xy);
+			}
 		}
 		return coordinates;
 	}

@@ -46,8 +46,8 @@ public class MooreGen extends PixelMapGen {
 
 	@Override
 	public boolean validate(int width, int height) {
-		if (width < 4) {
-			System.out.println("MooreGen Error: 4 is the minimum value for width and height, 2 is the minimum value for depth.");
+		if (width < 2) {
+			System.out.println("MooreGen Error: 2 is the minimum value for width and height, 1 is the minimum value for depth.");
 			return false;
 		}
 		if (width != height) {
@@ -82,52 +82,55 @@ public class MooreGen extends PixelMapGen {
 	 * @return		an ArrayList<int[]> of x, y coordinate pairs that are the points traversed by a generalized space-filling curve over a bitmap of dimensions w * h.
 	 */
 	private ArrayList<int[]> generateMooreCoordinates(int n) {
-	    ArrayList<int[]> mooreCoordinates = new ArrayList<>(n);
-	    int hilbDepth;
-	    if (this.depth > 1) {
-	      hilbDepth = this.depth - 1;
-	    }
-	    else {
-	      throw new IllegalArgumentException("Cannot generate Moore curve for depth < 2");
-	    }
-	    // rewrite the order of Hilbert curve coordinates to get the order for a Moore curve
-	    HilbertGen hilb = new HilbertGen(hilbDepth);
-	    int[] xcoords = new int[hilb.size];
-	    int[] ycoords = new int[hilb.size];
-	    int i = 0;
-	    for (int[] xy : hilb.getCoordinates()) {
-	      xcoords[i] = xy[1];
-	      ycoords[i] = xy[0];
-	      i++;
-	    }
-	    int m = hilb.getWidth() - 1;
-	    // flip xcoords
-	    for (i = 0; i < xcoords.length; i++) {
-	      xcoords[i] = m - xcoords[i];
-	    }
-	    // now we fill mooreCoordinates with transformed copies of the Hilbert curve
-	    for (i = 0; i < hilb.size; i++) {
-	      mooreCoordinates.add(new int[]{xcoords[i], ycoords[i]});
-	    }
-	    for (i = 0; i < hilb.size; i++) {
-	      mooreCoordinates.add(new int[]{xcoords[i], ycoords[i] + hilb.w});
-	    }
-	    // flip xcoords
-	    for (i = 0; i < xcoords.length; i++) {
-	      xcoords[i] = m - xcoords[i];
-	    }
-	    // flip ycoords
-	    for (i = 0; i < ycoords.length; i++) {
-	      ycoords[i] = m - ycoords[i];
-	    }
-	    for (i = 0; i < hilb.size; i++) {
-	      mooreCoordinates.add(new int[]{xcoords[i] + hilb.w, ycoords[i] + hilb.w});
-	    }
-	    for (i = 0; i < hilb.size; i++) {
-	      mooreCoordinates.add(new int[]{xcoords[i] + hilb.w, ycoords[i]});
-	    }
-	    return mooreCoordinates;
+		ArrayList<int[]> mooreCoordinates = new ArrayList<>(n);
+		int hilbDepth;
+		if (n == 4) {
+			mooreCoordinates.add(new int[] { 0, 0 });
+			mooreCoordinates.add(new int[] { 0, 1 });
+			mooreCoordinates.add(new int[] { 1, 1 });
+			mooreCoordinates.add(new int[] { 1, 0 });
+			System.out.println("-- Moore n == 4");
+		} 
+		else {
+			hilbDepth = this.depth - 1;
+			// transform four Hilbert curves to piece together a Moore curve
+			HilbertGen hilb = new HilbertGen(hilbDepth);
+			int[] xcoords = new int[hilb.size];
+			int[] ycoords = new int[hilb.size];
+			int i = 0;
+			for (int[] xy : hilb.getCoordinates()) {
+				xcoords[i] = xy[1];
+				ycoords[i] = xy[0];
+				i++;
+			}
+			int m = hilb.getWidth() - 1;
+			// flip xcoords
+			for (i = 0; i < xcoords.length; i++) {
+				xcoords[i] = m - xcoords[i];
+			}
+			// now we fill mooreCoordinates with transformed copies of the Hilbert curve
+			for (i = 0; i < hilb.size; i++) {
+				mooreCoordinates.add(new int[] { xcoords[i], ycoords[i] });
+			}
+			for (i = 0; i < hilb.size; i++) {
+				mooreCoordinates.add(new int[] { xcoords[i], ycoords[i] + hilb.w });
+			}
+			// flip xcoords
+			for (i = 0; i < xcoords.length; i++) {
+				xcoords[i] = m - xcoords[i];
+			}
+			// flip ycoords
+			for (i = 0; i < ycoords.length; i++) {
+				ycoords[i] = m - ycoords[i];
+			}
+			for (i = 0; i < hilb.size; i++) {
+				mooreCoordinates.add(new int[] { xcoords[i] + hilb.w, ycoords[i] + hilb.w });
+			}
+			for (i = 0; i < hilb.size; i++) {
+				mooreCoordinates.add(new int[] { xcoords[i] + hilb.w, ycoords[i] });
+			}
+		}
+		return mooreCoordinates;
 	}
-
 
 }
