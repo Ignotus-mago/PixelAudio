@@ -1,6 +1,7 @@
 package net.paulhertz.pixelaudio;
 
 import java.util.Arrays;
+// import java.util.ArrayList;
 import processing.core.PImage;
 import processing.core.PConstants;
 
@@ -92,6 +93,38 @@ public class BitmapTransform {
 		}
 		default: {
 			return Arrays.copyOf(pixels, pixels.length);
+		}
+		}
+	}
+	
+	public static int[] coordTransform(int x, int y, int width, int height, AffineTransformType type) {
+		switch (type) {
+		case ROT90: {
+			return BitmapTransform.rotate90Coord(x, y, width, height);
+		}
+		case ROT90CCW: {
+			return BitmapTransform.rotate90CCWCoord(x, y, width, height);
+		}
+		case ROT180: {
+			return BitmapTransform.rotate180Coord(x, y, width, height);
+		}
+		case FLIPX: {
+			return BitmapTransform.flipXCoord(x, y, width, height);
+		}
+		case FLIPY: {
+			return BitmapTransform.flipYCoord(x, y, width, height);
+		}
+		case FLIPX90: {
+			return BitmapTransform.flipX90Coord(x, y, width, height);		// secondary diagonal
+		}
+		case FLIPX90CCW: {
+			return BitmapTransform.flipX90CCWCoord(x, y, width, height);  // primary diagonal
+		}
+		case NADA: {
+			return BitmapTransform.nadaCoord(x, y, width, height);
+		}
+		default: {
+			return BitmapTransform.nadaCoord(x, y, width, height);
 		}
 		}
 	}
@@ -234,7 +267,7 @@ public class BitmapTransform {
 	}
 
 
-	// ------------- STATIC METHODS FOR A PROCESSING PIMAGE ------------- //
+	// ------------- STATIC METHODS FOR ROTATING AND REFLECTING A PROCESSING PIMAGE ------------- //
 	
 
 	public static PImage rotate90(PImage img) {
@@ -300,7 +333,58 @@ public class BitmapTransform {
         return img;
 	}
 	
+	
+	// ------------- STATIC METHODS FOR SINGLE COORDINATE PAIR TRANSFORM ------------- //
+	
+	public static int[] rotate90Coord(int x, int y, int w, int h) {
+		int newX = h - 1 - y; // Calculate rotated x-coordinate
+		int newY = x; // and rotated y-coordinate
+		return new int[] { newX, newY };
+	}
 
+	public static int[] rotate90CCWCoord(int x, int y, int w, int h) {
+		int newX = y;
+		int newY = w - 1 - x;
+		return new int[] { newX, newY };
+	}
+
+	public static int[] rotate180Coord(int x, int y, int w, int h) {
+		int newX = w - 1 - x;
+		int newY = h - 1 - y;
+		return new int[] { newX, newY };
+	}
+
+	public static int[] flipXCoord(int x, int y, int w, int h) {
+		int newX = w - 1 - x; // Calculate the reflected x-coordinate
+		int newY = y; // y-coordinate is unchanged
+		return new int[] { newX, newY };
+	}
+
+	public static int[] flipYCoord(int x, int y, int w, int h) {
+		int newX = x;
+		int newY = h - 1 - y;
+		return new int[] { newX, newY };
+	}
+
+	// reflect on primary diagonal
+	public static int[] flipX90CCWCoord(int x, int y, int w, int h) {
+		int newX = y;
+		int newY = x;
+		return new int[] { newX, newY };
+	}
+
+	// reflect on secondary diagonal
+	public static int[] flipX90Coord(int x, int y, int w, int h) {
+		int newX = h - 1 - y;
+		int newY = w - 1 - x;
+		return new int[] { newX, newY };
+	}
+
+	// don't do nothing, no, no, no
+	public static int[] nadaCoord(int x, int y, int w, int h) {
+		return new int[] { x, y };
+	}
+	
 	
 	// ------------- STATIC METHODS FOR INDEX MAP GENERATION ------------- //
 	
