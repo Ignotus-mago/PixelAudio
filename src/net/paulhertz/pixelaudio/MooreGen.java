@@ -55,19 +55,9 @@ public class MooreGen extends PixelMapGen {
 
 	@Override
 	public int[] generate() {
-		int p = 0;
-		int i = 0;
-		this.pixelMap = new int[this.h * this.w];
-		this.sampleMap = new int[this.h * this.w];
 		this.coords = this.generateCoordinates();
-		for (int[] loc : this.coords) {
-			p = loc[0] + loc[1] * w;
-			this.pixelMap[i++] = p;
-		}
-		for (i = 0; i < w * h - 1; i++) {
-			this.sampleMap[this.pixelMap[i]] = i;
-		}
-		return pixelMap;
+		// bitmap transforms of coordinates go here
+		return this.setMapsFromCoords(this.coords);
 	}
 	
 	

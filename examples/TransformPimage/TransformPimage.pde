@@ -63,7 +63,8 @@ public void keyPressed() {
       img.save("transformed_image.png");
       break;
     case 'm':
-        testAffineMap(4, 3);
+        if (imgFilename.equals("fShapeRect.png")) testAffineMap(4, 3);
+        else testAffineMap(4, 4);
         break;
     case 'h':
         showHelp();

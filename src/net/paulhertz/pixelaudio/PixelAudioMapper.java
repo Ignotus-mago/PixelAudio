@@ -315,6 +315,10 @@ public class PixelAudioMapper {
 	public ArrayList<int[]> getGeneratorCoordinatesCopy() {
 		return this.generator.getCoordinatesCopy();
 	}
+	
+	public String getGeneratorDescription() {
+		return this.generator.describe();
+	}
 
 	public PixelMapGen getGenerator() {
 		return this.generator;
@@ -324,11 +328,11 @@ public class PixelAudioMapper {
 		this.generator = newGen;
 		this.regenerate();
 	}
+	
 	/**
 	 * Calls generator.generate() to recreate coordinates and LUTs.
 	 */
 	public void regenerate() {
-		this.generator.generate();
 		this.width = generator.getWidth();
 		this.height = generator.getHeight();
 		this.mapSize = generator.getSize();

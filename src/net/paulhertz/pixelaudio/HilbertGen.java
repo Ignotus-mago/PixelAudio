@@ -15,6 +15,14 @@ public class HilbertGen extends PixelMapGen {
 	public final static String description = "HilbertGen generates a Hilbert curve over a square bitmap starting at (0,0) and ending at (width-1, 0). "
 			   + "Width and height must be equal powers of 2. You can also call HilbertGen(int depth) and width and height will equal Math.pow(2, depth). ";
 
+	public HilbertGen(int width, int height, AffineTransformType type) {
+		super(width, height, type);								// necessary first call
+		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// calculate depth before we generate the Hilbert curve
+		this.doXYSwap = (this.depth % 2 == 1);					// a value to preserve symmetry and orientation when depth is odd
+		// System.out.println("> HilbertGen "+ width +", "+ height +", depth  = "+ depth + ", swap = "+ doXYSwap +", transform = "+ type.name());
+		this.generate();										// last of all, once all parameters are set, go ahead and generate coordinates and LUTs.
+	}
+
 	public HilbertGen(int width, int height) {
 		super(width, height);									// necessary first call
 		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// calculate depth before we generate the Hilbert curve
@@ -27,6 +35,10 @@ public class HilbertGen extends PixelMapGen {
 		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)) );
 	}
 	
+	public HilbertGen(int depth, AffineTransformType type) {
+		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)), type);
+	}
+
 
 	@Override
 	public String describe() {
@@ -52,19 +64,9 @@ public class HilbertGen extends PixelMapGen {
 	
 	@Override
 	public int[] generate() {
-		int p = 0;
-		int i = 0;
-		this.pixelMap = new int[this.h * this.w];
-		this.sampleMap = new int[this.h * this.w];
-		this.coords = this.generateCoordinates();
-		for (int[] loc : this.coords) {
-			p = loc[0] + loc[1] * w;
-			this.pixelMap[i++] = p;
-		}
-		for (i = 0; i < w * h; i++) {
-			this.sampleMap[this.pixelMap[i]] = i;
-		}
-		return pixelMap;
+		this.coords= this.generateCoordinates();
+		// bitmap transforms of coordinates
+		return this.setMapsFromCoords(this.coords);
 	}
 	
 	

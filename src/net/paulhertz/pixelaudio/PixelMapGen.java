@@ -68,7 +68,7 @@ public abstract class PixelMapGen {
 	public int[] pixelMap;				// signalToImageLUT source for PixelAudioMapper, value at signal index returns index to pixel in bitmap
 	public int[] sampleMap;				// imageToSignalLUT source for PixelAudioMapper, value at bitmap index returns index to sample in signal
 	public ArrayList<int[]> coords;
-	public AffineTransformType type = AffineTransformType.NADA;
+	public AffineTransformType transformType = AffineTransformType.NADA;
 	public final static String description = "Declare the description variable in your class and describe your PixelMapGen.";
 
 
@@ -83,8 +83,8 @@ public abstract class PixelMapGen {
 	 * @param width
 	 * @param height
 	 */
-	public PixelMapGen(int width, int height) {
-		// TODO throw an exception instead? This is not the usual way of handling errors in Processing.
+	public PixelMapGen(int width, int height, AffineTransformType type) {
+		// TODO throw an exception instead? That's not the usual way of handling errors in Processing, AFAIK.
 		if (!this.validate(width, height)) {
 			System.out.println("Error: Validation failed");
 			return;
@@ -92,8 +92,22 @@ public abstract class PixelMapGen {
 		this.w = width;
 		this.h = height;
 		this.size = h * w;
+		this.transformType = type;
 	}
 
+	/**
+	 * Constructor for classes that extend PixelMapGen. You will need to create you own constructor
+	 * for your class, but it can just call super(width, height) if everything it does can be handled
+	 * in your generate() method. Note that generate() should be called on the last line of your constructor,
+	 * after any additional initializations or calculations required for your class. See {@link DiagonalZigzagGen}
+	 * and {@link HilbertGen} for examples of how to organize and initialize your own <code>PixelMapGen</code> class.
+	 *
+	 * @param width
+	 * @param height
+	 */
+	public PixelMapGen(int width, int height) {
+		this(width, height, AffineTransformType.NADA);
+	}
 
 
 	/* ---------------- USER MUST SUPPLY THESE METHODS ---------------- */
@@ -115,17 +129,69 @@ public abstract class PixelMapGen {
 	public abstract boolean validate(int width, int height);
 
 	/**
-	 * Initialization method for coordinates (<code>this.coords</code>), signalToImageLUT (<code>this.pixelMap</code>), and
-	 * imageToSignalLUT (<code>this.sampleMap</code>) used by PixelAudioMapper and its child classes. Generate() must be 
-	 * called from your class, so that you can initialize local variables before generating coordinates and LUTs.
-	 * The best place to call this is typically on the last line of the constructor for your class, after calling
-	 * super() and after initializing any local variables needed to generate your coordinates and LUTs.
-	 * You must initialize this.coords, this.pixelMap, and this.sampleMap within generate()
-	 * or other methods that it calls: See {@link DiagonalZigzagGen} or {@link HilbertGen} for sample code.
+	 * <p>Initialization method that sets <code>this.coords</code>, and then  <code>this.pixelMap</code> and
+	 * <code>this.sampleMap</code>: <code>this.coords</code> is a list of coordinate pairs representing the signal path,
+	 * the (x,y) pixel locations along a path that visits every pixel in a bitmap exactly once. Once you have created it,
+	 * you can call <code>setMapsFromCoords()</code> to set <code>this.pixelMap</code> and <code>this.sampleMap</code> automatically.</p> 
 	 * 
-	 * @return  this.pixelMap, the value for PixelAudioMapper.signalToImageLUT.
+	 * <p><code>generate()</code> must be called from your class, so that you can initialize any local variables before generating 
+	 * coordinates and LUTs. The best place to call it is typically on the last line of the constructor for your class, 
+	 * after calling super() on the first line and after initializing any local variables needed to generate your coordinates and LUTs.
+	 * You must initialize <code>this.coords</code>, <code>this.pixelMap</code>, and <code>this.sampleMap</code> within generate(). 
+	 * 
+	 * See {@link DiagonalZigzagGen} or {@link HilbertGen} for sample code.
+	 * 
+	 * @return  this.pixelMap, the value for PixelAudioMapper.signalToImageLUT. 
 	 */
 	public abstract int[] generate();
+	
+	
+	/**
+	 * Sets <code>this.coords</code>, <code>this.pixelMap</code> and <code>this.sampleMap</code> instance variables 
+	 * from coordinates ArrayList argument. This method is provided as a convenience: all you have to do in a 
+	 * child class is set the coordinates of the signal path as it steps through a bitmap of dimensions this.w * this.h. 
+	 * 
+	 * @param coordinates	a list of coordinate pairs representing the signal path, the (x,y) pixel locations 
+	 *                      along a path that visits every pixel in a bitmap exactly once. This should be 
+	 *                      created within your generate() method in your child class that extends PixelMapGen.
+	 * @return the <code>pixelMap</code> value, which has already been set in this method and may be ignored
+	 */
+	public int[] setMapsFromCoords(ArrayList<int[]> coordinates) {
+		if (this.transformType != AffineTransformType.NADA) transformCoords(coordinates, this.transformType);
+		loadIndexMaps();
+		return this.pixelMap;							// return the pixelMap value, which can be ignored
+	}
+
+	public void transformCoords(ArrayList<int[]> coordinates, AffineTransformType type) {
+		ArrayList<int[]> transformedCoords = new ArrayList<int[]>(coordinates.size());
+		for (int[] xy : coordinates) {
+			int[] newXY = BitmapTransform.coordTransform(xy[0], xy[1], w, h, type);
+			// System.out.println("newXY = " + newXY[0] + ", " + newXY[1]);
+			transformedCoords.add(newXY);
+		}
+		this.coords = transformedCoords;
+		if (type == AffineTransformType.ROT90 || type == AffineTransformType.ROT90CCW
+				|| type == AffineTransformType.FLIPX90
+				|| type == AffineTransformType.FLIPX90CCW) {
+			int temp = this.w;
+			this.w = this.h;
+			this.h = temp;
+		}
+	}
+
+	public void loadIndexMaps() {
+		int p = 0;										// pixelMap index, for the bitmap coordinates along the signal path
+		int i = 0;										// index through the list of coordinate pairs
+		this.pixelMap = new int[this.size];				// initialize this.pixelMap
+		for (int[] loc : this.coords) {
+			p = loc[0] + loc[1] * w;
+			this.pixelMap[i++] = p;
+		}
+		this.sampleMap = new int[this.size];            // initialize this.sampleMap
+		for (i = 0; i < w * h; i++) {					// set sampleMap values, inverse of pixelMap values
+			this.sampleMap[this.pixelMap[i]] = i;
+		}
+	}
 
 
 	/* ------------------------------ GETTERS AND NO SETTERS ------------------------------ */
@@ -185,6 +251,16 @@ public abstract class PixelMapGen {
 		return coordsCopy;
 	}
 	
+	public AffineTransformType getTransformType() {
+		return transformType;
+	}
+
+	public void setTransformType(AffineTransformType transformType) {
+		this.transformType = transformType;
+		this.transformCoords(this.coords, this.transformType);
+		this.loadIndexMaps();
+	}
+	
 
 	// ------------- STATIC METHODS FOR POWERS OF TWO ------------- //
 	   
@@ -210,5 +286,33 @@ public abstract class PixelMapGen {
         }
         return p >> 1; 		// Shift right to get the previous power of 2
     }
+    
+    /**
+     * @param coordsList   	a list of coordinate pairs representing the (x,y) pixel locations along a path that visits every pixel in a bitmap
+     * @param w				the width of the bitmap
+     * @return				the bitmap index numbers of the coordinates
+     */
+    public static int[] getPixelMapFromCoordinatess(ArrayList<int[]> coordsList, int w) {
+		if (coordsList == null) {
+			throw(new IllegalArgumentException("ERROR: The coordList argument must be non-null."));
+		}
+		int p = 0;
+		int i = 0;
+		int[] pixelMap = new int[coordsList.size()];
+		for (int[] loc : coordsList) {
+			p = loc[0] + loc[1] * w;
+			pixelMap[i++] = p;
+		}
+		return pixelMap;
+	}
+    
+    public static int[] getInversMapFromPixelArray(int[] pixelArr) {
+    	int[] inverseArr = new int[pixelArr.length];
+		for (int i = 0; i < pixelArr.length; i++) {
+			inverseArr[pixelArr[i]] = i;
+		}
+    	return inverseArr;
+    }
+
 
 }
