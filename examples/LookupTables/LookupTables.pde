@@ -1,41 +1,54 @@
 import net.paulhertz.pixelaudio.*;
 
-PixelAudio pixelaudio;      // our library
-HilbertGen hGen;            // a Hilbert curve generator
-MooreGen mGen;              // a Moore curve generator 
-DiagonalZigzagGen zGen;     // diagonal zigzag generator
-PixelMapGen gen;            // variable for the generator
-PixelAudioMapper mapper;    // PixelAUdioMapper, does stuff with pixels (here) and audio samples (elsewhere)
-int[] spectrum;             // an array of values for our mapper 
-ArrayList<int[]> coords;    // local copy of generator coordinates
-int[] imageLUT;             // the imageToSignalLUT from mapper, also the sampleMap field from the generator
-int[] signalLUT;            // the signalToImageLUT from mapper, also the pixelMap field from the generator
+// TODO allow MooreGen(4, 4)
 
-int imageWidth = 1024;      // for Moore and Hilbert curves, simplest to use equal powers of 2
-int imageHeight = 1024;     // for imageWidth and imageHeight
-int genW = 8;               // the width of the generator, must be a power of 2 for Hilbert and Moore generators
-int genH = 8;               // the height of the generator, must be a power of 2 for Hilbert and Moore generators
-int drawingScale = 1;       // scaling of drawing
-int offset = 0;             // offset of big text
-int bigTextSize = 64;       // big text size
-int smallTextSize = 32;     // small text size
+PixelAudio pixelaudio;            // our library
+HilbertGen hGen;                  // a Hilbert curve generator
+MooreGen mGen;                    // a Moore curve generator 
+DiagonalZigzagGen zGen;           // diagonal zigzag generator
+PixelMapGen gen;                  // variable for the generator
+PixelAudioMapper mapper;          // PixelAUdioMapper, does stuff with pixels (here) and audio samples (elsewhere)
+int[] spectrum;                   // an array of values for our mapper 
+ArrayList<int[]> coords;          // local copy of generator coordinates
+int[] imageLUT;                   // the imageToSignalLUT from mapper, also the sampleMap field from the generator
+int[] signalLUT;                  // the signalToImageLUT from mapper, also the pixelMap field from the generator
+      
+int imageWidth = 1024;            // for Moore and Hilbert curves, simplest to use equal powers of 2
+int imageHeight = 1024;           // for imageWidth and imageHeight
+int genW = 4;                    // the width of generator: must be a power of 2 for Hilbert and Moore, 4 and 8 are good, 1024 is the max
+int genH = 4;                    // the height of generator: must be a power of 2 for Hilbert and Moore, 4 and 8 are good
+int drawingScale = 1;             // scaling of drawing
+int offset = 0;                   // offset of big text
+int bigTextSize = 64;             // big text size
+int smallTextSize = 32;           // small text size
+boolean isHideNumbers = false;    // show or hide the numbers, good idea when genW and genH are 16 or 32 or 64...  
+boolean isHideLines = false;      // show or hide the lines, good idea when genW and genH greater than 128...  
 
 
 public void settings() {
   size(imageWidth, imageHeight, JAVA2D);
+  genW = constrain(genW, 2, 1024);
+  genH = constrain(genH, 2, 1024);
 }
 
 public void setup() {
   pixelaudio = new PixelAudio(this);
-  hGen = new HilbertGen(genW, genH);
-  zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.ROT180);
-  mGen = new MooreGen(genW, genH);
+  println("---- generator size: "+ genW +" * "+ genH);
+  initGens();
   initMapper(hGen);
   // printLUTs();
   spectrum = initColors();
   drawingScale = imageWidth / gen.getWidth();
   offset = drawingScale / 2;
+  if (genW > 8) isHideNumbers = true;
+  if (genW > 128) isHideLines = true;
   showHelp();
+}
+
+public void initGens() {
+  hGen = new HilbertGen(genW, genH);
+  zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.ROT180);
+  mGen = new MooreGen(genW, genH);
 }
 
 public void initMapper(PixelMapGen gen) {
@@ -56,8 +69,8 @@ public void updateMapper(PixelMapGen gen) {
 
 public void draw() {
   drawSquares();
-  drawLines();
-  drawNumbers();
+  if (!isHideLines) drawLines();
+  if (!isHideNumbers) drawNumbers();
 }
 
 public void keyPressed() {
@@ -76,7 +89,13 @@ public void keyPressed() {
     if (gen == hGen) {gen = mGen; initMapper(gen); break;}
     if (gen == mGen) {gen = zGen;initMapper(gen);}
     break;
-  case 'l': case 'L':
+  case 'n':
+      isHideNumbers = !isHideNumbers;
+      break;
+  case 'l':
+      isHideLines = !isHideLines;
+      break;
+  case 'k': case 'K':
       printLUTs();
       break;
   case 't': case 'T':
@@ -244,14 +263,25 @@ public void stepAnimation(int step) {
 }
 
 public void showHelp() {
-  println("\n----- HELP -----");
+  println("\n----- HELP -----\n");
   println("Signal path index numbers are small white numbers, bitmap index numbers are big black numbers.");
   println("Read the imageToSignalLUT values by following the pixel index order and reading the white numbers.");
   println("Read the signalToImageLUT values by following the signal path order and reading the black numbers.");
-  println("Read the imageToSignalLUT values by following the black pixel numbers in order and reading the white numbers.");
-  println("Press 'd' to print a description of the current generator to the console.");
+  println("Read the imageToSignalLUT values by following the black pixel numbers in order and reading the white numbers.\n");
   println("Press 'a' or 'A' to rotate the array of colors one step left or right.");
-  println("Press 'l' to print the imageToSignalLUT and the signalToImageLUT to the console.");
+  println("Press 'g' to display a different generator.");
+  println("Press 'n' to hide or show numbers.");
+  println("Press 'l' to hide or show lines.");
+  println("Press 'd' to print a description of the current generator to the console.");
+  if (genW <= 4) println("Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
+  if (genW <= 4) println("Press 't' to print affine maps to the console."); // omit for published version
+  println("Press 'f' to rotate 90 degress clockwise.");
+  println("Press 'b' to rotate 90 degress counterclockwise.");
+  println("Press 'r' to rotate 180 degress.");
+  println("Press 'x' to flip x-coordinates (reflect on y-axis).");
+  println("Press 'y' to flip y-coordinates (reflect on x-axis).");
+  println("Press '1' to flip on primary diagonal.");
+  println("Press '2' to flip on secondary diagonal.");
   println("Press 'h' to show this help text in the console.");
 }
 
