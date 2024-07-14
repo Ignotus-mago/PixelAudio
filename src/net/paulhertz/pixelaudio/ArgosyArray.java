@@ -38,8 +38,8 @@ public class ArgosyArray {
 	int argosyPixelShift = 0;
 	/** do we count the shift or not?  */
 	boolean isCountShift = true;
-  /** count the number of unit shifts */
-  int argosyShiftStep = 0;
+    /** count the number of unit shifts */
+    int argosyShiftStep = 0;
 
   // an argosy pattern with 55 elements, 89 = (34 * 2 + 21) units long, derived from a Fibonacci L-system
 	public static int[] argosy55 = new int[]{2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
@@ -386,7 +386,7 @@ public class ArgosyArray {
 	 * @return argosyMargin, the left and right margin to argosy patterns in the array,
 	 * set by bigArrayFill().
 	 */
-public int getArgosyMargin() {
+	public int getArgosyMargin() {
 		return argosyMargin;
 	}
 

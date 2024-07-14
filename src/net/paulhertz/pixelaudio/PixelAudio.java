@@ -13,12 +13,11 @@ import processing.core.PApplet;
  */
 
 public class PixelAudio {
-	// myParent is a reference to the parent sketch
-	// we make it static so it's available to other classes
+	/** myParent is a reference to the parent sketch, we make it static so it's available to other classes */
 	static PApplet myParent;
-
+	/** a variable to set */
 	int myVariable = 0;
-
+	/** SHould be set by Ant script (?), but that is not happening */
 	public final static String VERSION = "##library.prettyVersion##";
 
 

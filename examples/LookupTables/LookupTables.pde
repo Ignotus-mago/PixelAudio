@@ -15,8 +15,8 @@ int[] signalLUT;                  // the signalToImageLUT from mapper, also the 
       
 int imageWidth = 1024;            // for Moore and Hilbert curves, simplest to use equal powers of 2
 int imageHeight = 1024;           // for imageWidth and imageHeight
-int genW = 4;                    // the width of generator: must be a power of 2 for Hilbert and Moore, 4 and 8 are good, 1024 is the max
-int genH = 4;                    // the height of generator: must be a power of 2 for Hilbert and Moore, 4 and 8 are good
+int genW = 4;                     // the width of generator: must be a power of 2 for Hilbert and Moore, 4 and 8 are good, 1024 is the max
+int genH = 4;                     // the height of generator: must be a power of 2 for Hilbert and Moore, 4 and 8 are good, 1024 is the max
 int drawingScale = 1;             // scaling of drawing
 int offset = 0;                   // offset of big text
 int bigTextSize = 64;             // big text size
@@ -46,8 +46,11 @@ public void setup() {
 }
 
 public void initGens() {
+  // get a HIlbert curve generator
   hGen = new HilbertGen(genW, genH);
-  zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.ROT180);
+  // get a diagonal zigzag generator and flip the x-coordinates (same as reflecting it on the y-axis)
+  zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.FLIPX);
+  // get a Moore curve generator
   mGen = new MooreGen(genW, genH);
 }
 

@@ -115,6 +115,7 @@ public void showHelp() {
   println("press 'h' to show Help.");
 }
 
+// code for generating a gamma table, a non-linear adjustment of brightness
 public void makeGammaTable(float gamma) {
   int[] gammaTable = new int[256];
   println("----- GAMMA TABLE, gamma = "+ gamma +" -----");
