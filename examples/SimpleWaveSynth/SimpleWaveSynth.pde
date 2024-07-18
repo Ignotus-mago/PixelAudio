@@ -4,6 +4,7 @@ PixelAudio pixelaudio;
 HilbertGen hGen;
 MooreGen mGen;
 DiagonalZigzagGen zGen;
+PixelMapGen gen;
 PixelAudioMapper mapper;
 ArrayList<WaveData> wdList;
 WaveSynth wavesynth;
@@ -23,10 +24,12 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   hGen = new HilbertGen(1024, 1024);
   mGen = new MooreGen(1024, 1024);
-  zGen = new DiagonalZigzagGen(1024, 1024);
-  mapper = new PixelAudioMapper(hGen);
+  zGen = new DiagonalZigzagGen(1024, 1024, AffineTransformType.FLIPY);
+  gen = hGen;
+  mapper = new PixelAudioMapper(gen);
   wdList = initWaveDataList();
-  wavesynth = initWaveSynth();
+  wavesynth = new WaveSynth(mapper, wdList);
+  initWaveSynth(wavesynth);
   synthImage = wavesynth.mapImage;
   showHelp();
 }
@@ -51,15 +54,21 @@ public ArrayList<WaveData> initWaveDataList() {
   return list;
 }
 
-public WaveSynth initWaveSynth() {
-  WaveSynth synth = new WaveSynth(mapper, wdList);
+public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGain(0.8);
   synth.setGamma(myGamma);
   synth.setScaleHisto(false);
   synth.setAnimSteps(this.animSteps);
+  println("--- mapImage size = "+ synth.mapImage.pixels.length);
   synth.prepareAnimation();
   synth.renderFrame(0);
   return synth;
+}
+
+public void swapGen(PixelMapGen gen) {
+  mapper.setGenerator(gen);
+  // if we had a new mapper, we would call wavesynth.setMapper(mapper) and reset synthImage locally. 
+  // As it is, mapper only changed its variables, so the swap is really simple
 }
 
 public void draw() {
@@ -92,9 +101,20 @@ public void keyPressed() {
     wavesynth.setGamma(myGamma);
     break;
   case 'g':
-    makeGammaTable(myGamma);
+    // change the gen
+    if (gen == zGen) { gen = hGen; swapGen(gen); break;}
+    if (gen == hGen) {gen = mGen; swapGen(gen); break;}
+    if (gen == mGen) {gen = zGen; swapGen(gen);}
+    break;
+  case 'f':
+    // rotate gen 90 degrees clockwise
+    gen.setTransformType(AffineTransformType.ROT90);
+    swapGen(gen);
     break;
   case 't':
+    makeGammaTable(myGamma);
+    break;
+  case 'u':
     wavesynth.useGammaTable = !wavesynth.useGammaTable;
     if (wavesynth.useGammaTable) println("-- using gamma table");
     else println("-- calculating gamma ");
@@ -112,8 +132,8 @@ public void showHelp() {
   println("press '2' to set gamma to 1.4.");
   println("press '3' to set gamma to 1.8.");
   println("press '4' to set gamma to 0.5.");
-  println("press 'g' to print the lookup table for current gamma to console.");
-  println("press 't' to change gamma calculation between table lookup and calculation.");
+  println("press 't' to print the lookup table for current gamma to console.");
+  println("press 'u' to change gamma calculation between table lookup and calculation.");
   println("press 'h' to show Help.");
 }
 

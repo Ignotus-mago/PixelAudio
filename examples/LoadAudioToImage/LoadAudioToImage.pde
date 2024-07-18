@@ -117,6 +117,9 @@ public void keyPressed() {
     chan = PixelAudioMapper.ChannelNames.H;
     chooseFile();
     break;
+  case 's':
+    mapImage.save("pixelAudio.png");
+    break;
   case '?':
     // showHelp();
     break;
@@ -131,7 +134,7 @@ public void mousePressed() {
   // println("----- sample position for "+ mouseX +", "+ mouseY +" is "+ samplePos);
   int sampleLength = playSample(samplePos);
   if (sampleLength > 0) {
-    hightlightSample(mouseX, mouseY, sampleLength);
+    hightlightSample(samplePos, sampleLength);
     println("--- samplePos:", samplePos, "sampleLength:", sampleLength, "size:", width * height, "end:", samplePos + sampleLength);
   }
 }
@@ -193,7 +196,7 @@ public int playSample(int samplePos) {
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
   this.samplelen = int(vary * this.sampleBase);                                    // calculate the duration of the sample
   if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos - 1;                   // make sure we don't exceed the mapSize
+    samplelen = mapSize - samplePos;                   // make sure we don't exceed the mapSize
     println("----->>> sample length = "+ samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
@@ -209,16 +212,15 @@ public int playSample(int samplePos) {
   return samplelen;
 }
 
-public void hightlightSample(int x, int y, int length) {
+public void hightlightSample(int pos, int length) {
   shuffle(randColors);
   int highColor = setAlpha(randColors[0], blendAlpha);
-  int[] signalPathPixelSequence = mapper.pluckPixels(mapImage.pixels, x, y, samplelen);
+  int[] signalPathPixelSequence = mapper.pluckPixels(mapImage.pixels, pos, samplelen);
   mapImage.loadPixels();
-  int pos = x + y * width;
   for (int i = 0; i < length; i++) {
     int newColor = blendColor(mapImage.pixels[pos + i], highColor, BLEND);
     signalPathPixelSequence[i] = newColor;
   }
-  mapper.plantPixels(signalPathPixelSequence, mapImage.pixels, x, y, length);
+  mapper.plantPixels(signalPathPixelSequence, mapImage.pixels, pos, length);
   mapImage.updatePixels();
 }
