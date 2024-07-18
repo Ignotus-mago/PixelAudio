@@ -524,7 +524,7 @@ public class PixelAudioMapper {
 	/*
 	 * In each case, a source subarray is either extracted from or inserted into a target larger array.
 	 * When the small array, sprout, is inserted, it is indexed from 0..sprout.length. The larger array,
-	 * img or sig, is indexed from read or write point pos to pos + length.
+	 * img or sig, is indexed from read or write point signalPos to signalPos + length.
 	 *
 	 * All float[] arrays should contain audio range values [-1.0, 1.0].
 	 * All int[] arrays should contain RGB pixel values.
@@ -532,30 +532,41 @@ public class PixelAudioMapper {
 	 */
 
 
-	/**
-	 * Starting at image coordinates (x, y), reads values from pixel array img using imgToSignalLUT
-	 * to redirect indexing and returns them as an array of RGB pixel values in signal order.
-	 *
-	 * @param img			array of RGB values, the pixels array from a bitmap image with the same width and height as PixelAudioMapper
-	 * @param x				x coordinate of a point in the bitmap image from which img is derived
-	 * @param y				y coordinate of a point in the bitmap image from which img is derived
-	 * @param length		length of the subarray to pluck from img
-	 * @return				a new array of pixel values in signal order
-	 */
-	public int[] pluckPixels(int[] img, int x, int y, int length) {
-		int signalPos = this.imageToSignalLUT[x + y * this.width];		// get the signal position
-		int[] pixels = new int[length];					// new array for pixel values
-		int j = 0;										// index for pixels array 
-		for (int i = signalPos; i < signalPos + length; i++) {		// step through the signal with i as index
-			int rgb = img[this.signalToImageLUT[i]];	// get an rgb value from img at position signalToImageLUT[i]
-			pixels[j++] = rgb;							// accumulate values in pixels array
+	  /**
+	   * Starting at <code>signalPos</code>, reads <code>length</code> values from pixel array <code>img</code> in signal order
+	   * using <code>signalToImageLUT</code> to redirect indexing and then returns them as an array of RGB pixel values in signal order.
+	   * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or 
+	   *
+	   * @param img      	array of RGB values, the pixels array from a bitmap image with the same width and height as PixelAudioMapper
+	   * @param signalPos   position in the signal at which to start reading pixel values from the image, following the signal path
+	   * @param length    	length of the subarray to pluck from img, reading pixel values while following the signal path
+	   * @return        	a new array of pixel values in signal order
+	   */
+	  public int[] pluckPixels(int[] img, int signalPos, int length) {
+		// We can have an error condition if signalPos + length exceeds img.length! 
+		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
+		if (signalPos + length > img.length) {
+			length = img.length - signalPos;
+			System.out.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to "+ length);
 		}
-		return pixels;									// return the samples
-	}
+		if (signalPos >= img.length) {
+			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ img.length +". Returning null.");
+			return null;
+		}
+	    int[] pixels = new int[length];          // new array for pixel values
+	    int j = 0;                    // index for pixels array 
+	    for (int i = signalPos; i < signalPos + length; i++) {    // step through the signal with i as index    
+	      int rgb = img[this.signalToImageLUT[i]];  // get an rgb value from img at position signalToImageLUT[i]
+	      pixels[j++] = rgb;              // accumulate values in pixels array
+	    }
+	    return pixels;                  // return the samples
+	  }
 
-	/*
+
+	  /*
 	// It's not clear to me when this signature might be useful. Not yet, anyhow.
-	public int[] pluckPixels(int[] img, int x, int y, int length, ChannelNames fromChannel) {
+	 * It's supposed to return one channel of RGB, and that might be useful, after all. Implement it. TODO
+	public int[] pluckPixels(int[] img, int samplePos, int length, ChannelNames fromChannel) {
 		int pos = x + y * this.width;
 		int[] petal = new int[length];
 		for (int i = pos; i < pos + length; i++) {
@@ -566,21 +577,34 @@ public class PixelAudioMapper {
 	*/
 
 
+
 	/**
+     * Starting at <code>signalPos</code>, reads <code>length</code> values from pixel array <code>img</code> in signal order
+     * using <code>signalToImageLUT</code> to redirect indexing and then returns them as an array of transcoded float values.
+     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
+     * 
 	 * Starting at image coordinates (x, y), reads values from pixel array img using imageToSignalLUT
 	 * to redirect indexing and returns them as an array of transcoded audio values in signal order.
 	 *
 	 * @param img			source array of RGB pixel values, typically from the bitmap image you are using with PixelAudioMapper
-	 * @param x				x coordinate of a point in the bitmap image from which img is derived
-	 * @param y				y coordinate of a point in the bitmap image from which img is derived
+	 * @param signalPos		position in the signal at which to start reading pixel values from the image, following the signal path
 	 * @param length		length of the subarray to pluck from img
 	 * @param fromChannel	the color channel from which to read pixel values
 	 * @return				a new array of audio values in signal order
 	 */
-	public float[] pluckPixelsAsAudio(int[] img, int x, int y, int length, ChannelNames fromChannel) {
-		int signalPos = this.imageToSignalLUT[x + y * this.width];		// get the signal position
+	public float[] pluckPixelsAsAudio(int[] img, int signalPos, int length, ChannelNames fromChannel) {
+		// We can have an error condition if signalPos + length exceeds img.length! 
+		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
+		if (signalPos + length > img.length) {
+			length = img.length - signalPos;
+			System.out.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to "+ length);
+		}
+		if (signalPos >= img.length) {
+			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ img.length +". Returning null.");
+			return null;
+		}
 		float[] samples = new float[length];							// create an array of samples
-		int j = 0;
+		int j = 0;														// TODO we can have an error condition if signalPos + length exceeds img.length!
 		switch (fromChannel) {
 		case L: {
 			for (int i = signalPos; i < signalPos + length; i++) {
@@ -645,8 +669,9 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Starting at image coordinates (x, y), reads audio values from signal array sig starting at pos for length values
+     * Starting at <code>signalPos</code>, reads <code>length</code> values from float array <code>sig</code> 
 	 * and returns a new array of audio values in signal order. No redirection is needed when reading from the signal.
+     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
 	 *
 	 * @param sig			source array of audio values
 	 * @param signalPos		a position in the sig array
@@ -654,6 +679,16 @@ public class PixelAudioMapper {
 	 * @return				a new array with the audio values we read
 	 */
 	public float[] pluckSamples(float[] sig, int signalPos, int length) {
+		// We can have an error condition if signalPos + length exceeds sig.length! 
+		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
+		if (signalPos + length > sig.length) {
+			length = sig.length - signalPos;
+			System.out.println("WARNING! signalPos + length exceeded sig array length. Length was trimmed to "+ length);
+		}
+		if (signalPos >= sig.length) {
+			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ sig.length +". Returning null.");
+			return null;
+		}
 		float[] samples = new float[length];
 		int j = 0;
 		for (int i = signalPos; i < signalPos + length; i++) {
@@ -663,7 +698,9 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Starting at pos in the sig[] array, read values and transcode them into RGB data.
+     * Starting at <code>signalPos</code>, reads <code>length</code> values from float array <code>sig</code> 
+     * and transcodes and returns them as an RGB array in signal order.
+     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
 	 *
 	 * @param sig			source array of audio values (-1.0f..1.0f)
 	 * @param signalPos		entry point in the sig array
@@ -671,6 +708,16 @@ public class PixelAudioMapper {
 	 * @return				an array of RGB values where r == g == b, derived from the sig values
 	 */
 	public int[] pluckSamplesAsRGB(float[] sig, int signalPos, int length) {
+		// We can have an error condition if signalPos + length exceeds sig.length! 
+		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
+		if (signalPos + length > sig.length) {
+			length = sig.length - signalPos;
+			System.out.println("WARNING! signalPos + length exceeded sig array length. Length was trimmed to "+ length);
+		}
+		if (signalPos >= sig.length) {
+			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ sig.length +". Returning null.");
+			return null;
+		}
 		int[] rgbPixels = new int[length];
 		int j = 0;
 		for (int i = signalPos; i < signalPos + length; i++) {
@@ -684,26 +731,28 @@ public class PixelAudioMapper {
 
 
 	/**
-	 * Inserts elements from a source array of RGB pixel values in signal order into a target array of RGB pixel values (PImage.pixels, typically).
+	 * Starting at <code>signalPos</code>, writes <code>length</code> values from RGB array <code>sprout</code> 
+	 * into RGB array <code>img</code>, in signal order. <code>img</code> is typically the pixel array from a PImage 
+	 * with the same width and height as PixemAudioMapper. 
+     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
 	 *
-	 * @param sprout	source array of RGB values to insert into target array img, in signal order
-	 * @param img		target array of RGB values. in image (row major) order
-	 * @param x			x coordinate in image from which img pixel array was derived
-	 * @param y			y coordinate in image from which img pixel array was derived
-	 * @param length	number of values from sprout to insert into img array
+	 * @param sprout		source array of RGB values to insert into target array img, in signal order
+	 * @param img			target array of RGB values. in image (row major) order
+	 * @param signalPos   	position in the signal at which to start writing pixel values to the image, following the signal path
+	 * @param length		number of values from sprout to insert into img array
 	 */
-	public void plantPixels(int[] sprout, int[] img, int x, int y, int length) {
-		int signalPos = this.imageToSignalLUT[x + y * this.width];		// get the signal position
+	public void plantPixels(int[] sprout, int[] img, int signalPos, int length) {
 		int j = 0;														// index for sprout
-		for (int i = signalPos; i < signalPos + length; i++) {			// step through signal positions
+		for (int i = signalPos; i < signalPos + length; i++) {			// step through signal positions    TODO if signalPos + length > img.length we're in trouble
 			img[signalToImageLUT[i]] = sprout[j++];						// assign values from sprout to img
 		}
 	}
 
 
 	/**
-	 * Inserts elements from a source array of RGB pixel values into a specified color channel
-	 * in a target array of RGB pixel values following the signal path.
+	 * Starting at <code>signalPos</code>, writes <code>length</code> values from RGB array <code>sprout</code> 
+	 * into a specified channel of RGB array <code>img</code>, in signal order.
+     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
 	 *
 	 * @param sprout	source array of RGB values to insert into target array img, in signal order
 	 * @param img		target array of RGB values, in image order
@@ -711,8 +760,17 @@ public class PixelAudioMapper {
 	 * @param y			y coordinate in image from which img pixel array was derived
 	 * @param length	number of values from sprout to insert into img array
 	 */
-	public void plantPixels(int[] sprout, int[] img, int x, int y, int length, ChannelNames toChannel) {  
-		int signalPos = this.imageToSignalLUT[x + y * this.width];		// get the signal position
+	public void plantPixels(int[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {  
+		// We can have an error condition if signalPos + length exceeds img.length! 
+		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
+		if (signalPos + length > img.length) {
+			length = img.length - signalPos;
+			System.out.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to "+ length);
+		}
+		if (signalPos >= img.length) {
+			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ img.length +". Returning null.");
+
+		}
 		int j = 0;														// index for sprout
 		switch (toChannel) {
 		case L: {
@@ -792,6 +850,10 @@ public class PixelAudioMapper {
 
 
 	/**
+	 * Starting at <code>signalPos</code>, writes <code>length</code> transcoded values from audio sample array <code>sprout</code> 
+	 * into a specified channel of RGB array <code>img</code>, in signal order.
+     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
+	 *
 	 * Inserts elements from a source array of audio values (-1.0f..1.0f) into a specified color channel
 	 * in a target array of RGB pixel values following the signal path.
 	 *
@@ -801,8 +863,7 @@ public class PixelAudioMapper {
 	 * @param y			y coordinate in image from which img pixel array was derived
 	 * @param length	number of values from sprout to insert into img array
 	 */
-	public void plantPixels(float[] sprout, int[] img, int x, int y, int length, ChannelNames toChannel) {
-		int signalPos = this.imageToSignalLUT[x + y * this.width];		// get the signal position
+	public void plantPixels(float[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {
 		int j = 0;
 		switch (toChannel) {
 		case L: {
@@ -857,84 +918,95 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Insert audio samples from source array sprout into target array of audio samples sig. No redirection needed,
-	 * array values are already in signal order.
+	 * Starting at <code>signalPos</code>, insert <code>length</code> audio samples from source array <code>sprout</code> 
+	 * into target array of audio samples <code>sig</code>. No redirection by lookup tables is used.
 	 *
-	 * @param sprout	source array of audio values (-1.0f..1.0f)
-	 * @param sig		target array of signal values, in signal order
-	 * @param pos		start point in sig array
-	 * @param length	number of values to copy from sprout array to sig array
+	 * @param sprout		source array of audio values (-1.0f..1.0f)
+	 * @param sig			target array of signal values, in signal order
+	 * @param signalPos		start point in sig array
+	 * @param length		number of values to copy from sprout array to sig array
 	 */
-	public void plantSamples(float[] sprout, float[] sig, int pos, int length) {
+	public void plantSamples(float[] sprout, float[] sig, int signalPos, int length) {
 		int j = 0;
-		for (int i = pos; i < pos + length; i++) {
+		for (int i = signalPos; i < signalPos + length; i++) {
 			sig[i] = sprout[j++];
 		}
 	}
 
 	/**
-	 * Insert values from source array of RGB values sprout into target array sig of audio values (-1.0f..1.0f),
-	 * transcoding from RGB to audio.
+	 * Starting at <code>signalPos</code>, insert <code>length</code> transcoded RGB samples from source array <code>sprout</code> 
+	 * into target array of audio samples <code>sig</code>. No redirection by lookup tables is is used.
 	 *
 	 * @param sprout
 	 * @param sig
-	 * @param pos
+	 * @param signalPos
 	 * @param length
 	 */
-	public void plantSamples(int[] sprout, float[] sig, int pos, int length) {
+	public void plantSamples(int[] sprout, float[] sig, int signalPos, int length) {
 		int j = 0;
-		for (int i = pos; i < pos + length; i++) {
+		for (int i = signalPos; i < signalPos + length; i++) {
 			sig[i] = PixelAudio.map(PixelAudioMapper.getGrayscale(sprout[j++]), 0, 255, -1.0f, 1.0f);
 		}
 	}
 
-	public void plantSamples(int[] sprout, float[] sig, int pos, int length, ChannelNames fromChannel) {
+	/**
+	 * Starting at <code>signalPos</code>, insert <code>length</code> transcoded RGB samples from channel <code>fromChannel</code> 
+	 * of source array <code>sprout</code> into target array of audio samples <code>sig</code>. 
+	 * No redirection by lookup tables is is used.
+	 *
+	 * @param sprout
+	 * @param sig
+	 * @param signalPos
+	 * @param length
+	 * @param fromChannel
+	 */
+	public void plantSamples(int[] sprout, float[] sig, int signalPos, int length, ChannelNames fromChannel) {
 		int j = 0;
 		switch (fromChannel) {
 		case L: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				sig[i] = PixelAudio.map(brightness(sprout[j++]), 0, 1, -1.0f, 1.0f);
 			}
 			break;
 		}
 		case H: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				sig[i] = PixelAudio.map(hue(sprout[j++]), 0, 1, -1.0f, 1.0f);
 			}
 			break;
 		}
 		case S: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				sig[i] = PixelAudio.map(saturation(sprout[j++]), 0, 1, -1.0f, 1.0f);
 			}
 			break;
 		}
 		case R: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				sig[i] = PixelAudio.map(((sprout[j++] >> 16) & 0xFF), 0, 255, -1.0f, 1.0f);
 			}
 			break;
 		}
 		case G: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				sig[i] = PixelAudio.map(((sprout[j++] >> 8) & 0xFF), 0, 255, -1.0f, 1.0f);
 			}
 			break;
 		}
 		case B: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				sig[i] = PixelAudio.map((sprout[j++] & 0xFF), 0, 255, -1.0f, 1.0f);
 			}
 			break;
 		}
 		case A: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				sig[i] = PixelAudio.map(((sprout[j++] >> 24) & 0xFF), 0, 255, -1.0f, 1.0f);
 			}
 			break;
 		}
 		case ALL: {
-			for (int i = pos; i < pos + length; i++) {
+			for (int i = signalPos; i < signalPos + length; i++) {
 				// convert to grayscale using the "luminosity equation."
 				sig[i] = PixelAudio.map((0.3f * ((sprout[i] >> 16) & 0xFF)
 						+ 0.59f * ((sprout[i] >> 8) & 0xFF)

@@ -11,10 +11,10 @@ public class WaveSynth {
 	public int[] colorSignal;
 	public float[] mapSignal;
 	public ArrayList<WaveData>  waveDataList;
-	private int w;
-	private int h;
-	private int mapSize;
-	private int dataLength;
+	public int w;
+	public int h;
+	public int mapSize;
+	public int dataLength;
 
 	
 	// ------ WaveSYnth control variables ----- //
@@ -230,7 +230,7 @@ public class WaveSynth {
 	
 	public void prepareAnimation() {
 		this.mapImage.loadPixels();
-		this.colorSignal = mapper.pluckPixels(mapImage.pixels, 0, 0, mapSize);
+		this.colorSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
 		this.mapInc = PConstants.TWO_PI / mapSize;
 	}
 	
@@ -243,7 +243,7 @@ public class WaveSynth {
 			this.colorSignal[i] = this.renderPixel(frame, i);
 		}
 		// write scanSignal's pixel color values to scanImage pixels
-		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, 0, mapSize);
+		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, mapSize);
 		// mapImage.pixels = this.colorSignal;
 		this.mapImage.updatePixels();
 		// set our internal step variable, just a tracker for now
