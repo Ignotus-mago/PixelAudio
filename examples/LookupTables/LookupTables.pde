@@ -1,6 +1,5 @@
 import net.paulhertz.pixelaudio.*;
 
-// TODO allow MooreGen(4, 4)
 
 PixelAudio pixelaudio;            // our library
 HilbertGen hGen;                  // a Hilbert curve generator

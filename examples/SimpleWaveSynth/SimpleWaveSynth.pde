@@ -3,6 +3,7 @@ import net.paulhertz.pixelaudio.*;
 PixelAudio pixelaudio;
 HilbertGen hGen;
 MooreGen mGen;
+DiagonalZigzagGen zGen;
 PixelAudioMapper mapper;
 ArrayList<WaveData> wdList;
 WaveSynth wavesynth;
@@ -22,7 +23,8 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   hGen = new HilbertGen(1024, 1024);
   mGen = new MooreGen(1024, 1024);
-  mapper = new PixelAudioMapper(mGen);
+  zGen = new DiagonalZigzagGen(1024, 1024);
+  mapper = new PixelAudioMapper(hGen);
   wdList = initWaveDataList();
   wavesynth = initWaveSynth();
   synthImage = wavesynth.mapImage;
