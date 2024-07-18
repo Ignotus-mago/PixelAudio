@@ -5,3 +5,5 @@ distribution
 .settings/org.eclipse.jdt.core.prefs
 .classpath
 .classpath
+examples/LoadAudioToImage/pixelAudio.png
+examples/LoadAudioToImage/pixelAudio_000.png
