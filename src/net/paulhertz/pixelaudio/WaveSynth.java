@@ -31,7 +31,7 @@ public class WaveSynth {
 	public String comments = "---";
 	
 	// ----- animation variables ----- //
-	/** increment in phase over the image pixels, typically TWO_PI / image size */
+	/** the increment in phase over the image pixels, typically TWO_PI / image size */
 	public float mapInc;
 	/** array of amplitudes associated with the WaveData operators */
 	public float[] weights;
