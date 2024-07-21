@@ -1400,7 +1400,7 @@ public class PixelAudioMapper {
 		comp[0] = (argb >> 16) & 0xFF; // Faster way of getting red(argb)
 		comp[1] = (argb >> 8) & 0xFF; // Faster way of getting green(argb)
 		comp[2] = argb & 0xFF; // Faster way of getting blue(argb)
-		comp[3] = argb >> 24; // alpha component
+		comp[3] = argb >> 24 & 0xFF; // alpha component
 		return comp;
 	}
 
