@@ -103,3 +103,14 @@ public int setAlpha(int argb, int alpha) {
   int[] c = rgbComponents(argb);
   return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
 }
+
+
+    /* get min and max
+    float min = 0;
+    float max = 0;
+    for (int i = 0; i < rgbSignal.length; i++) {         
+      if (audioSignal[i] > max) max = audioSignal[i];
+      if (audioSignal[i] < min) min = audioSignal[i];
+    }
+    println("--- min", min, " max ", max);
+    */
