@@ -53,8 +53,11 @@ int samplePos;
 int blendAlpha = 64;
 
 
-public void setup() {
+public void settings() {
   size(1024, 1024);            // width and height must be equal powers of 2 for the Hilbert curve
+}
+
+public void setup() {
   initMapper();
   initAudio();
   rando = new Random();

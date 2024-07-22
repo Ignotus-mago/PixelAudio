@@ -1423,6 +1423,11 @@ public class PixelAudioMapper {
 	public static final int applyAlpha(int rgb, int rgba) {
 		return (rgba >> 24) << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | (rgb & 0xFF);
 	}
+	
+	public static int setAlpha(int argb, int alpha) {
+		int[] c = rgbComponents(argb);
+		return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
+	}
 
 	/**
 	 * Creates a Processing ARGB color from r, g, b, and alpha channel values. Note the order
