@@ -1,31 +1,30 @@
 // using minim's Instrument interface
-
 class SamplerInstrument implements Instrument {
   Sampler sampler;
   ADSR adsr;
-  
+
   SamplerInstrument(Sampler sampler, ADSR adsr) {
     this.sampler = sampler;
     this.adsr = adsr;
     sampler.patch(adsr);
   }
-  
+
   public void play() {
     // Trigger the ADSR envelope by calling noteOn()
     // Duration of 0.0 means the note is sustained indefinitely
-    noteOn(0.0f); 
+    noteOn(0.0f);
   }
-  
+
   public void play(float duration) {
     // Trigger the ADSR envelope by calling noteOn()
     // Duration of 0.0 means the note is sustained indefinitely
-    // Duration should be in seconds 
+    // Duration should be in seconds
     // println("----->>> SamplerInstrument.play("+ duration +")");
-    noteOn(duration); 
+    noteOn(duration);
   }
-  
+
   @Override
-  public void noteOn(float duration) {
+    public void noteOn(float duration) {
     // Trigger the ADSR envelope and sampler
     adsr.noteOn();
     sampler.trigger();
@@ -34,19 +33,17 @@ class SamplerInstrument implements Instrument {
       // println("----->>> duration > 0");
       int durationMillis = (int) (duration * 1000);
       // schedule noteOff with an anonymous Timer and TimerTask
-      new java.util.Timer().schedule(
-        new java.util.TimerTask() {
-          public void run() {
-            noteOff();
-          }
-        },
-        durationMillis
-      );
+      new java.util.Timer().schedule(new java.util.TimerTask() {
+        public void run() {
+          noteOff();
+        }
+      }
+      , durationMillis);
     }
   }
-  
+
   @Override
-  public void noteOff() {
+    public void noteOff() {
     // println("----->>> noteOff event");
     adsr.unpatchAfterRelease(audioOut);
     adsr.noteOff();

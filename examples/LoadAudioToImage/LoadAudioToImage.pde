@@ -1,7 +1,9 @@
 import java.util.Random;
 import java.util.Arrays;
+import java.io.File;
 
 import net.paulhertz.pixelaudio.*;
+
 import ddf.minim.*;
 import ddf.minim.ugens.*;
 
@@ -12,7 +14,7 @@ PixelAudioMapper mapper;
 int mapSize;
 PImage mapImage;
 int[] colors;
-PixelAudioMapper.ChannelNames chan = PixelAudioMapper.ChannelNames.L;
+PixelAudioMapper.ChannelNames chan;
 
 /** Minim audio library */
 Minim minim;
@@ -25,20 +27,20 @@ int audioLength;
 
 // SampleInstrument setup
 float sampleScale = 2;
-int sampleBase = 10250; 
-int samplelen = int(sampleScale * sampleBase);
+int sampleBase = 10250;
+int samplelen = (int) (sampleScale * sampleBase);
 Sampler audioSampler;
 SamplerInstrument instrument;
 
 // ADSR and params
 ADSR adsr;
-float maxAmplitude = 0.9;        
-float attackTime   = 0.2;          
-float decayTime    = 0.125;           
-float sustainLevel = 0.5;        
-float releaseTime  = 0.2;    
+float maxAmplitude = 0.9f;
+float attackTime = 0.2f;
+float decayTime = 0.125f;
+float sustainLevel = 0.5f;
+float releaseTime = 0.2f;
 
-// audio file 
+// audio file
 File audioFile;
 String audioFilePath;
 String audioFileName;
@@ -52,44 +54,55 @@ int pixelPos;
 int samplePos;
 int blendAlpha = 64;
 
+int histoHigh = 240;
+int histoLow = 32;
+float gamma = 0.9;
+int[] gammaTable;
+
 
 public void settings() {
-  size(1024, 1024);            // width and height must be equal powers of 2 for the Hilbert curve
+  size(1024, 1024);
 }
 
 public void setup() {
-  initMapper();
-  initAudio();
+  initMapper();    // set up mapper and load mapImage with color wheel
+  initAudio();     // set up audio
   rando = new Random();
+  // load an audio file into the Brightness channel in the HSB color space
+  chan = PixelAudioMapper.ChannelNames.L;
+  String path = this.dataPath("");
+  File audioSource = new File(path +"/youthorchestra.wav");
+  // load the file into audio buffer and brightness channel of display image
+  fileSelected(audioSource);
 }
 
 public void initMapper() {
-  pixelaudio = new PixelAudio(this);               // load the PixelAudio library
-  hGen = new HilbertGen(width, height);            // create a Hilbert curve that fills our display
-  mapper = new PixelAudioMapper(hGen);             // initialize mapper with the HIlbert curve generator
-  mapSize = mapper.getSize();                      // size of mapper's various arrays and of mapImage
-  colors = getColors();                            // create an array of colors
-  mapImage = createImage(width, height, ARGB);      // an image to use with mapper
+  pixelaudio = new PixelAudio(this);       // load the PixelAudio library
+  hGen = new HilbertGen(width, height);    // create a Hilbert curve that fills our display
+  mapper = new PixelAudioMapper(hGen);     // initialize mapper with the HIlbert curve generator
+  mapSize = mapper.getSize();              // size of mapper's various arrays and of mapImage
+  colors = getColors();                    // create an array of colors
+  mapImage = createImage(width, height, ARGB); // an image to use with mapper
   mapImage.loadPixels();
-  mapper.plantPixels(colors, mapImage.pixels, 0, mapSize);    // load the colors to mapImage following the Hilbert curve (the "signal path" for hGen)
+  mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
   mapImage.updatePixels();
 }
 
 public void initAudio() {
   this.minim = new Minim(this);
   // use the getLineOut method of the Minim object to get an AudioOutput object
-  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate); 
+  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
   this.audioBuffer = new MultiChannelBuffer(1024, 1);
 }
 
 public int[] getColors() {
-  int[] colorWheel = new int[mapSize];              // an array for our colors
-  pushStyle();                                      // save styles
-  colorMode(HSB, colorWheel.length, 100, 100);      // pop over to the HSB color space and give hue a very wide range
+  int[] colorWheel = new int[mapSize];       // an array for our colors
+  pushStyle();                   // save styles
+  colorMode(HSB, colorWheel.length, 100, 100);   // pop over to the HSB color space and give hue a very wide range
   for (int i = 0; i < colorWheel.length; i++) {
-    colorWheel[i] = color(i, 66, 66);               // fill our array with colors of a gradually changing hue
+    colorWheel[i] = color(i, 40, 75);       // fill our array with colors, gradually changing hue
   }
-  popStyle();                                       // restore styles, including the default RGB color space
+  popStyle();                   // restore styles, including the default RGB color space
   return colorWheel;
 }
 
@@ -98,7 +111,7 @@ public void draw() {
 }
 
 public void keyPressed() {
-  switch(key) {
+  switch (key) {
   case 'o':
   case 'O':
     chan = PixelAudioMapper.ChannelNames.ALL;
@@ -124,12 +137,24 @@ public void keyPressed() {
     chan = PixelAudioMapper.ChannelNames.H;
     chooseFile();
     break;
+  case 'm':
+    mapImage.loadPixels();
+    int[] bounds = getHistoBounds(mapImage.pixels);
+    mapImage.pixels = stretch(mapImage.pixels, bounds[0], bounds[1]);
+    mapImage.updatePixels();
+    break;
+  case 't':
+    setGamma(gamma);
+    mapImage.loadPixels();
+    mapImage.pixels = adjustGamma(mapImage.pixels);
+    mapImage.updatePixels();
+    break;
   case 'w':
     writeImageToAudio();
     break;
   case 's':
     mapImage.save("pixelAudio.png");
-    println("--- saved image pixelAudio.png");
+    println("--- saved display image to pixelAudio.png");
     break;
   case '?':
     // showHelp();
@@ -142,13 +167,13 @@ public void keyPressed() {
 public void mousePressed() {
   pixelPos = mouseX + mouseY * width;
   samplePos = mapper.lookupSample(mouseX, mouseY);
-  int c = mapImage.get(mouseX, mouseY);
-  String str = PixelAudioMapper.colorString(c);
   // println("----- sample position for "+ mouseX +", "+ mouseY +" is "+ samplePos);
   int sampleLength = playSample(samplePos);
   if (sampleLength > 0) {
     hightlightSample(samplePos, sampleLength);
-    println("--- samplePos:", samplePos, "sampleLength:", sampleLength, "size:", width * height, "end:", samplePos + sampleLength +", "+ str);
+    // int c = mapImage.get(mouseX, mouseY);
+    // String str = PixelAudioMapper.colorString(c);
+    // println("--- samplePos:", samplePos, "sampleLength:", sampleLength, "size:", width * height, "end:", samplePos + sampleLength + ", " + str);
   }
 }
 
@@ -160,34 +185,35 @@ public void fileSelected(File selectedFile) {
   if (null != selectedFile) {
     String filePath = selectedFile.getAbsolutePath();
     String fileName = selectedFile.getName();
-    String fileTag = fileName.substring(fileName.lastIndexOf('.')+1);
+    String fileTag = fileName.substring(fileName.lastIndexOf('.') + 1);
     fileName = fileName.substring(0, fileName.lastIndexOf('.'));
-    if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif") || fileTag.equalsIgnoreCase("aiff")) {
+    if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif")
+      || fileTag.equalsIgnoreCase("aiff")) {
       audioFile = selectedFile;
       audioFilePath = filePath;
       audioFileName = fileName;
       audioFileTag = fileTag;
-      println("----- Selected file "+ fileName +"."+ fileTag +" at "+ filePath.substring(0, filePath.length() - fileName.length()));
+      println("----- Selected file " + fileName + "." + fileTag + " at "
+        + filePath.substring(0, filePath.length() - fileName.length()));
       loadAudioFile(audioFile);
-    } 
-    else {
+    } else {
       println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
     }
-  } 
-  else {
+  } else {
     println("----- No audio or image file was selected.");
   }
 }
 
 public void loadAudioFile(File audioFile) {
-  float sampleRate = minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), audioBuffer);      // read audio file into our MultiChannelBuffer
-  if (sampleRate > 0) {                                                    // sampleRate > 0 means we read audio from the file
-    this.audioSignal = audioBuffer.getChannel(0);                          // read an array of floats from the buffer
-    this.audioLength = audioSignal.length;                                 //
-    rgbSignal = new int[mapSize];                                          // create an array the size of mapImage
-    rgbSignal = mapper.pluckSamplesAsRGB(audioSignal, 0, mapSize);
+  // read audio file into our MultiChannelBuffer
+  float sampleRate = minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), audioBuffer);
+  if (sampleRate > 0) {                 // sampleRate > 0 means we read audio from the file
+    this.audioSignal = audioBuffer.getChannel(0);   // read an array of floats from the buffer
+    this.audioLength = audioSignal.length;
+    rgbSignal = new int[mapSize];           // create an array the size of mapImage
+    rgbSignal = mapper.pluckSamplesAsRGB(audioSignal, 0, mapSize);  // rgbSignal is now an array of rgb gray
     if (rgbSignal.length < mapSize) {
-      rgbSignal = Arrays.copyOf(rgbSignal, mapSize);                       // pad rgbSignal with 0's
+      rgbSignal = Arrays.copyOf(rgbSignal, mapSize); // pad rgbSignal with 0's if necessary
     }
     mapImage.loadPixels();
     mapper.plantPixels(rgbSignal, mapImage.pixels, 0, rgbSignal.length, chan);
@@ -196,34 +222,42 @@ public void loadAudioFile(File audioFile) {
 }
 
 public int playSample(int samplePos) {
-  if (audioFile == null) return 0;
-  audioSampler = new Sampler(audioBuffer, 44100, 8);         // create a Minim Sampler from the buffer with 44.1 sampling rate, for up to 8 simultaneous outputs
-  audioSampler.amplitude.setLastValue(0.9);                  // set amplitude for the Sampler
-  audioSampler.begin.setLastValue(samplePos);                // set the Sampler to begin playback at samplePos, which corresponds to the place the mouse was clicked         
-  int releaseDuration = int(releaseTime * sampleRate);       // do some calculation to include the release time. There may be better ways to do this.
-  float vary = (float)(gauss(this.sampleScale, this.sampleScale * 0.125));        // vary the duration of the signal using a statistical distribution function
+  if (audioFile == null)
+    return 0;
+  audioSampler = new Sampler(audioBuffer, 44100, 8); // create a Minim Sampler from the buffer with 44.1 sampling
+  // rate, for up to 8 simultaneous outputs
+  audioSampler.amplitude.setLastValue(0.9f); // set amplitude for the Sampler
+  audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos, which corresponds
+  // to the place the mouse was clicked
+  int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
+  // There may be better ways to do this.
+  float vary = (float) (gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal
+  // using a statistical distribution
+  // function
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = int(vary * this.sampleBase);                                    // calculate the duration of the sample
+  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
   if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos;                   // make sure we don't exceed the mapSize
-    println("----->>> sample length = "+ samplelen);
+    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
+    println("----->>> sample length = " + samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
-  int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1 : samplePos + durationPlusRelease;
-  println("----->>> end = "+ end);
+  int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1
+    : samplePos + durationPlusRelease;
+  // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
-  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
+  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level,
+  // and release time
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   this.instrument = new SamplerInstrument(audioSampler, adsr);
   // play command takes a duration in seconds
-  instrument.play(samplelen/float(sampleRate));
+  instrument.play(samplelen / (float) (sampleRate));
   // return the length of the sample
   return samplelen;
 }
 
 public void hightlightSample(int pos, int length) {
   shuffle(randColors);
-  int highColor = setAlpha(randColors[0], blendAlpha);
+  int highColor = PixelAudioMapper.setAlpha(randColors[0], blendAlpha);
   int[] signalPathPixelSequence = mapper.pluckPixels(mapImage.pixels, pos, samplelen);
   mapImage.loadPixels();
   for (int i = 0; i < length; i++) {
@@ -237,5 +271,6 @@ public void hightlightSample(int pos, int length) {
 public void writeImageToAudio() {
   println("----- writing image to signal ");
   mapImage.loadPixels();
+  rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, rgbSignal.length);
   mapper.plantSamples(rgbSignal, audioBuffer.getChannel(0), 0, mapSize, PixelAudioMapper.ChannelNames.ALL);
 }
