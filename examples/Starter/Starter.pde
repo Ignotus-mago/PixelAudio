@@ -13,7 +13,7 @@ public void setup() {
   mapper = new PixelAudioMapper(hGen);
   mapImage = createImage(width, height, RGB);
   mapImage.loadPixels();
-  mapper.plantPixels(getColors(), mapImage.pixels, 0, 0, mapper.getSize());
+  mapper.plantPixels(getColors(), mapImage.pixels, 0, mapper.getSize());
   mapImage.updatePixels();
 }
 

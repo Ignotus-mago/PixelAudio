@@ -111,6 +111,12 @@ public void keyPressed() {
     gen.setTransformType(AffineTransformType.ROT90);
     swapGen(gen);
     break;
+  case 'r':
+    wavesynth.setSampleRate(41500);
+    break;
+  case 'R':
+    wavesynth.setSampleRate(wavesynth.mapSize);
+    break;
   case 't':
     makeGammaTable(myGamma);
     break;

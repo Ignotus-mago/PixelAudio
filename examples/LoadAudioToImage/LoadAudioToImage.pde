@@ -56,7 +56,8 @@ int blendAlpha = 64;
 
 int histoHigh = 240;
 int histoLow = 32;
-float gamma = 0.9;
+float gammaUp = 0.9;
+float gammaDown = 1.2;
 int[] gammaTable;
 
 
@@ -143,8 +144,16 @@ public void keyPressed() {
     mapImage.pixels = stretch(mapImage.pixels, bounds[0], bounds[1]);
     mapImage.updatePixels();
     break;
-  case 't':
-    setGamma(gamma);
+  case '=':
+  case '+':
+    setGamma(gammaUp);
+    mapImage.loadPixels();
+    mapImage.pixels = adjustGamma(mapImage.pixels);
+    mapImage.updatePixels();
+    break;
+  case '-':
+  case '_':
+    setGamma(gammaDown);
     mapImage.loadPixels();
     mapImage.pixels = adjustGamma(mapImage.pixels);
     mapImage.updatePixels();
@@ -224,16 +233,21 @@ public void loadAudioFile(File audioFile) {
 public int playSample(int samplePos) {
   if (audioFile == null)
     return 0;
-  audioSampler = new Sampler(audioBuffer, 44100, 8); // create a Minim Sampler from the buffer with 44.1 sampling
-  // rate, for up to 8 simultaneous outputs
-  audioSampler.amplitude.setLastValue(0.9f); // set amplitude for the Sampler
-  audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos, which corresponds
-  // to the place the mouse was clicked
+  // create a new ddf.minim.ugens.Sampler from the buffer with 44.1 KHz sampling rate
+  // it seems I have to do this every time I want to play a sound, not sure why
+  // I can't reuse the Sampler once it's been created -- if I don't the audio 
+  // sounds wrong, as if the sampling rate had changed.
+  audioSampler = new Sampler(audioBuffer, 44100, 8); 
+  // ADSR 
+  adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  // println("--- creating sampler ---");
+  // set amplitude for the Sampler
+  audioSampler.amplitude.setLastValue(0.9f); 
+  // set the Sampler to begin playback at samplePos, which corresponds to the place the mouse was clicked
+  audioSampler.begin.setLastValue(samplePos); 
   int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
-  // There may be better ways to do this.
-  float vary = (float) (gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal
-  // using a statistical distribution
-  // function
+  // set amplitude for the Sampler using a statistical distribution
+  float vary = (float) (gauss(this.sampleScale, this.sampleScale * 0.125f)); 
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
   this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
   if (samplePos + samplelen >= mapSize) {
@@ -245,9 +259,6 @@ public int playSample(int samplePos) {
     : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
-  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level,
-  // and release time
-  adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   this.instrument = new SamplerInstrument(audioSampler, adsr);
   // play command takes a duration in seconds
   instrument.play(samplelen / (float) (sampleRate));
@@ -271,6 +282,8 @@ public void hightlightSample(int pos, int length) {
 public void writeImageToAudio() {
   println("----- writing image to signal ");
   mapImage.loadPixels();
+  // fetch pixels from mapImage in signal order, put them in rgbSignal
   rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, rgbSignal.length);
-  mapper.plantSamples(rgbSignal, audioBuffer.getChannel(0), 0, mapSize, PixelAudioMapper.ChannelNames.ALL);
+  // write the Brightness channel of rgbPixels, transcoded to audio range, to audioBuffer
+  mapper.plantSamples(rgbSignal, audioBuffer.getChannel(0), 0, mapSize, PixelAudioMapper.ChannelNames.L);
 }

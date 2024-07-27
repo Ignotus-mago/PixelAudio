@@ -136,7 +136,6 @@ public int[] stretch(int[] source, int low, int high) {
 }
 
 public void setGamma(float gamma) {
-  this.gamma = gamma;
   if (gamma != 1.0) {
     this.gammaTable = new int[256];
     for (int i = 0; i < gammaTable.length; i++) {
