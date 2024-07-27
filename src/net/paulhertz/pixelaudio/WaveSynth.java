@@ -4,20 +4,23 @@ import processing.core.PImage;
 import processing.core.PConstants;
 import java.util.ArrayList;
 
+/**
+ * Implements a combination of color organ and additive audio synth.
+ * Note that animation by shifting phase does not necessarily affect the audio: we only hear phase relations when they shift. 
+ */
 public class WaveSynth {
 	// WaveSynth objects
 	public PixelAudioMapper mapper;
 	public PImage mapImage;
 	public int[] colorSignal;
-	public float[] mapSignal;
+	public float[] audioSignal;
 	public ArrayList<WaveData>  waveDataList;
-	public int w;
-	public int h;
+	private int w;
+	private int h;
 	public int mapSize;
 	public int dataLength;
-
 	
-	// ------ WaveSYnth control variables ----- //
+	// ------ WaveSynth control variables ----- //
 	public float gain = 1.0f;
 	public float gamma = 1.0f;
 	public int[] gammaTable;
@@ -31,6 +34,14 @@ public class WaveSynth {
 	public String comments = "---";
 	
 	// ----- animation variables ----- //
+	/** The sampling frequency, the number of samples read in one second of sound.
+	 *  By default, for WaveSynth instances that are intended to be primarily visual,
+	 *  mapSize is the sampling frequency. This makes one period of a 1.0 Hz wave fill 
+	 *  the entire signal curve. OTOH, if we want the image to represent an audio signal
+	 *  that is also produced by additive synthesis, we should set samplingFrequency to
+	 *  a standard such as 41500 or 48000. 
+	 */
+	public int sampleRate;
 	/** the increment in phase over the image pixels, typically TWO_PI / image size */
 	public float mapInc;
 	/** array of amplitudes associated with the WaveData operators */
@@ -59,9 +70,10 @@ public class WaveSynth {
 		this.w = mapper.getWidth();
 		this.h = mapper.getHeight();
 		this.mapSize = w * h;
+		this.sampleRate = mapSize;
 		this.mapImage = PixelAudio.myParent.createImage(w, h, PConstants.RGB);
 		this.colorSignal = new int[mapSize];
-		this.mapSignal = new float[mapSize];
+		this.audioSignal = new float[mapSize];
 	}
 	
 	public void setWaveData(ArrayList<WaveData> wdList) {
@@ -76,6 +88,8 @@ public class WaveSynth {
 	
 	
 	// ------------- GETTERS AND SETTERS ------------- //
+	
+	// ------------- Values for JSON and GUI ------------- //
 
 	public ArrayList<WaveData> getWaveDataList() {
 		return waveDataList;
@@ -176,9 +190,29 @@ public class WaveSynth {
 	public void setVideoFilename(String videoFilename) {
 		this.videoFilename = videoFilename;
 	}
+	
 
+	// ------------- MAPPER AND ASSOCIATED PROPERTIES ------------- //
+	
 	public PixelAudioMapper getMapper() {
 		return mapper;
+	}
+	
+	public int getWidth() {
+		return this.w;
+	}
+	
+	public int getHeight() {
+		return this.h;
+	}
+	
+	public int getSampleRate() {
+		return this.sampleRate;
+	}
+	
+	public void setSampleRate(int newSampleRate) {
+		this.sampleRate = newSampleRate;
+		this.mapInc = PConstants.TWO_PI / this.sampleRate;
 	}
 	
 
@@ -200,6 +234,7 @@ public class WaveSynth {
 		// have to set this after we have a wave data list
 		myClone.setAnimSteps(this.animSteps);
 		myClone.setStep(this.step);
+		myClone.setSampleRate(sampleRate);
 		// println("----->>> CLONE \n" + this.toString() +"\n");
 		return myClone;
 	}
@@ -217,6 +252,7 @@ public class WaveSynth {
 		}
 		sb.append("comments: " + this.getComments() + "\n");
 		sb.append("video filename: " + this.getVideoFilename() + "\n");
+		sb.append("sampling frequency: " + this.getSampleRate() + "\n");
 		sb.append("WaveData list: ");
 		for (int i = 0; i < this.waveDataList.size(); i++) {
 			WaveData wd = this.waveDataList.get(i);
@@ -228,12 +264,14 @@ public class WaveSynth {
 	
 	// ------------- ANIMATION ------------- //
 	
+	// set up mapImage for editing, set mapInc
 	public void prepareAnimation() {
 		this.mapImage.loadPixels();
 		this.colorSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
-		this.mapInc = PConstants.TWO_PI / mapSize;
+		this.mapInc = PConstants.TWO_PI / this.sampleRate;
 	}
 	
+	// loop to render all the pixels in a frame
 	public void renderFrame(int frame) {
 		// load variables with prepareAnimation() at start of animation loop
 		if (frame == 0)
@@ -250,7 +288,7 @@ public class WaveSynth {
 		this.setStep(frame);
 	}
 	
-	
+	// render one pixel, return its RGB value
 	public int renderPixel(int frame, int pos) {
 		// pos += blockInc;
 		// if (pos % 65536 == 0) println("----->>> pos = "+ pos +",
@@ -307,6 +345,35 @@ public class WaveSynth {
 	}	
 	
 	
-	
+	public static int[] getHistoBounds(int[] source) {
+	    int min = 255;
+	    int max = 0;
+	    for (int i = 0; i < source.length; i++) {
+	      int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+	      for (int j = 0; j < comp.length; j++) {
+	        if (comp[j] > max) max = comp[j];
+	        if (comp[j] < min) min = comp[j];
+	      }
+	    }
+	    return new int[]{min, max};
+	}
+
+	// histogram stretch -- run getHistoBounds to determine low and high
+	public static int[] stretch(int[] source, int low, int high) {
+	  int[] out = new int[source.length];
+	  int r = 0, g = 0, b = 0;
+	  for (int i = 0; i < out.length; i++) {
+	    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+	    r = comp[0];
+	    g = comp[1];
+	    b = comp[2];
+	    r = (int) PixelAudio.constrain(PixelAudio.map(r, low, high, 0, 255), 0, 255);
+	    g = (int) PixelAudio.constrain(PixelAudio.map(g, low, high, 0, 255), 0, 255);
+	    b = (int) PixelAudio.constrain(PixelAudio.map(b, low, high, 0, 255), 0, 255);
+	    out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
+	  }
+	  return out;
+	}
+
 	
 }

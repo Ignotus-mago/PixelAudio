@@ -1308,7 +1308,7 @@ public class PixelAudioMapper {
 	 * Rotates an array of ints left by d values. Uses efficient "Three Rotation" algorithm.
 	 *
 	 * @param arr array of ints to rotate
-	 * @param d   number of elements to shift
+	 * @param d   number of elements to shift, positive for shift left, negative for shift right
 	 */
 	public static final void rotateLeft(int[] arr, int d) {
 		int len = arr.length;
@@ -1318,12 +1318,15 @@ public class PixelAudioMapper {
 		reverseArray(arr, d, len - 1);
 		reverseArray(arr, 0, len - 1);
 	}
+	public static final void rotateRight(int[] arr, int d) {
+		rotateLeft(arr, -d);
+	}
 
 	/**
 	 * Rotates an array of floats left by d values. Uses efficient "Three Rotation" algorithm.
 	 *
 	 * @param arr array of floats to rotate
-	 * @param d   number of elements to shift
+	 * @param d   number of elements to shift, positive for shift left, negative for shift right
 	 */
 	public static final void rotateLeft(float[] arr, int d) {
 		int len = arr.length;
@@ -1332,6 +1335,9 @@ public class PixelAudioMapper {
 		reverseArray(arr, 0, d - 1);
 		reverseArray(arr, d, len - 1);
 		reverseArray(arr, 0, len - 1);
+	}
+	public static final void rotateRight(float[] arr, int d) {
+		rotateLeft(arr, -d);
 	}
 
 	/**
