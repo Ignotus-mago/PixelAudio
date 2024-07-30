@@ -14,6 +14,9 @@ PImage synthImage;
 float myGamma = 1.0;
 int animSteps = 240;
 int step = 0;
+int start = 0;
+int timespan = 0;
+boolean isTrackTime = false;
 
 
 public void settings() {
@@ -71,10 +74,31 @@ public void swapGen(PixelMapGen gen) {
   // As it is, mapper only changed its variables, so the swap is really simple
 }
 
-public void draw() {
-  image(synthImage, 0, 0);
-  stepAnimation();
-}
+  public void draw() {
+    image(synthImage, 0, 0);
+    if (isTrackTime) {
+      trackTime();
+    }
+    stepAnimation();
+  }
+
+  public void trackTime() {
+    if (step == 0) {
+      start = millis();
+      println("----- timer started -----");
+    }
+    if (step % 24 == 0) {
+      println("-- step " + step);
+    }
+    if (step == animSteps - 1) {
+      timespan = (millis() - start);
+      int xms = timespan % 1000;
+      int secs = (timespan - xms) / 1000;
+      int xsecs = secs % 60;
+      int mins = secs / 60;
+      println("--->> elapsed time: " + mins + ":" + xsecs + ":" + xms);
+    }
+  }
 
 public void stepAnimation() {
   step += 1;
@@ -111,6 +135,12 @@ public void keyPressed() {
     gen.setTransformType(AffineTransformType.ROT90);
     swapGen(gen);
     break;
+  case 'e':
+    wavesynth.setSampleRate(wavesynth.mapSize/2);
+    break;
+  case 'E':
+    wavesynth.setSampleRate(wavesynth.mapSize/4);
+    break;
   case 'r':
     wavesynth.setSampleRate(41500);
     break;
@@ -138,6 +168,8 @@ public void showHelp() {
   println("press '2' to set gamma to 1.4.");
   println("press '3' to set gamma to 1.8.");
   println("press '4' to set gamma to 0.5.");
+  println("press 'r' to set sample rate to 41500");
+  println("press 'R' to set sample rate to image size (width * height)");
   println("press 't' to print the lookup table for current gamma to console.");
   println("press 'u' to change gamma calculation between table lookup and calculation.");
   println("press 'h' to show Help.");

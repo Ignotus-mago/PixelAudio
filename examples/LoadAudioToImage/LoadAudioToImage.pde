@@ -28,7 +28,7 @@ int audioLength;
 // SampleInstrument setup
 float sampleScale = 2;
 int sampleBase = 10250;
-int samplelen = (int) (sampleScale * sampleBase);
+int sampleLength = (int) (sampleScale * sampleBase);
 Sampler audioSampler;
 SamplerInstrument instrument;
 
@@ -237,7 +237,7 @@ public int playSample(int samplePos) {
   // it seems I have to do this every time I want to play a sound, not sure why
   // I can't reuse the Sampler once it's been created -- if I don't the audio 
   // sounds wrong, as if the sampling rate had changed.
-  audioSampler = new Sampler(audioBuffer, 44100, 8); 
+  audioSampler = new Sampler(audioBuffer, sampleRate, 8); 
   // ADSR 
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   // println("--- creating sampler ---");
@@ -249,27 +249,27 @@ public int playSample(int samplePos) {
   // set amplitude for the Sampler using a statistical distribution
   float vary = (float) (gauss(this.sampleScale, this.sampleScale * 0.125f)); 
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
-  if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
-    println("----->>> sample length = " + samplelen);
+  this.sampleLength = (int) (vary * this.sampleBase); // calculate the duration of the sample
+  if (samplePos + sampleLength >= mapSize) {
+    sampleLength = mapSize - samplePos; // make sure we don't exceed the mapSize
+    println("----->>> sample length = " + sampleLength);
   }
-  int durationPlusRelease = this.samplelen + releaseDuration;
+  int durationPlusRelease = this.sampleLength + releaseDuration;
   int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1
     : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
   this.instrument = new SamplerInstrument(audioSampler, adsr);
   // play command takes a duration in seconds
-  instrument.play(samplelen / (float) (sampleRate));
+  instrument.play(sampleLength / (float) (sampleRate));
   // return the length of the sample
-  return samplelen;
+  return sampleLength;
 }
 
 public void hightlightSample(int pos, int length) {
   shuffle(randColors);
   int highColor = PixelAudioMapper.setAlpha(randColors[0], blendAlpha);
-  int[] signalPathPixelSequence = mapper.pluckPixels(mapImage.pixels, pos, samplelen);
+  int[] signalPathPixelSequence = mapper.pluckPixels(mapImage.pixels, pos, sampleLength);
   mapImage.loadPixels();
   for (int i = 0; i < length; i++) {
     int newColor = blendColor(mapImage.pixels[pos + i], highColor, BLEND);
