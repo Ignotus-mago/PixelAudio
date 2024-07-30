@@ -30,6 +30,7 @@ public class WaveSynth {
 	public int histoHigh = 254;
 	public int animSteps = 720;
 	public int step = 0;
+	public int stop = 0;
 	/** comments for JSON file */
 	public String comments = "---";
 	
@@ -157,6 +158,14 @@ public class WaveSynth {
 				wd.phaseInc = (wd.phaseCycles * PConstants.TWO_PI) / this.animSteps;
 			}
 		}
+	}
+
+	public int getStop() {
+		return stop;
+	}
+
+	public void setStop(int stop) {
+		this.stop = stop;
 	}
 
 	public int getStep() {
@@ -304,8 +313,9 @@ public class WaveSynth {
 			// Instead of incrementing phase at each step, we subtract (frame * phase increment)
 			// from the initial phase. (instead of adding, we subtract so that animation data files 
 			// give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.)
-			float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff)
-					* wscale + wd.dc;
+			// float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff) * wscale + wd.dc;
+			// we now let the WaveData object calculate the signal: this is much more flexible and barely affects the time
+			float val = (wd.waveValue(frame, pos, freqShift, mapInc) + woff) * wscale + wd.dc;
 			weights[j] = val * wd.amp * this.gain;
 		}
 		return this.weightedColor(waveColors, weights);

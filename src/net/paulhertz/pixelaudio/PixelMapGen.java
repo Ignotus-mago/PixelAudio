@@ -181,7 +181,7 @@ public abstract class PixelMapGen {
 
 	public void loadIndexMaps() {
 		int p = 0;										// pixelMap index, for the bitmap coordinates along the signal path
-		int i = 0;										// index through the list of coordinate pairs
+		int i = 0;										// index through the list of coordinate pairs (which we expect to be in signal order)
 		this.pixelMap = new int[this.size];				// initialize this.pixelMap
 		for (int[] loc : this.coords) {
 			p = loc[0] + loc[1] * w;

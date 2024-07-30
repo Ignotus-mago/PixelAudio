@@ -158,6 +158,11 @@ public class WaveData {
 			this.isMuted = true;
 	}
 	
+	// TODO develop this idea: a WaveData does its own calculation to produce a signal value.
+	public float waveValue(int frame, int pos, float freqShift, float mapInc) {
+		return (float) Math.sin(this.phaseTwoPi - frame * this.phaseInc + this.freq * freqShift * pos * mapInc);
+	}
+	
 	public static ArrayList<WaveData> waveDataListCopy(ArrayList<WaveData> wdList) {
 		ArrayList<WaveData> wdListCopy = new ArrayList<WaveData>();
 		for (WaveData wd : wdList) {
