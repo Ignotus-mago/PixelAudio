@@ -61,7 +61,7 @@ public void loadImagePixels(int[] pixArray, PImage img) {
     throw(new IllegalArgumentException("pixArray length and img.pixels.length must both equal mapper.getSize()."));
   }
   img.loadPixels();
-  mapper.plantPixels(pixArray, img.pixels, 0, 0, mapper.getSize());
+  mapper.plantPixels(pixArray, img.pixels, 0, mapper.getSize());
   img.updatePixels();
 }
 

@@ -12,6 +12,7 @@ public void loadWaveData() {
 public void fileSelectedOpen(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
+    isAnimating = oldIsAnimating;
     return;
   }
   currentDataFile = selection;
@@ -20,6 +21,7 @@ public void fileSelectedOpen(File selection) {
   json = loadJSONObject(currentFileName);
   setWaveSynthFromJSON(json, wavesynth);
   surface.setTitle(currentFileName);
+  isAnimating = oldIsAnimating;
 }
 
 public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
@@ -49,6 +51,7 @@ public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
     float f = waveElement.getFloat("freq");
     float a = waveElement.getFloat("amp");
     float p = waveElement.getFloat("phase");
+    // phase increment is calculated by WaveSynth, we don't need to set it
     // float pInc = waveElement.getFloat("phaseInc");
     float dc = 0.0f;
     if (!waveElement.isNull("dc")) {
@@ -69,7 +72,7 @@ public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
 }
 
 /**
- * Outputs fields from current waveAnimal and it waveDataList
+ * Prints fields from a WaveSynth and its waveDataList
  */
 public void printWaveData(WaveSynth synth) {
   java.nio.file.Path path = java.nio.file.Paths.get(currentFileName);
@@ -147,8 +150,7 @@ public void fileSelectedWrite(File selection) {
     stateData.setString("comments", "---");
   else
     stateData.setString("comments", synth.comments);
-  // String videoName = selection.getName(); //<>// //<>// //<>// //<>// //<>//
-  // //<>//
+  // String videoName = selection.getName(); 
   String videoName = synth.videoFilename;
   if (videoName == null || videoName.equals("")) {
     videoName = selection.getName();
