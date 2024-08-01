@@ -64,8 +64,7 @@ public class HilbertGen extends PixelMapGen {
 	
 	@Override
 	public int[] generate() {
-		this.coords= this.generateCoordinates();
-		// bitmap transforms of coordinates
+		this.coords = this.generateCoordinates();
 		return this.setMapsFromCoords(this.coords);
 	}
 	

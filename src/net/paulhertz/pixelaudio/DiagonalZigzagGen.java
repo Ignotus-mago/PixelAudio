@@ -29,7 +29,7 @@ public class DiagonalZigzagGen extends PixelMapGen {
 	}
 
 	/**
-	 * Always returns true for width and height greater than 2.
+	 * Always returns true for width and height greater than 1.
 	 */
 	@Override
 	public boolean validate(int width, int height) {
