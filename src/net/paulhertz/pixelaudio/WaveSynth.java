@@ -14,6 +14,7 @@ public class WaveSynth {
 	public PImage mapImage;
 	public int[] colorSignal;
 	public float[] audioSignal;
+	boolean isRenderAudio = false;
 	public ArrayList<WaveData>  waveDataList;
 	private int w;
 	private int h;
@@ -281,7 +282,8 @@ public class WaveSynth {
 	}
 	
 	// loop to render all the pixels in a frame
-	public void renderFrame(int frame) {
+	// We want it to complete a frame before any changes to the WaveSynth, so it's synchronized.
+	public synchronized void renderFrame(int frame) {
 		// load variables with prepareAnimation() at start of animation loop
 		if (frame == 0)
 			prepareAnimation();
@@ -293,6 +295,9 @@ public class WaveSynth {
 		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, mapSize);
 		// mapImage.pixels = this.colorSignal;
 		this.mapImage.updatePixels();
+		if (isRenderAudio) {
+			audioSignal = normalize(audioSignal);
+		}
 		// set our internal step variable, just a tracker for now
 		this.setStep(frame);
 	}
@@ -317,6 +322,13 @@ public class WaveSynth {
 			// we now let the WaveData object calculate the signal: this is much more flexible and barely affects the time
 			float val = (wd.waveValue(frame, pos, freqShift, mapInc) + woff) * wscale + wd.dc;
 			weights[j] = val * wd.amp * this.gain;
+		}
+		if (isRenderAudio) {
+			float weightSum = 0.0f;
+			for (int i = 0; i < weights.length; i++) {
+				weightSum += weights[i];
+			}
+			this.audioSignal[pos] = weightSum;
 		}
 		return this.weightedColor(waveColors, weights);
 	}
@@ -354,7 +366,37 @@ public class WaveSynth {
 		return PixelAudioMapper.composeColor((int) r, (int) g, (int) b, 255);
 	}	
 	
+	public float[] renderAudio(int frame) {
+		for (int pos = 0; pos < this.mapSize; pos++) {
+			for (int j = 0; j < dataLength; j++) {
+				WaveData wd = waveDataList.get(j);
+				if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED)
+					continue;
+				float val = (wd.waveValue(frame, pos, 1.0f, mapInc) + woff) * wscale + wd.dc;
+				weights[j] = val * wd.amp * this.gain;
+			}
+			float weightSum = 0.0f;
+			for (int i = 0; i < weights.length; i++) {
+				weightSum += weights[i];
+			}
+			this.audioSignal[pos] = weightSum;
+		}
+		return WaveSynth.normalize(audioSignal);
+	}	
 	
+	public static float[] normalize(float[] sig) {
+		float min = 0;
+		float max = 0;
+		for (int i = 0; i < sig.length; i++) {
+			if (sig[i] < min) min = sig[i];
+			if (sig[i] > max) max = sig [i];
+		}
+		for (int i = 0; i < sig.length; i++) {
+			sig[i] = PixelAudio.map(sig[i], min, max, -1.0f, 1.0f);
+		}
+		return sig;
+	}
+
 	public static int[] getHistoBounds(int[] source) {
 	    int min = 255;
 	    int max = 0;
