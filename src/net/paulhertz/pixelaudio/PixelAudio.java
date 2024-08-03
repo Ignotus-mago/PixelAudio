@@ -2,6 +2,7 @@ package net.paulhertz.pixelaudio;
 
 
 import processing.core.PApplet;
+import java.util.Random;
 
 /**
  *
@@ -17,6 +18,8 @@ public class PixelAudio {
 	static PApplet myParent;
 	/** a variable to set */
 	int myVariable = 0;
+	/** Java Random */
+	public static Random rando;
 	/** SHould be set by Ant script (?), but that is not happening */
 	public final static String VERSION = "##library.prettyVersion##";
 
@@ -124,8 +127,25 @@ public class PixelAudio {
 	    return a + f * (b - a);
 	}
 
+	/**
+	 * Returns a Gaussian variable using a Java library call to
+	 * <code>Random.nextGaussian</code>.
+	 * 
+	 * @param mean
+	 * @param variance
+	 * @return a Gaussian-distributed random number with mean <code>mean</code> and
+	 *         variance <code>variance</code>
+	 */
+	public static double gauss(double mean, double variance) {
+		return rando().nextGaussian() * Math.sqrt(variance) + mean;
+	}
 
-
+	public static Random rando() {
+		if (rando == null) {
+			rando = new Random();
+		}
+		return rando;
+	}
 
 }
 
