@@ -168,6 +168,8 @@ public void showHelp() {
   println("press '2' to set gamma to 1.4.");
   println("press '3' to set gamma to 1.8.");
   println("press '4' to set gamma to 0.5.");
+  println("press 'e' to set sample rate to (width * height)/2");
+  println("press 'e' to set sample rate to (width * height)/4");
   println("press 'r' to set sample rate to 41500");
   println("press 'R' to set sample rate to image size (width * height)");
   println("press 't' to print the lookup table for current gamma to console.");

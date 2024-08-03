@@ -20,6 +20,8 @@
  * spatial location and the AffineTransformType applied to each gen in the genlist, 
  * you can often create a continuous signal path through the final image. This application
  * demonstrates how to do that with HilbertGens. 
+ *
+ * Press ' ' to toggle animation that shifts pixels along the signal path.
  * 
  */
 
@@ -38,7 +40,7 @@ PixelAudioMapper mapper;         // PixelAudioMapper to handle mapping of pixels
 
 PImage mapImage;                 // A PImage to display
 int[] colors;                    // an array of color values for pixels
-int shift = 1024;                // amount to displace pixels for animation
+int shift = 512;                // amount to displace pixels for animation
 boolean isAnimating = false;     // well, are we animating or not?
 
 
@@ -102,7 +104,7 @@ public void draw() {
 
 public void keyPressed() {
   switch(key) {
-  case 'a':
+  case ' ':
     isAnimating = !isAnimating;
     break;
   case 'h':
