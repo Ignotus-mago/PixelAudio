@@ -7,3 +7,4 @@ distribution
 .classpath
 examples/LoadAudioToImage/pixelAudio.png
 examples/LoadAudioToImage/pixelAudio_000.png
+examples/SaveAudioImage/wavesynth.wav
