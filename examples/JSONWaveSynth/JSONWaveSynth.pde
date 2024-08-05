@@ -43,6 +43,7 @@ public void settings() {
 }
 
 public void setup() {
+  println("--->> data path: "+ dataPath(""));
   pixelaudio = new PixelAudio(this);
   hGen = new HilbertGen(1024, 1024);
   mGen = new MooreGen(1024, 1024);
