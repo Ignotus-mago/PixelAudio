@@ -14,6 +14,7 @@ public class WaveSynth {
 	public PImage mapImage;
 	public int[] colorSignal;
 	public float[] audioSignal;
+	public float[] renderSignal;
 	boolean isRenderAudio = false;
 	public ArrayList<WaveData>  waveDataList;
 	private int w;
@@ -248,7 +249,7 @@ public class WaveSynth {
 		// println("----->>> CLONE \n" + this.toString() +"\n");
 		return myClone;
 	}
-	
+		
 
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
@@ -272,8 +273,19 @@ public class WaveSynth {
 	}
 	
 	
-	// ------------- ANIMATION ------------- //
+	// ------------- ANIMATION AND AUDIO ------------- //
 	
+	public boolean isRenderAudio() {
+		return isRenderAudio;
+	}
+
+	public void setRenderAudio(boolean isRenderAudio) {
+		if (isRenderAudio) {
+			this.renderSignal = new float[audioSignal.length];
+		}
+		this.isRenderAudio = isRenderAudio;
+	}
+
 	// set up mapImage for editing, set mapInc
 	public void prepareAnimation() {
 		this.mapImage.loadPixels();
@@ -296,7 +308,7 @@ public class WaveSynth {
 		// mapImage.pixels = this.colorSignal;
 		this.mapImage.updatePixels();
 		if (isRenderAudio) {
-			audioSignal = normalize(audioSignal);
+			audioSignal = renderSignal;
 		}
 		// set our internal step variable, just a tracker for now
 		this.setStep(frame);
@@ -328,7 +340,7 @@ public class WaveSynth {
 			for (int i = 0; i < weights.length; i++) {
 				weightSum += weights[i];
 			}
-			this.audioSignal[pos] = weightSum;
+			this.renderSignal[pos] = weightSum;
 		}
 		return this.weightedColor(waveColors, weights);
 	}
@@ -367,6 +379,10 @@ public class WaveSynth {
 	}	
 	
 	public float[] renderAudio(int frame) {
+		return this.renderAudio(frame, 0.95f);
+	}
+	
+	public float[] renderAudioRaw(int frame) {
 		for (int pos = 0; pos < this.mapSize; pos++) {
 			for (int j = 0; j < dataLength; j++) {
 				WaveData wd = waveDataList.get(j);
@@ -381,10 +397,29 @@ public class WaveSynth {
 			}
 			this.audioSignal[pos] = weightSum;
 		}
-		return WaveSynth.normalize(audioSignal);
-	}	
+		return audioSignal;
+	}
 	
-	public static float[] normalize(float[] sig) {
+	public float[] renderAudio(int frame, float limit) {
+		for (int pos = 0; pos < this.mapSize; pos++) {
+			for (int j = 0; j < dataLength; j++) {
+				WaveData wd = waveDataList.get(j);
+				if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED)
+					continue;
+				float val = (wd.waveValue(frame, pos, 1.0f, mapInc) + woff) * wscale + wd.dc;
+				weights[j] = val * wd.amp * this.gain;
+			}
+			float weightSum = 0.0f;
+			for (int i = 0; i < weights.length; i++) {
+				weightSum += weights[i];
+			}
+			this.audioSignal[pos] = weightSum;
+		}
+		return WaveSynth.normalize(audioSignal, limit);
+	}
+
+
+	public static float[] normalize(float[] sig, float limit) {
 		float min = 0;
 		float max = 0;
 		for (int i = 0; i < sig.length; i++) {
@@ -392,9 +427,13 @@ public class WaveSynth {
 			if (sig[i] > max) max = sig [i];
 		}
 		for (int i = 0; i < sig.length; i++) {
-			sig[i] = PixelAudio.map(sig[i], min, max, -1.0f, 1.0f);
+			sig[i] = PixelAudio.map(sig[i], min, max, -limit, limit);
 		}
 		return sig;
+	}
+
+	public static float[] normalize(float[] sig) {
+		return normalize(sig, 1.0f);
 	}
 
 	public static int[] getHistoBounds(int[] source) {
