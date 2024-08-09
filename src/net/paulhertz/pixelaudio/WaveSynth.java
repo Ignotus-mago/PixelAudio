@@ -4,9 +4,11 @@ import processing.core.PImage;
 import processing.core.PConstants;
 import java.util.ArrayList;
 
+import javax.annotation.processing.ProcessingEnvironment;
+
 /**
  * Implements a combination of color organ and additive audio synth.
- * Note that animation by shifting phase does not necessarily affect the audio: we only hear phase relations when they shift. 
+ * Animates pixels using phase shifting of audio generators in <code>waveDataList</code>. 
  */
 public class WaveSynth {
 	// WaveSynth objects
@@ -17,6 +19,8 @@ public class WaveSynth {
 	public float[] renderSignal;
 	boolean isRenderAudio = false;
 	public ArrayList<WaveData>  waveDataList;
+	private ArrayList<WaveData>  editModeWDList;
+	boolean isEditMode = false;
 	private int w;
 	private int h;
 	public int mapSize;
@@ -33,16 +37,18 @@ public class WaveSynth {
 	public int animSteps = 720;
 	public int step = 0;
 	public int stop = 0;
+	public float noisiness = 0.0f;
 	/** comments for JSON file */
 	public String comments = "---";
 	
 	// ----- animation variables ----- //
-	/** The sampling frequency, the number of samples read in one second of sound.
+	/** 
+	 *  The sampling frequency, the number of samples read in one second of sound.
 	 *  By default, for WaveSynth instances that are intended to be primarily visual,
 	 *  mapSize is the sampling frequency. This makes one period of a 1.0 Hz wave fill 
 	 *  the entire signal curve. OTOH, if we want the image to represent an audio signal
 	 *  that is also produced by additive synthesis, we should set samplingFrequency to
-	 *  a standard such as 41500 or 48000. 
+	 *  a standard such as 44100 or 48000. 
 	 */
 	public int sampleRate;
 	/** the increment in phase over the image pixels, typically TWO_PI / image size */
@@ -147,6 +153,14 @@ public class WaveSynth {
 
 	public void setHistoHigh(int histoHigh) {
 		this.histoHigh = histoHigh;
+	}
+
+	public float getNoiseiness() {
+		return noisiness;
+	}
+
+	public void setNoiseiness(float noiseiness) {
+		this.noisiness = noiseiness;
 	}
 
 	public int getAnimSteps() {
@@ -286,11 +300,28 @@ public class WaveSynth {
 		this.isRenderAudio = isRenderAudio;
 	}
 
+	public boolean isEditMode() {
+		return isEditMode;
+	}
+
+	public void setEditMode(boolean isEditMode) {
+		this.isEditMode = isEditMode;
+	}
+
 	// set up mapImage for editing, set mapInc
 	public void prepareAnimation() {
 		this.mapImage.loadPixels();
 		this.colorSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
 		this.mapInc = PConstants.TWO_PI / this.sampleRate;
+		this.editModeWDList = new ArrayList<WaveData>();
+		for (int j = 0; j < dataLength; j++) {
+			WaveData wd = waveDataList.get(j);
+			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED) {
+				setEditMode(true);
+				continue;
+			}
+			editModeWDList.add(wd);
+		}
 	}
 	
 	// loop to render all the pixels in a frame
@@ -300,8 +331,17 @@ public class WaveSynth {
 		if (frame == 0)
 			prepareAnimation();
 		// loop through the image/signal, calculating a value for each pixel/sample
-		for (int i = 0; i < this.mapSize; i++) {
-			this.colorSignal[i] = this.renderPixel(frame, i);
+		// we only check once per frame for editMode, gaining some performance speed
+		// over the previous check in renderPixel
+		if (!isEditMode) {
+			for (int i = 0; i < this.mapSize; i++) {
+				this.colorSignal[i] = this.renderPixel(frame, i, this.waveDataList);
+			}
+		}
+		else {
+			for (int i = 0; i < this.mapSize; i++) {
+				this.colorSignal[i] = this.renderPixel(frame, i, this.editModeWDList);
+			}
 		}
 		// write scanSignal's pixel color values to scanImage pixels
 		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, mapSize);
@@ -315,16 +355,13 @@ public class WaveSynth {
 	}
 	
 	// render one pixel, return its RGB value
-	public int renderPixel(int frame, int pos) {
-		// pos += blockInc;
-		// if (pos % 65536 == 0) println("----->>> pos = "+ pos +",
-		// blockX, blockY "+ blockX, blockY );
-		float freqShift = 1.0f;
-		// float freqShift = isRandomFreqShift ? noiseAt(scanIndex % width, floor(scanIndex / width)) : 1;
+	public int renderPixel(int frame, int pos, ArrayList<WaveData> wdList) {
+		// float freqShift = 1.0f;
+		// float freqShift = noisiness != 0.0F ? noiseAt(pos % mapper.width, (int) Math.floor(pos / mapper.width)) : 1;
 		for (int j = 0; j < dataLength; j++) {
 			WaveData wd = waveDataList.get(j);
-			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED)
-				continue;
+			// TODO this logic has a significant performance hit. Move it out of here.
+			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED) continue;
 			// ::::: sample amplitude = sin(initial phase + phase shift + frequency * i * (TWO_PI/n)) :::::
 			// wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / mapSize; 
 			// Instead of incrementing phase at each step, we subtract (frame * phase increment)
@@ -332,7 +369,7 @@ public class WaveSynth {
 			// give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.)
 			// float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff) * wscale + wd.dc;
 			// we now let the WaveData object calculate the signal: this is much more flexible and barely affects the time
-			float val = (wd.waveValue(frame, pos, freqShift, mapInc) + woff) * wscale + wd.dc;
+			float val = (wd.waveValue(frame, pos, mapInc) + woff) * wscale + wd.dc;
 			weights[j] = val * wd.amp * this.gain;
 		}
 		if (isRenderAudio) {
@@ -417,6 +454,19 @@ public class WaveSynth {
 		}
 		return WaveSynth.normalize(audioSignal, limit);
 	}
+	
+	public float noiseAt(int x, int y) {
+		float scale = 0.001f;
+		float detail = 0.4f;
+		PixelAudio.myParent.noiseDetail(6, detail);
+		float px = (x) * scale;
+		float py = (y) * scale;
+		float g = PixelAudio.myParent.noise(px, py); 
+		g = PixelAudio.map(g, 0.0f, 1.0f, -0.5f, 0.5f) * noisiness;
+		return 1.0f + g;
+	}
+	
+	// ------------- STATIC METHODS ------------- //
 
 
 	public static float[] normalize(float[] sig, float limit) {
