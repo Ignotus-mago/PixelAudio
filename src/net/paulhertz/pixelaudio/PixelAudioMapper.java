@@ -513,9 +513,9 @@ public class PixelAudioMapper {
 	}
 
 	public int[] lookupCoordinate(int signalPos) {
-		signalPos = this.signalToImageLUT[signalPos];
-		int x =  signalPos % this.width;
-		int y = signalPos / this.width;
+		int imagePos = this.signalToImageLUT[signalPos];
+		int x =  imagePos % this.width;
+		int y = imagePos / this.width;
 		return new int[] {x, y};
 	}
 
