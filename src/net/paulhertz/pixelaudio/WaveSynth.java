@@ -306,6 +306,7 @@ public class WaveSynth {
 
 	public void setEditMode(boolean isEditMode) {
 		this.isEditMode = isEditMode;
+		prepareAnimation();
 	}
 
 	// set up mapImage for editing, set mapInc
