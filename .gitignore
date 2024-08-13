@@ -9,3 +9,4 @@ examples/LoadAudioToImage/pixelAudio.png
 examples/LoadAudioToImage/pixelAudio_000.png
 examples/SaveAudioImage/wavesynth.wav
 examples/GenerateAndSaveAudio/wavesynth.png
+examples/LoadAudioToImage/pixelAudio.wav
