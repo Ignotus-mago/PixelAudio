@@ -143,7 +143,6 @@ public void fileSelectedWrite(File selection) {
     waveElement.setFloat("phaseInc", wd.phaseInc);
     waveElement.setFloat("cycles", wd.phaseCycles);
     waveElement.setFloat("dc", wd.dc);
-    // BADSR settings
     int[] rgb = PixelAudioMapper.rgbComponents(wd.waveColor);
     JSONObject rgbColor = new JSONObject();
     rgbColor.setInt("r", rgb[0]);

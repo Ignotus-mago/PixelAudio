@@ -21,10 +21,10 @@ public void saveToAudio() {
  * Saves to a 32-bit floating point format that has higher resolution than 16-bit integer PCM.
  * The format can't be opened by Processing but can be opened by audio applications.
  *
- * @param samples      an array of floats in the audio range (-1.0f, 1.0f)
- * @param sampleRate    the sample rate for the file
- * @param fileName      name of the file
- * @throws IOException    an Exception you'll need to catch to call this method (see keyPressed entry for 's')
+ * @param samples        an array of floats in the audio range (-1.0f, 1.0f)
+ * @param sampleRate     the sample rate for the file
+ * @param fileName       name of the file
+ * @throws IOException   an Exception you'll need to catch to call this method (see saveToAudio(), above)
  */
 public static void saveAudioTo32BitPCMFile(float[] samples, float sampleRate, String fileName) throws IOException {
   // convert samples to 32-bit PCM float
@@ -49,11 +49,11 @@ public static void saveAudioTo32BitPCMFile(float[] samples, float sampleRate, St
 /**
  * Saves audio data to 16-bit integer PCM format, which Processing can also open.
  *
- * @param samples      an array of floats in the audio range (-1.0f, 1.0f)
+ * @param samples       an array of floats in the audio range (-1.0f, 1.0f)
  * @param sampleRate    audio sample rate for the file
  * @param fileName      name of the file to save to
- * @throws IOException    an Exception you'll need to catch to call this method (see keyPressed entry for 's')
- * @throws UnsupportedAudioFileException    another Exception (see keyPressed entry for 's')
+ * @throws IOException  an Exception you'll need to catch to call this method (see saveToAudio(), above)
+ * @throws UnsupportedAudioFileException    another possible Exception
  */
 public static void saveAudioToFile(float[] samples, float sampleRate, String fileName)
   throws IOException, UnsupportedAudioFileException {

@@ -10,13 +10,15 @@ import ddf.minim.ugens.*;
 import net.paulhertz.pixelaudio.*;
 
 /**
- * GenerateAndSaveAudio builds on BigWaveSynth, which shows how you can load a
- * WaveSynth into the pixel array of a MultiGen. SaveAudioImage uses a
- * WaveSynth but adds some useful features: 1. you can play the image as
- * audio, and 2. you can save the audio to a WAVE file.
+ * GenerateAndSaveAudio builds on BigWaveSynth, which shows how you can load
+ * WaveSynth pixel data into the pixel array of a MultiGen. GenerateAndSaveAudio 
+ * adds some useful features: 1. you can play the image as audio, and
+ * 2. you can save the audio to a WAVE file.
  *
- * This example also allows you to load JSON files to reconfigure the WaveSynth.
- * Initially, we call initWaveDataList() to create a WaveData array with eight operators.
+ * This example also allows you to load JSON files to reconfigure the WaveSynth. 
+ * Initially, we call buildWaveDataList() to create a WaveData array with eight operators. 
+ * This is passed to a WaveSynth which is further configured by initWaveSynth(). 
+ * To load JSON data, press the 'o' key and go to the data folder of this sketch.
  *
  * Note that the sampleRate value influences the appearance of the image, the duration
  * of audio samples and the way data is written to an audio file. See the comments
@@ -109,20 +111,20 @@ public void setup() {
   // and will play audio and save to file -- but it's not a standard sample rate and
   // though Processing may open files saved with non-standard sampling rates, it
   // usually shifts the frequency according the sampleRate you have set.
-  sampleRate = 44100;            // = genWidth * genHeight; // another value for sampleRate
-  sampleBase = sampleRate / 4;
-  initAudio();
-  genList = new ArrayList<PixelMapGen>();
+  sampleRate = 44100;                 // = genWidth * genHeight; // another value for sampleRate
+  sampleBase = sampleRate / 4;        // a quarter of a second
+  initAudio();                        // set up audio output and an audio buffer
+  genList = new ArrayList<PixelMapGen>();     // prepare data for the MultiGen
   offsetList = new ArrayList<int[]>();
   initMultiGenLists();
   // See the MultiGenDemo example for details on how MultiGen works
   multigen = new MultiGen(rows * genWidth, columns * genHeight, offsetList, genList);
-  mapper = new PixelAudioMapper(multigen);
-  wdList = buildWaveDataList();
-  wavesynth = new WaveSynth(mapper, wdList);
-  initWaveSynth(wavesynth);
-  synthImage = wavesynth.mapImage;
-  mapSize = mapper.getSize();
+  mapper = new PixelAudioMapper(multigen);    // initialize a PixelAudioMapper
+  wdList = buildWaveDataList();               // generate a WaveData list for the WaveSynth
+  wavesynth = new WaveSynth(mapper, wdList);  // initialize a WaveSynth object
+  initWaveSynth(wavesynth);                   // fill in some parameters of the WaveSynth
+  synthImage = wavesynth.mapImage;            // point synthImage at the WaveSynth's PImage field
+  mapSize = mapper.getSize();                 // size of the image, and of various other entities
   showHelp();
 }
 
@@ -341,18 +343,23 @@ public void mousePressed() {
 }
 
 public int playSample(int samplePos) {
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling
-  // rate, for up to 8 simultaneous outputs
-  audioSampler.amplitude.setLastValue(0.9f);   // set amplitude for the Sampler
-  audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos, which corresponds
+  // create a Minim Sampler from the buffer
+  audioSampler = new Sampler(audioBuffer, sampleRate, 8); 
+  // set amplitude for the Sampler
+  audioSampler.amplitude.setLastValue(0.9f);   
+  // set the Sampler to begin playback at samplePos, which corresponds
   // to the place the mouse was clicked
-  int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
-  // There may be better ways to do this.
-  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal
+  audioSampler.begin.setLastValue(samplePos); 
+  // do some calculation to include the release time. There may be better ways to do this.
+  int releaseDuration = (int) (releaseTime * sampleRate); 
+  // vary the duration of the signal
+  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); 
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
+  // calculate the duration of the sample
+  this.samplelen = (int) (vary * this.sampleBase); 
+  // make sure we don't exceed the mapSize
   if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
+    samplelen = mapSize - samplePos; 
     println("----->>> sample length = " + samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
