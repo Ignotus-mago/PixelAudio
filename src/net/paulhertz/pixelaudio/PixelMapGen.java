@@ -170,6 +170,7 @@ public abstract class PixelMapGen {
 			transformedCoords.add(newXY);
 		}
 		this.coords = transformedCoords;
+		// some rotations and reflections swap width and height
 		if (type == AffineTransformType.ROT90 || type == AffineTransformType.ROT90CCW
 				|| type == AffineTransformType.FLIPX90
 				|| type == AffineTransformType.FLIPX90CCW) {
@@ -184,7 +185,7 @@ public abstract class PixelMapGen {
 		int i = 0;										// index through the list of coordinate pairs (which we expect to be in signal order)
 		this.pixelMap = new int[this.size];				// initialize this.pixelMap
 		for (int[] loc : this.coords) {
-			p = loc[0] + loc[1] * w;
+			p = loc[0] + loc[1] * w;					// fill in pixelMap values using coordinate pairs, which are in signal order
 			this.pixelMap[i++] = p;
 		}
 		this.sampleMap = new int[this.size];            // initialize this.sampleMap
