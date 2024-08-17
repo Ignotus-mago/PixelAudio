@@ -65,6 +65,7 @@ public PixelMapGen importGenDataJSON(JSONObject json) {
   JSONArray map = (json.isNull("pixelMap")) ? null : json.getJSONArray("pixelMap");
   if (map != null && w != 0 && h != 0) {
     BuildFromPathGen myGen = new BuildFromPathGen(w, h);
+    // BuildFromPathGen myGen = new BuildFromPathGen(w, h, AffineTransformType.ROT90);
     int[] pixelMap = map.toIntArray();
     myGen.setPixelMap(pixelMap);
     myGen.generate();

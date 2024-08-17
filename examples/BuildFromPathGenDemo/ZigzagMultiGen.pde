@@ -1,19 +1,22 @@
-public void build8x8ZZMultiGenList(int w, int h) {
-  if (!validate(w, h)) return;
-  if ((w % 8) % 2 == 1) {
-    // w modulo 8 is an odd number
-    
-  }
-  else if ((h % 8) % 2 == 1) {
-    // h modulo 8 is an odd number
-    
-  }
-  else {
-    // w modulo 8 and h modulo 8 are both even numbers
-    
-  }
-}
+public class ZigzagMultiGen extends PixelMapGen {
+  public final static String description = "A PixelMapGen made of multiple zigzag parts.";
 
+  public ZigzagMultiGen(int width, int height, AffineTransformType type) {
+    super(width, height, type);
+    // TODO Auto-generated constructor stub
+  }
+
+  public ZigzagMultiGen(int width, int height) {
+    super(width, height);
+    // TODO Auto-generated constructor stub
+  }
+
+  @Override
+  public String describe() {
+    return ZigzagMultiGen.description;
+  }
+
+  @Override
 public boolean validate(int w, int h) {
   if(h < 8 || w < 8) {
     println("MultiZigzagGen width and height must be > 8.");
@@ -24,4 +27,29 @@ public boolean validate(int w, int h) {
     return false;
   }
   return true;
+}
+
+  @Override
+  public int[] generate() {
+    if (this.pixelMap == null && this.coords == null) {
+      System.out.println("BuildFromPathGen: You need to call setPixelMap(int[] newPixelMap) or "
+                   + "setCoords(ArrayList<int[]> newCoords) before calling generate().");  
+      return null;
+    }
+    if (this.pixelMap != null && this.coords == null) {
+      this.coords = new ArrayList<int[]>(pixelMap.length);
+      for (int i = 0; i < pixelMap.length; i++) {
+        int pos = pixelMap[i];
+        int[] xy = new int[] {pos % this.w, pos / this.w};
+        coords.add(xy);
+      }
+    }
+    this.loadIndexMaps();
+    return this.pixelMap;
+  }
+
+  public void setPixelMap(int[] newPixelMap) {
+    this.pixelMap = newPixelMap;
+  }
+
 }
