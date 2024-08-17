@@ -3,6 +3,22 @@ package net.paulhertz.pixelaudio;
 import java.util.ArrayList;
 
 /**
+ * A PixelMapGen that loads data from an external pixelMap, such as might be saved in a JSON file.
+ * When you instantiate a BuildFromPathGen, set the pixelMap field before you call generate().  
+ * 
+ * <pre>
+ *	BuildFromPathGen myGen = new BuildFromPathGen(w, h);
+ *	myGen.setPixelMap(newPixelMap);
+ *	myGen.generate();
+ * </pre>
+ * 
+ * The int[] array that you supply to setPixelMap must have length = w * h and contain the
+ * ordinal numbers from 0..(w * h - 1) in any order. Its values are the index numbers in
+ * a w * h bitmap in signal path order. BuildFromPathGen makes it easy to create arbitrary
+ * signal paths that do not depend on numerical calculations. 
+ * 
+ * @example BuildFromPathGenDemo
+ * 
  * 
  */
 public class BuildFromPathGen extends PixelMapGen {
@@ -44,11 +60,20 @@ public class BuildFromPathGen extends PixelMapGen {
 				int[] xy = new int[] { pos % this.w, pos / this.w };
 				coords.add(xy);
 			}
+			if (this.transformType != AffineTransformType.NADA) transformCoords(coords, this.transformType);
 		}
 		this.loadIndexMaps();
 		return this.pixelMap;
 	}
 
+	/**
+	 * Sets the value of the pixelMap field. PixelMap corresponds to signalToImageLUT in a PixelAudioMapper, 
+	 * an int[] array where the value at each index is the unique index of a pixel in a bitmap. 
+	 * The array that you supply to setPixelMap must have length = w * h and contain the ordinal numbers 
+	 * from 0..(w * h - 1) in any order. 
+	 * 
+	 * @param newPixelMap
+	 */
 	public void setPixelMap(int[] newPixelMap) {
 		this.pixelMap = newPixelMap;
 	}

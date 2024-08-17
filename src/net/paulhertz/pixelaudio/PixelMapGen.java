@@ -159,7 +159,7 @@ public abstract class PixelMapGen {
 	public int[] setMapsFromCoords(ArrayList<int[]> coordinates) {
 		if (this.transformType != AffineTransformType.NADA) transformCoords(coordinates, this.transformType);
 		loadIndexMaps();
-		return this.pixelMap;							// return the pixelMap value, which can be ignored
+		return this.pixelMap;	// return the pixelMap value, which can be ignored
 	}
 
 	public void transformCoords(ArrayList<int[]> coordinates, AffineTransformType type) {
@@ -222,28 +222,46 @@ public abstract class PixelMapGen {
 	}
 
 	/**
-	 * @return	pixelMap value created by the generate() method.
+	 * @return	pixelMap array, which steps through the signal 
+	 *          and returns indexes to each pixel in the corresponding bitmap
 	 */
 	public int[] getPixelMap() {
 		return this.pixelMap;
 	}
 
+	/**
+	 * @return	a copy of the pixelMap array
+	 */
 	public int[] getPixelMapCopy() {
 		return Arrays.copyOf(pixelMap, size);
 	}
 
+	/**
+	 * @return	the sampleMap array, which steps through the bitmap 
+	 *          and returns indexes to each sample in the corresponding signal
+	 */
 	public int[] getSampleMap() {
 		return this.sampleMap;
 	}
 
+	/**
+	 * @return	a copy of the sampleMap
+	 */
 	public int[] getSampleMapCopy() {
 		return Arrays.copyOf(sampleMap, size);
 	}
 
+	/**
+	 * @return	<code>this.coords</code>, the array of coordinate pairs that mark a path 
+	 *          (the "signal path") through every pixel in a bitmap. 
+	 */
 	public ArrayList<int[]> getCoordinates() {
 		return this.coords;
 	}
 
+	/**
+	 * @return	a copy of <code>this.coords</code>
+	 */
 	public ArrayList<int[]> getCoordinatesCopy() {
 		ArrayList<int[]> coordsCopy = new ArrayList<>(size);
 		for (int[] coord: this.coords) {
@@ -252,10 +270,19 @@ public abstract class PixelMapGen {
 		return coordsCopy;
 	}
 	
+	/**
+	 * @return	the AffineTransformType associated with this PixelMapGen
+	 */
 	public AffineTransformType getTransformType() {
 		return transformType;
 	}
 
+	/**
+	 * Sets the AffineTransformType associated with this PixelMapGen and 
+	 * transforms its coordinates and associated sampleMap and pixelMap fields. 
+	 * 
+	 * @param transformType		an AffineTransformType 
+	 */
 	public void setTransformType(AffineTransformType transformType) {
 		this.transformType = transformType;
 		this.transformCoords(this.coords, this.transformType);
