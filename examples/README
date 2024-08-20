@@ -1,1 +1,15 @@
-add examples for your Library here.
+As of August 20, we have the following examples:
+
+AudioCapture 
+BigWaveSynth 
+BuildFromPathGenDemo 
+GenerateAndSaveAudio 
+JSONWaveSynth 
+LoadAudioToImage 
+LoadImageToAudio 
+LookupTables 
+MultiGenDemo 
+QuickAnimation  
+SimpleWaveSynth 
+Starter 
+TransformPimage
