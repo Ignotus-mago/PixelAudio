@@ -5,6 +5,10 @@ import processing.core.PGraphics;
 import processing.core.PImage;
 
 /**
+ * @deprecated
+ * 
+ * THIS CLASS IS PROBABLY NOT GOING TO BE INCLUDED IN THE PixelAudio LIBRARY. 
+ * USE BitmapTransform INSTEAD. 
  *
  * <p>Provides static methods for rotating and reflecting Processing images of type
  * <code>PImage</code> using a <code>PGraphics</code> instance. The
