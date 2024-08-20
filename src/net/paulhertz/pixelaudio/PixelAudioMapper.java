@@ -1651,17 +1651,17 @@ public class PixelAudioMapper {
 	}
 
 	public static int applyRed(int rgbSource, int rgb) {
-		int r = PixelAudioMapper.rgbComponents(rgb)[0];								// get red component
+		int r = PixelAudioMapper.rgbComponents(rgbSource)[0];						// get red component
 		return (255 << 24 | r << 16 | ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF);		// apply to red channel
 	}
 
 	public static int applyGreen(int rgbSource, int rgb) {
-		int g = PixelAudioMapper.rgbComponents(rgb)[1];				                // get green component
+		int g = PixelAudioMapper.rgbComponents(rgbSource)[1];				                // get green component
 		return (255 << 24 | ((rgb >> 16) & 0xFF) << 16 | g << 8 | rgb & 0xFF);		// apply to green channel
 	}
 
 	public static int applyBlue(int rgbSource, int rgb) {
-		int b = PixelAudioMapper.rgbComponents(rgb)[2];						        // get blue component
+		int b = PixelAudioMapper.rgbComponents(rgbSource)[2];						        // get blue component
 		return (255 << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | b & 0xFF);	// apply to blue channel
 	}
 
