@@ -1,3 +1,4 @@
+
 /**
  * LoadImageToAudio shows how to load an image and turn it into an audio file
  * that can be played by clicking on the image. You can also load an image file
@@ -20,12 +21,13 @@
  * Press 'r' to load an image or audio file to the red color channel.
  * Press 'g' to load an image or audio file to the green color channel.
  * Press 'b' to load an image or audio file to the blue color channel.
- * Press 'l' to load an image or audio file to the HSB brightness channel.
  * Press 'h' to load an image or audio file to the HSB hue channel.
+ * Press 'v' to load an image or audio file to the HSB saturation (vibrance) channel.
+ * Press 'l' to load an image or audio file to the HSB brightness (lightness) channel.
  * Press 'O' to reload the most recent audio or image file.
  * Press 'm' to apply a contrast enhancement (histogram stretch) to the image.
- * Press '=' or '+' to make the image brighter (gamma adjustement).
- * Press '-' or '_' to make the image darker (gamma adjustement).
+ * Press '=' or '+' to make the image brighter
+ * Press '-' or '_' to make the image darker.
  * Press 's' to save to an audio file.
  * Press 'S' to save to an image file.
  * Press 'f' to show frameRate in the console.
@@ -46,7 +48,6 @@ import ddf.minim.ugens.*;
 
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
-import net.paulhertz.testprocessing.TimeArrayTest.TimedLocation;
 
 // PixelAudio vars and objects
 PixelAudio pixelaudio;     // our shiny new library
@@ -125,7 +126,6 @@ public void settings() {
 }
 
 public void setup() {
-  frameRate(30);
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
   // sampleRate affects image display and audio sample calculation.
@@ -246,15 +246,19 @@ public void keyPressed() {
     chan = PixelAudioMapper.ChannelNames.B;
     chooseFile();
     break;
-  case 'l':
-    chan = PixelAudioMapper.ChannelNames.L;
-    chooseFile();
-    break;
-  case 'h':
-    chan = PixelAudioMapper.ChannelNames.H;
-    chooseFile();
-    break;
-  case 'O':
+    case 'h':
+      chan = PixelAudioMapper.ChannelNames.H;
+      chooseFile();
+      break;
+    case 'v':
+      chan = PixelAudioMapper.ChannelNames.S;
+      chooseFile();
+      break;
+    case 'l':
+      chan = PixelAudioMapper.ChannelNames.L;
+      chooseFile();
+      break;
+    case 'O':
     if (audioFile == null && imageFile == null) {
       chooseFile();
     } else {
