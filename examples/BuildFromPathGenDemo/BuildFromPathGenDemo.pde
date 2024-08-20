@@ -1,5 +1,5 @@
 /**
- * AssembleFromPathGenDemo shows how to read and write data from a PixelMapGen in JSON format.
+ * BuildFromPathGenDemo shows how to read and write data from a PixelMapGen in JSON format.
  *
  * We use a MultiGen to get things rolling. See the MultiGenDemo example for more information.
  * A MultiGen is constructed of two or more PixelMapGens that are merged into a single gen.
