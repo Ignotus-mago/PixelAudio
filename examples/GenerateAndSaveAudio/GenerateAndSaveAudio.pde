@@ -1,5 +1,32 @@
+/**
+ * GenerateAndSaveAudio builds on BigWaveSynth, which shows how you can load
+ * WaveSynth pixel data into the pixel array of a MultiGen. GenerateAndSaveAudio 
+ * adds some useful features: 1. you can play the image as audio, and
+ * 2. you can save the audio to a WAVE file.
+ * 
+ * This example also allows you to load JSON files to reconfigure the WaveSynth. 
+ * Initially, we call buildWaveDataList() to create a WaveData array with eight operators. 
+ * This is passed to a WaveSynth which is further configured by initWaveSynth(). 
+ * To load JSON data, press the 'o' key and go to the data folder of this sketch.
+ * 
+ * Note that the sampleRate value influences the appearance of the image, the duration
+ * of audio samples and the way data is written to an audio file. See the comments
+ * in setup() for details. 
+ * 
+ * 
+ * Press the spacebar to start and stop animation. 
+ * Press 'o' key to open a JSON file
+ * Press 'O' to reload the file, for example after changing it in a text editor. 
+ * Press the 'j' or 'J' key to save the current configuration to a JSON file. 
+ * Press 's' to save wavesynth audio to a .wav audio file.
+ * Press 'i' to save the display immage as "wavesynth.png" to the sketch folder.
+ * Press 'f' to check the frame rate.
+ * Press 't' to trigger the audio (for testing some audio weirdness).
+ * Press 'h' to print key commands to the console.
+ * 
+ */
+
 import java.io.*;
-import java.util.ArrayList;
 import javax.sound.sampled.*;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -9,71 +36,44 @@ import ddf.minim.*;
 import ddf.minim.ugens.*;
 import net.paulhertz.pixelaudio.*;
 
-/**
- * GenerateAndSaveAudio builds on BigWaveSynth, which shows how you can load
- * WaveSynth pixel data into the pixel array of a MultiGen. GenerateAndSaveAudio 
- * adds some useful features: 1. you can play the image as audio, and
- * 2. you can save the audio to a WAVE file.
- *
- * This example also allows you to load JSON files to reconfigure the WaveSynth. 
- * Initially, we call buildWaveDataList() to create a WaveData array with eight operators. 
- * This is passed to a WaveSynth which is further configured by initWaveSynth(). 
- * To load JSON data, press the 'o' key and go to the data folder of this sketch.
- *
- * Note that the sampleRate value influences the appearance of the image, the duration
- * of audio samples and the way data is written to an audio file. See the comments
- * in setup() for details.
- *
- *
- * Press the spacebar to start and stop animation.
- * Press 'o' key to open a JSON file
- * Press 'O' to reload the file, for example after changing it in a text editor.
- * Press the 'j' or 'J' key to save the current configuration to a JSON file.
- * Press 's' to save wavesynth audio to a .wav audio file.
- * Press 'i' to save the display immage as "wavesynth.png" to the sketch folder.
- * Press 'f' to check the frame rate.
- * Press 't' to trigger the audio (for testing some audio weirdness).
- * Press 'h' to print key commands to the console.
- *
- */
-PixelAudio pixelaudio;             // our shiny new library
-HilbertGen hGen;                   // a PixelMapGen to draw Hilbert curves
-MultiGen multigen;                 // a PixelMapGen that handles multiple gens
-ArrayList<PixelMapGen> genList;    // list of PixelMapGens that create an image using mapper
-ArrayList<int[]> offsetList;       // list of x,y coordinates for placing gens from genList
+PixelAudio pixelaudio;        // our shiny new library
+HilbertGen hGen;              // a PixelMapGen to draw Hilbert curves
+MultiGen multigen;            // a PixelMapGen that handles multiple gens
+ArrayList<PixelMapGen> genList;  // list of PixelMapGens that create an image using mapper
+ArrayList<int[]> offsetList;  // list of x,y coordinates for placing gens from genList
 int rows = 3;
 int columns = 2;
-int genWidth = 512;                // width of PixelMapGen objects, for hGen must be a power of 2
-int genHeight = 512;               // height of PixelMapGen objects, for hGen must be equal to width
-PixelAudioMapper mapper;           // instance of a class for reading, writing, and transcoding audio and image data
-int mapSize;                       // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
-ArrayList<WaveData> wdList;        // a list of audio "operators" that drive a WaveSynth
-WaveSynth wavesynth;               // a sort of additive audio synthesis color organ that also produces sound
-PImage synthImage;                 // local variable that points to wavesynth's PImage instance variable
+int genWidth = 512;           // width of PixelMapGen objects, for hGen must be a power of 2
+int genHeight = 512;          // height of PixelMapGen objects, for hGen must be equal to width
+PixelAudioMapper mapper;      // instance of a class for reading, writing, and transcoding audio and image data
+int mapSize;          // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
+ArrayList<WaveData> wdList;   // a list of audio "operators" that drive a WaveSynth
+WaveSynth wavesynth;          // a sort of additive audio synthesis color organ that also produces sound
+PImage synthImage;            // local variable that points to wavesynth's PImage instance variable
 // WaveSynth variables
-float myGamma = 1.0f;              // a non-linear brightness adjustment
-int animSteps = 240;               // number of steps in the animation
-int animStop = animSteps;          // The step at which the animation should stop (not used here)
-int step = 0;                      // the current step in the animation
-String comments;                   // a JSON field that provides information about the WaveSynth effects it produces
+float myGamma = 1.0f;         // a non-linear brightness adjustment
+int animSteps = 240;          // number of steps in the animation
+int animStop = animSteps;     // The step at which the animation should stop (not used here)
+int step = 0;                 // the current step in the animation
+String comments;              // a JSON field that provides information about the WaveSynth effects it produces
 
 /** Minim audio library */
-Minim minim;                       // library that handles audio
-AudioOutput audioOut;              // line out to sound hardware
-MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
-boolean isBufferStale = false;     // after loading JSON data to wavesynth, we need to reset the audio buffer
-int sampleRate = 41500;            // a critical value, see the setup method
-float[] audioSignal;               // the audio signal as an array
-int[] rgbSignal;                   // the colors in the display image, in the order the signal path visits them
+Minim minim;                  // library that handles audio
+AudioOutput audioOut;         // line out to sound hardware
+MultiChannelBuffer audioBuffer;  // data structure to hold audio samples
+boolean isBufferStale = false;  // after loading JSON data to wavesynth, we need to reset the audio buffer
+int sampleRate = 41500;       // a critical value, see the setup method
+float[] audioSignal;          // the audio signal as an array
+int[] rgbSignal;              // the colors in the display image, in the order the signal path visits them
 int audioLength;
 // SampleInstrument setup
 float sampleScale = 4;
 int sampleBase = sampleRate/4;
 int samplelen = (int) (sampleScale * sampleBase);
-Sampler audioSampler;              // minim class for sampled sound
-SamplerInstrument instrument;      // local class to wrap audioSampler
+Sampler audioSampler;         // minim class for sampled sound
+SamplerInstrument instrument; // local class to wrap audioSampler
 // ADSR and params
-ADSR adsr;                         // good old attack, decay, sustain, release
+ADSR adsr;                    // good old attack, decay, sustain, release
 float maxAmplitude = 0.9f;
 float attackTime = 0.2f;
 float decayTime = 0.125f;
@@ -86,12 +86,15 @@ File currentDataFile;
 String currentFileName;
 JSONObject json;
 // animation
-boolean isAnimating = true;        // animation status
-boolean oldIsAnimating;            // keep old animation status if we suspend animation
-boolean isLooping = true;          // looping sample (our instrument ignores this
+boolean isAnimating = true;   // animation status
+boolean oldIsAnimating;       // keep old animation status if we suspend animation
+boolean isLooping = true;     // looping sample (our instrument ignores this
 // interaction
-int samplePos;                     // position of a mouse click along the audio path, index into the audio array
-Timer hiTimer;                     // a timer for highlighting mouse click position
+int sampleX;
+int sampleY;
+int samplePos;                // position of a mouse click along the signal path, index into the audio array
+ArrayList<TimedLocation> timeLocsArray;
+int count = 0;
 
 
 public void settings() {
@@ -111,25 +114,26 @@ public void setup() {
   // and will play audio and save to file -- but it's not a standard sample rate and
   // though Processing may open files saved with non-standard sampling rates, it
   // usually shifts the frequency according the sampleRate you have set.
-  sampleRate = 44100;                 // = genWidth * genHeight; // another value for sampleRate
+  sampleRate = 44100;             // = genWidth * genHeight; // another value for sampleRate
   sampleBase = sampleRate / 4;        // a quarter of a second
-  initAudio();                        // set up audio output and an audio buffer
+  initAudio();                // set up audio output and an audio buffer
   genList = new ArrayList<PixelMapGen>();     // prepare data for the MultiGen
   offsetList = new ArrayList<int[]>();
   initMultiGenLists();
   // See the MultiGenDemo example for details on how MultiGen works
   multigen = new MultiGen(rows * genWidth, columns * genHeight, offsetList, genList);
-  mapper = new PixelAudioMapper(multigen);    // initialize a PixelAudioMapper
-  wdList = buildWaveDataList();               // generate a WaveData list for the WaveSynth
+  mapper = new PixelAudioMapper(multigen);  // initialize a PixelAudioMapper
+  wdList = buildWaveDataList();        // generate a WaveData list for the WaveSynth
   wavesynth = new WaveSynth(mapper, wdList);  // initialize a WaveSynth object
-  initWaveSynth(wavesynth);                   // fill in some parameters of the WaveSynth
-  synthImage = wavesynth.mapImage;            // point synthImage at the WaveSynth's PImage field
-  mapSize = mapper.getSize();                 // size of the image, and of various other entities
+  initWaveSynth(wavesynth);          // fill in some parameters of the WaveSynth
+  synthImage = wavesynth.mapImage;      // point synthImage at the WaveSynth's PImage field
+  mapSize = mapper.getSize();          // size of the image, and of various other entities
+  timeLocsArray = new ArrayList<TimedLocation>();     // initialize mouse event tracking array
   showHelp();
 }
 
 public void initAudio() {
-  // we use the getLineOut method of the Minim object to get an AudioOutput object
+  // use the getLineOut method of the Minim object to get an AudioOutput object
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
   this.audioBuffer = new MultiChannelBuffer(1024, 1);
 }
@@ -164,7 +168,7 @@ public ArrayList<WaveData> buildWaveDataList() {
   ArrayList<WaveData> list = new ArrayList<WaveData>();
   // funda is the fundamental of a musical tone that is somewhat like a trumpet
   // in its frequency spectrum. Vary it to see how the image and sound change.
-  float funda = 128.0f;
+  float funda = 64.0f;
   float frequency = funda;
   float amplitude = 0.55f;
   float phase = 0.766f;
@@ -247,12 +251,31 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
 public void draw() {
   image(synthImage, 0, 0, width, height);
   if (isAnimating) stepAnimation();
+  runTimeArray();
 }
 
 public void stepAnimation() {
   step += 1;
   step %= animSteps;
   wavesynth.renderFrame(step);
+}
+
+public void runTimeArray() {
+  int currentTime = millis();
+  timeLocsArray.forEach(tl -> {
+    tl.setStale(tl.stopTime() < currentTime);
+    if (!tl.isStale()) {
+      drawCircle(tl.getX(), tl.getY());
+    }
+  }
+  );
+  timeLocsArray.removeIf(TimedLocation::isStale);
+}
+
+public void drawCircle(int x, int y) {
+  fill(color(233, 220, 199, 128));
+  noStroke();
+  circle(x, y, 60);
 }
 
 public void keyPressed() {
@@ -286,7 +309,6 @@ public void keyPressed() {
     break;
   case 'i':
     synthImage.save("wavesynth.png");
-    println("Saved image to wavesynth.png.");
     break;
   case 'f':
     println("--->> frame rate: "+ frameRate);
@@ -306,15 +328,15 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println("Press SPACEBAR to start and stop animation.");
-  println("Press 'o' key to open a JSON file.");
-  println("Press 'O' to reload the file, for example after changing it in a text editor.");
-  println("Press the 'j' or 'J' key to save the current configuration to a JSON file. ");
-  println("Press 's' to save wavesynth audio to a .wav audio file.");
-  println("Press 'i' to save the display immage as \"wavesynth.png\" to the sketch folder.");
-  println("Press 'f' to check the frame rate.");
-  println("Press 't' to trigger the audio (for testing some audio weirdness).");
-  println("Press 'h' to print key commands to the console.");
+  println("  * Press the spacebar to start and stop animation. ");
+  println("  * Press 'o' key to open a JSON file.");
+  println("  * Press 'O' to reload the file, for example after changing it in a text editor. ");
+  println("  * Press the 'j' or 'J' key to save the current configuration to a JSON file. ");
+  println("  * Press 's' to save wavesynth audio to a .wav audio file.");
+  println("  * Press 'i' to save the display immage as \"wavesynth.png\" to the sketch folder.");
+  println("  * Press 'f' to check the frame rate.");
+  println("  * Press 't' to trigger the audio (for testing some audio weirdness).");
+  println("  * Press 'h' to print key commands to the console.");
 }
 
 /**
@@ -330,36 +352,29 @@ public void renderSignal() {
 }
 
 public void mousePressed() {
-  samplePos = mapper.lookupSample(mouseX, mouseY);
+  sampleX = mouseX;
+  sampleY = mouseY;
+  samplePos = mapper.lookupSample(sampleX, sampleY);
   if (audioSignal == null || isBufferStale) {
     renderSignal();
     isBufferStale = false;
   }
   playSample(samplePos);
-  if (samplelen > 0) {
-    if (hiTimer != null) hiTimer.cancel();
-    highlightSample(samplePos, samplelen);
-  }
 }
 
 public int playSample(int samplePos) {
-  // create a Minim Sampler from the buffer
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8); 
-  // set amplitude for the Sampler
-  audioSampler.amplitude.setLastValue(0.9f);   
-  // set the Sampler to begin playback at samplePos, which corresponds
+  audioSampler = new Sampler(audioBuffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling
+  // rate, for up to 8 simultaneous outputs
+  audioSampler.amplitude.setLastValue(0.9f);   // set amplitude for the Sampler
+  audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos, which corresponds
   // to the place the mouse was clicked
-  audioSampler.begin.setLastValue(samplePos); 
-  // do some calculation to include the release time. There may be better ways to do this.
-  int releaseDuration = (int) (releaseTime * sampleRate); 
-  // vary the duration of the signal
-  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); 
+  int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
+  // There may be better ways to do this.
+  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  // calculate the duration of the sample
-  this.samplelen = (int) (vary * this.sampleBase); 
-  // make sure we don't exceed the mapSize
+  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
   if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos; 
+    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
     println("----->>> sample length = " + samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
@@ -371,31 +386,9 @@ public int playSample(int samplePos) {
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   this.instrument = new SamplerInstrument(audioSampler, adsr);
   // play command takes a duration in seconds
-  instrument.play(samplelen / (float) (sampleRate));
+  float duration = samplelen / (float) (sampleRate);
+  instrument.play(duration);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, (int) (duration * 1000) + millis()));
   // return the length of the sample
   return samplelen;
-}
-
-public void highlightSample(int pos, int len) {
-  int[] xy = mapper.lookupCoordinate(pos);
-  int stop = millis() + 1000 * len / sampleRate;
-  hiTimer = new Timer();
-  hiTimer.schedule(
-    new TimerTask() {
-    public void run() {
-      drawCircle(xy, stop);
-    }
-  }
-  , 32, 60
-    );
-}
-
-public void drawCircle(int[] xy, int stop) {
-  fill(color(233, 220, 199, 128));
-  noStroke();
-  circle(xy[0], xy[1], 60);
-  if (millis() > stop) {
-    if (hiTimer != null)
-      hiTimer.cancel();
-  }
 }

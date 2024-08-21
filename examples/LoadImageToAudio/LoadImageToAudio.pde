@@ -1,21 +1,20 @@
-
 /**
  * LoadImageToAudio shows how to load an image and turn it into an audio file
  * that can be played by clicking on the image. You can also load an image file
  * and turn it into an audio signal. It will probably be noisy, both because it's
  * an image and because its resolution is only 8 bits. When you load an audio, it
- * will exist both as a floating point audio signal and as an image. When you 
- * click in the image, you will be playing a sample from the signal. You can write 
- * the image to the audio signal ('w' key command). 
- * 
- * An audio signal or image can be loaded to various channels of the image: Red, 
- * Green, Blue or all channels in the RGB color space or Hue or Brightness in the 
- * HSB color space (We ignore Saturation for now). 
- * 
+ * will exist both as a floating point audio signal and as an image. When you
+ * click in the image, you will be playing a sample from the signal. You can write
+ * the image to the audio signal ('w' key command).
+ *
+ * An audio signal or image can be loaded to various channels of the image: Red,
+ * Green, Blue or all channels in the RGB color space or Hue or Brightness in the
+ * HSB color space (We ignore Saturation for now).
+ *
  * You can enhance image contrast by stretching its histogram ('m' key).
  * You can make the image brighter ('=' and '+' keys) or darker ('-' or '_' key)
- * using a gamma function, a non-linear adjustment. 
- * 
+ * using a gamma function, a non-linear adjustment.
+ *
  * Press ' ' to toggle animation.
  * Press 'o' to load an image or audio file to all color channels.
  * Press 'r' to load an image or audio file to the red color channel.
@@ -33,7 +32,10 @@
  * Press 'f' to show frameRate in the console.
  * Press 'w' to write the image to the audio buffer (expect noise)
  * Press '?' to show this help message.
- * 
+ *
+ * PLEASE NOTE: Hue (H) and Saturation (V) operations may have no effect on gray pixels.
+ * ALSO: Image brightness determines image audio. Images with uniform brightness will be silent.
+ *
  */
 
 import java.io.*;
@@ -112,7 +114,6 @@ int sampleX;
 int sampleY;
 int samplePos;            // position of a mouse click along the signal path, index into the audio array
 ArrayList<TimedLocation> timeLocsArray;
-int delay = 4000; // millis
 int count = 0;
 // histogram and gamma adjustments
 int histoHigh = 240;
@@ -121,11 +122,13 @@ float gammaUp = 0.9f;
 float gammaDown = 1.2f;
 int[] gammaTable;
 
+
 public void settings() {
   size(rows * genWidth, columns * genHeight);
 }
 
 public void setup() {
+  frameRate(30);
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
   // sampleRate affects image display and audio sample calculation.
@@ -155,6 +158,7 @@ public void setup() {
   mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
   mapImage.updatePixels();
   timeLocsArray = new ArrayList<TimedLocation>();
+  showHelp();
 }
 
 public void initAudio() {
@@ -246,19 +250,19 @@ public void keyPressed() {
     chan = PixelAudioMapper.ChannelNames.B;
     chooseFile();
     break;
-    case 'h':
-      chan = PixelAudioMapper.ChannelNames.H;
-      chooseFile();
-      break;
-    case 'v':
-      chan = PixelAudioMapper.ChannelNames.S;
-      chooseFile();
-      break;
-    case 'l':
-      chan = PixelAudioMapper.ChannelNames.L;
-      chooseFile();
-      break;
-    case 'O':
+  case 'h':
+    chan = PixelAudioMapper.ChannelNames.H;
+    chooseFile();
+    break;
+  case 'v':
+    chan = PixelAudioMapper.ChannelNames.S;
+    chooseFile();
+    break;
+  case 'l':
+    chan = PixelAudioMapper.ChannelNames.L;
+    chooseFile();
+    break;
+  case 'O':
     if (audioFile == null && imageFile == null) {
       chooseFile();
     } else {
@@ -320,8 +324,9 @@ public void showHelp() {
   println(" * Press 'r' to load an image or audio file to the red color channel.");
   println(" * Press 'g' to load an image or audio file to the green color channel.");
   println(" * Press 'b' to load an image or audio file to the blue color channel.");
-  println(" * Press 'l' to load an image or audio file to the HSB brightness channel.");
   println(" * Press 'h' to load an image or audio file to the HSB hue channel.");
+  println(" * Press 'v' to load an image or audio file to the HSB saturation (vibrance) channel.");
+  println(" * Press 'l' to load an image or audio file to the HSB brightness (lightness) channel.");
   println(" * Press 'O' to reload the most recent audio or image file.");
   println(" * Press 'm' to apply a contrast enhancement (histogram stretch) to the image.");
   println(" * Press '=' or '+' to make the image brighter");
@@ -330,7 +335,11 @@ public void showHelp() {
   println(" * Press 'S' to save to an image file.");
   println(" * Press 'f' to show frameRate in the console.");
   println(" * Press 'w' to write the image to the audio buffer (expect noise)");
-  println(" * Press '?' to show this help message.");    
+  println(" * Press '?' to show this help message.");
+  println(" * ");
+  println(" * PLEASE NOTE: Hue (H) and Saturation (V) may have no effect on gray pixels.");
+  println(" * ALSO: Image brightness determines image audio. Images with uniform brightness will be silent.");
+
 }
 
 public void mousePressed() {
@@ -344,20 +353,15 @@ public void mousePressed() {
 }
 
 public int playSample(int samplePos) {
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate
-                              // sampling
-                              // rate, for up to 8 simultaneous outputs
-  audioSampler.amplitude.setLastValue(0.9f); // set amplitude for the Sampler
-  audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos, which corresponds
-                        // to the place the mouse was clicked
+  audioSampler = new Sampler(audioBuffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling rate, for up to 8 simultaneous outputs
+  audioSampler.amplitude.setLastValue(0.9f);              // set amplitude for the Sampler
+  audioSampler.begin.setLastValue(samplePos);             // set the Sampler to begin playback at samplePos, which corresponds to the place the mouse was clicked
   int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
-                              // There may be better ways to do this.
-  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of
-                                              // the signal
+  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
+  this.samplelen = (int) (vary * this.sampleBase);        // calculate the duration of the sample
   if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
+    samplelen = mapSize - samplePos;                      // make sure we don't exceed the mapSize
     println("----->>> sample length = " + samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
@@ -365,8 +369,7 @@ public int playSample(int samplePos) {
       : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
-  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level,
-  // and release time
+  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   this.instrument = new SamplerInstrument(audioSampler, adsr);
   // play command takes a duration in seconds
@@ -385,7 +388,6 @@ public void writeImageToAudio() {
   mapImage.loadPixels();
   // fetch pixels from mapImage in signal order, put them in rgbSignal
   rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, rgbSignal.length);
-  
   // write the Brightness channel of rgbPixels, transcoded to audio range, to audioBuffer
   mapper.plantSamples(rgbSignal, audioBuffer.getChannel(0), 0, mapSize, PixelAudioMapper.ChannelNames.L);
 }
@@ -394,17 +396,17 @@ public void writeImageToAudio() {
 // ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- // 
   
 public int[] getHistoBounds(int[] source) {
-    int min = 255;
-    int max = 0;
-    for (int i = 0; i < source.length; i++) {
-      int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-      for (int j = 0; j < comp.length; j++) {
-        if (comp[j] > max) max = comp[j];
-        if (comp[j] < min) min = comp[j];
-      }
+  int min = 255;
+  int max = 0;
+  for (int i = 0; i < source.length; i++) {
+    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+    for (int j = 0; j < comp.length; j++) {
+    if (comp[j] > max) max = comp[j];
+    if (comp[j] < min) min = comp[j];
     }
-    println("--- min", min, " max ", max);
-    return new int[]{min, max};
+  }
+  println("--- min", min, " max ", max);
+  return new int[]{min, max};
 }
 
 // histogram stretch -- run getHistoBounds to determine low and high
@@ -412,25 +414,25 @@ public int[] stretch(int[] source, int low, int high) {
   int[] out = new int[source.length];
   int r = 0, g = 0, b = 0;
   for (int i = 0; i < out.length; i++) {
-    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-    r = comp[0];
-    g = comp[1];
-    b = comp[2];
-    r = (int) constrain(map(r, low, high, 1, 254), 0, 255);
-    g = (int) constrain(map(g, low, high, 1, 254), 0, 255);
-    b = (int) constrain(map(b, low, high, 1, 254), 0, 255);
-    out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
+  int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+  r = comp[0];
+  g = comp[1];
+  b = comp[2];
+  r = (int) constrain(map(r, low, high, 1, 254), 0, 255);
+  g = (int) constrain(map(g, low, high, 1, 254), 0, 255);
+  b = (int) constrain(map(b, low, high, 1, 254), 0, 255);
+  out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
   }
   return out;
 }
 
 public void setGamma(float gamma) {
   if (gamma != 1.0) {
-    this.gammaTable = new int[256];
-    for (int i = 0; i < gammaTable.length; i++) {
-      float c = i/(float)(gammaTable.length - 1);
-      gammaTable[i] = (int) Math.round(Math.pow(c, gamma) * (gammaTable.length - 1));
-    }
+  this.gammaTable = new int[256];
+  for (int i = 0; i < gammaTable.length; i++) {
+    float c = i/(float)(gammaTable.length - 1);
+    gammaTable[i] = (int) Math.round(Math.pow(c, gamma) * (gammaTable.length - 1));
+  }
   }
 }
 
@@ -438,14 +440,14 @@ public int[] adjustGamma(int[] source) {
   int[] out = new int[source.length];
   int r = 0, g = 0, b = 0;
   for (int i = 0; i < out.length; i++) {
-    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-    r = comp[0];
-    g = comp[1];
-    b = comp[2];
-    r = gammaTable[r];
-    g = gammaTable[g];
-    b = gammaTable[b];
-    out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
+  int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+  r = comp[0];
+  g = comp[1];
+  b = comp[2];
+  r = gammaTable[r];
+  g = gammaTable[g];
+  b = gammaTable[b];
+  out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
   }
   return out;
 }  
@@ -591,17 +593,17 @@ public void fileSelected(File selectedFile) {
       audioFileName = fileName;
       audioFileTag = fileTag;
       println("----- Selected file " + fileName + "." + fileTag + " at "
-          + filePath.substring(0, filePath.length() - fileName.length()));
+              + filePath.substring(0, filePath.length() - fileName.length()));
       loadAudioFile(audioFile);
       isLoadFromImage = false;
     } 
     else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg") || fileTag.equalsIgnoreCase("jpeg")) {
-          imageFile = selectedFile;
-          imageFilePath = filePath;
-          imageFileName = fileName;
-          imageFileTag = fileTag;
-          loadImageFile(imageFile);
-          isLoadFromImage = true;
+      imageFile = selectedFile;
+      imageFilePath = filePath;
+      imageFileName = fileName;
+      imageFileTag = fileTag;
+      loadImageFile(imageFile);
+      isLoadFromImage = true;
     }
     else {
       println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
@@ -647,7 +649,21 @@ public void loadAudioFile(File audFile) {
 public void loadImageFile(File imgFile) {
   PImage img = loadImage(imgFile.getAbsolutePath());
   // TODO handle color channel setting for images
-  mapImage.copy(img,0, 0, img.width, img.height, 0, 0, img.width, img.height);
+  int w = img.width > mapImage.width ? mapImage.width : img.width;
+  int h = img.height > mapImage.height ? mapImage.height : img.height;
+  if (chan != PixelAudioMapper.ChannelNames.ALL) {
+    PImage mixImage = createImage(w, h, RGB);
+    mixImage.copy(mapImage, 0, 0, w, h, 0, 0, w, h);
+    img.loadPixels();
+    mixImage.loadPixels();
+    mixImage.pixels = PixelAudioMapper.pushAudioPixel(img.pixels, mixImage.pixels, chan);
+    mixImage.updatePixels();
+    // TODO make it work!
+    mapImage.copy(mixImage,0, 0, w, h, 0, 0, w, h);
+  }
+  else {
+    mapImage.copy(img,0, 0, w, h, 0, 0, w, h);
+  }
   rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
   audioBuffer.setBufferSize(mapSize);
   writeImageToAudio();
@@ -663,8 +679,8 @@ public void saveToAudio() {
 
 public void audioFileSelectedWrite(File selection) {
   if (selection == null) {
-      println("Window was closed or the user hit cancel.");
-      return;      
+    println("Window was closed or the user hit cancel.");
+    return;      
   }
   String fileName = selection.getAbsolutePath();
   if (selection.getName().indexOf(".wav") != selection.getName().length() - 4) {
@@ -727,8 +743,8 @@ public void saveToImage() {
 
 public void imageFileSelectedWrite(File selection) {
   if (selection == null) {
-      println("Window was closed or the user hit cancel.");
-      return;      
+    println("Window was closed or the user hit cancel.");
+    return;      
   }
   String fileName = selection.getAbsolutePath();
   if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {

@@ -2,7 +2,6 @@
 //             SAMPLER INSTRUMENT            //
 //-------------------------------------------//
 
-
 // using minim's Instrument interface
 class SamplerInstrument implements Instrument {
   Sampler sampler;

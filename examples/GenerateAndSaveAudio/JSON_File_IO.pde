@@ -2,7 +2,6 @@
 //               JSON FILE I/O               //
 //-------------------------------------------//
 
-
 /**
  * Show an Open File dialog for JSON files
  */
