@@ -1441,8 +1441,9 @@ public class PixelAudioMapper {
 	}
 	
 	public static int setAlpha(int argb, int alpha) {
-		int[] c = rgbComponents(argb);
-		return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
+		// int[] c = rgbComponents(argb);
+		// return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
+		return (argb & 0x00FFFFFF) | (alpha << 24);
 	}
 
 	/**
