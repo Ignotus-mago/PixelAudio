@@ -2,7 +2,7 @@ As of August 20, we have the following examples:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **AudioCapture**: capture streaming or live audio and turn it into a bitmap.
-- **Starter**: basics of creating a PixelMapGen and plugging it into a PixelAudioMapper.
+- **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
 - **QuickAnimation**: a simple way to animate a bitmap using PixelAudioMapper.
 - **TransformPimage**: introduces the affine transforms available in the BitmapTransform class.
 - **MultiGenDemo**: chain PixelMapGens together to generate a large image.
