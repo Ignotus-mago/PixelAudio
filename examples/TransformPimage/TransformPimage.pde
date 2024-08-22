@@ -1,3 +1,22 @@
+/**
+ *
+ * TransformPImage demonstrates some of the commands available in the BitmapTransform class.
+ * See the keyPressed method for the syntax of the commands.
+ *
+ * Press 'f' to rotate image clockwise.
+ * Press 'b' to rotate image counterclockwise.
+ * Press 'r' to rotate image 180 degrees.
+ * Press 'x' to flip x coordinates = mirror on y-axis.
+ * Press 'y' to flip y coordinates = mirror on x-axis.
+ * Press '1' to mirror on primary diagonal.
+ * Press '2' to mirror on secondary diagonal.
+ * Press 'o' to reload image.
+ * Press 's' to save display to a file.
+ * Press 'm' to test index remapping.
+ * Press 'h' to show this help message in the console.
+ *
+ */
+
 import net.paulhertz.pixelaudio.*;
 
 PImage img;
@@ -19,17 +38,17 @@ public void draw() {
 }
 
 public void showHelp() {
-  println("\nPress 'f' to rotate image clockwise.");
-  println("Press 'b' to rotate image counterclockwise.");
-  println("Press 'r' to rotate image 180 degrees.");
-  println("Press 'x' to flip x coordinates = mirror on y-axis.");
-  println("Press 'y' to flip y coordinates = mirror on x-axis.");
-  println("Press '1' to mirror on primary diagonal.");
-  println("Press '2' to mirror on secondary diagonal.");
-  println("Press 'o' to reload image.");
-  println("Press 's' to save display to a file.");
-  println("Press 'm' to test index remapping.");
-  println("Press 'h' to show this help message in the console.\n");
+  println("\n * Press 'f' to rotate image clockwise.");
+  println(" * Press 'b' to rotate image counterclockwise.");
+  println(" * Press 'r' to rotate image 180 degrees.");
+  println(" * Press 'x' to flip x coordinates = mirror on y-axis.");
+  println(" * Press 'y' to flip y coordinates = mirror on x-axis.");
+  println(" * Press '1' to mirror on primary diagonal.");
+  println(" * Press '2' to mirror on secondary diagonal.");
+  println(" * Press 'o' to reload image.");
+  println(" * Press 's' to save display to a file.");
+  println(" * Press 'm' to test index remapping.");
+  println(" * Press 'h' to show this help message in the console.\n");
 }
 
 public void keyPressed() {
