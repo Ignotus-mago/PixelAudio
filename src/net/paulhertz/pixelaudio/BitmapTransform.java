@@ -11,7 +11,7 @@ import processing.core.PConstants;
  * the arrays may be bitmap pixel arrays, but not  necessarily--they could represent 
  * index values over a large bitmap or integer data of any sort, such as the LUTs generated 
  * by PixelMapGen subclasses. Methods that take a PImage as an argument will use the 
- * <code>PImage.pixels</code> array, and resize the image when necessary. *Map methods
+ * <code>PImage.pixels</code> array, and resize the image when necessary. Map methods
  * that accept width and height parameters return arrays of transformed pixel indices.</p>
  * 
  * @see AffineTransformType
