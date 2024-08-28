@@ -224,7 +224,9 @@ public int[] getColors() {
 
 public void initOSCPlugs() {
   osc.plug(this, "sampleHit", "/sampleHit");
+  osc.plug(this, "drawHit", "/draw");
 }
+
 
 public void draw() {
   image(mapImage, 0, 0);
@@ -448,6 +450,16 @@ public void sampleHit(int sam) {
   println("---> sampleHit "+ xy[0], xy[1]);
   playSample(sam);
 }
+
+public void drawHit(int... args) {
+  int sam = 0;
+  for (int pos : args) {
+    int[] xy = mapper.lookupCoordinate(pos);
+    println("---> drawHit "+ xy[0], xy[1], pos);
+    sam = pos;
+  }
+  playSample(sam);
+}
   
 
 
@@ -471,6 +483,7 @@ public void printSizes() {
 public void reducePoints() {
   drawPoints.clear();
   int total = allPoints.size();
+  if (total <= 0) return;
   PVector start = allPoints.get(0);
   PVector end = allPoints.get(total - 1);
   drawPoints.add(start);
@@ -531,15 +544,20 @@ PVector scalarProjection(PVector p, PVector a, PVector b) {
 
 
 public int playSample(int samplePos) {
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling rate, for up to 8 simultaneous outputs
-  audioSampler.amplitude.setLastValue(0.9f);              // set amplitude for the Sampler
-  audioSampler.begin.setLastValue(samplePos);             // set the Sampler to begin playback at samplePos, which corresponds to the place the mouse was clicked
+  audioSampler = new Sampler(audioBuffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate
+                              // sampling
+                              // rate, for up to 8 simultaneous outputs
+  audioSampler.amplitude.setLastValue(0.9f); // set amplitude for the Sampler
+  audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos, which corresponds
+                        // to the place the mouse was clicked
   int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
-  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal
+                              // There may be better ways to do this.
+  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of
+                                              // the signal
   // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = (int) (vary * this.sampleBase);        // calculate the duration of the sample
+  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
   if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos;                      // make sure we don't exceed the mapSize
+    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
     println("----->>> sample length = " + samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
@@ -547,13 +565,16 @@ public int playSample(int samplePos) {
       : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
-  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
+  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level,
+  // and release time
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   this.instrument = new SamplerInstrument(audioSampler, adsr);
   // play command takes a duration in seconds
   float duration = samplelen / (float) (sampleRate);
   instrument.play(duration);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, (int) (duration * 1000) + millis()));
+  int[] xy = mapper.lookupCoordinate(samplePos);
+  print("---> playSample coords ", xy[0], xy[1], samplePos);
+  timeLocsArray.add(new TimedLocation(xy[0], xy[1], (int) (duration * 1000) + millis()));
   // return the length of the sample
   return samplelen;
 }
