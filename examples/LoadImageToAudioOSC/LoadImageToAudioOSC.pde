@@ -134,8 +134,8 @@ PVector currentPoint;
 
 // OSC protocol
 OscP5 osc;
-int inPort = 7400;
-int outPort = 7401;
+int inPort = 7401;
+int outPort = 7400;
 NetAddress remoteFrom;
 NetAddress remoteTo;
 
@@ -181,7 +181,8 @@ public void setup() {
   // OSC init
   osc = new OscP5(this, inPort);
   remoteFrom = new NetAddress("127.0.0.1", inPort);
-  remoteTo = new NetAddress("127.0.0.1", inPort);
+  remoteTo = new NetAddress("127.0.0.1", outPort);
+  initOSCPlugs();
   showHelp();
 }
 
@@ -219,6 +220,10 @@ public int[] getColors() {
   }
   popStyle(); // restore styles, including the default RGB color space
   return colorWheel;
+}
+
+public void initOSCPlugs() {
+  osc.plug(this, "sampleHit", "/sampleHit");
 }
 
 public void draw() {
@@ -400,6 +405,8 @@ public void mousePressed() {
   playSample(samplePos);
   allPoints.clear();
   addPoint();
+  // osc.send(new OscMessage("/press").add(mapper.lookupSample(sampleX, sampleY)), remoteTo);
+  oscSendMousePressed(remoteTo);
 }
 
 public void mouseDragged() {
@@ -408,8 +415,41 @@ public void mouseDragged() {
 
 public void mouseReleased() {
   reducePoints();
+  oscSendDrawPoints(remoteTo);
   printSizes();
 }
+
+/* incoming osc message are forwarded to the oscEvent method. */
+void oscEvent(OscMessage theOscMessage) {
+  /* print the address pattern and the typetag of the received OscMessage */
+  print("### received an osc message.");
+  print(" addrpattern: "+theOscMessage.addrPattern());
+  println(" typetag: "+theOscMessage.typetag());
+}
+
+public void oscSendMousePressed(NetAddress dest) {
+  OscMessage msg = new OscMessage("/press");
+  msg.add(mapper.lookupSample(sampleX, sampleY));
+  msg.add(sampleX);
+  msg.add(sampleY);
+  osc.send(msg, dest);
+}
+
+public void oscSendDrawPoints(NetAddress dest) {
+  OscMessage msg = new OscMessage("/draw");
+  for (PVector vec : drawPoints) {
+    msg.add(mapper.lookupSample((int)vec.x, (int)vec.y));
+  }
+  osc.send(msg, dest);
+}  
+  
+public void sampleHit(int sam) {
+  int[] xy = mapper.lookupCoordinate(sam);
+  println("---> sampleHit "+ xy[0], xy[1]);
+  playSample(sam);
+}
+  
+
 
 // ************* POINT AND MOUSE TRACKING ************* //
 
