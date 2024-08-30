@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>PixelAudio</title>
+<meta name="description" content="A Library for the Processing programming environment" />
+<meta name="keywords" content="processing.org, library, ?" />
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<meta http-equiv="Content-Language" content="en-us" />
+<meta name="ROBOTS" content="index,follow,archive" />
+<meta http-equiv="imagetoolbar" content="false" />
+<meta name="MSSmartTagsPreventParsing" content="true" />
+<meta name="author" content="Paul Hertz" />
+<meta name="Rating" content="General" />
+<meta name="revisit-after" content="7 Days" />
+<meta name="doc-class" content="Living Document" />
+<link rel="stylesheet" type="text/css" href="./stylesheet.css">
+</head>
+<body>
+	<div id="container">
+	
+		<div id="header">
+			<h1>PixelAudio</h1>
+		</div>
+		
+		<div id="menu" class="clear">
+			<ul>
+				<li><a href="#about">About</a> \ </li>
+				<li><a href="#download">Download</a> \ </li>
+				<li><a href="#download">Installation</a> \ </li>
+				<li><a href="#examples">Examples</a> \ </li>
+				<li><a href="./reference/index.html" target="_blank">Reference</a></li>
+				<!-- <li><a href="#demos">Demos</a> \ </li> -->				
+				<!-- <li><a href="#misc">Misc</a> \ </li> -->
+				<!-- <li><a href="#images">Images</a> \ </li> -->
+			</ul>
+		</div>
+		
+		<div id="content" class="clear">
+			
+			<div id="about">
+			<h2>PixelAudio</h2>
+			<p>
+			A Library by <a href="https://paulhertz.net/">Paul Hertz</a> for the <a href="http://www.processing.org" target="_blank">Processing</a> programming environment.<br>
+			Last update, 08/29/2024.
+			</p>
+			<p>
+			PixelAudio blends sounds and images by mapping between arrays of audio samples and arrays of pixel values.<br>
+			1D Audio arrays are mapped onto 2D image arrays using space-filling curves and patterns, such as a diagonal zigzag or a Hilbert curve. PixelAudio provides a template to design your own mappings, and methods to translate values between audio and pixel data.<br>
+			Feel free to replace this paragraph with a description of the Library.<br>
+			Contributed Libraries are developed, documented, and maintained by members of the Processing community. Further directions are included with each Library. For feedback and support, please post to the Discourse. We strongly encourage all Libraries to be open source, but not all of them are.
+			</p>
+			</div>
+			
+			
+			
+			<div id="download" class="clear">
+			<h2>Download</h2>
+			<p>
+			Download PixelAudio version 0.8.0a (1) in 
+			<a href="./download/PixelAudio-1.zip">.zip format</a>.
+			</p>
+			<h2>Installation</h2>
+			<p>
+			Unzip and put the extracted PixelAudio folder into the libraries folder of your Processing sketches. Reference and examples are included in the PixelAudio folder.
+			</p>
+			</div>	
+			
+			
+			<div id="resources">
+			<p><strong>Keywords</strong>. ?</p>
+			<p><strong>Reference</strong>. Have a look at the javadoc reference <a href="./reference/index.html" target="_blank">here</a>. A copy of the reference is included in the .zip as well.</p>		
+			<p><strong>Source</strong>. The source code of PixelAudio is available at <a href="https://github.com/Ignotus-Mago/PixelAudio">GitHub</a>, and its repository can be browsed <a href="https://github.com/Ignotus-Mago/PixelAudio.git" target="_blank">here</a>.</p>			
+			</div>
+			
+			
+			<div id="examples" class="clear">
+			<h2>Examples</h2>
+			<p>Find a list of examples in the current distribution of PixelAudio, or have a look at them by following the links below.</p>
+			<ul>
+				<li><a href="examples/LookupTables/LookupTables.pde"><strong>LookupTables</strong></a>: intro to a core concept in PixelAudio. Start here. </li>
+				<li><a href="examples/Starter/Starter.pde"><strong>Starter</strong></a>: how to create a PixelMapGen instance and plug it into PixelAudioMapper.</li>
+				<li><a href="examples/QuickAnimation/QuickAnimation.pde"><strong>QuickAnimation</strong></a>: a simple way to animate a bitmap using PixelAudioMapper.</li>
+				<li><a href="examples/TransformPimage/TransformPimage.pde"><strong>TransformPimage</strong></a>: affine transforms in the BitmapTransform class.</li>
+				<li><a href="examples/MultiGenDemo/MultiGenDemo.pde"><strong>MultiGenDemo</strong></a>: chain PixelMapGens together to generate a large image.</li>
+				<li><a href="examples/BuildFromPathGenDemo/BuildFromPathGenDemo.pde"><strong>BuildFromPathGenDemo</strong></a>: read and write PixelMapGen data in JSON format. </li>
+				<li><a href="examples/LoadAudioToImage/LoadAudioToImage.pde"><strong>LoadAudioToImage</strong></a>: transcode an audio file to an image and play audio samples. </li>
+				<li><a href="examples/LoadImageToAudio/LoadImageToAudio.pde"><strong>LoadImageToAudio</strong></a>: read, write, play, and mix channels of images and audio files. </li>
+				<li><a href="examples/LoadImageToAudioOSC/LoadImageToAudioOSC.pde"><strong>LoadImageToAudioOSC</strong></a>: adds UDP hooks and a Max patch to LoadImageToAudio.</li>
+				<li><a href="examples/AudioCapture/AudioCapture.pde"><strong>AudioCapture</strong></a>: capture streaming or live audio and turn it into a bitmap.</li>
+				<li><a href="examples/SimpleWaveSynth/SimpleWaveSynth.pde"><strong>SimpleWaveSynth</strong></a>: basics of creating a WaveSynth animation. </li>
+				<li><a href="examples/JSONWaveSynth/JSONWaveSynth.pde"><strong>JSONWaveSynth</strong></a>: read and write JSON data to configure a WaveSynth.</li>
+				<li><a href="examples/BigWaveSynth/BigWaveSynth.pde"><strong>BigWaveSynth</strong></a>: use a WaveSynth with a large bitmap mapped to a MultiGen. </li>
+				<li><a href="examples/GenerateAndSaveAudio/GenerateAndSaveAudio.pde"><strong>GenerateAndSaveAudio</strong></a>: WaveSynth generates audio and animation simultaneously.</li>
+			</ul>
+			</div>
+			
+			<div id="info">
+			<h2>Tested</h2>
+			<p>
+			<!-- on which platform has the Library been tested? -->
+			<strong>Platform</strong> osx,windows
+			
+			<!-- which processing version did you use for testing your Library? -->
+			<br /><strong>Processing</strong> 4.3
+			
+			<!-- does your Library depend on any other Library or framework? -->
+			<br /><strong>Dependencies</strong> minim audio library, install with Processing, other libraries required in example code
+			</p>
+			</div>
+		
+			
+			<!-- use the demos section for a list of applets run in a browser. -->
+			<!--
+			<div id="demos" class="clear">
+				<h2>demos</h2>
+				<p>
+				find a list of online applet demos below.
+				
+				<ul>
+					<li><a href="./applets/demo/index.html">demo</a></li>
+				</ul>
+				</p>
+			</div>
+			-->
+			
+			<!-- use the misc section for other relevant information. Activate the link to the misc section in the menu above. -->
+			<!--
+			<div id="misc" class="clear">
+				<p></p>
+			</div>
+			-->
+			
+			<!-- use the images/screenshots section. Activate the link to the misc section in the menu above. -->
+			<!--
+			<div id="images" class="clear">
+			</div>
+			-->
+			
+			
+			<br class="clear" />
+		</div>
+		
+		<div id="footer">
+			<p>by Paul Hertz, (c) 2024.</p>
+		</div>
+	</div>
+</body>
+</html>
