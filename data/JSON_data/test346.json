@@ -1,0 +1,127 @@
+{
+  "waves": [
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": -0.02617993950843811,
+      "freq": 2.7262279987335205,
+      "index": 0,
+      "cycles": -2,
+      "dc": 0
+    },
+    {
+      "phase": 0.75,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": -0.039269909262657166,
+      "freq": 1.6849029064178467,
+      "index": 1,
+      "cycles": -3,
+      "dc": 0
+    },
+    {
+      "phase": 0.75,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.02617993950843811,
+      "freq": 2.7262279987335205,
+      "index": 2,
+      "cycles": 2,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": 0.039269909262657166,
+      "freq": 1.6849029064178467,
+      "index": 3,
+      "cycles": 3,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.10471975803375244,
+      "freq": 4.411130905151367,
+      "index": 4,
+      "cycles": 8,
+      "dc": 0
+    },
+    {
+      "phase": 0.75,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": 0.06544984877109528,
+      "freq": 7.137359142303467,
+      "index": 5,
+      "cycles": 5,
+      "dc": 0
+    },
+    {
+      "phase": 0.75,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": -0.06544984877109528,
+      "freq": 4.411130905151367,
+      "index": 6,
+      "cycles": -5,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": -0.10471975803375244,
+      "freq": 7.137359142303467,
+      "index": 7,
+      "cycles": -8,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.3125,
+  "comments": "Color phasing experiment",
+  "filename": "test346.mp4",
+  "stop": 480,
+  "dataFormat": 2,
+  "scanner": 2,
+  "scaleHisto": false,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 480,
+  "gamma": 1.2000000476837158
+}
