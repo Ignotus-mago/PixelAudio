@@ -15,7 +15,6 @@ import processing.core.PConstants;
  * that accept width and height parameters return arrays of transformed pixel indices.</p>
  * 
  * @see AffineTransformType
- * @see ImageTransform
  * 
  */
 public class BitmapTransform {
