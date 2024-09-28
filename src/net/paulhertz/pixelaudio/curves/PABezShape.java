@@ -16,11 +16,10 @@ import java.util.ListIterator;
  * https://paulhertz.net/ignocodelib/ and https://github.com/Ignotus-mago/IgnoCodeLib3
  * 
  * TODO add write methods to save curves to a (JSON) file, create (JSON) file reader.
+ * TODO consider refactoring so that PApplet only need be passed in as an argument.
  *
  */
 public class PABezShape {
-  /** PApplet for callbacks to Processing drawing environment, etc. Used by constructors */
-  PApplet parent;
   /** initial x-coordinate */
   float x;
   /** initial y-coordinate */
@@ -75,8 +74,7 @@ public class PABezShape {
    * @param y    y-coordinate of initial point
    * @param isClosed   true if shape is closed, false if it is open
    */
-  public PABezShape(PApplet parent, float x, float y, boolean isClosed) {
-    this.parent = parent;
+  public PABezShape(float x, float y, boolean isClosed) {
     this.setStartPoint(x, y);
     this.curves = new ArrayList<PAVertex2DINF>();
     this.isClosed = isClosed;
@@ -283,47 +281,115 @@ public class PABezShape {
     weight = newWeight;
   }
 
+  /*-------------------------------------------------------------------*/
+  /*                                                                   */
+  /*                          COLOR UTILITIES                          */ 
+  /*                                                                   */
+  /*-------------------------------------------------------------------*/
+  
+  // TODO These color utilities are duplicated in PixelAudioMapper. 
+  // They are useful here if we want to pull out the pixelaudio.curves package
+  // for use in other contexts. 
+  
+  
   /**
-   * Breaks a Processing color into A, R, G and B values in an array.
-   * @param argb   a Processing color as a 32-bit integer 
-   * @return       an array of integers in the range 0..255 for each color component: {A, R, G, B}
+   * Breaks a Processing color into R, G and B values in an array.
+   * @param rgb    a Processing color as a 32-bit integer 
+   * @return       an array of 3 integers in the intRange 0..255 for 3 primary color components: {R, G, B}
    */
-  public int[] argbComponents(int argb) {
-    int[] comp = new int[4];
-    comp[0] = (argb >> 24) & 0xFF;  // alpha
-    comp[1] = (argb >> 16) & 0xFF;  // Faster way of getting red(argb)
-    comp[2] = (argb >> 8) & 0xFF;   // Faster way of getting green(argb)
-    comp[3] = argb & 0xFF;          // Faster way of getting blue(argb)
+  public static int[] rgbComponents(int rgb) {
+    int[] comp = new int[3];
+    comp[0] = (rgb >> 16) & 0xFF;  // Faster way of getting red(argb)
+    comp[1] = (rgb >> 8) & 0xFF;   // Faster way of getting green(argb)
+    comp[2] = rgb & 0xFF;          // Faster way of getting blue(argb)
     return comp;
   }
 
-  /**
-   * Creates a Processing ARGB color from r, g, b, and alpha channel values. Note the order
-   * of arguments, the same as the Processing color(value1, value2, value3, alpha) method. 
-   * @param r   red component 0..255
-   * @param g   green component 0..255
-   * @param b   blue component 0..255
-   * @param a   alpha component 0..255
-   * @return    a 32-bit integer with bytes in Processing format ARGB.
-   */
-  public int composeColor(int r, int g, int b, int a) {
-    return a << 24 | r << 16 | g << 8 | b;
-  }
-  /**
-   * Creates a Processing ARGB color from a grayscale value. Alpha will be set to 255.
-   * @param gray   a grayscale value 0..255
-   * @return       an int compatible with a Processing color
-   */
-  public int composeColor(int gray) {
-    return 255 << 24 | gray << 16 | gray << 8 | gray;
-  }
+	/**
+	 * Breaks a Processing color into A, R, G and B values in an array.
+	 * 
+	 * @param argb a Processing color as a 32-bit integer
+	 * @return an array of 4 integers in the range 0..255 for each color component:
+	 *         {A, R, G, B}
+	 */
+	public static int[] argbComponents(int argb) {
+		int[] comp = new int[4];
+		comp[0] = (argb >> 24) & 0xFF; // alpha
+		comp[1] = (argb >> 16) & 0xFF; // Faster way of getting red(argb)
+		comp[2] = (argb >> 8) & 0xFF; // Faster way of getting green(argb)
+		comp[3] = argb & 0xFF; // Faster way of getting blue(argb)
+		return comp;
+	}
 
+	/**
+	 * Breaks a Processing color into R, G, B and A values in an array.
+	 *
+	 * @param argb a Processing color as a 32-bit integer
+	 * @return an array of integers in the intRange [0, 255] for 3 primary color
+	 *         components: {R, G, B} plus alpha
+	 */
+	public static int[] rgbaComponents(int argb) {
+		int[] comp = new int[4];
+		comp[0] = (argb >> 16) & 0xFF; // Faster way of getting red(argb)
+		comp[1] = (argb >> 8) & 0xFF; // Faster way of getting green(argb)
+		comp[2] = argb & 0xFF; // Faster way of getting blue(argb)
+		comp[3] = argb >> 24 & 0xFF; // alpha component
+		return comp;
+	}
 
-  /*-------------------------------------------------------------------------------------------*/
-  /*                                                                                           */
-  /* METHODS TO APPEND POINTS AND ITERATE THROUGH THIS SHAPE                                   */ 
-  /*                                                                                           */
-  /*-------------------------------------------------------------------------------------------*/
+	/**
+	 * Creates an opaque Processing RGB color from r, g, b values. Note the order
+	 * of arguments, the same as the Processing color(value1, value2, value3) method.
+	 *
+	 * @param r red component [0, 255]
+	 * @param g green component [0, 255]
+	 * @param b blue component [0, 255]
+	 * @return a 32-bit integer with bytes in Processing format ARGB.
+	 */
+	public static int composeColor(int r, int g, int b) {
+		return 255 << 24 | r << 16 | g << 8 | b;
+	}
+
+	/**
+	 * Creates a Processing ARGB color from r, g, b, and alpha channel values. Note the order
+	 * of arguments, the same as the Processing color(value1, value2, value3, alpha) method.
+	 *
+	 * @param r red component [0, 255]
+	 * @param g green component [0, 255]
+	 * @param b blue component [0, 255]
+	 * @param a alpha component [0, 255]
+	 * @return a 32-bit integer with bytes in Processing format ARGB.
+	 */
+	public static final int composeColor(int r, int g, int b, int a) {
+		return a << 24 | r << 16 | g << 8 | b;
+	}
+
+	/**
+	 * Creates a Processing ARGB color from r, g, b, values in an array.
+	 *
+	 * @param comp 	array of 3 integers in range [0, 255], for red, green and blue
+	 *             	components of color alpha value is assumed to be 255
+	 * @return a 32-bit integer with bytes in Processing format ARGB.
+	 */
+	public static int composeColor(int[] comp) {
+		return 255 << 24 | comp[0] << 16 | comp[1] << 8 | comp[2];
+	}
+
+	/**
+	 * Creates a Processing ARGB color from a grayscale value. Alpha is set to 255.
+	 * 
+	 * @param gray a grayscale value 0..255
+	 * @return an int compatible with a Processing color
+	 */
+	public static int composeColor(int gray) {
+		return 255 << 24 | gray << 16 | gray << 8 | gray;
+	}
+
+  /*-------------------------------------------------------------------------*/
+  /*                                                                         */
+  /*         METHODS TO APPEND POINTS AND ITERATE THROUGH THIS SHAPE         */ 
+  /*                                                                         */
+  /*-------------------------------------------------------------------------*/
 
   
   /**
@@ -402,7 +468,7 @@ public class PABezShape {
    * @see java.lang.Object#clone
    */
   public PABezShape clone() {
-    PABezShape copyThis = new PABezShape(parent, this.x, this.y, false);
+    PABezShape copyThis = new PABezShape(this.x, this.y, false);
     copyThis.setIsClosed(this.isClosed());
     ListIterator<PAVertex2DINF> it = curveIterator();
     while (it.hasNext()) {
@@ -424,7 +490,7 @@ public class PABezShape {
    * Draws this shape to the display. Calls beginShape and endShape on its own.
    * Uses current fill, stroke and weight from Processing environment.
    */
-  public void drawQuick() {
+  public void drawQuick(PApplet parent) {
     parent.beginShape();
     // equivalent to startPoint.draw(this.parent);
     parent.vertex(this.x, this.y);
@@ -520,7 +586,7 @@ public class PABezShape {
    * Draws this shape to the display. Calls beginShape and endShape on its own.
    * If isMarked is true, will mark anchor and control points.
    */
-  public void draw() {
+  public void draw(PApplet parent) {
     parent.beginShape();
     if (hasFill()) {
       parent.fill(fillColor);
@@ -652,7 +718,7 @@ public class PABezShape {
    * @param steps    number of straight line segments to divide Bezier curves into
    * @return         ArrayList of PVector, coordinates for a polygon approximation of this shape.
    */
-  public ArrayList<PVector> getPointList(int steps) {
+  public ArrayList<PVector> getPointList(PApplet parent, int steps) {
     ArrayList<PVector> curvePoints = new ArrayList<PVector>();
 
     ListIterator<PAVertex2DINF> it = curves.listIterator();

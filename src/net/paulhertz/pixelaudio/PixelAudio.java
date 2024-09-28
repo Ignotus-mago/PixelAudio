@@ -25,7 +25,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class PixelAudio {
 	/** myParent is a reference to the parent sketch, we make it static so it's available to other classes */
-	static PApplet myParent;
+	public static PApplet myParent;
 	/** a variable to set */
 	int myVariable = 0;
 	/** Java Random */

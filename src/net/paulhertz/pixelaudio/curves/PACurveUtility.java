@@ -6,94 +6,58 @@ package net.paulhertz.pixelaudio.curves;
 import java.util.ArrayList;
 import java.util.ListIterator;
 
+import net.paulhertz.pixelaudio.PixelAudio;
 import processing.core.PVector;
 import processing.core.PApplet;
 
 /**
- * Test class for point reduction and curve modeling. I think PACurveUtility, 
- * with its static methods, is more useful. PACurveMaker may evolve to a storage
- * class, calling PACurveUtility for its modeling tasks.  
+ *  Static versions of point reduction and curve-modeling methods in PACurveMaker.
  */
-public class PACurveMaker {
-	PApplet parent;
-	public ArrayList<PVector> allPoints;
-	public ArrayList<PVector> drawPoints;
-	public PABezShape bezPoints;
-	public PABezShape weightedBezPoints;
-	public PABezShape brushShape;
-	public float epsilon = 8.0f;
-	public boolean isDrawWeighted = false;
-	public boolean isShowBrush = false;
-	int dragColor = PABezShape.composeColor(233, 144, 89, 64);    // tan
-	int rdpColor = PABezShape.composeColor(233, 89, 144);         // red
-	int curveColor = PABezShape.composeColor(55, 199, 246);       // blue
-	int brushColor = PABezShape.composeColor(76, 199, 144, 96);   // tranparent green
-
+public class PACurveUtility {
+	/**
+	 * KAPPA = (distance between Bezier anchor and its associated control point) /
+	 * (circle radius) when a circle is divided into 4 sectors of 90 degrees. kappa
+	 * = 4 * (√2 - 1) / 3 see <a href=
+	 * "http://www.whizkidtech.redprince.net/bezier/circle/kappa/">http://www.whizkidtech.redprince.net/bezier/circle/kappa/</a>
+	 */
+	public final static double KAPPA = 0.5522847498;
+	/**
+	 * LAMBDA = KAPPA/√2, a value for weighting Bezier splines based on the length
+	 * of line segments between anchor points derived from the ratio of the chord of
+	 * a quarter circle to KAPPA, LAMBDA = KAPPA * (1/√2)
+	 *
+	 */
+	public final static float LAMBDA = 0.39052429175f;
 
 	
-	public PACurveMaker(PApplet parent) {
-		this.parent = parent;
-		this.allPoints = new ArrayList<PVector>();
-		this.drawPoints = new ArrayList<PVector>();
-	}
-	
-	public PACurveMaker(PApplet parent, ArrayList<PVector> points) {
-		this.parent = parent;
-		this.allPoints = points;
-		this.drawPoints = new ArrayList<PVector>();
-	}
-	
-	public void reducePoints() {
-		drawPoints.clear();
-		int total = allPoints.size();
-		PVector start = allPoints.get(0);
-		PVector end = allPoints.get(total - 1);
-		drawPoints.add(start);
-		rdp(0, total - 1, allPoints, drawPoints);
-		// put in a midpoint when there are only two points in the reduced points
-		if (drawPoints.size() == 1) {
-			PVector midPoint = start.copy().add(end).div(2.0f);
-			drawPoints.add(midPoint);
-		}
-		drawPoints.add(end);
-	}
-	
-	public void calculateDerivedPoints() {
-		reducePoints();
-		calculateCurve();
-		calculateWeightedCurve();
-		/*
-		if (isShowBrush) {
-			brushShape = quickBrushShape(drawPoints, 24.0f);
-			brushShape.setNoStroke();
-			brushShape.setFillColor(brushColor);
-		}
-		*/
-	}
-
-
 	/* ------------- BEGIN CODE FROM CODING TRAIN ------------- */
 	/* see Coding Challenge on RDP Line Simplification at 
 	 * https://thecodingtrain.com/CodingChallenges/152-rdp-algorithm.html 
 	 */
 
 	/**
-	 * Ramer-Douglas-Peucker algorithm (RDP)
+	 * Ramer-Douglas-Peucker point reduction algorithm (RDP)
+	 * 
+	 * @param startIndex	start index in allPoints (usually 0 to begin with)
+	 * @param endIndex		end index in allPoints (usually allPoints.size()-1 to begin with)
+	 * @param allPoints		ArrayList of dense points, for example a hand-drawn line
+	 * @param rdpPoints		an empty ArrayList for accumulating reduced points
+	 * @param epsilon       the expected distance between reduced points
 	 */
-	public void rdp(int startIndex, int endIndex, ArrayList<PVector> allPoints, ArrayList<PVector> rdpPoints) {
-	  int nextIndex = findFurthest(allPoints, startIndex, endIndex, this.epsilon);
+	public static void rdp(int startIndex, int endIndex, ArrayList<PVector> allPoints, ArrayList<PVector> rdpPoints, float epsilon) {
+	  int nextIndex = findFurthest(allPoints, startIndex, endIndex, epsilon);
 	  if (nextIndex > 0) {
 	    if (startIndex != nextIndex) {
-	      rdp(startIndex, nextIndex, allPoints, rdpPoints);
+	      rdp(startIndex, nextIndex, allPoints, rdpPoints, epsilon);
 	    }
 	    rdpPoints.add(allPoints.get(nextIndex));
 	    if (endIndex != nextIndex) {
-	      rdp(nextIndex, endIndex, allPoints, rdpPoints);
+	      rdp(nextIndex, endIndex, allPoints, rdpPoints, epsilon);
 	    }
 	  }
 	}
 
-	int findFurthest(ArrayList<PVector> points, int a, int b, float epsilon) {
+	static int findFurthest(ArrayList<PVector> points, int a, int b, float epsilon) {
 	  float recordDistance = -1;
 	  PVector start = points.get(a);
 	  PVector end = points.get(b);
@@ -113,12 +77,12 @@ public class PACurveMaker {
 	  }
 	}
 
-	float lineDist(PVector c, PVector a, PVector b) {
+	static float lineDist(PVector c, PVector a, PVector b) {
 	  PVector norm = scalarProjection(c, a, b);
 	  return PVector.dist(c, norm);
 	}
 
-	PVector scalarProjection(PVector p, PVector a, PVector b) {
+	static PVector scalarProjection(PVector p, PVector a, PVector b) {
 	  PVector ap = PVector.sub(p, a);
 	  PVector ab = PVector.sub(b, a);
 	  ab.normalize(); // Normalize the line
@@ -138,29 +102,7 @@ public class PACurveMaker {
 	 *
 	 */
 
-	public void calculateCurve() {
-	  int n = drawPoints.size();
-	  float[] xCoords = new float[n];
-	  float[] yCoords = new float[n];
-	  int i = 0;
-	  for (PVector vec : drawPoints) {
-	      xCoords[i] = vec.x;
-	      yCoords[i] = vec.y;
-	      i++;
-	  }
-	  float[] xp1 = new float[n-1];
-	  float[] xp2 = new float[n-1];
-	  computeControlPoints(xCoords, xp1, xp2);
-	  float[] yp1 = new float[n-1];
-	  float[] yp2 = new float[n-1];
-	  computeControlPoints(yCoords, yp1, yp2);
-	  bezPoints = new PABezShape(drawPoints.get(0).x, drawPoints.get(0).y, false);
-	  for (int k = 0; k < n - 1; k++) {
-	    bezPoints.append(xp1[k], yp1[k], xp2[k], yp2[k], drawPoints.get(k+1).x, drawPoints.get(k+1).y);
-	  }
-	}
-
-	public PABezShape calculateCurve(ArrayList<PVector> framePoints) {
+	public static PABezShape calculateCurve(ArrayList<PVector> framePoints) {
 	  int n = framePoints.size();
 	  float[] xCoords = new float[n];
 	  float[] yCoords = new float[n];
@@ -183,7 +125,7 @@ public class PACurveMaker {
 	  return bez;
 	}
 
-	public void computeControlPoints(float[] K, float[] p1, float[] p2) {
+	static void computeControlPoints(float[] K, float[] p1, float[] p2) {
 	  int n = K.length - 1;
 	  if (n <= 0) return;
 
@@ -237,53 +179,17 @@ public class PACurveMaker {
 	
 	/* ------------- code for weighted Bezier path ------------- */
 
-	// the weighted curve scales the position of the control points  
-	// by a factor determined by the length of the line between the two anchor points
-	// it's most useful when a short line segment follows a long segment. 
-	public void calculateWeightedCurve() {
-	  weightedBezPoints = bezPoints.clone();
-	  float weight = PABezShape.LAMBDA;
-	  ListIterator<PAVertex2DINF> it = weightedBezPoints.curveIterator();
-	  float x1, y1, x2, y2;
-	  x1 = weightedBezPoints.startVertex().x();
-	  y1 = weightedBezPoints.startVertex().y();
-	  // int i = 0;
-	  PABezVertex bz;
-	  while (it.hasNext()) {
-	    PAVertex2DINF bez = it.next();
-	    if (bez.segmentType() == PABezShape.CURVE_SEGMENT) {
-	      bz = (PABezVertex) bez;
-	      // lines from anchors to control point:
-	      // (x1, y1), (bz.cx1(), bz.cy1())
-	      // (bz.x(), bz.y()), (bz.cx2(), bz.cy2())
-	      // distance between anchor points
-	      float d = PApplet.dist(x1, y1, bz.x(), bz.y());
-	      PVector cxy1 = weightedControlVec(x1, y1, bz.cx1(), bz.cy1(), weight, d);
-	      bz.setCx1(cxy1.x);
-	      bz.setCy1(cxy1.y);
-	      PVector cxy2 = weightedControlVec(bz.x(), bz.y(), bz.cx2(), bz.cy2(), weight, d);
-	      bz.setCx2(cxy2.x);
-	      bz.setCy2(cxy2.y);
-	      // store the first anchor point for the next iteration
-	      x1 = bz.x();
-	      y1 = bz.y();
-	    }
-	    else if (bez.segmentType() == PABezShape.LINE_SEGMENT) {
-	      x1 = bez.x();
-	      y1 = bez.y();
-	    }
-	    else {
-	      // error! should never arrive here
-	    }
-	    // i++;
-	  }
-	}
 
-	// the weighted curve scales the position of the control points  
-	// by a factor determined by the length of the line between the two anchor points
-	// it's most useful when a short line segment follows a long segment. 
-	public void calculateWeightedCurve(PABezShape weightedBezPoints) {
-	  float weight = (float) PABezShape.LAMBDA;
+	/**
+	 * Scales the position of the curve control points on a Bezier curve by a factor
+	 * determined by the length of the line between the two anchor points and a weight
+	 * value, such as PACurveUtility.LAMBDA.
+	 * It's most useful when a short control line segment follows a long segment. 
+	 * 
+	 * @param weightedBezPoints
+	 * @param weight
+	 */
+	public static void calculateWeightedCurve(PABezShape weightedBezPoints, float weight) {
 	  ListIterator<PAVertex2DINF> it = weightedBezPoints.curveIterator();
 	  float x1 = weightedBezPoints.startVertex().x();
 	  float y1 = weightedBezPoints.startVertex().y();
@@ -316,8 +222,21 @@ public class PACurveMaker {
 	    }
 	  }
 	}
+	
+	/**
+	 * Scales the position of the curve control points on a Bezier curve by a factor
+	 * determined by the length of the line between the two anchor points and a weight
+	 * value, such as PACurveUtility.LAMBDA (the default, in this method).
+	 * It's most useful when a short control line segment follows a long segment. 
+	 * 
+	 * @param weightedBezPoints
+	 */
+	public static void calculateWeightedCurve(PABezShape weightedBezPoints) {
+		calculateWeightedCurve(weightedBezPoints, PACurveUtility.LAMBDA);
+	}
 
-	public PVector weightedControlVec(float ax, float ay, float cx, float cy, float w, float d) {
+
+	public static PVector weightedControlVec(float ax, float ay, float cx, float cy, float w, float d) {
 	  // divide the weighted distance between anchor points by the distance from anchor point to control point
 	  float t = w * d * 1/(PApplet.dist(ax, ay, cx, cy));
 	  // plug into parametric line equation
@@ -329,7 +248,7 @@ public class PACurveMaker {
 	// ------------- CODE FOR BRUSH SHAPE ------------- //
 
 	// simulate a brushstroke as a vector shape
-	public PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth) {
+	public static PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth, boolean isDrawWeighted, float weight) {
 	  ArrayList<PVector> pointsLeft = new ArrayList<PVector>();
 	  ArrayList<PVector> pointsRight = new ArrayList<PVector>();
 	  if (!(points.size() > 0)) return null;
@@ -374,9 +293,18 @@ public class PACurveMaker {
 	  // return the brushstroke shape in bezRight
 	  return bezRight;
 	}
-
+	
+	public static PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth) {
+		return quickBrushShape(points, brushWidth, false, 0);
+	}
+	
+	public static PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth, float weight) {
+		return quickBrushShape(points, brushWidth, true, weight);
+	}
+	
+	
 	// returns a normal to a line at a point on the line at parametric distance u, normalized if d = 1
-	public PVector normalAtPoint(PVector a1, PVector a2, float u, float d) {
+	public static PVector normalAtPoint(PVector a1, PVector a2, float u, float d) {
 	  float ax1 = a1.x;
 	  float ay1 = a1.y;
 	  float ax2 = a2.x;
@@ -400,11 +328,11 @@ public class PACurveMaker {
 	// PVector anchor   the point from which the normal extends
 	// PVector normal   a normalized vector
 	// float   d        distance from anchor to the returned vector
-	public PVector scaledNormalAtPoint(PVector anchor, PVector normal, float d) {
+	public static PVector scaledNormalAtPoint(PVector anchor, PVector normal, float d) {
 	  return new PVector(anchor.x + normal.x * d, anchor.y + normal.y * d);
 	}
 
-	public void reverseArray(ArrayList<PVector> arr, int l, int r) {
+	public static void reverseArray(ArrayList<PVector> arr, int l, int r) {
 	  PVector temp;
 	  while (l < r) {
 	    temp = arr.get(l);
@@ -415,35 +343,6 @@ public class PACurveMaker {
 	  }
 	}	
 	
-	/************************************************
-	 *                                              *
-	 * ------------- DRAWING METHODS -------------  *
-	 *                                              *
-	 ************************************************/
-	
-	
-	public void RDPDraw(int dragColor, int rdpColor) {
-		if (allPoints.size() > 1) {
-			parent.stroke(dragColor);
-			parent.strokeWeight(8);
-			parent.noFill();
-			parent.beginShape();
-			for (PVector vec : allPoints) {
-				parent.vertex(vec.x, vec.y);
-			}
-			parent.endShape();
-		}
-		if (drawPoints.size() > 1) {
-			parent.stroke(rdpColor);
-			parent.strokeWeight(1);
-			parent.noFill();
-			parent.beginShape();
-			for (PVector vec : drawPoints) {
-				parent.vertex(vec.x, vec.y);
-			}
-			parent.endShape();
-		}
-	}
 	
 	
 }
