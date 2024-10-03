@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 1048.0, -754.0, 711.0, 483.0 ],
+		"rect" : [ 1266.0, -742.0, 711.0, 483.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -58,7 +58,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 87.0, 355.0, 126.0, 22.0 ],
-					"text" : "/sampleHit 650662"
+					"text" : "/sampleHit 28908"
 				}
 
 			}
@@ -223,7 +223,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 958.0, -1341.0, 489.0, 483.0 ],
+						"rect" : [ 1480.0, -1335.0, 489.0, 483.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 12.0,
@@ -293,13 +293,12 @@
 									"fontname" : "Arial",
 									"fontsize" : 11.595186999999999,
 									"id" : "obj-13",
-									"linecount" : 2,
 									"maxclass" : "message",
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 175.0, 147.0, 265.0, 34.0 ],
-									"text" : "/draw 650662 651037 568847 562936 760259 400411 379400"
+									"patching_rect" : [ 175.0, 147.0, 265.0, 21.0 ],
+									"text" : "/draw 28908 28908"
 								}
 
 							}
@@ -397,9 +396,7 @@
 						"bgfillcolor_type" : "gradient",
 						"bgfillcolor_color1" : [ 0.454902, 0.462745, 0.482353, 1.0 ],
 						"bgfillcolor_color2" : [ 0.290196, 0.309804, 0.301961, 1.0 ],
-						"bgfillcolor_color" : [ 0.290196, 0.309804, 0.301961, 1.0 ],
-						"bgfillcolor_angle" : 270.0,
-						"bgfillcolor_proportion" : 0.39
+						"bgfillcolor_color" : [ 0.290196, 0.309804, 0.301961, 1.0 ]
 					}
 ,
 					"patching_rect" : [ 337.0, 82.0, 111.0, 26.0 ],

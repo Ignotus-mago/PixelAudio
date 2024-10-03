@@ -1,4 +1,27 @@
 /**
+ *
+ * This version of the LoadAudioToImage, LoadAudioToImageOSC sends and receives
+ * messages to and from Max using the UDP protocol. You'll need a copy of Max 
+ * to use the UDP messaging features. If you opened LoadAudioToImageOSC from the
+ * Contributed Libraries Jave Examples using the File menu -> Examples... menu item,
+ * you'll need to save it to another location and then open the enclosing folder
+ * with the Sketch menu -> Show Sketch Folder command. 
+ *
+ * In the sketch folder, open the Max patch UDPNetworking.maxpat in the MaxUDPTest folder. 
+ * Then run this sketch, load an audio file (press'o'), and click or drag on the image. 
+ * "Saucer_mixdown.wav" in the data folder for this sketch is a good file to start with.
+ *
+ * You can see the messages that Processing sends to Max in the UDPNetworking window 
+ * and in the window for the network_receiver patcher. The network_receiver window
+ * displays the audio sample offsets for mouse clicks and drags. These are the numbers
+ * Processing uses to play audio.
+ *
+ * You can also send messages to Processing from Max. In the UDPNetworking window 
+ * there are buttons and number boxes the will send messages. These show up in the
+ * Processing console, but they coud be handle by Processing methods. You can also 
+ * send messages that play audio by clicking the message box in the network_receiver 
+ * patcher. At the moment, only one sound is played. 
+ *
  * LoadImageToAudio shows how to load an image and turn it into an audio file
  * that can be played by clicking on the image. You can also load an image file
  * and turn it into an audio signal. It will probably be noisy, both because it's
