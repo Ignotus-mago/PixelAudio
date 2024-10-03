@@ -720,7 +720,6 @@ public class PABezShape {
    */
   public ArrayList<PVector> getPointList(PApplet parent, int steps) {
     ArrayList<PVector> curvePoints = new ArrayList<PVector>();
-
     ListIterator<PAVertex2DINF> it = curves.listIterator();
     // calculate the total number of points in the result array
     // start counting points at 1, since start point (at indices 0 and 1) will begin the array
@@ -778,5 +777,76 @@ public class PABezShape {
     }
     return curvePoints;
   }
+  
+  /**
+   * Extracts an approximated polygon from path data, returning it as an array of floats.
+   * Rebuilds the {@code xcoords} and {@code ycoords} arrays. Polygon data is not cached, but the
+   * {@code xcoords} and {@code ycoords} arrays are. You can use them to construct a polygon once 
+   * they have been initialized. If, against our good advice, you munge around with
+   * shape geometry, you can reset {@code xcoords} and {@code ycoords} with a call to 
+   * this method, which always recalculates {@code xcoords} and {@code ycoords} and {@code boundsRect}
+   * @param steps    number of straight line segments to divide Bezier curves into
+   * @return         ArrayList of PVector, coordinates for a polygon approximation of this shape.
+   */
+  public ArrayList<PVector> getPointList(PGraphics parent, int steps) {
+    ArrayList<PVector> curvePoints = new ArrayList<PVector>();
+    ListIterator<PAVertex2DINF> it = curves.listIterator();
+    // calculate the total number of points in the result array
+    // start counting points at 1, since start point (at indices 0 and 1) will begin the array
+    int ct = 1;
+    while (it.hasNext()) {
+      PAVertex2DINF vt = it.next();
+      int segType = vt.segmentType();
+      if (CURVE_SEGMENT == segType) {
+        // divide the curve into steps lines
+        ct += steps;
+      }
+      else if (LINE_SEGMENT == segType) {
+        ct += 1;
+      }
+    }
+    // each point is comprised of 2 floats
+    float[] points = new float[ct * 2];
+    // add the start point to the array
+    int i = 0;
+    points[i++] = this.x;
+    points[i++] = this.y;
+    // retrieve x and y values
+    float currentX = points[i - 2];
+    float currentY = points[i - 1];
+    // reset the iterator to the beginning
+    it = curves.listIterator();
+    while (it.hasNext()) {
+      PAVertex2DINF vt = it.next();
+      int segType = vt.segmentType();
+      if (CURVE_SEGMENT == segType) {
+        float[] knots = vt.coords();
+        float cx1 = knots[0];
+        float cy1 = knots[1];
+        float cx2 = knots[2];
+        float cy2 = knots[3];
+        float ax  = knots[4];
+        float ay  = knots[5];
+        for (int j = 1; j <= steps; j++) {
+          float t = j / (float) steps;
+          float segx = parent.bezierPoint(currentX, cx1, cx2, ax, t);
+          float segy = parent.bezierPoint(currentY, cy1, cy2, ay, t);
+          points[i++] = segx;
+          points[i++] = segy;
+        }
+      }
+      else if (LINE_SEGMENT == segType) {
+        points[i++] = vt.x();
+        points[i++] = vt.y();
+      }
+      currentX = points[i - 2];
+      currentY = points[i - 1];
+    }
+    for (int j = 0; j < i; ) {
+      curvePoints.add(new PVector(points[j++], points[j++]));
+    }
+    return curvePoints;
+  }
+
 
 }

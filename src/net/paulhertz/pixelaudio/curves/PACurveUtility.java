@@ -36,7 +36,8 @@ public class PACurveUtility {
 	 */
 
 	/**
-	 * Ramer-Douglas-Peucker point reduction algorithm (RDP)
+	 * Ramer-Douglas-Peucker point reduction algorithm (RDP), reduces points in allPoints and 
+	 * returns the result in rdpPoints.
 	 * 
 	 * @param startIndex	start index in allPoints (usually 0 to begin with)
 	 * @param endIndex		end index in allPoints (usually allPoints.size()-1 to begin with)
@@ -189,7 +190,8 @@ public class PACurveUtility {
 	 * @param weightedBezPoints
 	 * @param weight
 	 */
-	public static void calculateWeightedCurve(PABezShape weightedBezPoints, float weight) {
+	public static PABezShape calculateWeightedCurve(PABezShape bezPoints, float weight) {
+	  PABezShape weightedBezPoints = bezPoints.clone();
 	  ListIterator<PAVertex2DINF> it = weightedBezPoints.curveIterator();
 	  float x1 = weightedBezPoints.startVertex().x();
 	  float y1 = weightedBezPoints.startVertex().y();
@@ -221,6 +223,7 @@ public class PACurveUtility {
 	      // error! should never arrive here
 	    }
 	  }
+	  return weightedBezPoints;
 	}
 	
 	/**
