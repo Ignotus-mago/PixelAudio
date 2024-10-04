@@ -6,8 +6,11 @@ import java.util.HashMap;
 /**
  * Implements a simple Lindenmeyer system (L-system), a so-called DOL-system:
  * deterministic and context-free. Load production strings into transTable with
- * put(), retrieve them with get(). Was used by Hilbert curve generation until I
- * sped it up more optimized methods.
+ * put(), retrieve them with get(). I used this class for Hilbert curve generation
+ * until I found analytical methods in Wikipedia to speed up curve generation.
+ * 
+ * There will be demos, but probably not for the early beta release. 
+ * 
  */
 public class Lindenmeyer extends Object {
 	// our handy tables

@@ -4,7 +4,13 @@ import java.util.ArrayList;
 
 
 /**
- * @author ignot
+ * @author Paul Hertz
+ * 
+ * ArgosyArray provides tools for shifting pixel patterns along the signal path
+ * of an image. It is currently awaiting further development and some sample code.
+ * One way to generate the pixel patterns is with the Lindenmeyer class. Demos 
+ * will appear eventually, probably after the early beta release of the PixelAudio 
+ * library at Experimental Sound Studio.  
  *
  */
 public class ArgosyArray {

@@ -11,6 +11,13 @@ import java.util.Arrays;
 
 /**
  * <p>
+ * As of pre-release version 0.8.1-beta PixelAudioMapper is reasonably complete. However, 
+ * the "peel" and "stamp" methods have not been tested or supplied with example applications.
+ * The Javadocs for these methods are also minimal or missing. They will change. You should
+ * avoid using them for now. 
+ * </p>
+ * 
+ * <p>
  * PixelAudioMapper maps between 1D "signal" arrays of audio samples formatted as floating point 
  * values in the range [-1, 1] and 2D "image" arrays formatted as RGBA integer pixel data. 
  * This class is designed to handle one-to-one mappings between signal and image arrays. 
@@ -532,36 +539,43 @@ public class PixelAudioMapper {
 	 */
 
 
-	  /**
-	   * Starting at <code>signalPos</code>, reads <code>length</code> values from pixel array <code>img</code> in signal order
-	   * using <code>signalToImageLUT</code> to redirect indexing and then returns them as an array of RGB pixel values in signal order.
-	   * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or 
-	   *
-	   * @param img      	array of RGB values, the pixels array from a bitmap image with the same width and height as PixelAudioMapper
-	   * @param signalPos   position in the signal at which to start reading pixel values from the image, following the signal path
-	   * @param length    	length of the subarray to pluck from img, reading pixel values while following the signal path
-	   * @return        	a new array of pixel values in signal order
-	   */
-	  public int[] pluckPixels(int[] img, int signalPos, int length) {
-		// We can have an error condition if signalPos + length exceeds img.length! 
-		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
+	/**
+	 * Starting at <code>signalPos</code>, reads <code>length</code> values from
+	 * pixel array <code>img</code> in signal order using
+	 * <code>signalToImageLUT</code> to redirect indexing and then returns them as
+	 * an array of RGB pixel values in signal order. Note that
+	 * <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or
+	 *
+	 * @param img       array of RGB values, the pixels array from a bitmap image
+	 *                  with the same width and height as PixelAudioMapper
+	 * @param signalPos position in the signal at which to start reading pixel
+	 *                  values from the image, following the signal path
+	 * @param length    length of the subarray to pluck from img, reading pixel
+	 *                  values while following the signal path
+	 * @return 			a new array of pixel values in signal order
+	 */
+	public int[] pluckPixels(int[] img, int signalPos, int length) {
+		// We can have an error condition if signalPos + length exceeds img.length!
+		// If signalPos exceeds length, we return null. Let the caller take note and
+		// remedy the problem.
 		if (signalPos + length > img.length) {
 			length = img.length - signalPos;
-			System.out.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to "+ length);
+			System.out
+					.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to " + length);
 		}
 		if (signalPos >= img.length) {
-			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ img.length +". Returning null.");
+			System.out.println(
+					"WARNING! signalPos " + signalPos + " exceeded img length " + img.length + ". Returning null.");
 			return null;
 		}
-	    int[] pixels = new int[length];         // new array for pixel values
-	    int j = 0;                    			// index for pixels array 
-	    for (int i = signalPos; i < signalPos + length; i++) {  // step through the signal with i as index    
-	      int rgb = img[this.signalToImageLUT[i]];  			// get an rgb value from img at position signalToImageLUT[i]
-	      pixels[j++] = rgb;              		// accumulate values in pixels array
-	    }
-	    return pixels;                  		// return the samples
-	  }
-
+		int[] pixels = new int[length]; // new array for pixel values
+		int j = 0; // index for pixels array
+		for (int i = signalPos; i < signalPos + length; i++) { // step through the signal with i as index
+			int rgb = img[this.signalToImageLUT[i]]; // get an rgb value from img at position signalToImageLUT[i]
+			pixels[j++] = rgb; // accumulate values in pixels array
+		}
+		return pixels; // return the samples
+	}
 
 	 
 	// It's not clear to me when this signature might be useful. Not yet, anyhow.
@@ -1031,7 +1045,7 @@ public class PixelAudioMapper {
 
 	/**
 	 * Copy a rectangular area of pixels in image (row major) order and return it as an array of RGB values.
-	 * This is a standard image method, for example, public PImage get(int x, int y, int w, int h) in Processing.
+	 * This is a standard image method, as for example, PImage.get(int x, int y, int w, int h) in Processing.
 	 * TODO How much error checking do we want in the pluck/plant/peel/stamp methods?
 	 * If we check, do we fall through or post an error message?
 	 *

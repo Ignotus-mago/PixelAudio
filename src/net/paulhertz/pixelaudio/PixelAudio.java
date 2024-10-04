@@ -15,7 +15,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 /**
- *
+ * @author Paul Hertz
  *
  * (the tag example followed by the name of an example included in folder 'examples' will
  * automatically include the example in the javadoc.)
