@@ -75,7 +75,7 @@ int mapSize;              // size of the display bitmap, audio signal, wavesynth
 PImage mapImage;          // image for display
 PixelAudioMapper.ChannelNames chan = PixelAudioMapper.ChannelNames.ALL;
 int[] colors;             // array of spectral colors
-boolean isBlending = false;
+boolean isBlending = false;     // currently not used, for future implementation
 
 /** Minim audio library */
 Minim minim;              // library that handles audio
@@ -85,10 +85,10 @@ boolean isBufferStale = false;     // do we need to reset the audio buffer?
 int sampleRate = 41500;   // ----->> a critical value, see the setup method <<-----
 float[] audioSignal;      // the audio signal as an array
 int[] rgbSignal;          // the colors in the display image, in the order the signal path visits them
-int audioLength;
+int audioLength;          // length of audio buffer, audio signal, usually 32.768 seconds
 
 // SampleInstrument setup
-float sampleScale = 4;
+float sampleScale = 4;  
 int sampleBase = sampleRate / 4;
 int samplelen = (int) (sampleScale * sampleBase);
 Sampler audioSampler;     // minim class for sampled sound
@@ -146,15 +146,15 @@ public boolean isDrawMode = false;
 public float epsilon = 12.0f;
 public ArrayList<PVector> allPoints = new ArrayList<PVector>();
 public PVector currentPoint;
-public int polySteps = 16;
+public int polySteps = 12;
 public PACurveMaker curveMaker;
 public ArrayList<PVector> eventPoints;
 public ListIterator<PVector> eventPointsIter;
-int eventStep = 125;   // milliseconds between events
+int eventStep = 67;   // milliseconds between events
 public ArrayList<TimedLocation> pointEventsArray;
 
 String dataPath;
-String audioStartFile = "workflow_t01_mix.wav";
+String audioStartFile = "workflow_t01_mix.mp3";
 String imageStartFile = "workFlowPanel_03.png";
 
 boolean isWriteToScreen = true;
@@ -168,20 +168,9 @@ public void setup() {
   frameRate(30);
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
-  // sampleRate affects image display and audio sample calculation.
-  // For compatibility with other applications, including Processing, it's a good
-  // idea to use a standard sampling rate, like 44100. However, you can experiment
-  // with other sampling rates and probably can play audio and and save files.
-  // Their behavior in Processing when you try to open them can be unpredictable.
-  //
-  // Setting sampleRate = genWidth * genHeight provides interesting symmetries in
-  // the image
-  // and will play audio and save to file -- but it's not a standard sample rate
-  // and
-  // though Processing may open files saved with non-standard sampling rates, it
-  // usually shifts the frequency according the sampleRate you have set.
-  sampleRate = 48000; // = genWidth * genHeight;
-  sampleBase = sampleRate / 4;
+  // For this sketch, audio was recorded at 48KHz. 
+  sampleRate = 48000; 
+  sampleBase  = (int) (sampleRate / sampleScale);
   initAudio();
   // multigen = loadLoopGen(genWidth, genHeight);
   multigen = loadWordGen(genWidth/4, genHeight/4);
@@ -306,9 +295,11 @@ public void displayColors() {
 
 public void writeToScreen(String msg) {
   pushStyle();
-  fill(255);
+  fill(0);
   textSize(24);
   text(msg, 64, 1000);
+  fill(255);
+  text(msg, 66, 1001);
   popStyle();
 }
 
@@ -327,7 +318,7 @@ public void draw() {
     if (pointEventsArray != null) runPointEventsArray();
   } 
   runTimeArray();
-  if (isWriteToScreen) writeToScreen("Press 'd' to turn drawing on (or off). Draw something. The press 'p' to play your drawing.");
+  if (isWriteToScreen) writeToScreen("Click to play a sound. Press 'd' to turn drawing on (or off). Draw something. Then press 'p' to play your drawing.");
 }
 
 public void freshDraw() {
@@ -355,17 +346,6 @@ public void stepAnimation() {
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
   mapImage.updatePixels();
 }
-
-//  public void runTimeArrayBack() {
-//    int currentTime = millis();
-//    timeLocsArray.forEach(tl -> {
-//      tl.setStale(tl.stopTime() < currentTime);
-//      if (!tl.isStale()) {
-//        drawCircle(tl.getX(), tl.getY());
-//      }
-//    });
-//    timeLocsArray.removeIf(TimedLocation::isStale);
-//  }
 
 public void runTimeArray() {
   int currentTime = millis();
@@ -533,6 +513,8 @@ public void showHelp() {
   println(" * Press 'S' to save to an image file.");
   println(" * Press 'f' to show frameRate in the console.");
   println(" * Press 'w' to write the image to the audio buffer (expect noise)");
+  println(" * Press 'k' to display a color spectrum along the signal path.");
+  println(" * Press 'K' to load audioStartFile and imageStartFile.");
   println(" * Press '?' to show this help message.");    
 }
 
