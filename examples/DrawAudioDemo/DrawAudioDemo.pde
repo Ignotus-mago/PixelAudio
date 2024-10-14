@@ -154,7 +154,7 @@ int eventStep = 67;   // milliseconds between events
 public ArrayList<TimedLocation> pointEventsArray;
 
 String dataPath;
-String audioStartFile = "workflow_t01_mix.mp3";
+String audioStartFile = "workflow_03_mixdown_01.mp3";
 String imageStartFile = "workFlowPanel_03.png";
 
 boolean isWriteToScreen = true;
