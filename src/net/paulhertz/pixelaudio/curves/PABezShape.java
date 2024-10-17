@@ -5,8 +5,15 @@ import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.core.PVector;
 
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.ListIterator;
+
+import net.paulhertz.aifile.BezVertex;
+import net.paulhertz.aifile.LineVertex;
+import net.paulhertz.aifile.Vertex2DINF;
+import net.paulhertz.geom.GeomUtils;
+import net.paulhertz.pixelaudio.PixelAudio;
 
 /**
  * Class to store a path composed of lines and Bezier curves, along with fill, stroke, weight and opacity values.
@@ -45,6 +52,8 @@ public class PABezShape {
   int strokeColor;
   /** stroke weight for shape */
   float weight;
+  /** left, top, right, bottom bounding rectangle */
+  float[] bounds;
   
   
   /** 
@@ -709,12 +718,7 @@ public class PABezShape {
 
 
   /**
-   * Extracts an approximated polygon from path data, returning it as an array of floats.
-   * Rebuilds the {@code xcoords} and {@code ycoords} arrays. Polygon data is not cached, but the
-   * {@code xcoords} and {@code ycoords} arrays are. You can use them to construct a polygon once 
-   * they have been initialized. If, against our good advice, you munge around with
-   * shape geometry, you can reset {@code xcoords} and {@code ycoords} with a call to 
-   * this method, which always recalculates {@code xcoords} and {@code ycoords} and {@code boundsRect}
+   * Extracts an approximated polygon from path data, returning it as an array of PVector.
    * @param steps    number of straight line segments to divide Bezier curves into
    * @return         ArrayList of PVector, coordinates for a polygon approximation of this shape.
    */
@@ -779,12 +783,7 @@ public class PABezShape {
   }
   
   /**
-   * Extracts an approximated polygon from path data, returning it as an array of floats.
-   * Rebuilds the {@code xcoords} and {@code ycoords} arrays. Polygon data is not cached, but the
-   * {@code xcoords} and {@code ycoords} arrays are. You can use them to construct a polygon once 
-   * they have been initialized. If, against our good advice, you munge around with
-   * shape geometry, you can reset {@code xcoords} and {@code ycoords} with a call to 
-   * this method, which always recalculates {@code xcoords} and {@code ycoords} and {@code boundsRect}
+   * Extracts an approximated polygon from path data, returning it as an array of PVector.
    * @param steps    number of straight line segments to divide Bezier curves into
    * @return         ArrayList of PVector, coordinates for a polygon approximation of this shape.
    */
@@ -847,6 +846,221 @@ public class PABezShape {
     }
     return curvePoints;
   }
+
+	public float[] bounds() {
+		ArrayList<PVector> points = this.getPointList(PixelAudio.myParent, 16);
+		PVector vec = points.get(0);
+		float xMin = vec.x;
+		float yMin = vec.y;
+		float xMax = xMin;
+		float yMax = yMin;
+		for (int i = 1; i < points.size(); i++) {
+			vec = points.get(i);
+			float x = vec.x;
+			float y = vec.y;
+			if (x < xMin) xMin = x;
+			if (y < yMin) yMin = y;
+			if (x > xMax) xMax = x;
+			if (y > yMax) yMax = y;
+		}
+		float[] result = new float[4];
+		result[0] = xMin;
+		result[1] = yMin;
+		result[2] = xMax;
+		result[3] = yMax;
+		return result;
+	} 
+	
+	public float[] getBounds() {
+		if (bounds == null) {
+			bounds = bounds();
+		}
+		return bounds;
+	}
+	
+	public void setBounds(float[] newBounds) {
+		this.bounds = newBounds;
+	}
+
+	public PVector getBoundsCenter() {
+		float[] bounds = this.getBounds();
+		float left = bounds[0];
+		float top = bounds[1];
+		float right = bounds[2];
+		float bottom = bounds[3];
+		return new PVector((right + left)/2.0f, (top + bottom)/2.0f);
+	}
+	
+	
+	/*
+	 * Some basic geometric transforms for our shape.
+	 */
+	
+	public void translateShape(float xTrans, float yTrans) {
+		this.setStartPoint(this.x + xTrans, this.y + yTrans);
+		ListIterator<PAVertex2DINF> it = this.curveIterator();
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			int segType = vt.segmentType();
+			if (CURVE_SEGMENT == segType) {
+				PABezVertex bv = (PABezVertex) vt;
+				float[] coords = bv.coords();
+				coords[0] += xTrans;
+				coords[1] += yTrans;
+				coords[2] += xTrans;
+				coords[3] += yTrans;
+				coords[4] += xTrans;
+				coords[5] += yTrans;
+				bv.setCx1(coords[0]);
+				bv.setCy1(coords[1]);
+				bv.setCx2(coords[2]);
+				bv.setCy2(coords[3]);
+				bv.setX(coords[4]);
+				bv.setY(coords[5]);
+			}
+			else if (LINE_SEGMENT == segType) {
+				PALineVertex lv = (PALineVertex) vt;
+				lv.setX(lv.x + xTrans);
+				lv.setY(lv.y + yTrans);
+			}
+		}
+		this.bounds = null;
+	}
+	
+	/**
+	 * Scales this shape around a given point. 
+	 * Sets xcoords and ycoords arrays to null: they will have to be recalculated after a transform,
+	 * which will be done through lazy initialization when {@code xcoords()} or {@code ycoords()} are called.
+	 * @param xScale   scaling on x-axis
+	 * @param yScale   scaling on y-axis
+	 */
+	public void scaleShape(float xScale, float yScale, float x0, float y0) {
+		this.x = (x0 + (this.x - x0) * xScale);
+		this.y = (y0 + (this.y - y0) * yScale);
+		ListIterator<PAVertex2DINF> it = this.curveIterator();
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			int segType = vt.segmentType();
+			float[] coords = vt.coords();
+			PVector pt;
+			if (CURVE_SEGMENT == segType) {
+				PABezVertex bv = (PABezVertex) vt;
+				pt = scaleCoorAroundPoint(coords[0], coords[1], xScale, yScale, x0, y0);
+				bv.setCx1(pt.x);
+				bv.setCy1(pt.y);
+				pt = scaleCoorAroundPoint(coords[2], coords[3], xScale, yScale, x0, y0);
+				bv.setCx2(pt.x);
+				bv.setCy2(pt.y);
+				pt = scaleCoorAroundPoint(coords[4], coords[5], xScale, yScale, x0, y0);
+				bv.setX(pt.x);
+				bv.setY(pt.y);
+			}
+			else if (LINE_SEGMENT == segType) {
+				PALineVertex lv = (PALineVertex) vt;
+				pt = scaleCoorAroundPoint(coords[0], coords[1], xScale, yScale, x0, y0);
+				lv.setX(pt.x);
+				lv.setY(pt.y);
+			}
+		}
+		this.bounds = null;
+	}
+	
+	/**
+	 * Rotates this shape around a supplied center point.
+	 * @param theta    degrees to rotate (in radians)
+	 * TODO for theta very near PI, 0, or TWO_PI, insure correct rotation.  
+	 */
+	public void rotateShape(float xctr, float yctr, float theta) {
+		PVector pt = rotateCoorAroundPoint(this.x(), this.y(), xctr, yctr, theta);
+		this.setX(pt.x);
+		this.setY(pt.y);
+		ListIterator<PAVertex2DINF> it = this.curveIterator();
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			int segType = vt.segmentType();
+			float[] coords = vt.coords();
+			if (CURVE_SEGMENT == segType) {
+				PABezVertex bv = (PABezVertex) vt;
+				pt = rotateCoorAroundPoint(coords[0], coords[1], xctr, yctr, theta);
+				bv.setCx1(pt.x);
+				bv.setCy1(pt.y);
+				pt = rotateCoorAroundPoint(coords[2], coords[3], xctr, yctr, theta);
+				bv.setCx2(pt.x);
+				bv.setCy2(pt.y);
+				pt = rotateCoorAroundPoint(coords[4], coords[5], xctr, yctr, theta);
+				bv.setX(pt.x);
+				bv.setY(pt.y);
+			}
+			else if (LINE_SEGMENT == segType) {
+				PALineVertex lv = (PALineVertex) vt;
+				pt = rotateCoorAroundPoint(coords[0], coords[1], xctr, yctr, theta);
+				lv.setX(pt.x);
+				lv.setY(pt.y);
+			}
+		}
+		this.bounds = null;;
+	}
+
+	
+	
+	/*
+	 * Because the points in our shapes may need to interact with specific pixel locations,
+	 * we want to transform the shape itself and not just shift the local frame where it is
+	 * drawn, as happens with Processing's transform commands. These global transform methods 
+	 * assist us in doing that. There are better ways of doing these transforms, with matrices
+	 * and perhaps with quaternions, but these methods have the benefit of clarity. 
+	 *  
+	 */
+	
+	/**
+	 * translates a point by xOffset and yOffset, returns a new point
+	 * @param x         x coordinate of point
+	 * @param y         y coordinate of point
+	 * @param xOffset   distance to translate on x-xis
+	 * @param yOffset   distance to translate on y-axis
+	 * @return          a new translated point
+	 */
+	public static PVector translateCoor(float x, float y, float xOffset, float yOffset) {
+		return new PVector(x + xOffset, y + yOffset);
+	}
+
+	/**
+	 * scales a point by xScale and yScale around a point (xctr, yctr), returns a new point
+	 * @param x        x coordinate of point
+	 * @param y        y coordinate of point
+	 * @param xScale   scaling on x-axis
+	 * @param yScale   scaling on y-axis
+	 * @param xctr     x coordinate of center of transformation
+	 * @param yctr     y coordinate of center of transformation
+	 * @return         a new scaled point as a PVector
+	 */
+	public static PVector scaleCoorAroundPoint(float x, float y, float xScale, float yScale, float xctr, float yctr) {
+		float xout = xctr + (x - xctr) * xScale;
+		float yout = yctr + (y - yctr) * yScale;
+		return new PVector(xout, yout);
+	}
+	
+	/**
+	 * rotates a point theta radians around a point (xctr, yctr), returns a new point
+	 * rotation is counterclockwise for positive theta in Cartesian system, 
+	 * clockwise in screen display coordinate system
+	 * @param x       x coordinate of point
+	 * @param y       y coordinate of point
+	 * @param xctr    x coordinate of center of rotation
+	 * @param yctr    y coordinate of center of rotation
+	 * @param theta   angle to rotate, in radians
+	 * @return        a new rotated point
+	 */
+	public static PVector rotateCoorAroundPoint(float x, float y, float xctr, float yctr, float theta) {
+		// Rotate vector or point (x,y) around point (xctr, yctr) through an angle theta
+		// degrees in radians, rotation is counterclockwise from the coordinate axis
+		// returns a new point
+		double sintheta = Math.sin(theta);
+		double costheta = Math.cos(theta);
+		PVector pt = translateCoor(x, y, -xctr, -yctr);
+		pt.set((float)(pt.x * costheta - pt.y * sintheta), (float)(pt.x * sintheta + pt.y * costheta));
+		return translateCoor(pt.x, pt.y, xctr, yctr);
+	}
 
 
 }
