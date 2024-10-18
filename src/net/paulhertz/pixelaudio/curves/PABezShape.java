@@ -5,14 +5,9 @@ import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.core.PVector;
 
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.ListIterator;
 
-import net.paulhertz.aifile.BezVertex;
-import net.paulhertz.aifile.LineVertex;
-import net.paulhertz.aifile.Vertex2DINF;
-import net.paulhertz.geom.GeomUtils;
 import net.paulhertz.pixelaudio.PixelAudio;
 
 /**
@@ -1060,6 +1055,31 @@ public class PABezShape {
 		PVector pt = translateCoor(x, y, -xctr, -yctr);
 		pt.set((float)(pt.x * costheta - pt.y * sintheta), (float)(pt.x * sintheta + pt.y * costheta));
 		return translateCoor(pt.x, pt.y, xctr, yctr);
+	}
+
+	/**
+	 * decides if a point is inside a polygon
+	 * @param npol   number of points in polygon
+     * @param poly   an array of PVectors representing a polygon
+	 * @param x      x-coordinate of point
+	 * @param y      y-coordinate of point
+	 * @return       true if point is in polygon, false otherwise
+	 */
+	public static boolean pointInPoly(int npol, ArrayList<PVector> poly, float x, float y) {
+		int i, j = 0;
+		boolean inside = false;
+		for (i = 0, j = npol-1; i < npol; j = i++) {
+            PVector iVec = poly.get(i);
+            PVector jVec = poly.get(j);
+			if (
+					(((iVec.y <= y) && (y < jVec.y)) || ((jVec.y <= y) && (y < iVec.y))) &&
+					(x < (jVec.x - iVec.x) * (y - iVec.y) / (jVec.y - iVec.y) + iVec.x)
+			)
+			{
+                inside = !inside;
+            }
+		}
+		return inside;
 	}
 
 
