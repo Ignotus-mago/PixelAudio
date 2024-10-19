@@ -1065,7 +1065,8 @@ public class PABezShape {
 	 * @param y      y-coordinate of point
 	 * @return       true if point is in polygon, false otherwise
 	 */
-	public static boolean pointInPoly(int npol, ArrayList<PVector> poly, float x, float y) {
+	public static boolean pointInPoly(ArrayList<PVector> poly, float x, float y) {
+		int npol = poly.size();
 		int i, j = 0;
 		boolean inside = false;
 		for (i = 0, j = npol-1; i < npol; j = i++) {
