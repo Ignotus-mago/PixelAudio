@@ -62,7 +62,7 @@ Minim minim;                  // library that handles audio
 AudioOutput audioOut;         // line out to sound hardware
 MultiChannelBuffer audioBuffer;  // data structure to hold audio samples
 boolean isBufferStale = false;  // after loading JSON data to wavesynth, we need to reset the audio buffer
-int sampleRate = 41500;       // a critical value, see the setup method
+int sampleRate = 48000;       // a critical value, see the setup method
 float[] audioSignal;          // the audio signal as an array
 int[] rgbSignal;              // the colors in the display image, in the order the signal path visits them
 int audioLength;
@@ -96,12 +96,15 @@ int samplePos;                // position of a mouse click along the signal path
 ArrayList<TimedLocation> timeLocsArray;
 int count = 0;
 
+boolean isRaining = false;
+boolean oldIsRaining = false;
 
 public void settings() {
   size(rows * genWidth, columns * genHeight);
 }
 
 public void setup() {
+  frameRate(30);
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
   // sampleRate affects image display and audio sample calculation.
@@ -114,7 +117,7 @@ public void setup() {
   // and will play audio and save to file -- but it's not a standard sample rate and
   // though Processing may open files saved with non-standard sampling rates, it
   // usually shifts the frequency according the sampleRate you have set.
-  sampleRate = 44100;             // = genWidth * genHeight; // another value for sampleRate
+  sampleRate = 48000;             // = genWidth * genHeight; // another value for sampleRate
   sampleBase = sampleRate / 4;        // a quarter of a second
   initAudio();                // set up audio output and an audio buffer
   genList = new ArrayList<PixelMapGen>();     // prepare data for the MultiGen
@@ -168,7 +171,7 @@ public ArrayList<WaveData> buildWaveDataList() {
   ArrayList<WaveData> list = new ArrayList<WaveData>();
   // funda is the fundamental of a musical tone that is somewhat like a trumpet
   // in its frequency spectrum. Vary it to see how the image and sound change.
-  float funda = 64.0f;
+  float funda = 46.875f;
   float frequency = funda;
   float amplitude = 0.55f;
   float phase = 0.766f;
@@ -252,6 +255,12 @@ public void draw() {
   image(synthImage, 0, 0, width, height);
   if (isAnimating) stepAnimation();
   runTimeArray();
+  if (isRaining) {
+    float thresh = (isAnimating) ? 0.5 : 0.1;
+    if (random(0,1) < thresh) {
+      raindrops();
+    }
+  }
 }
 
 public void stepAnimation() {
@@ -289,6 +298,8 @@ public void keyPressed() {
     // turn off animation while reading new settings for wavesynth
     oldIsAnimating = isAnimating;
     isAnimating = false;
+    oldIsRaining = isRaining;
+    isRaining = false;
     this.loadWaveData();
     isBufferStale = true;
     break;
@@ -319,6 +330,9 @@ public void keyPressed() {
       instrument.play(samplelen / (float) (sampleRate));
     }
     break;
+  case 'r':
+    isRaining = !isRaining;
+    break;
   case 'h':
     showHelp();
     break;
@@ -336,6 +350,7 @@ public void showHelp() {
   println("  * Press 'i' to save the display immage as \"wavesynth.png\" to the sketch folder.");
   println("  * Press 'f' to check the frame rate.");
   println("  * Press 't' to trigger the audio (for testing some audio weirdness).");
+  println("  * Press 'r' to trigger raindrops.");
   println("  * Press 'h' to print key commands to the console.");
 }
 
@@ -391,4 +406,16 @@ public int playSample(int samplePos) {
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, (int) (duration * 1000) + millis()));
   // return the length of the sample
   return samplelen;
+}
+
+public void raindrops() {
+  int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
+  int[] coords = mapper.lookupCoordinate(signalPos);
+  sampleX = coords[0];
+  sampleY = coords[1];
+  if (audioSignal == null || isBufferStale) {
+    renderSignal();
+    isBufferStale = false;
+  }
+  playSample(samplePos);  
 }

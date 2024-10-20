@@ -17,6 +17,7 @@ public void fileSelectedOpen(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
     isAnimating = oldIsAnimating;
+    isRaining = oldIsRaining;
     return;
   }
   currentDataFile = selection;
@@ -26,6 +27,7 @@ public void fileSelectedOpen(File selection) {
   setWaveSynthFromJSON(json, wavesynth);
   surface.setTitle(currentFileName);
   isAnimating = oldIsAnimating;
+  isRaining = oldIsRaining;
 }
 
 /**
