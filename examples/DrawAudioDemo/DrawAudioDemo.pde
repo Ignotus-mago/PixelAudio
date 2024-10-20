@@ -181,10 +181,11 @@ public void setup() {
   currentPoint = new PVector(-1, -1);
   timeLocsArray = new ArrayList<TimedLocation>();
   octet = new ArrayList<SamplerInstrument>();
-  dataPath = dataPath("");
+  dataPath = sketchPath("") +"../examples_data";
   // println("-- dataPath: "+ dataPath);
-  audioStartFile = dataPath +"/"+ audioStartFile;
+  audioStartFile = "../"+ dataPath +"/"+ audioStartFile;
   imageStartFile = dataPath +"/"+ imageStartFile;
+  println("--- test path "+ sketchPath("") +".." + "/examples_data");
   loadFiles();
 }
 
