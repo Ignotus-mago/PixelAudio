@@ -130,9 +130,9 @@ public ArrayList<TimedLocation> curveTLEvents;
 public ArrayList<BrushData> brushShapesList;
 public BrushData activeBrush;
 
-String dataPath = "/Users/paulhz/Code/Workspace/TestProcessing/src/net/paulhertz/workflow/workflowdata/";
-String audioStartFile = dataPath + "workflow_03_mixdown.wav";
-String imageStartFile = dataPath + "workFlowPanel_03.png";
+String dataPath;
+String audioStartFile = "workflow_03_mixdown.wav";
+String imageStartFile = "workFlowPanel_03.png";
 
 boolean isWriteToScreen = true;
 
@@ -149,6 +149,10 @@ public void setup() {
   sampleBase = sampleRate / 4;
   initAudio();
   initMapper();
+  dataPath = dataPath("");
+  // println("-- dataPath: "+ dataPath);
+  audioStartFile = dataPath +"/"+ audioStartFile;
+  imageStartFile = dataPath +"/"+ imageStartFile;
   loadFiles();
   longEnv = new PAEnvelope(0.9f, 0.2f, 0.125f, 0.5f, 0.2f);
   shortEnv = new PAEnvelope(0.8f, 0.05f, 0.0f, 0.8f, 0.05f);
