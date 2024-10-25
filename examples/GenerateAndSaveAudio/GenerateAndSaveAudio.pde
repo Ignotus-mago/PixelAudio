@@ -72,6 +72,7 @@ int sampleBase = sampleRate/4;
 int samplelen = (int) (sampleScale * sampleBase);
 Sampler audioSampler;         // minim class for sampled sound
 SamplerInstrument instrument; // local class to wrap audioSampler
+float samplerAmp = 0.4f;      // amplitude of sampler, keep low if you are layering many samplesß
 // ADSR and params
 ADSR adsr;                    // good old attack, decay, sustain, release
 float maxAmplitude = 0.9f;
@@ -118,7 +119,7 @@ public void setup() {
   // though Processing may open files saved with non-standard sampling rates, it
   // usually shifts the frequency according the sampleRate you have set.
   sampleRate = 48000;             // = genWidth * genHeight; // another value for sampleRate
-  sampleBase = sampleRate / 4;        // a quarter of a second
+  sampleBase = sampleRate / 1;        // a quarter of a second
   initAudio();                // set up audio output and an audio buffer
   genList = new ArrayList<PixelMapGen>();     // prepare data for the MultiGen
   offsetList = new ArrayList<int[]>();
@@ -126,7 +127,7 @@ public void setup() {
   // See the MultiGenDemo example for details on how MultiGen works
   multigen = new MultiGen(rows * genWidth, columns * genHeight, offsetList, genList);
   mapper = new PixelAudioMapper(multigen);  // initialize a PixelAudioMapper
-  wdList = buildWaveDataList();        // generate a WaveData list for the WaveSynth
+  wdList = buildWaveDataList(46.875f, 8);        // generate a WaveData list for the WaveSynth
   wavesynth = new WaveSynth(mapper, wdList);  // initialize a WaveSynth object
   initWaveSynth(wavesynth);          // fill in some parameters of the WaveSynth
   synthImage = wavesynth.mapImage;      // point synthImage at the WaveSynth's PImage field
@@ -167,11 +168,12 @@ public void initMultiGenLists() {
  *
  * @return an ArrayList of WaveData objects
  */
-public ArrayList<WaveData> buildWaveDataList() {
+public ArrayList<WaveData> buildWaveDataList(float fundamental, int partials) {
   ArrayList<WaveData> list = new ArrayList<WaveData>();
+  if (partials < 1) partials = 1;
   // funda is the fundamental of a musical tone that is somewhat like a trumpet
   // in its frequency spectrum. Vary it to see how the image and sound change.
-  float funda = 46.875f;
+  float funda = fundamental;
   float frequency = funda;
   float amplitude = 0.55f;
   float phase = 0.766f;
@@ -181,6 +183,8 @@ public ArrayList<WaveData> buildWaveDataList() {
   int steps = this.animSteps;
   WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
+  //
+  if (partials == 1) return list;
   frequency = 2 * funda;
   amplitude = 0.52f;
   phase = -0.89f;
@@ -188,6 +192,8 @@ public ArrayList<WaveData> buildWaveDataList() {
   waveColor = color(89, 199, 55);
   wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
+  //
+  if (partials == 2) return list;
   frequency = 3 * funda;
   amplitude = 0.6f;
   phase = -0.486f;
@@ -195,6 +201,8 @@ public ArrayList<WaveData> buildWaveDataList() {
   waveColor = color(254, 89, 110);
   wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
+  //
+  if (partials == 3) return list;
   frequency = 4 * funda;
   amplitude = 0.45f;
   phase = -0.18616974f;
@@ -202,6 +210,8 @@ public ArrayList<WaveData> buildWaveDataList() {
   waveColor = color(89, 110, 233);
   wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
+  //
+  if (partials == 4) return list;
   frequency = 5 * funda;
   amplitude = 0.42f;
   phase = 0.6846085f;
@@ -209,6 +219,8 @@ public ArrayList<WaveData> buildWaveDataList() {
   waveColor = color(233, 34, 21);
   wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
+  //
+  if (partials == 5) return list;
   frequency = 6 * funda;
   amplitude = 0.45f;
   phase = 0.68912f;
@@ -216,6 +228,8 @@ public ArrayList<WaveData> buildWaveDataList() {
   waveColor = color(220, 199, 55);
   wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
+  //
+  if (partials == 6) return list;
   frequency = 7 * funda;
   amplitude = 0.25f;
   phase = 0.68f;
@@ -223,6 +237,8 @@ public ArrayList<WaveData> buildWaveDataList() {
   waveColor = color(159, 190, 255);
   wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
+  //
+  if (partials == 7) return list;
   frequency = 8 * funda;
   amplitude = 0.32f;
   phase = 0.68f;
@@ -256,7 +272,7 @@ public void draw() {
   if (isAnimating) stepAnimation();
   runTimeArray();
   if (isRaining) {
-    float thresh = (isAnimating) ? 0.5 : 0.1;
+    float thresh = (isAnimating) ? 0.25 : 0.05;
     if (random(0,1) < thresh) {
       raindrops();
     }
@@ -282,9 +298,10 @@ public void runTimeArray() {
 }
 
 public void drawCircle(int x, int y) {
+  float size = isRaining? random(10, 30) : 60;
   fill(color(233, 220, 199, 128));
   noStroke();
-  circle(x, y, 60);
+  circle(x, y, size);
 }
 
 public void keyPressed() {
@@ -380,7 +397,7 @@ public void mousePressed() {
 public int playSample(int samplePos) {
   audioSampler = new Sampler(audioBuffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling
   // rate, for up to 8 simultaneous outputs
-  audioSampler.amplitude.setLastValue(0.9f);   // set amplitude for the Sampler
+  audioSampler.amplitude.setLastValue(samplerAmp);   // set amplitude for the Sampler
   audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos, which corresponds
   // to the place the mouse was clicked
   int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
