@@ -248,6 +248,7 @@ public int[] getColors() {
 public void initOSCPlugs() {
   osc.plug(this, "sampleHit", "/sampleHit");
   osc.plug(this, "drawHit", "/draw");
+  osc.plug(this, "multislider", "/multislider");
 }
 
 
@@ -458,12 +459,25 @@ public void oscSendMousePressed(NetAddress dest) {
   msg.add(sampleX);
   msg.add(sampleY);
   osc.send(msg, dest);
+  println("---> msg: "+ msg);
 }
 
 public void oscSendDrawPoints(NetAddress dest) {
   OscMessage msg = new OscMessage("/draw");
+  int y0 = (int) drawPoints.get(0).y;
+  int sliders = 12;
+  int[] multi = new int[sliders];
+  int i = 0;
   for (PVector vec : drawPoints) {
     msg.add(mapper.lookupSample((int)vec.x, (int)vec.y));
+    if (i < sliders) {
+      multi[i++] = ((int) abs(y0 - vec.y)) % 128;
+    }
+  }
+  osc.send(msg, dest);
+  msg = new OscMessage("/multislider");
+  for (i = 0; i < multi.length; i++) {
+    msg.add(multi[i]);
   }
   osc.send(msg, dest);
 }  
@@ -484,7 +498,13 @@ public void drawHit(int... args) {
   playSample(sam);
 }
   
-
+public void multislider(int... args) {
+  print("---> multislider: ");
+  for (int pos : args) {
+    print(pos +", ");
+  }
+  println();
+}
 
 // ************* POINT AND MOUSE TRACKING ************* //
 
@@ -499,8 +519,8 @@ public void printSizes() {
   int allSize = allPoints.size();
   int drawSize = drawPoints.size();
   float percent = (drawSize * 100.0f) / allSize;
-  println("For epsilon of " + nf(epsilon, 0, 2) + ": all points: " + allSize + ", reduced points: " + drawSize
-      + ", " + nf(percent, 0, 2) + "% reduction.");
+  // println("For epsilon of " + nf(epsilon, 0, 2) + ": all points: " + allSize + ", reduced points: " + drawSize
+  //    + ", " + nf(percent, 0, 2) + "% reduction.");
 }
 
 public void reducePoints() {
@@ -596,7 +616,7 @@ public int playSample(int samplePos) {
   float duration = samplelen / (float) (sampleRate);
   instrument.play(duration);
   int[] xy = mapper.lookupCoordinate(samplePos);
-  print("---> playSample coords ", xy[0], xy[1], samplePos);
+  println("---> playSample coords:", xy[0], xy[1], samplePos);
   timeLocsArray.add(new TimedLocation(xy[0], xy[1], (int) (duration * 1000) + millis()));
   // return the length of the sample
   return samplelen;
