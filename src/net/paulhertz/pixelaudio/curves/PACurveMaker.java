@@ -30,6 +30,8 @@ public class PACurveMaker {
 	public int curveColor = PABezShape.composeColor(55, 199, 246);       // blue
 	public int brushColor = PABezShape.composeColor(76, 199, 144, 96);   // transparent green
 	private boolean isReady = false;
+	public int timeStamp;
+	public int timeOffset;
 
 
 	
@@ -125,6 +127,22 @@ public class PACurveMaker {
 		this.brushShape = brush;
 	}
 	
+
+	public int getTimeStamp() {
+		return timeStamp;
+	}
+
+	public void setTimeStamp(int timeStamp) {
+		this.timeStamp = timeStamp;
+	}
+
+	public int getTimeOffset() {
+		return timeOffset;
+	}
+
+	public void setTimeOffset(int timeOffset) {
+		this.timeOffset = timeOffset;
+	}
 
 	/************************************************
 	 *                                              *
