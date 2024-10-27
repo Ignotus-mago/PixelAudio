@@ -18,6 +18,7 @@ import processing.core.PGraphics;
 public class PACurveMaker {
 	public ArrayList<PVector> allPoints;
 	public ArrayList<PVector> drawPoints;
+	public ArrayList<Integer> drawTimes;
 	public PABezShape bezPoints;
 	public PABezShape weightedBezPoints;
 	public PABezShape brushShape;
@@ -34,12 +35,7 @@ public class PACurveMaker {
 	public int timeOffset;
 
 
-	
-	public PACurveMaker() {
-		this.allPoints = new ArrayList<PVector>();
-		this.drawPoints = new ArrayList<PVector>();
-	}
-	
+		
 	public PACurveMaker(ArrayList<PVector> points) {
 		this.allPoints = points;
 		this.drawPoints = new ArrayList<PVector>();
