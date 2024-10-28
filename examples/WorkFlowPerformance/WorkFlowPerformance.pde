@@ -1,3 +1,23 @@
+/*
+ * TO GET STARTED
+ * Launch the Max patch. 
+ * Launch WorkFlowApp3.
+ * Click on image to trigger single voices. Coordinates and sample offset are reported in the Max UDPHandler window.
+ * Type 'd' to turn on drawing. Drag the mouse to make "brushstrokes." Sound will play and data will show in 
+ * the Max subpatcher network_receiver. Turn off drawing ('d' toggles on and off) and click on brushstrokes to play.
+ * In Max, you can trigger this app -- see instructions in Max.
+ *
+ * 'z' key will reset both the app and the Max patch. See other key commands (incomplete list) below and in console.
+ * 
+ * Changes: Synchronized signatures on runPointEvents() and runCurveEvents().
+ * New synchronized method storeCurveTL() called by playPoints() methods.
+ * These steps seem to have eliminated the concurrent modification errors caused by calls from Max.
+ * I also changed some params: epsilon = 4 (was 12) makes tighter reduced curve points, 
+ * while polySteps = 8 (was 12) reduces number of points in polygonized Bezier curves. 
+ * Calling audioSampler.amplitude.setLastValue(0.6f) with 0.6 instead of 0.9 seems to reduce clipping.
+ *
+ */
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -120,7 +140,7 @@ public float epsilon = 4.0f;
 public ArrayList<PVector> allPoints = new ArrayList<PVector>();
 public ArrayList<Integer> allTimes;
 public PVector currentPoint;
-public int polySteps = 12;
+public int polySteps = 8;
 public PACurveMaker curveMaker;
 public ArrayList<PVector> eventPoints;
 public ListIterator<PVector> eventPointsIter;
@@ -371,7 +391,7 @@ public void runTimeArrayBack() {
 */
 
 // handle single clicks
-public void runPointEvents() {
+public synchronized void runPointEvents() {
   int currentTime = millis();
   for (Iterator<TimedLocation> iter = timeLocsArray.iterator(); iter.hasNext();) {
     TimedLocation tl = iter.next();
@@ -384,21 +404,8 @@ public void runPointEvents() {
 }
 
 // handle curves drawn on screen
-public void runCurveEvents() {
+public synchronized void runCurveEvents() {
   int currentTime = millis();
-  //for (Iterator<TimedLocation> iter = curveTLEvents.iterator(); iter.hasNext();) {
-  //  TimedLocation tl = iter.next();
-  //  if (tl.stopTime() < currentTime) {
-  //    sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width-1);
-  //    sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height-1);
-  //    int pos = mapper.lookupSample(sampleX, sampleY);
-  //    playSample(pos);
-  //    tl.setStale(true);
-  //  }
-  //  else {
-  //    return;
-  //  }
-  //}
   curveTLEvents.forEach(tl -> {
     if (tl.stopTime() < currentTime) {
       // the curves may exceed display bounds, so we have to constrain values
@@ -650,13 +657,7 @@ public void playPoints() {
     int startTime = millis();
     // println("building pointsTimer: "+ startTime);
     if (curveTLEvents == null) curveTLEvents = new ArrayList<TimedLocation>();
-    startTime += 50;
-    int i = 0;
-    while(eventPointsIter.hasNext()) {
-      PVector loc = eventPointsIter.next();
-      curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * eventStep));
-      Collections.sort(curveTLEvents);
-    }
+    storeCurveTL(eventPointsIter, startTime);
   }
 }
 
@@ -667,14 +668,18 @@ public void playPoints(ArrayList<PVector> pts) {
     int startTime = millis();
     // println("building pointsTimer: "+ startTime);
     if (curveTLEvents == null) curveTLEvents = new ArrayList<TimedLocation>();
-    startTime += 50;
-    int i = 0;
-    while(ptsIter.hasNext()) {
-      PVector loc = ptsIter.next();
-      curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * eventStep));
-      Collections.sort(curveTLEvents);
-    }
+    storeCurveTL(ptsIter, startTime);
   }
+}
+
+public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime) {
+  startTime += 50;
+  int i = 0;
+  while (iter.hasNext()) {
+    PVector loc = iter.next();
+    curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * eventStep));
+  }
+  Collections.sort(curveTLEvents);
 }
 
 public int playSample(int samplePos) {
@@ -704,7 +709,7 @@ public Sampler selectAudioSampler(int samplePos) {
   int sampleOffset = 4096;
   float relTime = isDrawMode ? shortEnv.getRel() : longEnv.getRel();
   audioSampler = new Sampler(audioBuffer, sampleRate, 32); // create a Minim Sampler 
-  audioSampler.amplitude.setLastValue(0.9f); // set amplitude for the Sampler
+  audioSampler.amplitude.setLastValue(0.6f); // set amplitude for the Sampler
   int beginPos = samplePos - sampleOffset < 0 ? 0 : samplePos - 4096;
   audioSampler.begin.setLastValue(beginPos); // set the Sampler to begin playback at samplePos
   int releaseDuration = (int) (relTime * sampleRate); // do some calculation to include the release time.
