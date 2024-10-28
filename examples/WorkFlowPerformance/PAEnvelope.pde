@@ -19,6 +19,19 @@ public class PAEnvelope {
    * @param decayTime
    * @param sustainLevel
    * @param releaseTime
+   * @return  a new PAEnvelope instance
+   */
+  public PAEnvelope createPAEnvelope(float maxAmplitude, float attackTime, float decayTime, float sustainLevel,
+      float releaseTime) {
+    return new PAEnvelope(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  }
+
+  /**
+   * @param maxAmplitude
+   * @param attackTime
+   * @param decayTime
+   * @param sustainLevel
+   * @param releaseTime
    */
   public PAEnvelope(float maxAmplitude, float attackTime, float decayTime, float sustainLevel, float releaseTime) {
     this.max = maxAmplitude;

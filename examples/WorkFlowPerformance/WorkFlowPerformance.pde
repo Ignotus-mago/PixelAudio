@@ -4,17 +4,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.ListIterator;
-import java.util.Timer;
 
 import javax.sound.sampled.*;
 
 import ddf.minim.*;
 import ddf.minim.ugens.*;
+import ddf.minim.analysis.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
-import net.paulhertz.pixelaudio.curves.PABezShape;
-import net.paulhertz.pixelaudio.curves.PACurveMaker;
-import net.paulhertz.pixelaudio.curves.PACurveUtility;
+import net.paulhertz.pixelaudio.curves.*;
 
 /**
  * Development version 3 of DeadBodyWorkFlow performance software.
@@ -118,8 +116,9 @@ int[] gammaTable;
 
 // curve drawing and interaction
 public boolean isDrawMode = false;
-public float epsilon = 12.0f;
+public float epsilon = 4.0f;
 public ArrayList<PVector> allPoints = new ArrayList<PVector>();
+public ArrayList<Integer> allTimes;
 public PVector currentPoint;
 public int polySteps = 12;
 public PACurveMaker curveMaker;
@@ -129,12 +128,13 @@ int eventStep = 90;   // milliseconds between events
 public ArrayList<TimedLocation> curveTLEvents;
 public ArrayList<BrushData> brushShapesList;
 public BrushData activeBrush;
+public int activeIndex = 0;
+// network communications
+NetworkDelegate nd;
 
 String dataPath;
 String audioStartFile = "workflow_03_mixdown.wav";
 String imageStartFile = "workFlowPanel_03.png";
-
-boolean isWriteToScreen = true;
 
 
 public void settings() {
@@ -154,19 +154,21 @@ public void setup() {
   audioStartFile = dataPath +"/"+ audioStartFile;
   imageStartFile = dataPath +"/"+ imageStartFile;
   loadFiles();
-  longEnv = new PAEnvelope(0.9f, 0.2f, 0.125f, 0.5f, 0.2f);
-  shortEnv = new PAEnvelope(0.8f, 0.05f, 0.0f, 0.8f, 0.05f);
   currentPoint = new PVector(-1, -1);
   timeLocsArray = new ArrayList<TimedLocation>();
   octet = new ArrayList<WFInstrument>();
   voiceList = new ArrayList<MultiChannelBuffer>();
   brushShapesList = new ArrayList<BrushData>();
+  nd = new NetworkDelegate();
+  nd.oscSendClear();
 }
 
 public void initAudio() {
   // use the getLineOut method of the Minim object to get an AudioOutput object
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
   this.audioBuffer = new MultiChannelBuffer(1024, 1);
+  longEnv = new PAEnvelope(0.9f, 0.2f, 0.125f, 0.5f, 0.2f);
+  shortEnv = new PAEnvelope(0.8f, 0.05f, 0.0f, 0.8f, 0.05f);
 }
 
 public void initMapper() {
@@ -279,13 +281,13 @@ public void displayColors() {
   mapImage.updatePixels();
 }
 
-public void writeToScreen(String msg, int x, int y) {
+public void writeToScreen(String msg) {
   pushStyle();
   fill(0);
   textSize(24);
-  text(msg, x, y);
+  text(msg, 64, 1000);
   fill(255);
-  text(msg, x + 2, y + 1);
+  text(msg, 66, 1001);
   popStyle();
 }
 
@@ -302,23 +304,23 @@ public void draw() {
   freshDraw();
   if (curveTLEvents != null) runCurveEvents();
   runPointEvents();
-  if (isWriteToScreen) writeToScreen("Click to play a sound. Press 'd' to turn drawing on (or off)."+ 
-  " Draw something.\n"+ "Turn off drawing and click on brushstrokes to play sounds.\n"+
-  " When many sounds are playing glitch happenz. Maybe you'll like it. Or you can press 'z' to reset.", 64, 900);
 }
 
 public void freshDraw() {
   if (this.brushShapesList.size() > 0) {
+    int idx = 0;
     for (BrushData bd : brushShapesList) {
       int brushFill = color(34, 89, 55, 233);
-      if (!isDrawMode && mouseInPoly(bd.brush.getPointList(this, polySteps))) {
+      if (mouseInPoly(bd.brush.getPointList(this, polySteps))) {
         brushFill = color(144, 89, 55, 233);
         activeBrush = bd;
+        activeIndex = idx;
       }
       bd.brush.setFillColor(brushFill);
       bd.brush.setWeight(2);
       bd.brush.setStrokeColor(brushFill);
       bd.brush.draw(this);
+      idx++;
     }
   }
   if (isDrawMode && curveMaker != null) curveMakerDraw();
@@ -384,6 +386,19 @@ public void runPointEvents() {
 // handle curves drawn on screen
 public void runCurveEvents() {
   int currentTime = millis();
+  //for (Iterator<TimedLocation> iter = curveTLEvents.iterator(); iter.hasNext();) {
+  //  TimedLocation tl = iter.next();
+  //  if (tl.stopTime() < currentTime) {
+  //    sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width-1);
+  //    sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height-1);
+  //    int pos = mapper.lookupSample(sampleX, sampleY);
+  //    playSample(pos);
+  //    tl.setStale(true);
+  //  }
+  //  else {
+  //    return;
+  //  }
+  //}
   curveTLEvents.forEach(tl -> {
     if (tl.stopTime() < currentTime) {
       // the curves may exceed display bounds, so we have to constrain values
@@ -460,7 +475,6 @@ public void keyPressed() {
     mapImage.updatePixels();
     break;
   case 'd': case'D':
-    isWriteToScreen = false;
     isDrawMode = !isDrawMode;
     if (!isDrawMode) this.curveMaker = null;
     String msg = isDrawMode ? "Screen drawing is on. Drag the mouse to draw to the screen." : "Screen drawing is off.";
@@ -512,13 +526,20 @@ public void keyPressed() {
   case 'x':
     if (brushShapesList != null) {
       // remove the oldest addition
-      if (!brushShapesList.isEmpty()) brushShapesList.remove(0);
+      if (!brushShapesList.isEmpty()) {
+        brushShapesList.remove(0);    // brushShapes array starts at 0
+        nd.oscSendDelete(1);       // Mac coll object index starts at 1
+      }
     }
     break;
   case 'X':
     if (brushShapesList != null) {
       // remove the most recent addition
-      if (!brushShapesList.isEmpty()) brushShapesList.remove(brushShapesList.size()-1);
+      if (!brushShapesList.isEmpty()) {
+        int idx = brushShapesList.size();
+        brushShapesList.remove(idx - 1);  // brushShapes array starts at 0
+        nd.oscSendDelete(idx);        // Mac coll object index starts at 1
+      }
     }
     break;
   case 'z':
@@ -556,17 +577,25 @@ public void showHelp() {
 public void mousePressed() {
   if (this.isDrawMode) {
     allPoints.clear();
+    allTimes = new ArrayList<Integer>();
     curveMaker = new PACurveMaker(allPoints);
+    curveMaker.setTimeStamp(millis());
     curveMaker.setEpsilon(epsilon);
     addPoint();
   } 
   else {
     if (activeBrush != null) {
-      eventPoints = activeBrush.points;
+      // a brushShape was triggered
+      eventPoints = activeBrush.polyPoints;
       playPoints();
+      // probably don't want to send the brush, already sent 
+      // when it was created (see mouseReleased)
+      // nd.oscSendDrawPoints(activeBrush.drawPoints);
+      nd.oscSendTrig(activeIndex + 1);
       activeBrush = null;
     } 
     else {
+      // a point event was triggered
       sampleX = mouseX;
       sampleY = mouseY;
       samplePos = mapper.lookupSample(sampleX, sampleY);
@@ -574,6 +603,7 @@ public void mousePressed() {
         isBufferStale = false;
       }
       playSample(samplePos);
+      nd.oscSendMousePressed(sampleX, sampleY, samplePos);
     }
   }
 }
@@ -582,6 +612,7 @@ public void addPoint() {
   if (mouseX != currentPoint.x || mouseY != currentPoint.y) {
     currentPoint = new PVector(mouseX, mouseY);
     allPoints.add(currentPoint);
+    
   }
 }
 
@@ -589,19 +620,23 @@ public void mouseReleased() {
   if (isDrawMode && allPoints != null && allPoints.size() > 2) {
     calculateDerivedPoints();
     if (curveMaker.isReady()) {
+      curveMaker.setTimeOffset(millis() - curveMaker.getTimeStamp());
       PABezShape curve = curveMaker.bezPoints;
       eventPoints = curve.getPointList(this, polySteps);
       playPoints();
       PABezShape brush = curveMaker.brushShape;
-      addBrushShape(curve, brush, eventPoints);
+      addBrushShape(curve, brush, eventPoints, curveMaker.drawPoints, curveMaker.getTimeStamp(), curveMaker.getTimeOffset());
       // isDrawMode = false;
+      nd.oscSendDrawPoints(curveMaker.drawPoints);
+      nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
     }
   }
   // isRefreshBuffer = true;
 }
 
-public void addBrushShape(PABezShape curve, PABezShape brush, ArrayList<PVector> points) {
-  this.brushShapesList.add(new BrushData(curve, brush, points));
+public void addBrushShape(PABezShape curve, PABezShape brush, ArrayList<PVector> polyPoints, 
+              ArrayList<PVector> drawPoints, int timeStamp, int timeOffset) {
+  this.brushShapesList.add(new BrushData(curve, brush, polyPoints, drawPoints, timeStamp, timeOffset));
 }
 
 public void calculateDerivedPoints() {
@@ -619,6 +654,23 @@ public void playPoints() {
     int i = 0;
     while(eventPointsIter.hasNext()) {
       PVector loc = eventPointsIter.next();
+      curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * eventStep));
+      Collections.sort(curveTLEvents);
+    }
+  }
+}
+
+public void playPoints(ArrayList<PVector> pts) {
+  if (pts != null) {
+    this.timeLocsArray.clear();
+    ListIterator<PVector> ptsIter = pts.listIterator();
+    int startTime = millis();
+    // println("building pointsTimer: "+ startTime);
+    if (curveTLEvents == null) curveTLEvents = new ArrayList<TimedLocation>();
+    startTime += 50;
+    int i = 0;
+    while(ptsIter.hasNext()) {
+      PVector loc = ptsIter.next();
       curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * eventStep));
       Collections.sort(curveTLEvents);
     }
@@ -696,7 +748,9 @@ public void reset() {
   loadFiles();
   this.curveMaker = null;
   this.brushShapesList.clear();
-  isWriteToScreen = true;
+  this.activeIndex = 0;
+  nd.oscSendClear();
+  nd.setDrawCount(0);
   println("----->>> RESET <<<------");
 }
   
@@ -954,7 +1008,8 @@ public static void saveAudioToFile(float[] samples, float sampleRate, String fil
   AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
 }
 
-// ------------- IMAGES ------------- //
+
+// ------------- SAVE IMAGE FILE ------------- //
 
 public void saveToImage() {
   // File folderToStartFrom = new File(dataPath(""));
@@ -982,12 +1037,46 @@ public void saveImageToFile(PImage img, String fileName) {
 public class BrushData {
   PABezShape curve;
   PABezShape brush;
-  ArrayList<PVector> points;
+  ArrayList<PVector> allPoints;
+  ArrayList<PVector> drawPoints;
+  ArrayList<PVector> polyPoints;
+  int timeStamp;
+  int timeOffset;
+  ArrayList<Integer>timeArray;
   
-  public BrushData(PABezShape curve, PABezShape brush, ArrayList<PVector> points) {
+  /**
+   * @param curve      a Bezier curve, the skeleton for the brush shape
+   * @param brush      a Bezier "brushstroke"
+   * @param poly      the Bezier skeleton as a polyline
+   * @param drawPoints  the reduced point set from which the Bezier skeleton was derived
+   * @param stamp      initial timestamp in milliseconds from application start
+   * @param offset    final time offset, milliseconds from initial timestamp
+   * 
+   * drawPoints UDP format: 
+   */
+  public BrushData(PABezShape curve, PABezShape brush, ArrayList<PVector> poly, ArrayList<PVector> drawPoints, int stamp, int offset) {
     this.curve = curve;
     this.brush = brush;
-    this.points = points;
+    this.drawPoints = drawPoints;
+    this.polyPoints = poly;
+    this.timeStamp = stamp;
+    this.timeOffset = offset;
+  }
+
+  public ArrayList<PVector> getAllPoints() {
+    return allPoints;
+  }
+
+  public void setAllPoints(ArrayList<PVector> allPoints) {
+    this.allPoints = allPoints;
+  }
+
+  public ArrayList<Integer> getTimeArray() {
+    return timeArray;
+  }
+
+  public void setTimeArray(ArrayList<Integer> timeArray) {
+    this.timeArray = timeArray;
   }
   
 }

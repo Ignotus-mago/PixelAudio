@@ -1,5 +1,5 @@
 // ------------------------------------------- //
-//           SAMPLER INSTRUMENT CLASS          //
+//       SAMPLER INSTRUMENT CLASS       //
 // ------------------------------------------- //
 
 // using minim's Instrument interface
@@ -74,5 +74,4 @@ public class WFInstrument implements Instrument {
   public void setADSR(ADSR adsr) {
     this.adsr = adsr;
   }
-
 }
