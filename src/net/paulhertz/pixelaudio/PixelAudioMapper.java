@@ -1598,6 +1598,12 @@ public class PixelAudioMapper {
 		return hsbTemp[2];
 	}
 
+	public static int colorShift(int rgbColor, float shift) {
+		float[] hsb = new float[3];
+		float h = PixelAudioMapper.hue(rgbColor, hsb);
+		h = (h + shift);
+		return Color.HSBtoRGB(h, hsb[1], hsb[2]);
+	}
 	
 	
 	// ------------- APPLY COLOR CHANNEL METHODS ------------- //
