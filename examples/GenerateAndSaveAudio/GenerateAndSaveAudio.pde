@@ -127,13 +127,22 @@ public void setup() {
   // See the MultiGenDemo example for details on how MultiGen works
   multigen = new MultiGen(rows * genWidth, columns * genHeight, offsetList, genList);
   mapper = new PixelAudioMapper(multigen);  // initialize a PixelAudioMapper
-  wdList = buildWaveDataList(46.875f, 8);        // generate a WaveData list for the WaveSynth
+  wdList = buildWaveDataList(46.875f, 8);   // generate a WaveData list for the WaveSynth
   wavesynth = new WaveSynth(mapper, wdList);  // initialize a WaveSynth object
   initWaveSynth(wavesynth);          // fill in some parameters of the WaveSynth
   synthImage = wavesynth.mapImage;      // point synthImage at the WaveSynth's PImage field
   mapSize = mapper.getSize();          // size of the image, and of various other entities
   timeLocsArray = new ArrayList<TimedLocation>();     // initialize mouse event tracking array
+  initDecimalFormat();
+  testPianoFrequency(13.5);
   showHelp();
+}
+
+public void testPianoFrequency(float testKey) {
+  float f = pianoKeyFrequency(testKey);
+  println("-- frequency for key "+ testKey +" is "+ eightPlaces.format(f) +" --");
+  float pk = frequencyPianoKey(f);
+  println("-- key for frequency "+ f +" is "+ eightPlaces.format(pk) +" --");
 }
 
 public void initAudio() {
@@ -160,111 +169,6 @@ public void initMultiGenLists() {
   offsetList.add(new int[] { genWidth, genHeight });
   genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
   offsetList.add(new int[] { 0, genHeight });
-}
-
-/**
- * Generates an ArrayList of WaveDate objects to be used by a WaveSynth to generate
- * RGB pixel values and (on request) audio signal values.
- *
- * @return an ArrayList of WaveData objects
- */
-public ArrayList<WaveData> buildWaveDataList(float fundamental, int partials) {
-  ArrayList<WaveData> list = new ArrayList<WaveData>();
-  if (partials < 1) partials = 1;
-  // funda is the fundamental of a musical tone that is somewhat like a trumpet
-  // in its frequency spectrum. Vary it to see how the image and sound change.
-  float funda = fundamental;
-  float frequency = funda;
-  float amplitude = 0.55f;
-  float phase = 0.766f;
-  float dc = 0.0f;
-  float cycles = -8.0f;
-  int waveColor = color(0, 89, 233);
-  int steps = this.animSteps;
-  WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  //
-  if (partials == 1) return list;
-  frequency = 2 * funda;
-  amplitude = 0.52f;
-  phase = -0.89f;
-  cycles = 8.0f;
-  waveColor = color(89, 199, 55);
-  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  //
-  if (partials == 2) return list;
-  frequency = 3 * funda;
-  amplitude = 0.6f;
-  phase = -0.486f;
-  cycles = 3.0f;
-  waveColor = color(254, 89, 110);
-  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  //
-  if (partials == 3) return list;
-  frequency = 4 * funda;
-  amplitude = 0.45f;
-  phase = -0.18616974f;
-  cycles = -2.0f;
-  waveColor = color(89, 110, 233);
-  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  //
-  if (partials == 4) return list;
-  frequency = 5 * funda;
-  amplitude = 0.42f;
-  phase = 0.6846085f;
-  cycles = -5.0f;
-  waveColor = color(233, 34, 21);
-  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  //
-  if (partials == 5) return list;
-  frequency = 6 * funda;
-  amplitude = 0.45f;
-  phase = 0.68912f;
-  cycles = 13.0f;
-  waveColor = color(220, 199, 55);
-  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  //
-  if (partials == 6) return list;
-  frequency = 7 * funda;
-  amplitude = 0.25f;
-  phase = 0.68f;
-  cycles = 11.0f;
-  waveColor = color(159, 190, 255);
-  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  //
-  if (partials == 7) return list;
-  frequency = 8 * funda;
-  amplitude = 0.32f;
-  phase = 0.68f;
-  cycles = -11.0f;
-  waveColor = color(209, 178, 117);
-  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-  list.add(wd);
-  return list;
-}
-
-/**
- * Sets instance variables for a supplied WaveSynth.
- * @param synth
- * @return
- */
-public WaveSynth initWaveSynth(WaveSynth synth) {
-  synth.setGain(0.44f);
-  synth.setGamma(myGamma);
-  synth.setScaleHisto(false);
-  synth.setAnimSteps(this.animSteps);
-  synth.setSampleRate(sampleRate);
-  // synth.setNoiseiness(0.5f);
-  println("--- mapImage size = " + synth.mapImage.pixels.length);
-  synth.prepareAnimation();
-  synth.renderFrame(0);
-  return synth;
 }
 
 public void draw() {
