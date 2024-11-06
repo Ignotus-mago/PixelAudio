@@ -1412,9 +1412,9 @@ public class PixelAudioMapper {
 	 */
 	public static final int[] rgbComponents(int rgb) {
 		int[] comp = new int[3];
-		comp[0] = (rgb >> 16) & 0xFF; // Faster way of getting red(rgb)
-		comp[1] = (rgb >> 8) & 0xFF; // Faster way of getting green(rgb)
-		comp[2] = rgb & 0xFF; // Faster way of getting blue(rgb)
+	    comp[0] = (rgb >> 16) & 0xFF; // Red component
+	    comp[1] = (rgb >> 8) & 0xFF;  // Green component
+	    comp[2] = rgb & 0xFF;         // Blue component
 		return comp;
 	}
 
@@ -1425,13 +1425,14 @@ public class PixelAudioMapper {
 	 * @return 	an array of 4 integers {R, G, B, A} in the range 0..255
 	 */
 	public static final int[] rgbaComponents(int argb) {
-		int[] comp = new int[4];
-		comp[0] = (argb >> 16) & 0xFF; // Faster way of getting red(argb)
-		comp[1] = (argb >> 8) & 0xFF; // Faster way of getting green(argb)
-		comp[2] = argb & 0xFF; // Faster way of getting blue(argb)
-		comp[3] = argb >> 24 & 0xFF; // alpha component
-		return comp;
+	    int[] comp = new int[4];
+	    comp[0] = (argb >> 16) & 0xFF; // Red component
+	    comp[1] = (argb >> 8) & 0xFF;  // Green component
+	    comp[2] = argb & 0xFF;         // Blue component
+	    comp[3] = (argb >> 24) & 0xFF; // Alpha component
+	    return comp;
 	}
+
 
 	/**
 	 * Breaks a Processing color into A, R, G and B values in an array.
@@ -1469,9 +1470,9 @@ public class PixelAudioMapper {
 	}
 	
 	public static int setAlpha(int argb, int alpha) {
-		// int[] c = rgbComponents(argb);
-		// return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
-		return (argb & 0x00FFFFFF) | (alpha << 24);
+		//int[] c = rgbComponents(argb);
+		//return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
+		 return (argb & 0x00FFFFFF) | (alpha << 24);
 	}
 
 	/**
