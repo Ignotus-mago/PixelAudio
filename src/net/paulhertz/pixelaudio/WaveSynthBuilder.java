@@ -8,7 +8,7 @@ import java.util.ArrayList;
 /**
  * 
  */
-public class WavSynthBuilder {
+public class WaveSynthBuilder {
 	public static final double semitoneFac = Math.pow(2, 1 / 12.0);
 
 	/**
@@ -113,6 +113,80 @@ public class WavSynthBuilder {
 		list.add(wd);
 		return list;
 	}
+	
+	/**
+	 * Generates an ArrayList of WaveData objects to be used by a WaveSynth to
+	 * generate RGB pixel values and (on request) audio signal values.
+	 *
+	 * @return an ArrayList of WaveData objects
+	 */
+	public static ArrayList<WaveData> synthDoubleStop(float funda1, float funda2, float pianoKey1, float pianoKey2, int animSteps) {
+		ArrayList<WaveData> list = new ArrayList<WaveData>();
+		float detune = 0.0625f;
+		//
+		// First Stop
+		float funda = funda1;
+		float pianoKey = pianoKey1;
+		float frequency = funda1;
+		float amplitude = 0.6f;
+		float phase = 0.75f;
+		float dc = 0.0f;
+		float cycles = 1.0f;
+		int waveColor = PixelAudioMapper.composeColor(0, 89, 233);
+		waveColor = PixelAudioMapper.colorShift(waveColor, (pianoKey % 12) / 12.0f);
+		int steps = animSteps;
+		WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+		list.add(wd);
+		//
+		frequency = 2 * funda;
+		amplitude = 0.4f;
+		phase = -0.5f;
+		cycles = -2.0f;
+		waveColor = PixelAudioMapper.composeColor(89, 199, 55);
+		waveColor = PixelAudioMapper.colorShift(waveColor, (pianoKey % 12) / 12.0f);
+		wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+		list.add(wd);
+		//
+		frequency = 4.0f * funda + detune;
+		amplitude = 0.3f;
+		phase = -0.125f;
+		cycles = 3.0f;
+		waveColor = PixelAudioMapper.composeColor(89, 110, 233);
+		waveColor = PixelAudioMapper.colorShift(waveColor, (pianoKey % 12) / 12.0f);
+		wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+		list.add(wd);
+		//
+		// Second Stop
+		funda = funda2;
+		pianoKey = pianoKey2;
+		frequency = funda2;
+		amplitude = 0.6f;
+		phase = 0.5f;
+		dc = 0.0f;
+		cycles = -1.0f;
+		waveColor = PixelAudioMapper.composeColor(0, 89, 233);
+		waveColor = PixelAudioMapper.colorShift(waveColor, (pianoKey % 12) / 12.0f);
+		//
+		frequency = 2 * funda;
+		amplitude = 0.4f;
+		phase = 0.75f;
+		cycles = 2.0f;
+		waveColor = PixelAudioMapper.composeColor(89, 199, 55);
+		waveColor = PixelAudioMapper.colorShift(waveColor, (pianoKey % 12) / 12.0f);
+		wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+		list.add(wd);
+		//
+		frequency = 4  * funda - detune;
+		amplitude = 0.3f;
+		phase = 0.125f;
+		cycles = -3.0f;
+		waveColor = PixelAudioMapper.composeColor(89, 110, 233);
+		waveColor = PixelAudioMapper.colorShift(waveColor, (pianoKey % 12) / 12.0f);
+		wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+		list.add(wd);
+		return list;
+	}
+
 
 	public static float[] chromaticScale(float funda) {
 		float[] chromaScale = new float[12];
