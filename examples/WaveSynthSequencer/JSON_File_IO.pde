@@ -9,15 +9,13 @@ public void loadWaveData() {
   File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }
-
 /**
  * @param selection   a file selected from an Open File dialog
  */
 public void fileSelectedOpen(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
-    isAnimating = oldIsAnimating;
-    isRaining = oldIsRaining;
+    isWaveSynthAnimating = oldIsAnimating;
     return;
   }
   currentDataFile = selection;
@@ -26,13 +24,11 @@ public void fileSelectedOpen(File selection) {
   json = loadJSONObject(currentFileName);
   setWaveSynthFromJSON(json, wavesynth);
   surface.setTitle(currentFileName);
-  isAnimating = oldIsAnimating;
-  isRaining = oldIsRaining;
+  isWaveSynthAnimating = oldIsAnimating;
 }
-
 /**
  * Parses a JSONObject to get values for a WaveSynth and load the values to the WaveSynth.
- *
+ * 
  * @param json    JSONObject data, probably from a file
  * @param synth    a WaveSynth to modify with the JSONObject data values
  */
@@ -81,7 +77,6 @@ public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
   synth.renderFrame(0);
   printWaveData(synth);
 }
-
 /**
  * Outputs fields from a WaveSynth to the console
  */
@@ -114,7 +109,6 @@ public void printWaveData(WaveSynth synth) {
 public void saveWaveData() {
   selectOutput("Select a file to write to:", "fileSelectedWrite");
 }
-
 public void fileSelectedWrite(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
@@ -124,7 +118,7 @@ public void fileSelectedWrite(File selection) {
   println("User selected " + selection.getAbsolutePath());
   // Do we have a .json at the end?
   if (selection.getName().length() < 5
-    || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
+      || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
     // problem missing ".json"
     currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
   } else {
@@ -144,6 +138,7 @@ public void fileSelectedWrite(File selection) {
     waveElement.setFloat("phaseInc", wd.phaseInc);
     waveElement.setFloat("cycles", wd.phaseCycles);
     waveElement.setFloat("dc", wd.dc);
+    // BADSR settings
     int[] rgb = PixelAudioMapper.rgbComponents(wd.waveColor);
     JSONObject rgbColor = new JSONObject();
     rgbColor.setInt("r", rgb[0]);
@@ -163,7 +158,7 @@ public void fileSelectedWrite(File selection) {
     stateData.setString("comments", "---");
   else
     stateData.setString("comments", synth.comments);
-  // String videoName = selection.getName();
+  // String videoName = selection.getName(); 
   String videoName = synth.videoFilename;
   if (videoName == null || videoName.equals("")) {
     videoName = selection.getName();

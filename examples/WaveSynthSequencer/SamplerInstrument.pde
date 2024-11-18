@@ -3,22 +3,20 @@
 //-------------------------------------------//
 
 // using minim's Instrument interface
-class SamplerInstrument implements Instrument {
+public class SamplerInstrument implements Instrument {
   Sampler sampler;
   ADSR adsr;
-
   SamplerInstrument(Sampler sampler, ADSR adsr) {
     this.sampler = sampler;
     this.adsr = adsr;
     sampler.patch(adsr);
+    adsr.unpatchAfterRelease(sampler);
   }
-
   public void play() {
     // Trigger the ADSR envelope by calling noteOn()
     // Duration of 0.0 means the note is sustained indefinitely
     noteOn(0.0f);
   }
-
   public void play(float duration) {
     // Trigger the ADSR envelope by calling noteOn()
     // Duration of 0.0 means the note is sustained indefinitely
@@ -26,9 +24,8 @@ class SamplerInstrument implements Instrument {
     // println("----->>> SamplerInstrument.play("+ duration +")");
     noteOn(duration);
   }
-
   @Override
-    public void noteOn(float duration) {
+  public void noteOn(float duration) {
     // Trigger the ADSR envelope and sampler
     adsr.noteOn();
     sampler.trigger();
@@ -41,33 +38,27 @@ class SamplerInstrument implements Instrument {
         public void run() {
           noteOff();
         }
-      }
-      , durationMillis);
+      }, durationMillis);
     }
   }
-
   @Override
-    public void noteOff() {
+  public void noteOff() {
     // println("----->>> noteOff event");
     adsr.unpatchAfterRelease(audioOut);
     adsr.noteOff();
   }
-
   // Getter for the Sampler instance
   public Sampler getSampler() {
     return sampler;
   }
-
   // Setter for the Sampler instance
   public void setSampler(Sampler sampler) {
     this.sampler = sampler;
   }
-
   // Getter for the ADSR instance
   public ADSR getADSR() {
     return adsr;
   }
-
   // Setter for the ADSR instance
   public void setADSR(ADSR adsr) {
     this.adsr = adsr;

@@ -1,7 +1,7 @@
 /*
  * TO GET STARTED
  * Launch the Max patch. 
- * Launch WorkFlowApp3.
+ * Launch WorkFlowPerformance.
  * Click on image to trigger single voices. Coordinates and sample offset are reported in the Max UDPHandler window.
  * Type 'd' to turn on drawing. Drag the mouse to make "brushstrokes." Sound will play and data will show in 
  * the Max subpatcher network_receiver. Turn off drawing ('d' toggles on and off) and click on brushstrokes to play.
@@ -31,7 +31,7 @@ import ddf.minim.*;
 import ddf.minim.ugens.*;
 import ddf.minim.analysis.*;
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
+//import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
 
 /**
@@ -72,7 +72,7 @@ int genHeight = 512;      // height of PixelMapGen objects, for hGen must be equ
 PixelAudioMapper mapper;  // object for reading, writing, and transcoding audio and image data
 int mapSize;              // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
 PImage mapImage;          // image for display
-PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
+PixelAudioMapper.ChannelNames chan = PixelAudioMapper.ChannelNames.ALL;
 int[] colors;             // array of spectral colors
 boolean isBlending = false;
 
