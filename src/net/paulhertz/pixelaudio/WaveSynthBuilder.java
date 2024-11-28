@@ -197,7 +197,7 @@ public class WaveSynthBuilder {
 		return chromaScale;
 	}
 
-	public static float pianoKeyFrequency(int keyNumber) {
+	public static float pianoKeyFrequency(float keyNumber) {
 		return (float) (440 * Math.pow(2, (keyNumber - 49) / 12.0));
 	}
 

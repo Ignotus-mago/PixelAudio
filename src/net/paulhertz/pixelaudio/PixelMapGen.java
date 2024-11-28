@@ -72,7 +72,6 @@ public abstract class PixelMapGen {
 	public final static String description = "Declare the description variable in your class and describe your PixelMapGen.";
 
 
-
 	/**
 	 * Constructor for classes that extend PixelMapGen. You will need to create you own constructor
 	 * for your class, but it can just call super(width, height) if everything it does can be handled
