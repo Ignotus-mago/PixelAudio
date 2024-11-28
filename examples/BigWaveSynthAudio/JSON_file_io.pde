@@ -16,7 +16,7 @@ public void loadWaveData() {
 public void fileSelectedOpen(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
-    isWaveSynthAnimating = oldIsAnimating;
+    isAnimating = oldIsAnimating;
     return;
   }
   currentDataFile = selection;
@@ -25,7 +25,7 @@ public void fileSelectedOpen(File selection) {
   json = loadJSONObject(currentFileName);
   setWaveSynthFromJSON(json, wavesynth);
   surface.setTitle(currentFileName);
-  isWaveSynthAnimating = oldIsAnimating;
+  isAnimating = oldIsAnimating;
 }
 
 /**

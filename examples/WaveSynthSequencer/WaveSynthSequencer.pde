@@ -14,10 +14,11 @@ import net.paulhertz.pixelaudio.*;
 
 /**
  * 
- * WaveSynthSequencer builds on BigWaveSynth, which shows how you can load
- * WaveSynth pixel data into the pixel array of a MultiGen. WaveSynthSequencer 
- * adds some useful features: 1. you can play the image as audio, and
- * 2. you can save the audio to a .wav file.
+ * WaveSynthSequencer builds on BigWaveSynth and BigWaveSynthAudio, which show how 
+ * you can load WaveSynth pixel data into the pixel array of a MultiGen. 
+ * WaveSynthSequencer adds some useful features: 
+ * 1. you can play the image as a musical sequence, and
+ * 2. you can save audio to a .wav file and image to a .png file
  * 
  * This example also allows you to load JSON files to reconfigure the current WaveSynth.
  * You can play any WaveSynth with raindrops ('d' key) or by clicking in the image. 
@@ -28,8 +29,10 @@ import net.paulhertz.pixelaudio.*;
  * To load JSON data, press the 'o' key and go to the data folder of this sketch. 
  * 
  * Note that the sampleRate value influences the appearance of the image, the duration
- * of audio samples and the way data is written to an audio file. See the comments
- * in setup() for details. 
+ * of audio samples and the way data is written to an audio file. See BigWaveSynthAudio 
+ * example code for documentation of how sampleRate affects audio playback 
+ * and WaveSynth patterns. In WaveSynthSequencer, we set the WaveSynth objects sample rate
+ * to the global sample rate. This ensures that the musical frequencies are accurate. 
  * 
  * 
  * Press ' ' to start and stop WaveSynth animation.
@@ -117,22 +120,19 @@ int count = 0;
 /** for frequency calculations, numbers are piano keys */
 public static final double semitoneFac = Math.pow(2, 1/12.0);
 int[] dbwfMusic = { 
-  //9, 9, 9,  9,
-  9, 14, 20,  8,    12, 19,  7, 13,    17, 12, 18, 11,    21, 16, 24, 15,
+   9, 14, 20,  8,    12, 19,  7, 13,    17, 12, 18, 11,    21, 16, 24, 15,
   26, 24, 19, 25,    24, 17, 11,  4,     9, 14, 20,  8,    12, 19,  7,  9, 
    4,  9, 15,  8,    14, 19, 16, 23,    21, 26, 19, 12,    20, 16, 14, 10
 };
 /** for time calculations, 12 = one quarter note */
 ArrayList<WaveSynth> waveSynthList;
 int[] dbwfTimes = {
-  //12, 12, 12, 12, 
   12, 12, 12, 12,    8, 4, 12, 24,     12, 12, 18, 6,   4, 4, 16, 24,
   12, 12, 12, 12,    8, 4, 12, 24,     12, 12, 18, 6,   8, 8,  8, 24,
   12, 12, 12, 12,    8, 4, 12, 24,     12, 12, 18, 6,   8, 4, 12, 24
 };
 /** amplitude values */
 float[] dbwfAmps = {
-  //0.0f, 0.0f, 0.f, 0.0f,
   0.4f, 0.3f, 0.5f, 0.3f,    0.4f, 0.3f, 0.5f, 0.4f,     0.4f, 0.3f, 0.3f, 0.3f,   0.4f, 0.3f, 0.3f, 0.4f,
   0.4f, 0.3f, 0.5f, 0.3f,    0.4f, 0.3f, 0.3f, 0.5f,     0.4f, 0.3f, 0.5f, 0.3f,   0.4f, 0.3f,  0.3f, 0.5f,
   0.4f, 0.3f, 0.3f, 0.3f,    0.4f, 0.3f, 0.3f, 0.4f,     0.4f, 0.3f, 0.5f, 0.3f,   0.4f, 0.3f, 0.3f, 0.5f
@@ -156,6 +156,7 @@ DecimalFormat eightPlaces;
 public void settings() {
   size(rows * genWidth, columns * genHeight);
 }
+
 public void setup() {
   frameRate(30);
   pixelaudio = new PixelAudio(this);
@@ -177,7 +178,6 @@ public void setup() {
   showHelp();
 }
 
-
 public void initAudio() {
   // use the getLineOut method of the Minim object to get an AudioOutput object
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
@@ -185,6 +185,7 @@ public void initAudio() {
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
 }
+
 /**
  * Adds PixelMapGen objects to the local variable genList, puts the coords
  * of their upper left corner in offsetList. The two lists are used to  
@@ -210,6 +211,7 @@ public MultiGen loadLoopGen(int loopGenW, int loopGenH) {
   offsetList.add(new int[] { 0, loopGenH });
   return new MultiGen(width, height, offsetList, genList);
 }
+
 /**
  * Initializes number formatters, handy for display.
  */
@@ -245,6 +247,7 @@ public void draw() {
       }
   }
 }
+
 /**
  * Animates the WaveSynth referenced by variable wavesynth.
  * The animation is controlled by the WaveSynth phase and cycle attributes.
@@ -254,6 +257,7 @@ public void stepAnimation() {
   step %= animSteps;
   wavesynth.renderFrame(step);
 }
+
 /**
  * Run the animation for audio events. 
  */
@@ -393,7 +397,6 @@ public void keyPressed() {
   }
 }
 
-
 /**
  * Advance the WaveSynth Sequencer to its next state. 
  */
@@ -422,6 +425,7 @@ public void showHelp() {
   println(" * Press 'c' to reset the image and sound to the opening state. ");
   println(" * Press 'h' to show this help message in the console. ");
 }
+
 /**
  * Save audio buffer to a file called "wavesynth_<wsIndex>.wav".
  */
@@ -437,6 +441,7 @@ public void saveToAudio() {
     println("--->> The file format is unsupported "+ e.getMessage());
   }
 }
+
 /**
  * Calls WaveSynth to render a audio sample array derived from the same math that creates the image.
  */
@@ -448,6 +453,7 @@ public void renderSignal() {
   audioBuffer.setChannel(0, audioSignal);            // copy audioSignal to channel 0 of audioBuffer
   // println("--->> copied audio signal to audio buffer");
 }
+
 public void mousePressed() {
   sampleX = mouseX;
   sampleY = mouseY;
@@ -458,7 +464,7 @@ public void mousePressed() {
   }
   playSample(samplePos, calcSampleLen(), 0.3f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
 }
-  
+
 /**
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
@@ -468,11 +474,13 @@ public void mousePressed() {
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSR adsr) {
   // println("--- play "+ twoPlaces.format(amplitude));
-  // create a Minim Sampler from the buffer sampleRate sampling rate, for up to 8 simultaneous outputs
+  // create a Minim Sampler from the buffer, with sampleRate sampling rate, 
+  // for up to 8 simultaneous outputs
   audioSampler = new Sampler(audioBuffer, sampleRate, 8);
   // set amplitude for the Sampler
   audioSampler.amplitude.setLastValue(amplitude);
-  // set the Sampler to begin playback at samplePos, which corresponds to the place the mouse was clicked
+  // set the Sampler to begin playback at samplePos, which corresponds 
+  // to the place the mouse was clicked
   audioSampler.begin.setLastValue(samplePos);
   // do some calculation to include the release time.
   int releaseDuration = (int) (releaseTime * sampleRate); 
@@ -504,8 +512,9 @@ public int calcSampleLen() {
 
 
 // ------------------------------------------- //
-//             FREQUENCY CALCULATIONS       //
+//            FREQUENCY CALCULATIONS           //
 // ------------------------------------------- //
+
 /**
  * Generates an ArrayList of WaveData objects to be used by a WaveSynth to
  * generate RGB pixel values and (on request) audio signal values.
@@ -622,6 +631,7 @@ public int colorShift(int c, float shift) {
   h = (h + shift);
   return Color.HSBtoRGB(h, hsb[1], hsb[2]);
 }
+
 /**
  * Sets instance variables for a supplied WaveSynth.
  * @param synth
@@ -639,9 +649,10 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
   // synth.renderFrame(0);
   return synth;
 }
+
 /**
- * @param keyNumber    key number on a piano, where A is key 49
- * @return        frequency of the key (A = 440)
+ * @param keyNumber key number on a piano, where A440 is key 49
+ * @return          frequency of the key (A = 440)
  */
 public float pianoKeyFrequency(int keyNumber) {
   return (float) (440 * Math.pow(2, (keyNumber - 49) / 12.0));
@@ -673,7 +684,6 @@ public void initWaveSynthList() {
   }
 }
 
-
 /**
  * Initializes the introMusic ArrayList of NoteTimedLocation objects, data for a simple audio sequencer. 
  * Uses the dbwfTimes array to set durations, dbwfMusic to set frequencies, and dbwfAmps to set amplitudes.
@@ -692,6 +702,7 @@ public void loadMusic() {
   int y;
   float span;
   ADSR adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime, 0, 0);
+  println("\n----- SEQUENCER DATA -----\n   piano key, frequency, duration, stop time ms");
   for (int dur : this.dbwfTimes) {
     signalPos = (int) random(samplelen, mapSize - samplelen - 1);
     coords = mapper.lookupCoordinate(signalPos);
@@ -699,14 +710,6 @@ public void loadMusic() {
     y = coords[1];
     circ = color(233, 220, 199, 128);
     adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime, 0, 0);
-    /*
-    if (i < 4) {
-      x = 768;
-      y = 512;
-      circ = color(246, 233, 123, 192);
-      adsr = new ADSR(0.1f, 0.0f, 0.1f, 0.1f, 0.1f, 0, 0);
-    }
-    */
     span = dur * this.beatSpan;
     int pianoKey = this.dbwfMusic[i];
     float f = 1.0f * pianoKeyFrequency(pianoKey);
@@ -716,6 +719,6 @@ public void loadMusic() {
     introMusic.add(new NoteTimedLocation(x, y, stopSum, i, pianoKey, span, amp * 1.8f, circ, adsr, ws));
     i++;
     stopSum += (int) (Math.round(span));
-    println("--->> note event ", pianoKey, twoPlaces.format(f), twoPlaces.format(span), stopSum);
+    println("  ", pianoKey, twoPlaces.format(f), twoPlaces.format(span), stopSum);
   }
 }  

@@ -30,6 +30,7 @@ public static void saveAudioTo32BitPCMFile(float[] samples, float sampleRate, St
     File outFile = new File(fileName);
     AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);      
 }
+
 /**
  * Saves audio data to 16-bit integer PCM format, which Processing can also open.
  * 

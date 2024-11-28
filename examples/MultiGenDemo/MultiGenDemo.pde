@@ -65,7 +65,7 @@ public void setup() {
   mapImage.updatePixels();
 }
 
-// generate HIlbertGens and pixel offsets where they will be placed
+// generate HilbertGens and pixel offsets where they will be placed
 // AfineTransformType arguments determine the rotation and reflection of the gens
 // in such a was as to make the pixels look continuous along the signal path.
 public void loadGenLists() {
