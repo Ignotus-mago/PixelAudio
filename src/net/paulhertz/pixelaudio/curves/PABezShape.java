@@ -51,19 +51,23 @@ public class PABezShape {
   float[] bounds;
   
   
-  /** 
-   *  KAPPA = (distance between Bezier anchor and its associated control point) / (circle radius)
-   *  when a circle is divided into 4 sectors of 90 degrees.
-   *  kappa = 4 * (√2 - 1) / 3
-   *  see <a href="http://www.whizkidtech.redprince.net/bezier/circle/kappa/">http://www.whizkidtech.redprince.net/bezier/circle/kappa/</a>
-   */
-  public final static double KAPPA = 0.5522847498;
-  /**
-   * LAMBDA = KAPPA/√2, a value for weighting Bezier splines based on the length of line segments between anchor points
-   * derived from the ratio of the chord of a quarter circle to KAPPA, LAMBDA = KAPPA * (1/√2)
-   *
-   */
-  public final static float LAMBDA = 0.39052429175f;
+	/**
+	 * <p>
+	 * In the approximation of a circle by Bezier curves, <br>
+	 * KAPPA = (distance between Bezier anchor and its associated control point) /
+	 * (circle radius),</br> when a circle is divided into 4 sectors of 90 degrees.</br>
+	 * KAPPA = 4 * (√2 - 1) / 3 = 0.5522847498</p>
+	 * @see <a href="http://www.whizkidtech.redprince.net/bezier/circle/kappa/">http://www.whizkidtech.redprince.net/bezier/circle/kappa/</a>
+	 */
+	public final static double KAPPA = 0.5522847498;
+	/**
+	 * A value for weighting Bezier splines based on the length of line segments between 
+	 * anchor points, derived from the ratio of the chord of a quarter circle to KAPPA. </br>
+	 * LAMBDA = KAPPA * (1/√2) = 0.39052429175f
+	 *
+	 */
+	public final static float LAMBDA = 0.39052429175f;
+
 
 
   /**
@@ -926,6 +930,7 @@ public class PABezShape {
 	 * Scales this shape around a given point. 
 	 * Sets xcoords and ycoords arrays to null: they will have to be recalculated after a transform,
 	 * which will be done through lazy initialization when {@code xcoords()} or {@code ycoords()} are called.
+	 * 
 	 * @param xScale   scaling on x-axis
 	 * @param yScale   scaling on y-axis
 	 */
@@ -940,19 +945,19 @@ public class PABezShape {
 			PVector pt;
 			if (CURVE_SEGMENT == segType) {
 				PABezVertex bv = (PABezVertex) vt;
-				pt = scaleCoorAroundPoint(coords[0], coords[1], xScale, yScale, x0, y0);
+				pt = scaleCoordAroundPoint(coords[0], coords[1], xScale, yScale, x0, y0);
 				bv.setCx1(pt.x);
 				bv.setCy1(pt.y);
-				pt = scaleCoorAroundPoint(coords[2], coords[3], xScale, yScale, x0, y0);
+				pt = scaleCoordAroundPoint(coords[2], coords[3], xScale, yScale, x0, y0);
 				bv.setCx2(pt.x);
 				bv.setCy2(pt.y);
-				pt = scaleCoorAroundPoint(coords[4], coords[5], xScale, yScale, x0, y0);
+				pt = scaleCoordAroundPoint(coords[4], coords[5], xScale, yScale, x0, y0);
 				bv.setX(pt.x);
 				bv.setY(pt.y);
 			}
 			else if (LINE_SEGMENT == segType) {
 				PALineVertex lv = (PALineVertex) vt;
-				pt = scaleCoorAroundPoint(coords[0], coords[1], xScale, yScale, x0, y0);
+				pt = scaleCoordAroundPoint(coords[0], coords[1], xScale, yScale, x0, y0);
 				lv.setX(pt.x);
 				lv.setY(pt.y);
 			}
@@ -962,11 +967,12 @@ public class PABezShape {
 	
 	/**
 	 * Rotates this shape around a supplied center point.
+	 * 
 	 * @param theta    degrees to rotate (in radians)
 	 * TODO for theta very near PI, 0, or TWO_PI, insure correct rotation.  
 	 */
 	public void rotateShape(float xctr, float yctr, float theta) {
-		PVector pt = rotateCoorAroundPoint(this.x(), this.y(), xctr, yctr, theta);
+		PVector pt = rotateCoordAroundPoint(this.x(), this.y(), xctr, yctr, theta);
 		this.setX(pt.x);
 		this.setY(pt.y);
 		ListIterator<PAVertex2DINF> it = this.curveIterator();
@@ -976,19 +982,19 @@ public class PABezShape {
 			float[] coords = vt.coords();
 			if (CURVE_SEGMENT == segType) {
 				PABezVertex bv = (PABezVertex) vt;
-				pt = rotateCoorAroundPoint(coords[0], coords[1], xctr, yctr, theta);
+				pt = rotateCoordAroundPoint(coords[0], coords[1], xctr, yctr, theta);
 				bv.setCx1(pt.x);
 				bv.setCy1(pt.y);
-				pt = rotateCoorAroundPoint(coords[2], coords[3], xctr, yctr, theta);
+				pt = rotateCoordAroundPoint(coords[2], coords[3], xctr, yctr, theta);
 				bv.setCx2(pt.x);
 				bv.setCy2(pt.y);
-				pt = rotateCoorAroundPoint(coords[4], coords[5], xctr, yctr, theta);
+				pt = rotateCoordAroundPoint(coords[4], coords[5], xctr, yctr, theta);
 				bv.setX(pt.x);
 				bv.setY(pt.y);
 			}
 			else if (LINE_SEGMENT == segType) {
 				PALineVertex lv = (PALineVertex) vt;
-				pt = rotateCoorAroundPoint(coords[0], coords[1], xctr, yctr, theta);
+				pt = rotateCoordAroundPoint(coords[0], coords[1], xctr, yctr, theta);
 				lv.setX(pt.x);
 				lv.setY(pt.y);
 			}
@@ -1008,19 +1014,21 @@ public class PABezShape {
 	 */
 	
 	/**
-	 * translates a point by xOffset and yOffset, returns a new point
+	 * Translates a point by xOffset and yOffset, returns a new point.
+	 * 
 	 * @param x         x coordinate of point
 	 * @param y         y coordinate of point
 	 * @param xOffset   distance to translate on x-xis
 	 * @param yOffset   distance to translate on y-axis
 	 * @return          a new translated point
 	 */
-	public static PVector translateCoor(float x, float y, float xOffset, float yOffset) {
+	public static PVector translateCoord(float x, float y, float xOffset, float yOffset) {
 		return new PVector(x + xOffset, y + yOffset);
 	}
 
 	/**
-	 * scales a point by xScale and yScale around a point (xctr, yctr), returns a new point
+	 * Scales a point by xScale and yScale around a point (xctr, yctr), returns a new point.
+	 * 
 	 * @param x        x coordinate of point
 	 * @param y        y coordinate of point
 	 * @param xScale   scaling on x-axis
@@ -1029,16 +1037,17 @@ public class PABezShape {
 	 * @param yctr     y coordinate of center of transformation
 	 * @return         a new scaled point as a PVector
 	 */
-	public static PVector scaleCoorAroundPoint(float x, float y, float xScale, float yScale, float xctr, float yctr) {
+	public static PVector scaleCoordAroundPoint(float x, float y, float xScale, float yScale, float xctr, float yctr) {
 		float xout = xctr + (x - xctr) * xScale;
 		float yout = yctr + (y - yctr) * yScale;
 		return new PVector(xout, yout);
 	}
 	
 	/**
-	 * rotates a point theta radians around a point (xctr, yctr), returns a new point
+	 * Rotates a point theta radians around a point (xctr, yctr), returns a new point.
 	 * rotation is counterclockwise for positive theta in Cartesian system, 
 	 * clockwise in screen display coordinate system
+	 * 
 	 * @param x       x coordinate of point
 	 * @param y       y coordinate of point
 	 * @param xctr    x coordinate of center of rotation
@@ -1046,19 +1055,17 @@ public class PABezShape {
 	 * @param theta   angle to rotate, in radians
 	 * @return        a new rotated point
 	 */
-	public static PVector rotateCoorAroundPoint(float x, float y, float xctr, float yctr, float theta) {
-		// Rotate vector or point (x,y) around point (xctr, yctr) through an angle theta
-		// degrees in radians, rotation is counterclockwise from the coordinate axis
-		// returns a new point
+	public static PVector rotateCoordAroundPoint(float x, float y, float xctr, float yctr, float theta) {
 		double sintheta = Math.sin(theta);
 		double costheta = Math.cos(theta);
-		PVector pt = translateCoor(x, y, -xctr, -yctr);
+		PVector pt = translateCoord(x, y, -xctr, -yctr);
 		pt.set((float)(pt.x * costheta - pt.y * sintheta), (float)(pt.x * sintheta + pt.y * costheta));
-		return translateCoor(pt.x, pt.y, xctr, yctr);
+		return translateCoord(pt.x, pt.y, xctr, yctr);
 	}
 
 	/**
-	 * decides if a point is inside a polygon
+	 * Decides if a point is inside a polygon, returns true if it is.
+	 * 
 	 * @param npol   number of points in polygon
      * @param poly   an array of PVectors representing a polygon
 	 * @param x      x-coordinate of point
@@ -1072,11 +1079,8 @@ public class PABezShape {
 		for (i = 0, j = npol-1; i < npol; j = i++) {
             PVector iVec = poly.get(i);
             PVector jVec = poly.get(j);
-			if (
-					(((iVec.y <= y) && (y < jVec.y)) || ((jVec.y <= y) && (y < iVec.y))) &&
-					(x < (jVec.x - iVec.x) * (y - iVec.y) / (jVec.y - iVec.y) + iVec.x)
-			)
-			{
+			if ( (((iVec.y <= y) && (y < jVec.y)) || ((jVec.y <= y) && (y < iVec.y))) &&
+				 (x < (jVec.x - iVec.x) * (y - iVec.y) / (jVec.y - iVec.y) + iVec.x) ) {
                 inside = !inside;
             }
 		}
