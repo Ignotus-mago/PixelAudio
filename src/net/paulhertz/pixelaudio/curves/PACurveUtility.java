@@ -416,22 +416,22 @@ public class PACurveUtility {
 	/**
 	 * Draws a line in a PGraphics using the 2D PVector data and supplied color and weight.
 	 * 
-	 * @param pix			a PGraphics where drawing takes place
+	 * @param pg			a PGraphics where drawing takes place
 	 * @param points		ArrayList of 2D PVector objects, typically a 
 	 * 						point set without successive identical points
 	 * @param lineColor		color for the line that is drawn
 	 * @param lineWeight	weight for the line that is drawn
 	 */
-	public static void pointsDraw(PGraphics pix, ArrayList<PVector> points, int lineColor, float lineWeight) {
+	public static void pointsDraw(PGraphics pg, ArrayList<PVector> points, int lineColor, float lineWeight) {
 		if (points.size() > 1) {
-			pix.stroke(lineColor);
-			pix.strokeWeight(lineWeight);
-			pix.noFill();
-			pix.beginShape();
+			pg.stroke(lineColor);
+			pg.strokeWeight(lineWeight);
+			pg.noFill();
+			pg.beginShape();
 			for (PVector vec : points) {
-				pix.vertex(vec.x, vec.y);
+				pg.vertex(vec.x, vec.y);
 			}
-			pix.endShape();
+			pg.endShape();
 		}
 	}
 	
@@ -472,19 +472,19 @@ public class PACurveUtility {
 	 * Draws a Bezier path in a PGraphics using 2D curve data and supplied stroke color and weight.
 	 * The path is drawn with no fill.
 	 * 
-	 * @param pix
+	 * @param pg
 	 * @param curve
 	 * @param curveColor
 	 * @param curveWeight
 	 */
-	public static void curveDraw(PGraphics pix, PABezShape curve, int curveColor, float curveWeight) {
+	public static void curveDraw(PGraphics pg, PABezShape curve, int curveColor, float curveWeight) {
 		if (null != curve && curve.size() > 0) {
-			pix.pushStyle();
-			pix.stroke(curveColor);
-			pix.strokeWeight(curveWeight);
-			pix.noFill();
-			curve.drawQuick(pix);
-			pix.popStyle();
+			pg.pushStyle();
+			pg.stroke(curveColor);
+			pg.strokeWeight(curveWeight);
+			pg.noFill();
+			curve.drawQuick(pg);
+			pg.popStyle();
 		}
 	}
 
@@ -492,12 +492,12 @@ public class PACurveUtility {
 	 * Draws a Bezier path in a PGraphics using 2D curve data and local stroke color and weight 
 	 * of a PABezShape. If the PABezShape is filled, the fill will be drawn.
 	 * 
-	 * @param pix
+	 * @param pg
 	 * @param curve
 	 */
-	public static void curveDraw(PGraphics pix, PABezShape curve) {
+	public static void curveDraw(PGraphics pg, PABezShape curve) {
 		if (null != curve && curve.size() > 0) {
-            curve.draw(pix);
+            curve.draw(pg);
         }
 	}
 
@@ -539,33 +539,33 @@ public class PACurveUtility {
 	 * Draws a PABezShape in a PGraphics using supplied fill, stroke, and weight. If weight == 0,
 	 * the shape is drawn with no stroke.
 	 * 
-	 * @param pix
+	 * @param pg
 	 * @param shape
 	 * @param shapeFill
 	 * @param shapeStroke
 	 * @param shapeWeight
 	 */
-	public static void shapeDraw(PGraphics pix, PABezShape shape, int shapeFill, int shapeStroke, float shapeWeight) {
+	public static void shapeDraw(PGraphics pg, PABezShape shape, int shapeFill, int shapeStroke, float shapeWeight) {
 	    if (null != shape && shape.size() > 0) {
-	        pix.pushStyle();
-	        pix.stroke(shapeStroke);
-	        pix.strokeWeight(shapeWeight);
-	        if (shapeWeight == 0) pix.noFill();
-	        else pix.fill(shapeStroke);
-	        shape.drawQuick(pix);
-	        pix.popStyle();
+	        pg.pushStyle();
+	        pg.stroke(shapeStroke);
+	        pg.strokeWeight(shapeWeight);
+	        if (shapeWeight == 0) pg.noFill();
+	        else pg.fill(shapeStroke);
+	        shape.drawQuick(pg);
+	        pg.popStyle();
 	    }
 	}
 
 	/**
 	 * Draws a PABezShape in a PGraphics using local fill, stroke, and weight of the shape.
 	 * 
-	 * @param pix
+	 * @param pg
 	 * @param shape
 	 */
-	public static void shapeDraw(PGraphics pix, PABezShape shape) {
+	public static void shapeDraw(PGraphics pg, PABezShape shape) {
 		if (null != shape && shape.size() > 0) {
-			shape.draw(pix);
+			shape.draw(pg);
 		}
 	}
 
