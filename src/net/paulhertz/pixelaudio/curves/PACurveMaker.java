@@ -70,7 +70,7 @@ public class PACurveMaker {
 
 		
 	private PACurveMaker(ArrayList<PVector> points) {
-		this.allPoints = points;
+		this.allPoints = new ArrayList<PVector>(points);
 		this.drawPoints = new ArrayList<PVector>();
 	}
 	
