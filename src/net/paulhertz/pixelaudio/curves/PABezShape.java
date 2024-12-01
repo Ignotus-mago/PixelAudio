@@ -716,138 +716,147 @@ public class PABezShape {
   }
 
 
-  /**
-   * Extracts an approximated polygon from path data, returning it as an array of PVector.
-   * @param steps    number of straight line segments to divide Bezier curves into
-   * @return         ArrayList of PVector, coordinates for a polygon approximation of this shape.
-   */
-  public ArrayList<PVector> getPointList(PApplet parent, int steps) {
-    ArrayList<PVector> curvePoints = new ArrayList<PVector>();
-    ListIterator<PAVertex2DINF> it = curves.listIterator();
-    // calculate the total number of points in the result array
-    // start counting points at 1, since start point (at indices 0 and 1) will begin the array
-    int ct = 1;
-    while (it.hasNext()) {
-      PAVertex2DINF vt = it.next();
-      int segType = vt.segmentType();
-      if (CURVE_SEGMENT == segType) {
-        // divide the curve into steps lines
-        ct += steps;
-      }
-      else if (LINE_SEGMENT == segType) {
-        ct += 1;
-      }
-    }
-    // each point is comprised of 2 floats
-    float[] points = new float[ct * 2];
-    // add the start point to the array
-    int i = 0;
-    points[i++] = this.x;
-    points[i++] = this.y;
-    // retrieve x and y values
-    float currentX = points[i - 2];
-    float currentY = points[i - 1];
-    // reset the iterator to the beginning
-    it = curves.listIterator();
-    while (it.hasNext()) {
-      PAVertex2DINF vt = it.next();
-      int segType = vt.segmentType();
-      if (CURVE_SEGMENT == segType) {
-        float[] knots = vt.coords();
-        float cx1 = knots[0];
-        float cy1 = knots[1];
-        float cx2 = knots[2];
-        float cy2 = knots[3];
-        float ax  = knots[4];
-        float ay  = knots[5];
-        for (int j = 1; j <= steps; j++) {
-          float t = j / (float) steps;
-          float segx = parent.bezierPoint(currentX, cx1, cx2, ax, t);
-          float segy = parent.bezierPoint(currentY, cy1, cy2, ay, t);
-          points[i++] = segx;
-          points[i++] = segy;
-        }
-      }
-      else if (LINE_SEGMENT == segType) {
-        points[i++] = vt.x();
-        points[i++] = vt.y();
-      }
-      currentX = points[i - 2];
-      currentY = points[i - 1];
-    }
-    for (int j = 0; j < i; ) {
-      curvePoints.add(new PVector(points[j++], points[j++]));
-    }
-    return curvePoints;
-  }
-  
-  /**
-   * Extracts an approximated polygon from path data, returning it as an array of PVector.
-   * @param steps    number of straight line segments to divide Bezier curves into
-   * @return         ArrayList of PVector, coordinates for a polygon approximation of this shape.
-   */
-  public ArrayList<PVector> getPointList(PGraphics parent, int steps) {
-    ArrayList<PVector> curvePoints = new ArrayList<PVector>();
-    ListIterator<PAVertex2DINF> it = curves.listIterator();
-    // calculate the total number of points in the result array
-    // start counting points at 1, since start point (at indices 0 and 1) will begin the array
-    int ct = 1;
-    while (it.hasNext()) {
-      PAVertex2DINF vt = it.next();
-      int segType = vt.segmentType();
-      if (CURVE_SEGMENT == segType) {
-        // divide the curve into steps lines
-        ct += steps;
-      }
-      else if (LINE_SEGMENT == segType) {
-        ct += 1;
-      }
-    }
-    // each point is comprised of 2 floats
-    float[] points = new float[ct * 2];
-    // add the start point to the array
-    int i = 0;
-    points[i++] = this.x;
-    points[i++] = this.y;
-    // retrieve x and y values
-    float currentX = points[i - 2];
-    float currentY = points[i - 1];
-    // reset the iterator to the beginning
-    it = curves.listIterator();
-    while (it.hasNext()) {
-      PAVertex2DINF vt = it.next();
-      int segType = vt.segmentType();
-      if (CURVE_SEGMENT == segType) {
-        float[] knots = vt.coords();
-        float cx1 = knots[0];
-        float cy1 = knots[1];
-        float cx2 = knots[2];
-        float cy2 = knots[3];
-        float ax  = knots[4];
-        float ay  = knots[5];
-        for (int j = 1; j <= steps; j++) {
-          float t = j / (float) steps;
-          float segx = parent.bezierPoint(currentX, cx1, cx2, ax, t);
-          float segy = parent.bezierPoint(currentY, cy1, cy2, ay, t);
-          points[i++] = segx;
-          points[i++] = segy;
-        }
-      }
-      else if (LINE_SEGMENT == segType) {
-        points[i++] = vt.x();
-        points[i++] = vt.y();
-      }
-      currentX = points[i - 2];
-      currentY = points[i - 1];
-    }
-    for (int j = 0; j < i; ) {
-      curvePoints.add(new PVector(points[j++], points[j++]));
-    }
-    return curvePoints;
-  }
+	/**
+	 * Extracts an approximated polygon from path data, returning it as an array of PVector.
+	 * We no longer require a PApplet instance to calculate the bezierPoint.
+	 * 
+	 * @param parent a PApplet instance
+	 * @param steps  number of straight line segments to divide Bezier curves into
+	 * @return ArrayList of PVector, coordinates for a polygon approximation of this shape.
+	 */
+  	@Deprecated
+	public ArrayList<PVector> getPointList(PApplet parent, int steps) {
+		return getPointList(steps);
+	}
 
-	public float[] bounds() {
-		ArrayList<PVector> points = this.getPointList(PixelAudio.myParent, 16);
+	/**
+	 * Extracts an approximated polygon from path data, returning it as an array of PVector.
+	 * 
+	 * @param steps  number of straight line segments to divide Bezier curves into
+	 * @return ArrayList of PVector, coordinates for a polygon approximation of this shape.
+	 */
+	public ArrayList<PVector> getPointList(int steps) {
+		ArrayList<PVector> curvePoints = new ArrayList<PVector>();
+		ListIterator<PAVertex2DINF> it = curves.listIterator();
+		// calculate the total number of points in the result array
+		// start counting points at 1, since start point (at indices 0 and 1) will begin
+		// the array
+		int ct = 1;
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			int segType = vt.segmentType();
+			if (CURVE_SEGMENT == segType) {
+				// divide the curve into steps lines
+				ct += steps;
+			} else if (LINE_SEGMENT == segType) {
+				ct += 1;
+			}
+		}
+		// each point is comprised of 2 floats
+		float[] points = new float[ct * 2];
+		// add the start point to the array
+		int i = 0;
+		points[i++] = this.x;
+		points[i++] = this.y;
+		// retrieve x and y values
+		float currentX = points[i - 2];
+		float currentY = points[i - 1];
+		// reset the iterator to the beginning
+		it = curves.listIterator();
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			int segType = vt.segmentType();
+			if (CURVE_SEGMENT == segType) {
+				float[] knots = vt.coords();
+				float cx1 = knots[0];
+				float cy1 = knots[1];
+				float cx2 = knots[2];
+				float cy2 = knots[3];
+				float ax = knots[4];
+				float ay = knots[5];
+				for (int j = 1; j <= steps; j++) {
+					float t = j / (float) steps;
+					float segx = bezierPoint(currentX, cx1, cx2, ax, t);
+					float segy = bezierPoint(currentY, cy1, cy2, ay, t);
+					points[i++] = segx;
+					points[i++] = segy;
+				}
+			} else if (LINE_SEGMENT == segType) {
+				points[i++] = vt.x();
+				points[i++] = vt.y();
+			}
+			currentX = points[i - 2];
+			currentY = points[i - 1];
+		}
+		for (int j = 0; j < i;) {
+			curvePoints.add(new PVector(points[j++], points[j++]));
+		}
+		return curvePoints;
+	}
+ 
+	/**
+	 * Extracts an approximated polygon from path data, returning it as an array of PVector.
+	 * We no longer require a PGraphics instance to calculate the bezierPoint.
+	 * 
+	 * @param pg 		a PGraphics instance
+	 * @param steps     number of straight line segments to divide Bezier curves
+	 * @return 			ArrayList of PVector, coordinates for a polygon approximation of this shape.
+	 */
+	@Deprecated
+	public ArrayList<PVector> getPointList(PGraphics pg, int steps) {
+		return getPointList(steps);
+	}
+
+  
+	/**
+	 * <p>Evaluates the Bezier at point t for points a, b, c, d. The parameter t varies
+	 * between 0 and 1, a and d are points on the curve, and b and c are the control
+	 * points. This can be done once with the x coordinates and a second time with
+	 * the y coordinates to get the location of a Bézier curve at t. Evaluation takes
+	 * multiple calls, once each for x and y coordinates, in two dimensions.</p>
+	 * 
+	 * @param a		coordinate of first point on the curve
+	 * @param b 	coordinate of first control point
+	 * @param c 	coordinate of second control point
+	 * @param d 	coordinate of second point on the curve
+	 * @param t 	value between 0 and 1
+	 * @return		single coordinate value of a point on the curve
+	 * 
+	 * @see <a href="https://github.com/benfry/processing4/blob/main/core/src/processing/core/PGraphics.java#L3369">
+	 *      https://github.com/benfry/processing4/blob/main/core/src/processing/core/PGraphics.java#L3369</a>
+	 */
+	public float bezierPoint(float a, float b, float c, float d, float t) {
+		float t1 = 1.0f - t;
+		return (a * t1 + 3 * b * t) * t1 * t1 + (3 * c * t1 + d * t) * t * t;
+	}
+	
+	/**
+	 * <p>Calculates the tangent of a point on a Bézier curve. There is a good definition of
+	 * <a href="http://en.wikipedia.org/wiki/Tangent" target="new"><em>tangent</em> on Wikipedia</a>. 
+	 * Evaluation takes multiple calls, once each for x and y coordinates, in two dimensions.</p>
+	 *
+	 * <h3>From Processing GitHub repo:</h3> <p>Code submitted by Dave Bollinger (davbol) for release 0136.</p>
+	 *
+	 * @param a 	coordinate of first point on the curve
+	 * @param b 	coordinate of first control point
+	 * @param c 	coordinate of second control point
+	 * @param d 	coordinate of second point on the curve
+	 * @param t 	value between 0 and 1
+	 * @return		a single coordinate value of endpoint of the tangent
+	 * 
+	 * @see <a href="https://github.com/benfry/processing4/blob/main/core/src/processing/core/PGraphics.java#L3360">
+	 * https://github.com/benfry/processing4/blob/main/core/src/processing/core/PGraphics.java#L3360</a>
+	 */
+	public float bezierTangent(float a, float b, float c, float d, float t) {
+		return (3 * t * t * (-a + 3 * b - 3 * c + d) + 6 * t * (a - 2 * b + c) + 3 * (-a + b));
+	}
+
+	/**
+	 * Calculates the boundary rectangle of this shape and returns it as an array of floats.
+	 * @return	[xMin, yMin, xMax, yMax]
+	 */
+	protected float[] bounds() {
+		ArrayList<PVector> points = this.getPointList(16);
 		PVector vec = points.get(0);
 		float xMin = vec.x;
 		float yMin = vec.y;
@@ -870,6 +879,9 @@ public class PABezShape {
 		return result;
 	} 
 	
+	/**
+	 * @return bounding rectangle of this shape as an array of floats, [xMin, yMin, xMax, yMax]
+	 */
 	public float[] getBounds() {
 		if (bounds == null) {
 			bounds = bounds();
@@ -890,11 +902,15 @@ public class PABezShape {
 		return new PVector((right + left)/2.0f, (top + bottom)/2.0f);
 	}
 	
-	
-	/*
-	 * Some basic geometric transforms for our shape.
+
+	// ------------- Some basic geometric transforms for our shape. ------------- //
+
+	/**
+	 * Translates this shape in x and y directions. 
+	 * 
+	 * @param xTrans
+	 * @param yTrans
 	 */
-	
 	public void translateShape(float xTrans, float yTrans) {
 		this.setStartPoint(this.x + xTrans, this.y + yTrans);
 		ListIterator<PAVertex2DINF> it = this.curveIterator();
@@ -1000,9 +1016,7 @@ public class PABezShape {
 			}
 		}
 		this.bounds = null;;
-	}
-
-	
+	}	
 	
 	/*
 	 * Because the points in our shapes may need to interact with specific pixel locations,
