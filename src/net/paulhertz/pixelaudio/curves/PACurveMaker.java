@@ -17,9 +17,9 @@ import processing.core.PGraphics;
  */
 public class PACurveMaker {
 	/** List of all the points that need to be reduced */
-	public ArrayList<PVector> allPoints;
+	public ArrayList<PVector> dragPoints;
 	/** The reduced points delivered by the RDP algoritnm */
-	public ArrayList<PVector> drawPoints;
+	public ArrayList<PVector> rdpPoints;
 	/** List of points where events such as audio samples can be triggered */
 	public ArrayList<PVector> eventPoints;
 	/** number of steps along a polygonized curve, used to produce eventPoints */
@@ -66,12 +66,13 @@ public class PACurveMaker {
 	public int timeStamp;
 	/** Time of mouseReleased event, in milliseconds elapsed since timeStamp */
 	public int timeOffset;
-
-
+	/** List of time data: first element is time in millis when event occurred, 
+	 *  the remaining elements are offsets in millis from the first element  */
+	ArrayList<Integer> dragTimes;
 		
 	private PACurveMaker(ArrayList<PVector> points) {
-		this.allPoints = new ArrayList<PVector>(points);
-		this.drawPoints = new ArrayList<PVector>();
+		this.dragPoints = new ArrayList<PVector>(points);
+		this.rdpPoints = new ArrayList<PVector>();
 	}
 	
 	public void setDrawingProperties(int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
@@ -103,19 +104,19 @@ public class PACurveMaker {
 	 * Takes the list of points in allPoints and generates a reduced list in drawPoints.
 	 */
 	public void reducePoints() {
-		drawPoints.clear();
-		int total = allPoints.size();
-		PVector start = allPoints.get(0);
-		PVector end = allPoints.get(total - 1);
-		drawPoints.add(start);
+		rdpPoints.clear();
+		int total = dragPoints.size();
+		PVector start = dragPoints.get(0);
+		PVector end = dragPoints.get(total - 1);
+		rdpPoints.add(start);
 		// rdp reduces allPoints and puts the result into drawPoints
-		PACurveUtility.rdp(0, total - 1, allPoints, drawPoints, epsilon);
+		PACurveUtility.rdp(0, total - 1, dragPoints, rdpPoints, epsilon);
 		// put in a midpoint when there are only two points in the reduced points
-		if (drawPoints.size() == 1) {
+		if (rdpPoints.size() == 1) {
 			PVector midPoint = start.copy().add(end).div(2.0f);
-			drawPoints.add(midPoint);
+			rdpPoints.add(midPoint);
 		}
-		drawPoints.add(end);
+		rdpPoints.add(end);
 	}
 	
 	/**
@@ -126,10 +127,10 @@ public class PACurveMaker {
 	 */
 	public void calculateDerivedPoints() {
 		reducePoints();
-		curveShape = PACurveUtility.calculateCurve(drawPoints);
+		curveShape = PACurveUtility.calculateCurve(rdpPoints);
 		weightedCurveShape = PACurveUtility.calculateWeightedCurve(curveShape, bezWeight);
 		eventPoints = curveShape.getPointList(polySteps);
-		brushShape = PACurveUtility.quickBrushShape(drawPoints, brushSize);
+		brushShape = PACurveUtility.quickBrushShape(rdpPoints, brushSize);
 		brushShape.setNoStroke();
 		brushShape.setFillColor(brushColor);
 		isReady = true;
@@ -291,7 +292,7 @@ public class PACurveMaker {
 	 * @param dragColor		color for the line that is drawn
 	 */
 	public void allPointsDraw(PApplet parent, int dragColor, float dragWeight) {
-		PACurveUtility.pointsDraw(parent, this.allPoints, dragColor, dragWeight);
+		PACurveUtility.pointsDraw(parent, this.dragPoints, dragColor, dragWeight);
 	}
 
 	/**
@@ -313,7 +314,7 @@ public class PACurveMaker {
 	 * @param drawWeight	the weight of the line that is drawn
 	 */
 	public void reducedPointsDraw(PApplet parent, int rdpColor, float drawWeight) {
-		PACurveUtility.pointsDraw(parent, drawPoints, rdpColor, drawWeight);
+		PACurveUtility.pointsDraw(parent, rdpPoints, rdpColor, drawWeight);
 	}
 	
 	/**
@@ -363,7 +364,7 @@ public class PACurveMaker {
 	 * @param dragWeight	weight (in pixels) of the line through the dense point set
 	 */
 	public void allPointsDraw(PGraphics pg, int dragColor, float dragWeight) {
-		PACurveUtility.pointsDraw(pg, this.allPoints, dragColor, dragWeight);
+		PACurveUtility.pointsDraw(pg, this.dragPoints, dragColor, dragWeight);
 	}
 	
 	/**
@@ -372,7 +373,7 @@ public class PACurveMaker {
 	 * @param pg			a PGraphics instance
 	 */
 	public void allPointsDraw(PGraphics pg) {
-		PACurveUtility.pointsDraw(pg, this.allPoints, this.dragColor, this.dragWeight);
+		PACurveUtility.pointsDraw(pg, this.dragPoints, this.dragColor, this.dragWeight);
 	}
 
 	/**
@@ -383,7 +384,7 @@ public class PACurveMaker {
 	 * @param rdpWeight		weight (in pixels) of the line through the reduced point set
 	 */
 	public void reducedPointsDraw(PGraphics pg, int rdpColor, float rdpWeight) {
-		PACurveUtility.pointsDraw(pg, this.drawPoints, rdpColor, rdpWeight);
+		PACurveUtility.pointsDraw(pg, this.rdpPoints, rdpColor, rdpWeight);
 	}
 	
 	/**
@@ -392,7 +393,7 @@ public class PACurveMaker {
 	 * @param pg	a PGraphics instance
 	 */
 	public void reducedPointsDraw(PGraphics pg) {
-		PACurveUtility.pointsDraw(pg, this.drawPoints, this.rdpColor, this.rdpWeight);
+		PACurveUtility.pointsDraw(pg, this.rdpPoints, this.rdpColor, this.rdpWeight);
 	}
 
 	
