@@ -13,6 +13,10 @@ import processing.core.PGraphics;
 /**
  * Storage and utility class for point reduction, curve modeling and drawing.
  * Makes extensive use of PACurveUtility's static methods.
+ * Provides a wide range of graphic objects and properties for dense point arrays, 
+ * reduced point arrays, derived Bezier curves (weighted and not weighted), 
+ * brush stroke Bezier shapes, brush stroke polygons, plus some basic timing data
+ * associated with actual drawing to the screen.
  * 
  */
 public class PACurveMaker {
