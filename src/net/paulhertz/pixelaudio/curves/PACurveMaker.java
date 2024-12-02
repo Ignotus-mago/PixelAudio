@@ -30,6 +30,8 @@ public class PACurveMaker {
 	public PABezShape weightedCurveShape;
 	/** A simulated brush stroke */
 	public PABezShape brushShape;
+	/** polygon representation of brushShape, for point testing, etc. */
+	public ArrayList<PVector> brushPoly;
 	/** The distance in pixels of the edges of the brush stroke from the central generating curve  */
 	public float brushSize = 24.0f;
 	/** A parameter to control the amount of reduction in the RDP algorithm */
@@ -133,6 +135,7 @@ public class PACurveMaker {
 		brushShape = PACurveUtility.quickBrushShape(rdpPoints, brushSize);
 		brushShape.setNoStroke();
 		brushShape.setFillColor(brushColor);
+		brushPoly = brushShape.getPointList(polySteps);
 		isReady = true;
 	}
 	
@@ -196,13 +199,29 @@ public class PACurveMaker {
 		this.rdpWeight = rdpWeight;
 	}
 
+	public PABezShape getCurveShape() {
+		return curveShape;
+	}
+
+	public void setCurveShape(PABezShape curveShape) {
+		this.curveShape = curveShape;
+	}
+
 	public int getCurveColor() {
 		return curveColor;
 	}
 
 	public void setCurveColor(int curveColor) {
 		this.curveColor = curveColor;
-	}	
+	}
+	
+	public float getCurveWeight() {
+		return curveWeight;
+	}
+
+	public void setCurveWeight(float curveWeight) {
+		this.curveWeight = curveWeight;
+	}
 
 	public PABezShape getBrushShape() {
 		return brushShape;
@@ -236,8 +255,35 @@ public class PACurveMaker {
 		this.activeBrushColor = activeBrushColor;
 	}
 
+	public ArrayList<PVector> getBrushPoly() {
+		if (this.brushPoly == null) {
+			this.brushPoly = this.brushShape.getPointList(polySteps);
+		}
+		return brushPoly;
+	}
+	
 	public int getTimeStamp() {
 		return timeStamp;
+	}
+	
+	public void setTimeStamp(int timeStamp) {
+		this.timeStamp = timeStamp;
+	}
+
+	public int getTimeOffset() {
+		return timeOffset;
+	}
+
+	public void setTimeOffset(int timeOffset) {
+		this.timeOffset = timeOffset;
+	}	
+
+	public ArrayList<Integer> getDragTimes() {
+		return dragTimes;
+	}
+
+	public void setDragTimes(ArrayList<Integer> dragTimes) {
+		this.dragTimes = dragTimes;
 	}
 
 	public ArrayList<PVector> getEventPoints() {
@@ -264,17 +310,7 @@ public class PACurveMaker {
 		this.eventPointsSize = eventPointsSize;
 	}
 
-	public void setTimeStamp(int timeStamp) {
-		this.timeStamp = timeStamp;
-	}
-
-	public int getTimeOffset() {
-		return timeOffset;
-	}
-
-	public void setTimeOffset(int timeOffset) {
-		this.timeOffset = timeOffset;
-	}
+	
 
 	/************************************************
 	 *                                              *
