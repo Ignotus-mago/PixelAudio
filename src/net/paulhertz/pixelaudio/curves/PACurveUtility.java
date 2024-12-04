@@ -193,14 +193,14 @@ public class PACurveUtility {
 
 	/**
 	 * Scales the position of the curve control points on a Bezier curve by a factor
-	 * determined by the length of the line between the two anchor points and a weight
+	 * determined by the length of the line between the two anchor points and a bias
 	 * value, such as PACurveUtility.LAMBDA.
 	 * It's most useful when a short control line segment follows a long segment. 
 	 * 
 	 * @param weightedCurveShape
-	 * @param weight
+	 * @param bias
 	 */
-	public static PABezShape calculateWeightedCurve(PABezShape bezPoints, float weight) {
+	public static PABezShape calculateWeightedCurve(PABezShape bezPoints, float bias) {
 	  PABezShape weightedBezPoints = bezPoints.clone();
 	  ListIterator<PAVertex2DINF> it = weightedBezPoints.curveIterator();
 	  float x1 = weightedBezPoints.startVertex().x();
@@ -215,10 +215,10 @@ public class PACurveUtility {
 	      // (bz.x(), bz.y()), (bz.cx2(), bz.cy2())
 	      // distance between anchor points
 	      float d = PApplet.dist(x1, y1, bz.x(), bz.y());
-	      PVector cxy1 = weightedControlVec(x1, y1, bz.cx1(), bz.cy1(), weight, d);
+	      PVector cxy1 = weightedControlVec(x1, y1, bz.cx1(), bz.cy1(), bias, d);
 	      bz.setCx1(cxy1.x);
 	      bz.setCy1(cxy1.y);
-	      PVector cxy2 = weightedControlVec(bz.x(), bz.y(), bz.cx2(), bz.cy2(), weight, d);
+	      PVector cxy2 = weightedControlVec(bz.x(), bz.y(), bz.cx2(), bz.cy2(), bias, d);
 	      bz.setCx2(cxy2.x);
 	      bz.setCy2(cxy2.y);
 	      // store the first anchor point for the next iteration
@@ -236,16 +236,21 @@ public class PACurveUtility {
 	  return weightedBezPoints;
 	}
 	
+	public static PABezShape calculateWeightedCurve(ArrayList<PVector> framePoints, float bias) {
+		PABezShape curve = PACurveUtility.calculateCurve(framePoints);
+		return PACurveUtility.calculateWeightedCurve(curve, bias);
+	}
+	
 	/**
 	 * Scales the position of the curve control points on a Bezier curve by a factor
-	 * determined by the length of the line between the two anchor points and a weight
+	 * determined by the length of the line between the two anchor points and a bias
 	 * value, such as PACurveUtility.LAMBDA (the default, in this method).
 	 * It's most useful when a short control line segment follows a long segment. 
 	 * 
-	 * @param weightedBezPoints
+	 * @param bezPoints		a Bezier path encapsulated in a PABezShape instance
 	 */
-	public static void calculateWeightedCurve(PABezShape weightedBezPoints) {
-		calculateWeightedCurve(weightedBezPoints, PABezShape.LAMBDA);
+	public static void calculateWeightedCurve(PABezShape bezPoints) {
+		calculateWeightedCurve(bezPoints, PABezShape.LAMBDA);
 	}
 
 
@@ -267,10 +272,10 @@ public class PACurveUtility {
 	 * @param points			an ArrayList of 2D PVector objects
 	 * @param brushWidth		width of the brush in pixels
 	 * @param isDrawWeighted	create a weighted version of the PABezShape shape
-	 * @param weight			weight valued to apply to curves
+	 * @param bias				adjusts distances between control points and anchor points
 	 * @return
 	 */
-	public static PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth, boolean isDrawWeighted, float weight) {
+	public static PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth, boolean isDrawWeighted, float bias) {
 	  ArrayList<PVector> pointsLeft = new ArrayList<PVector>();
 	  ArrayList<PVector> pointsRight = new ArrayList<PVector>();
 	  if (!(points.size() > 0)) return null;
@@ -303,8 +308,8 @@ public class PACurveUtility {
 	  PABezShape bezLeft = calculateCurve(pointsLeft);
 	  PABezShape bezRight = calculateCurve(pointsRight);
 	  if (isDrawWeighted ) {
-	    calculateWeightedCurve(bezLeft);
-	    calculateWeightedCurve(bezRight);
+	    calculateWeightedCurve(bezLeft, bias);
+	    calculateWeightedCurve(bezRight, bias);
 	  }
 	  // append points in bezLeft to bezRight
 	  ListIterator<PAVertex2DINF> it = bezLeft.curveIterator();
@@ -320,8 +325,8 @@ public class PACurveUtility {
 		return quickBrushShape(points, brushWidth, false, 0);
 	}
 	
-	public static PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth, float weight) {
-		return quickBrushShape(points, brushWidth, true, weight);
+	public static PABezShape quickBrushShape(ArrayList<PVector> points, float brushWidth, float bias) {
+		return quickBrushShape(points, brushWidth, true, bias);
 	}
 	
 	
@@ -394,13 +399,13 @@ public class PACurveUtility {
 	/**
 	 * Draws a line in a PApplet context using the PVector data in points and supplied color and weight.
 	 * 
-	 * @param parent		a PApplet where drawing takes place
+	 * @param parent		a PApplet where drawing takes place on screen
 	 * @param points		ArrayList of 2D PVector objects, typically a 
 	 * 						point set without successive identical points
 	 * @param lineColor		color for the line that is drawn
 	 * @param lineWeight	weight for the line that is drawn
 	 */
-	public static void pointsDraw(PApplet parent, ArrayList<PVector> points, int lineColor, float lineWeight) {
+	public static void lineDraw(PApplet parent, ArrayList<PVector> points, int lineColor, float lineWeight) {
 		if (points.size() > 1) {
 			parent.stroke(lineColor);
 			parent.strokeWeight(lineWeight);
@@ -416,13 +421,13 @@ public class PACurveUtility {
 	/**
 	 * Draws a line in a PGraphics using the 2D PVector data and supplied color and weight.
 	 * 
-	 * @param pg			a PGraphics where drawing takes place
+	 * @param pg			a PGraphics where drawing takes place off screen
 	 * @param points		ArrayList of 2D PVector objects, typically a 
 	 * 						point set without successive identical points
 	 * @param lineColor		color for the line that is drawn
 	 * @param lineWeight	weight for the line that is drawn
 	 */
-	public static void pointsDraw(PGraphics pg, ArrayList<PVector> points, int lineColor, float lineWeight) {
+	public static void lineDraw(PGraphics pg, ArrayList<PVector> points, int lineColor, float lineWeight) {
 		if (points.size() > 1) {
 			pg.stroke(lineColor);
 			pg.strokeWeight(lineWeight);

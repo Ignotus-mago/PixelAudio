@@ -4,44 +4,96 @@
 package net.paulhertz.pixelaudio.curves;
 
 import java.util.ArrayList;
+
 import java.util.ListIterator;
 
 import processing.core.PVector;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
+//TODO provide multiple ways that eventPoints and brushPoly can work in PACurveMaker and in apps that use PACurveMaker instances:
+//sometimes we'll want dense eventPoints, but leave brushPoly low-res. We'll consider how to vary events over playback.
+//we can also consider how the time interval of a PACurveMaker instance could affect its playback.
+
+
 /**
- * Storage and utility class for point reduction, curve modeling and drawing.
- * Makes extensive use of PACurveUtility's static methods.
- * Provides a wide range of graphic objects and properties for dense point arrays, 
+ * <p>PACurveMaker is a utility and storage class for interactive drawing and  
+ * curve modeling and for drawing to on screen PApplets or off screen PGraphics. 
+ * You can use it for data storage in interactive drawing applications, or 
+ * implement your own storage with just the features you require. PACUrveMaker
+ * makes extensive use of PACurveUtility's static methods and provides
+ * a wide range of graphic objects and properties for dense point arrays, 
  * reduced point arrays, derived Bezier curves (weighted and not weighted), 
- * brush stroke Bezier shapes, brush stroke polygons, plus some basic timing data
- * associated with actual drawing to the screen.
+ * brushstroke Bezier shapes, brushstroke polygons, plus some basic timing data
+ * associated with drawing to the screen. You can use PACurveUtility 
+ * for drawing all PACurveMaker data formats or you can use the built-in
+ * commands if you use PACurveMaker as a storage class.</p>
+ * 
+ * <p>PACurveMaker's factory methods takes as their principal argument an array of PVectors.
+ * The array is typically derived from a line drawn by dragging the mouse across the application
+ * window. This line is stored in <code>dragPoints</code>. When <code>reducePoints()</code> or <code>calculateDerivedPoints()</code>
+ * is called, <code>dragPoints</code> is reduced using the RDP algorithm and the result is stored in 
+ * <code>rdpPoints</code>. <code>CalculateDerivedPoints()</code> passes the reduced points to <code>PACurveUtility.calculateCurve()</code>
+ * to create a Bezier path, <code>curveShape</code>, using PixelAudio library's <code>PABezShape</code> class. Finally, a
+ * brushstroke shape, <code>brushShape</code>, is created from the curve. An array of PVectors, 
+ * <code>eventPoints</code>, is created from curveShape to facilitate timed event-staging along the curve. 
+ * Another array of Pvectors, <code>brushPoly</code>, can be used to test points with <code>PABezShape.pointInPoly()</code>.
+ * The values of all other fields are up to the caller. In particular, you may want to set <code>timeStamp</code>, 
+ * <code>timeOffset</code>, and the <code>dragTimes</code> array, if the timing of drawing events is of interest. 
+ * </p>
+ * 
+ * <p>PACurveMaker works in stages.  If you call any one of the <code>buildCurveMakerComplete()</code>  
+ * factory methods, PACurveMaker will call <code>calculateDerivedPoints()</code> to create the objects 
+ * listed in the previous paragraph for you. Otherwise, when you call the <code>buildCurveMaker()</code> factory methods, 
+ * you will have the opportunity to set drawing properties and other fields yourself and then call <code>calculateDerivedPoints()</code>.
+ * After call to <code>calculateDerivedPoints()</code>, <code>isReady()</code> will return true. You can also
+ * use lazy initialization to create PACurveMaker geometry as you need it. The fields for the various point 
+ * and curve data objects are private: when you call a getter method such as <code>getCurveShape()</code>, it will 
+ * create the curveShape if it has not yet been initialized. The same is true of rdpPoints, brushShape, eventPoints, 
+ * and brushPoly. Each of the geometric data objects--dragPoints, rdpPoints, curveShape, and brushShape--has 
+ * method for drawing to the screen to a PApplet or drawing offscreen to a PGraphic. 
+ * </p>
+ * 
+ * <p>There a several properties of PACurveMaker that can affect the appearance of curves. The value of <code>epsilon</code>
+ * determines how closely the reduced point set in <code>rdpPoints</code> matches the dense point set in <code>dragPoints</code>.
+ * Smaller values, down to 1.0, yield a reduced point set with more points and great precision. Some of the factory methods
+ * allow you to supply your own value for epsilon, which defaults to 8.0. Weighted curves and brushstrokes are variations 
+ * on the smooth Bezier curves that PACurveMaker generates by default. In the default curves, the rate of change in 
+ * curvature is the same on either side of a Bezier anchor point. The weighted curves use a value, bezierBias, to 
+ * change the adjust the control points. The default bias value, PABezShape.LAMBDA, may provide a closer approximation
+ * to rdpPoints. Other values can create extreme curves. It's worth some experimentation. If you call setDrawWeighted(true)
+ * and then call calculateDerivedPoints(), curveShape and brushShape will be generated as weighted Bezier curves. 
+ * There are several call to generate weighted Bezier curves. They do not set local variables, but can be useful
+ * for exploring the variations created by different values of bezierBias. PACurveUtility can also create 
+ * weighted curves. 
+ * <pre>
+ * 	
+ * 
+ * </pre>
+ * </p>
  * 
  */
 public class PACurveMaker {
 	/** List of all the points that need to be reduced */
 	public ArrayList<PVector> dragPoints;
-	/** The reduced points delivered by the RDP algoritnm */
-	public ArrayList<PVector> rdpPoints;
-	/** List of points where events such as audio samples can be triggered */
-	public ArrayList<PVector> eventPoints;
-	/** number of steps along a polygonized curve, used to produce eventPoints */
-	int polySteps = 8;
+	/** The reduced points delivered by the RDP algorithm */
+	private ArrayList<PVector> rdpPoints;
 	/** An ArrayList of PABezShapes representing a continuous curved line */
-	public PABezShape curveShape;
-	/** A different version of the bezPoints, where control points are adjusted by a weighting parameter */
-	public PABezShape weightedCurveShape;
+	private PABezShape curveShape;
 	/** A simulated brush stroke */
-	public PABezShape brushShape;
+	private PABezShape brushShape;
 	/** polygon representation of brushShape, for point testing, etc. */
-	public ArrayList<PVector> brushPoly;
+	private ArrayList<PVector> brushPoly;
+	/** number of steps along a polygonized curve, used to produce brushPoly */
+	public int polySteps = 8;
 	/** The distance in pixels of the edges of the brush stroke from the central generating curve  */
 	public float brushSize = 24.0f;
 	/** A parameter to control the amount of reduction in the RDP algorithm */
 	public float epsilon = 8.0f;
+	/** boolean value that determines whether curve  and brush shapes are weighted */
+	public boolean isDrawWeighted = false;
 	/** A weight applied to calculations of the control points for Bezier curves */
-	public float bezWeight = PABezShape.LAMBDA;
+	public float bezierBias = PABezShape.LAMBDA;
 	/** Color for lines dragged by the mouse, stored in allPoints */
 	public int dragColor = PABezShape.composeColor(233, 199, 89, 128);   // tan
 	/** weight of lines drawn between PVectors in allPoints */
@@ -52,7 +104,7 @@ public class PACurveMaker {
 	public float rdpWeight = 2;
 	/** Color for Bezier curve derived from drawPoints, stored in bezPoints or weightedBezPoints */
 	public int curveColor = PABezShape.composeColor(55, 199, 246);       // blue
-	/** weight of curved line described by curveShape and weightedCurveShape */
+	/** weight of curved line curveShape */
 	public float curveWeight = 4;
 	/** Color for simulated brushstroke fill and stroke, stored in brushShape */
 	public int brushColor = PABezShape.composeColor(76, 199, 144, 96);   // transparent green
@@ -60,6 +112,10 @@ public class PACurveMaker {
 	public int activeBrushColor = PABezShape.composeColor(199, 89, 55, 192);   // transparent brick red
 	/** weight of stroke for brushStroke, set to 0 for no stroke */
 	public float brushWeight = 0;
+	/** List of points where events such as audio samples can be triggered */
+	private ArrayList<PVector> eventPoints;
+	/** number of steps along a polygonized curve, used to produce eventPoints from curveShape */
+	public int eventSteps = 8;
 	/** color of eventPoints markers */
 	public int eventPointsColor = PABezShape.composeColor(233, 199, 144, 192);	// yellow
 	/** size of eventPoints markers */
@@ -99,17 +155,47 @@ public class PACurveMaker {
 		return curveMaker;
 	}
 	
-	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points, int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
+	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points, float epsilon) {
+		PACurveMaker curveMaker = new PACurveMaker(points);
+		curveMaker.setEpsilon(epsilon);
+		return curveMaker;
+	}
+	
+	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points, float epsilon, int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
             								   int curveColor, float curveWeight, int brushColor, float brushWeight, int activeBrushColor) {
 		PACurveMaker curveMaker = new PACurveMaker(points);
+		curveMaker.setEpsilon(epsilon);
 		curveMaker.setDrawingProperties(dragColor, dragWeight, rdpColor, rdpWeight, curveColor, curveWeight, brushColor, brushWeight, activeBrushColor);
 		return curveMaker;
 	}
 	
+	public static PACurveMaker buildCurveMakerComplete(ArrayList<PVector> points) {
+		PACurveMaker curveMaker = new PACurveMaker(points);
+		curveMaker.calculateDerivedPoints();
+		return curveMaker;
+	}
+
+	public static PACurveMaker buildCurveMakerComplete(ArrayList<PVector> points, float epsilon) {
+		PACurveMaker curveMaker = new PACurveMaker(points);
+		curveMaker.setEpsilon(epsilon);
+		curveMaker.calculateDerivedPoints();
+		return curveMaker;
+	}
+	
+	public static PACurveMaker buildCurveMakerComplete(ArrayList<PVector> points, float epsilon, int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
+            								   int curveColor, float curveWeight, int brushColor, float brushWeight, int activeBrushColor) {
+		PACurveMaker curveMaker = new PACurveMaker(points);
+		curveMaker.setEpsilon(epsilon);
+		curveMaker.setDrawingProperties(dragColor, dragWeight, rdpColor, rdpWeight, curveColor, curveWeight, brushColor, brushWeight, activeBrushColor);
+		curveMaker.calculateDerivedPoints();
+		return curveMaker;
+	}
+	
+	
 	/**
 	 * Takes the list of points in allPoints and generates a reduced list in drawPoints.
 	 */
-	public void reducePoints() {
+	public void reducePoints(float epsilon) {
 		rdpPoints.clear();
 		int total = dragPoints.size();
 		PVector start = dragPoints.get(0);
@@ -132,9 +218,8 @@ public class PACurveMaker {
 	 * when allPoints is complete, e.g., on mouseReleased.
 	 */
 	public void calculateDerivedPoints() {
-		reducePoints();
+		reducePoints(this.epsilon);
 		curveShape = PACurveUtility.calculateCurve(rdpPoints);
-		weightedCurveShape = PACurveUtility.calculateWeightedCurve(curveShape, bezWeight);
 		eventPoints = curveShape.getPointList(polySteps);
 		brushShape = PACurveUtility.quickBrushShape(rdpPoints, brushSize);
 		brushShape.setNoStroke();
@@ -147,6 +232,14 @@ public class PACurveMaker {
 		return this.isReady;
 	}
 	
+	public boolean isDrawWeighted() {
+		return isDrawWeighted;
+	}
+
+	public void setDrawWeighted(boolean isDrawWeighted) {
+		this.isDrawWeighted = isDrawWeighted;
+	}
+
 	public float getBrushSize() {
 		return brushSize;
 	}
@@ -160,15 +253,31 @@ public class PACurveMaker {
 	}
 
 	public void setEpsilon(float epsilon) {
+		this.epsilon = (float) Math.abs(epsilon);
+		if (epsilon < 1.0f) epsilon = 1.0f;
 		this.epsilon = epsilon;
 	}
 
-	public float getBezWeight() {
-		return bezWeight;
+	public float getBezierBias() {
+		return bezierBias;
 	}
 
-	public void setBezWeight(float weight) {
-		this.bezWeight = weight;
+	public void setBezierBias(float bias) {
+		this.bezierBias = bias;
+	}
+
+	public ArrayList<PVector> getDragPoints() {
+		return this.dragPoints;
+	}
+
+	/**
+	 * If you change the value of dragPoints, immediately call calculateDerivedPoints() 
+	 * to refresh all drawing data. 
+	 * 
+	 * @param dragPoints	ArrayList<PVector>, a dense set of points for drawing a line
+	 */
+	public void setDragPoints(ArrayList<PVector> dragPoints) {
+		this.dragPoints = dragPoints;
 	}
 
 	public int getDragColor() {
@@ -185,6 +294,24 @@ public class PACurveMaker {
 
 	public void setDragWeight(float dragWeight) {
 		this.dragWeight = dragWeight;
+	}
+
+	public ArrayList<PVector> getRdpPoints() {
+		if (rdpPoints.size() < 1) {
+			this.reducePoints(this.epsilon);
+		}
+		return rdpPoints;
+	}
+
+	/**
+	 * Sets rdpPoints, generally not something you want to do: 
+	 * let reducePoints() or calculateDerivedPoints() 
+	 * derive rdpPoints from dragPoints. 
+	 * 
+	 * @param rdpPoints
+	 */
+	public void setRdpPoints(ArrayList<PVector> rdpPoints) {
+		this.rdpPoints = rdpPoints;
 	}
 
 	public int getRdpColor() {
@@ -204,7 +331,30 @@ public class PACurveMaker {
 	}
 
 	public PABezShape getCurveShape() {
-		return curveShape;
+		if (this.curveShape == null) {
+			if (this.isDrawWeighted) {
+				this.curveShape = PACurveUtility.calculateWeightedCurve(this.getRdpPoints(), this.bezierBias);
+			}
+			else {
+				this.curveShape = PACurveUtility.calculateCurve(this.getRdpPoints());
+			}
+		}
+		return this.curveShape;
+	}
+	
+	/**
+	 * Calculates a PABezSHape with distances between control points and anchor 
+	 * points adjusted by bezierBias. Does not store the returned curve. 
+	 * 
+	 * @param bias		a parameter to adjust distances between Bezier anchor points and control points.
+	 * @return			a Bezier curve shape whose control points are adjusted using bezierBias. 
+	 */
+	public PABezShape getWeightedCurveShape(float bias) {
+		return PACurveUtility.calculateWeightedCurve(this.getCurveShape(), bias);
+	}
+	
+	public PABezShape getWeightedCurveShape() {
+		return PACurveUtility.calculateWeightedCurve(this.getCurveShape(), this.bezierBias);
 	}
 
 	public void setCurveShape(PABezShape curveShape) {
@@ -228,7 +378,27 @@ public class PACurveMaker {
 	}
 
 	public PABezShape getBrushShape() {
+		if (this.brushShape == null) {
+			if (this.isDrawWeighted) {
+				brushShape = PACurveUtility.quickBrushShape(this.getRdpPoints(), brushSize, true, this.bezierBias);
+			}
+			else {
+				brushShape = PACurveUtility.quickBrushShape(this.getRdpPoints(), brushSize);
+			}
+			brushShape.setNoStroke();
+			brushShape.setFillColor(brushColor);
+		}
 		return brushShape;
+	}
+
+	public PABezShape getWeightedBrushShape() {
+		PABezShape weightedBrushShape = PACurveUtility.calculateWeightedCurve(this.getBrushShape(), this.bezierBias);
+		return weightedBrushShape;
+	}
+
+	public PABezShape getWeightedBrushShape(float brushSize, float bias) {
+		PABezShape weightedBrushShape = PACurveUtility.calculateWeightedCurve(this.getBrushShape(), bias);
+		return weightedBrushShape;
 	}
 
 	public void setBrushShape(PABezShape brushShape) {
@@ -261,11 +431,58 @@ public class PACurveMaker {
 
 	public ArrayList<PVector> getBrushPoly() {
 		if (this.brushPoly == null) {
-			this.brushPoly = this.brushShape.getPointList(polySteps);
+			this.brushPoly = this.getBrushShape().getPointList(polySteps);
 		}
 		return brushPoly;
 	}
 	
+	public int getPolySteps() {
+		return polySteps;
+	}
+
+	public void setPolySteps(int polySteps) {
+		this.polySteps = polySteps;
+	}
+
+	public ArrayList<PVector> getEventPoints() {
+		if (this.eventPoints == null) {
+			eventPoints = this.getCurveShape().getPointList(this.eventSteps);			
+		}
+		return eventPoints;
+	}
+
+	public ArrayList<PVector> getEventPoints(int eventSteps) {
+		return this.getCurveShape().getPointList(eventSteps);
+	}
+
+	public void setEventPoints(ArrayList<PVector> eventPoints) {
+		this.eventPoints = eventPoints;
+	}
+
+	public int getEventSteps() {
+		return eventSteps;
+	}
+
+	public void setEventSteps(int eventSteps) {
+		this.eventSteps = eventSteps;
+	}
+
+	public int getEventPointsColor() {
+		return eventPointsColor;
+	}
+
+	public void setEventPointsColor(int eventPointsColor) {
+		this.eventPointsColor = eventPointsColor;
+	}
+
+	public float getEventPointsSize() {
+		return eventPointsSize;
+	}
+
+	public void setEventPointsSize(float eventPointsSize) {
+		this.eventPointsSize = eventPointsSize;
+	}
+
 	public int getTimeStamp() {
 		return timeStamp;
 	}
@@ -290,30 +507,6 @@ public class PACurveMaker {
 		this.dragTimes = dragTimes;
 	}
 
-	public ArrayList<PVector> getEventPoints() {
-		return eventPoints;
-	}
-
-	public void setEventPoints(ArrayList<PVector> eventPoints) {
-		this.eventPoints = eventPoints;
-	}
-
-	public int getEventPointsColor() {
-		return eventPointsColor;
-	}
-
-	public void setEventPointsColor(int eventPointsColor) {
-		this.eventPointsColor = eventPointsColor;
-	}
-
-	public float getEventPointsSize() {
-		return eventPointsSize;
-	}
-
-	public void setEventPointsSize(float eventPointsSize) {
-		this.eventPointsSize = eventPointsSize;
-	}
-
 	
 
 	/************************************************
@@ -326,13 +519,13 @@ public class PACurveMaker {
 	// ------------- PApplet drawing methods for allPoints and drawPoints ------------- //
 
 	/**
-	 * Draws a line using the PVector data in allPoints and a supplied color.
+	 * Draws a line using the PVector data in dragPoints and a supplied color.
 	 * 
 	 * @param parent		a PApplet where drawing takes place
 	 * @param dragColor		color for the line that is drawn
 	 */
-	public void allPointsDraw(PApplet parent, int dragColor, float dragWeight) {
-		PACurveUtility.pointsDraw(parent, this.dragPoints, dragColor, dragWeight);
+	public void dragPointsDraw(PApplet parent, int dragColor, float dragWeight) {
+		PACurveUtility.lineDraw(parent, this.dragPoints, dragColor, dragWeight);
 	}
 
 	/**
@@ -341,8 +534,8 @@ public class PACurveMaker {
 	 * 
 	 * @param parent		a PApplet where drawing takes place
 	 */
-	public void allPointsDraw(PApplet parent) {
-		allPointsDraw(parent, this.dragColor, this.dragWeight);
+	public void dragPointsDraw(PApplet parent) {
+		PACurveUtility.lineDraw(parent, this.dragPoints, this.dragColor, this.dragWeight);
 	}
 
 	/**
@@ -354,112 +547,60 @@ public class PACurveMaker {
 	 * @param drawWeight	the weight of the line that is drawn
 	 */
 	public void reducedPointsDraw(PApplet parent, int rdpColor, float drawWeight) {
-		PACurveUtility.pointsDraw(parent, rdpPoints, rdpColor, drawWeight);
+		PACurveUtility.lineDraw(parent, this.getRdpPoints(), rdpColor, drawWeight);
 	}
 	
 	/**
-	 * Draws a line using the PVector data in drawPoints and the current values 
+	 * Draws a line using the PVector data in rdpPoints and the current values 
 	 * of this.rdpColor and this.rdpWeight.
 	 * 
 	 * @param parent		a PApplet where drawing takes place
 	 */
 	public void reducedPointsDraw(PApplet parent) {
-		reducedPointsDraw(parent, this.rdpColor, this.rdpWeight);
+		PACurveUtility.lineDraw(parent, this.getRdpPoints(), this.rdpColor, this.rdpWeight);
 	}
 
-	/**
-	 * Draws both the dense and reduced point sets, allPoints and drawPoints
-	 * as lines using supplied colors.
-	 * 
-	 * @param parent		a PApplet where drawing takes place
-	 * @param dragColor		color for the line through the dense point set
-	 * @param dragWeight	weight (in pixels) of the line through the dense point set
-	 * @param rdpColor		color for the line through the reduced point set
-	 * @param rdpWeight		weight (in pixels) of the line through the reduced point set
-	 */
-	public void RDPDraw(PApplet parent, int dragColor, float dragWeight, int rdpColor, float rdpWeight) {
-		this.allPointsDraw(parent, dragColor, dragWeight);
-		this.reducedPointsDraw(parent, rdpColor, rdpWeight);
-	}
-	
-	/**
-	 * Draws both the dense and reduced point sets, allPoints and drawPoints
-	 * as lines of different colors using local properties this.dragColor, 
-	 * this.dragWeight, this.rdpColor and this.rdpWeight.
-	 * 
-	 * @param parent		a PApplet where drawing takes place
-	 */
-	public void RDPDraw(PApplet parent) {
-		this.allPointsDraw(parent);
-		this.RDPDraw(parent);
-	}
 	
 	// ------------- PGraphics drawing methods for allPoints and drawPoints ------------- //
 	
 	/**
-	 * Draws allPoints to a PGraphics using supplied color and weight.
+	 * Draws dragPoints to a PGraphics using supplied color and weight.
 	 * 
-	 * @param pg			a PGraphics instance
+	 * @param pg			a PGraphics offscreen graphics context
 	 * @param dragColor		color for the line through the dense point set
 	 * @param dragWeight	weight (in pixels) of the line through the dense point set
 	 */
-	public void allPointsDraw(PGraphics pg, int dragColor, float dragWeight) {
-		PACurveUtility.pointsDraw(pg, this.dragPoints, dragColor, dragWeight);
+	public void dragPointsDraw(PGraphics pg, int dragColor, float dragWeight) {
+		PACurveUtility.lineDraw(pg, this.dragPoints, dragColor, dragWeight);
 	}
 	
 	/**
-	 * Draws allPoints to a PGraphics using local color and weight, this.dragColor and this.dragWeight.
+	 * Draws dragPoints to a PGraphics using local color and weight, this.dragColor and this.dragWeight.
 	 * 
-	 * @param pg			a PGraphics instance
+	 * @param pg			a PGraphics offscreen graphics context
 	 */
-	public void allPointsDraw(PGraphics pg) {
-		PACurveUtility.pointsDraw(pg, this.dragPoints, this.dragColor, this.dragWeight);
+	public void dragPointsDraw(PGraphics pg) {
+		PACurveUtility.lineDraw(pg, this.dragPoints, this.dragColor, this.dragWeight);
 	}
 
 	/**
-	 * Draws drawPoints to a PGraphics using supplied color and weight.
+	 * Draws rdpPoints to a PGraphics using supplied color and weight.
 	 * 
-	 * @param pg			a PGraphics instance
+	 * @param pg			a PGraphics offscreen graphics context
 	 * @param rdpColor		color for the line through the reduced point set
 	 * @param rdpWeight		weight (in pixels) of the line through the reduced point set
 	 */
 	public void reducedPointsDraw(PGraphics pg, int rdpColor, float rdpWeight) {
-		PACurveUtility.pointsDraw(pg, this.rdpPoints, rdpColor, rdpWeight);
+		PACurveUtility.lineDraw(pg, this.getRdpPoints(), rdpColor, rdpWeight);
 	}
 	
 	/**
 	 * Draws drawPoints to a PGraphics using current values of this.rdpColor and this.rdpWeight.
 	 * 
-	 * @param pg	a PGraphics instance
+	 * @param pg	a PGraphics offscreen graphics context
 	 */
 	public void reducedPointsDraw(PGraphics pg) {
-		PACurveUtility.pointsDraw(pg, this.rdpPoints, this.rdpColor, this.rdpWeight);
-	}
-
-	
-	/**
-	 * Draws allPoints and rdpPoints using values of supplied parameters.
-	 * 
-	 * @param pg
-	 * @param dragColor		color for the line through the dense point set
-	 * @param dragWeight	weight (in pixels) of the line through the dense point set
-	 * @param rdpColor		color for the line through the reduced point set
-	 * @param rdpWeight		weight (in pixels) of the line through the reduced point set
-	 */
-	public void RDPDraw(PGraphics pg, int dragColor, float dragWeight, int rdpColor, float rdpWeight) {
-		this.allPointsDraw(pg, dragColor, dragWeight);
-		this.reducedPointsDraw(pg, rdpColor, rdpWeight);
-	}
-
-	/**
-	 * Draws allPoints and rdpPoints using current values of this.dragColor, 
-	 * this.dragWeight, this.rdpColor and this.rdpWeight.
-	 * 
-	 * @param pg	a PGraphics instance
-	 */
-	public void RDPDraw(PGraphics pg) {
-		this.allPointsDraw(pg);
-		this.reducedPointsDraw(pg);
+		PACurveUtility.lineDraw(pg, this.getRdpPoints(), this.rdpColor, this.rdpWeight);
 	}
 		
 	
@@ -471,123 +612,99 @@ public class PACurveMaker {
 	 * values of this.curveColor and this.curveWeight. The resulting curve will have no fill.
 	 * 
 	 * @param parent			a PApplet instance
-	 * @param isDrawWeighted	if true, use the version of the curve with 
-	 *                          control points adjusted using this.bezWeight.
 	 */
-	public void curveDraw(PApplet parent, boolean isDrawWeighted) {
-		if (isDrawWeighted) {
-			PACurveUtility.curveDraw(parent, this.curveShape, this.curveColor, this.curveWeight);
-		}
-		else {
-			PACurveUtility.curveDraw(parent, this.weightedCurveShape, this.curveColor, this.curveWeight);
-		}
+	public void curveDraw(PApplet parent) {
+		PACurveUtility.curveDraw(parent, this.getCurveShape(), this.curveColor, this.curveWeight);
 	}
 
 	/**
-	 * Draws a Bezier curve using local drawing properties of this.curveShape. 
+	 * Draws a Bezier curve using local drawing properties of curveShape. 
 	 * If the drawing properties use a fill, the resulting curve will have a fill.
 	 * 
 	 * @param parent			a PApplet instance
-	 * @param isDrawWeighted	if true, use the version of the curve with 
-	 *                          control points adjusted using this.bezWeight.
 	 */
-	public void curveDrawDirect(PApplet parent, boolean isDrawWeighted) {
-		if (isDrawWeighted) {
-			PACurveUtility.curveDraw(parent, this.curveShape);
-		}
-		else {
-			PACurveUtility.curveDraw(parent, this.weightedCurveShape);
-		}
+	public void curveDrawDirect(PApplet parent) {
+		PACurveUtility.curveDraw(parent, this.getCurveShape());
 	}
 
 	/**
 	 * Draws a Bezier curve using the 2D Bezier curve data in this.curveShape and the current
 	 * values of this.curveColor and this.curveWeight. The resulting curve will have no fill.
 	 * 
-	 * @param pg				a PGraphics instance
-	 * @param isDrawWeighted	if true, use the version of the curve with 
-	 *                          control points adjusted using this.bezWeight.
+	 * @param pg				a PGraphics offscreen graphics context
 	 */
-	public void curveDraw(PGraphics pg, boolean isDrawWeighted) {
-		if (isDrawWeighted) {
-			PACurveUtility.curveDraw(pg, this.weightedCurveShape, this.curveColor, this.curveWeight);
-		}
-		else {
-			PACurveUtility.curveDraw(pg, this.curveShape, this.curveColor, this.curveWeight);
-		}
+	public void curveDraw(PGraphics pg) {
+		PACurveUtility.curveDraw(pg, this.getCurveShape(), this.curveColor, this.curveWeight);
 	}
 
 	/**
 	 * Draws a Bezier curve using local drawing properties of this.curveShape. 
 	 * If the drawing properties use a fill, the resulting curve will have a fill.
 	 * 
-	 * @param pg				a PGraphics instance
-	 * @param isDrawWeighted	if true, use the version of the curve with 
-	 *                          control points adjusted using this.bezWeight.
+	 * @param pg				a PGraphics offscreen graphics context
 	 */
-	public void curveDrawDirect(PGraphics pg, boolean isDrawWeighted) {
-		if (isDrawWeighted) {
-			PACurveUtility.curveDraw(pg, this.weightedCurveShape);
-		}
-		else {
-			PACurveUtility.curveDraw(pg, this.curveShape);
-		}
+	public void curveDrawDirect(PGraphics pg) {
+		PACurveUtility.curveDraw(pg, this.getCurveShape());
 	}
 	
+	/**
+	 * Draws the stored brushShape using supplied fill color, storke color, and weight.
+	 * @param parent
+	 * @param brushColor
+	 * @param strokeColor
+	 * @param brushWeight
+	 */
 	public void brushDraw(PApplet parent, int brushColor, int strokeColor, float brushWeight) {
-		PACurveUtility.shapeDraw(parent, this.brushShape, brushColor, strokeColor, brushWeight);
+		PACurveUtility.shapeDraw(parent, this.getBrushShape(), brushColor, strokeColor, brushWeight);
 	}
 
 	public void brushDraw(PApplet parent) {
-		PACurveUtility.shapeDraw(parent, this.brushShape, this.brushColor, this.brushColor, this.brushWeight);
+		PACurveUtility.shapeDraw(parent, this.getBrushShape(), this.brushColor, this.brushColor, this.brushWeight);
 	}
 
 	public void brushDrawDirect(PApplet parent) {
-		PACurveUtility.shapeDraw(parent, this.brushShape);
+		PACurveUtility.shapeDraw(parent, this.getBrushShape());
 	}	
 
 	public void brushDraw(PGraphics pg, int brushColor, int strokeColor, float brushWeight) {
-		PACurveUtility.shapeDraw(pg, this.brushShape, brushColor, strokeColor, brushWeight);
+		PACurveUtility.shapeDraw(pg, this.getBrushShape(), brushColor, strokeColor, brushWeight);
 	}
 	
 	public void brushDraw(PGraphics pg) {
-		PACurveUtility.shapeDraw(pg, this.brushShape, this.brushColor, this.brushColor, this.brushWeight);
+		PACurveUtility.shapeDraw(pg, this.getBrushShape(), this.brushColor, this.brushColor, this.brushWeight);
 	}
 	
 	public void brushDrawDirect(PGraphics pg) {
-		PACurveUtility.shapeDraw(pg, this.brushShape);
+		PACurveUtility.shapeDraw(pg, this.getBrushShape());
 	}	
 	
 
 	// ------------- Drawing methods for eventPoints ------------- //
 	
 	public void eventPointsDraw(PApplet parent) {
-		if (eventPoints == null || eventPoints.size() < 2) return;
+		if (eventPoints == null) this.getEventPoints();
 		parent.pushStyle();
 		parent.noStroke();
 		parent.fill(this.eventPointsColor);
-		for (PVector v : eventPoints) {
+		for (PVector v : this.eventPoints) {
 			parent.circle(v.x, v.y, this.eventPointsSize);
 		}
 		parent.popStyle();
 	}
 	
 	public void eventPointsDraw(PApplet parent, int eventPointsColor, float eventPointsSize) {
-		if (eventPoints == null || eventPoints.size() < 2) return;
+		if (eventPoints == null) this.getEventPoints();
 		parent.pushStyle();
 		parent.noStroke();
 		parent.fill(eventPointsColor);
-		for (PVector v : eventPoints) {
+		for (PVector v : this.eventPoints) {
 			parent.circle(v.x, v.y, eventPointsSize);
 		}
 		parent.popStyle();
 	}
 	
 	public void eventPointsDraw(PApplet parent, int eventSteps, int eventPointsColor, float eventPointsSize) {
-		if (eventPoints == null || eventPoints.size() < 2) return;
-		if (eventSteps != eventPoints.size()) {
-			eventPoints = curveShape.getPointList(eventSteps);
-		}
+		if (eventPoints == null) this.getEventPoints(eventSteps);
 		parent.pushStyle();
 		parent.noStroke();
 		parent.fill(eventPointsColor);
@@ -598,7 +715,7 @@ public class PACurveMaker {
 	}
 	
 	public void eventPointsDraw(PGraphics pg) {
-		if (eventPoints == null || eventPoints.size() < 2) return;
+		if (eventPoints == null) this.getEventPoints();
 		pg.pushStyle();
 		pg.noStroke();
 		pg.fill(this.eventPointsColor);
@@ -609,7 +726,7 @@ public class PACurveMaker {
 	}
 
 	public void eventPointsDraw(PGraphics pg, int eventPointsColor, float eventPointsSize) {
-		if (eventPoints == null || eventPoints.size() < 2) return;
+		if (eventPoints == null) this.getEventPoints();
 		pg.pushStyle();
 		pg.noStroke();
 		pg.fill(eventPointsColor);
@@ -620,10 +737,7 @@ public class PACurveMaker {
 	}
 
 	public void eventPointsDraw(PGraphics pg, int eventSteps, int eventPointsColor, float eventPointsSize) {
-		if (eventPoints == null || eventPoints.size() < 2) return;
-		if (eventSteps != eventPoints.size()) {
-			eventPoints = curveShape.getPointList(eventSteps);
-		}
+		if (eventPoints == null) this.getEventPoints(eventSteps);
 		pg.pushStyle();
 		pg.noStroke();
 		pg.fill(eventPointsColor);
@@ -635,9 +749,10 @@ public class PACurveMaker {
 	
 	
 	// ------------- Drawing methods for points in polygon representation of curveShape ------------- //
+	// TODO polyPointsDraw is roughly equivalent to eventPointsDraw. Maybe we don't need it. 
 	
 	public ArrayList<PVector> polyPointsDraw(PApplet parent, int steps, int pointColor, int pointSize) {
-		if (curveShape == null || curveShape.size() < 2) return null;
+		if (this.getCurveShape() == null || curveShape.size() < 2) return null;
 		// PApplet.println("poly");
 		ArrayList<PVector> poly = curveShape.getPointList(steps);
 		parent.pushStyle();
@@ -651,7 +766,7 @@ public class PACurveMaker {
 	}
 
 	public ArrayList<PVector> polyPointsDraw(PGraphics pg, int steps, int pointColor, int pointSize) {
-		if (curveShape == null || curveShape.size() < 2) return null;
+		if (this.getCurveShape() == null || curveShape.size() < 2) return null;
 		// PApplet.println("poly");
 		ArrayList<PVector> poly = curveShape.getPointList(steps);
 		pg.pushStyle();
