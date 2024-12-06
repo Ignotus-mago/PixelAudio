@@ -14,7 +14,8 @@ public void fileSelectedWrite(File selection) {
     || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
     // problem missing ".json"
     currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
-  } else {
+  } 
+  else {
     currentFileName = selection.getAbsolutePath();
   }
   JSONObject genJSON = new JSONObject();
@@ -30,6 +31,7 @@ public void fileSelectedWrite(File selection) {
 }
 
 public void importGenData() {
+  // we only use this data for this example, so it's in the usual "data" folder
   File folderToStartFrom = new File(dataPath("") + "//*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }

@@ -63,34 +63,35 @@ import net.paulhertz.pixelaudio.curves.*;
  */
 
 // PixelAudio vars and objects
+// PixelAudio vars and objects
 PixelAudio pixelaudio;     // our shiny new library
 HilbertGen hGen;           // a PixelMapGen to draw Hilbert curves
-MultiGen multigen;         // a PixelMapGen that handles multiple gens
+MultiGen multigen;         // a PixelMapGen that handles multiple gens strung together
 int rows = 3;
 int columns = 2;
-int genWidth = 512;       // width of PixelMapGen objects, for hGen must be a power of 2
-int genHeight = 512;      // height of PixelMapGen objects, for hGen must be equal to width
-PixelAudioMapper mapper;  // object for reading, writing, and transcoding audio and image data
-int mapSize;              // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
-PImage mapImage;          // image for display
+int genWidth = 512;        // width of PixelMapGen objects: for hGen must be a power of 2
+int genHeight = 512;       // height of PixelMapGen objects: for hGen must be equal to width
+PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
+int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
+PImage mapImage;           // image for display
 PixelAudioMapper.ChannelNames chan = PixelAudioMapper.ChannelNames.ALL;
-int[] colors;             // array of spectral colors
-boolean isBlending = false;     // currently not used, for future implementation
+int[] colors;              // array of spectral colors
+boolean isBlending = false;
 
 /** Minim audio library */
-Minim minim;              // library that handles audio
-AudioOutput audioOut;     // line out to sound hardware
+Minim minim;               // library that handles audio
+AudioOutput audioOut;      // line out to sound hardware
 MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
 boolean isBufferStale = false;     // do we need to reset the audio buffer?
-int sampleRate = 41500;   // ----->> a critical value, see the setup method <<-----
-float[] audioSignal;      // the audio signal as an array
-int[] rgbSignal;          // the colors in the display image, in the order the signal path visits them
-int audioLength;          // length of audio buffer, audio signal, usually 32.768 seconds
+int sampleRate = 41500;    // ----->> a critical value, see the setup method <<-----
+float[] audioSignal;       // the audio signal as an array
+int[] rgbSignal;           // the colors in the display image, in the order the signal path visits them
+int audioLength;           // length of audio buffer, audio signal, usually 32.768 seconds
 
 // SampleInstrument setup
-float sampleScale = 4;  
-int sampleBase = sampleRate / 4;
-int samplelen = (int) (sampleScale * sampleBase);
+float sampleScale = 4;
+int sampleBase;
+int samplelen;
 Sampler audioSampler;     // minim class for sampled sound
 ArrayList<SamplerInstrument> octet;
 SamplerInstrument instrument;      // local class to wrap audioSampler
@@ -144,7 +145,9 @@ int[] gammaTable;
 // curve drawing and interaction
 public boolean isDrawMode = false;
 public float epsilon = 12.0f;
-public ArrayList<PVector> allPoints = new ArrayList<PVector>();
+public ArrayList<PVector> allPoints;
+public int allPointsColor = color(220, 199, 212, 192);
+public float allPointsWeight = 4;
 public PVector currentPoint;
 public int polySteps = 12;
 public PACurveMaker curveMaker;
@@ -153,8 +156,8 @@ public ListIterator<PVector> eventPointsIter;
 int eventStep = 67;   // milliseconds between events
 public ArrayList<TimedLocation> pointEventsArray;
 
-String dataPath;
-String audioStartFile = "workflow_03_mixdown_01.mp3";
+String daPath;
+String audioStartFile = "workflow_03_mixdown_01.mp3";     
 String imageStartFile = "workFlowPanel_03.png";
 
 boolean isWriteToScreen = true;
@@ -169,8 +172,8 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
   // For this sketch, audio was recorded at 48KHz. 
-  sampleRate = 48000; 
-  sampleBase  = (int) (sampleRate / sampleScale);
+  sampleRate = 48000; // = genWidth * genHeight;
+  sampleBase = (int) (sampleRate / sampleScale);
   initAudio();
   // multigen = loadLoopGen(genWidth, genHeight);
   multigen = loadWordGen(genWidth/4, genHeight/4);
@@ -178,22 +181,20 @@ public void setup() {
   mapSize = mapper.getSize();
   colors = getColors(); // create an array of rainbow colors
   mapImage = createImage(width, height, ARGB); // an image to use with mapper
-  currentPoint = new PVector(-1, -1);
+     currentPoint = new PVector(-1, -1);
   timeLocsArray = new ArrayList<TimedLocation>();
   octet = new ArrayList<SamplerInstrument>();
-  dataPath = sketchPath("") +"../examples_data";
-  // println("-- dataPath: "+ dataPath);
-  audioStartFile = "../"+ dataPath +"/"+ audioStartFile;
-  imageStartFile = dataPath +"/"+ imageStartFile;
-  println("--- test path "+ sketchPath("") +".." + "/examples_data");
+  // path to the folder where PixelAudio examples keep their data files 
+  // such as image, audio, .json, etc.
+  daPath = sketchPath("") + "../examples_data/";
   loadFiles();
 }
 
 public void loadFiles() {
   boolean oldIsLoadBoth = isLoadBoth;
   isLoadBoth = false;
-  loadAudioFile(new File(audioStartFile));
-  loadImageFile(new File(imageStartFile));
+  loadAudioFile(new File(daPath + audioStartFile));
+  loadImageFile(new File(daPath + imageStartFile));
   isLoadBoth = oldIsLoadBoth;
 }
 
@@ -202,6 +203,7 @@ public void initAudio() {
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
   this.audioBuffer = new MultiChannelBuffer(1024, 1);
 }
+
 
 /**
  * Adds PixelMapGen objects to the genList. The genList will be used to
@@ -305,13 +307,19 @@ public void writeToScreen(String msg) {
 }
 
 public void draw() {
+  // background image, erases previous display
   image(mapImage, 0, 0);
+  // step the animation
   if (isAnimating)
     stepAnimation();
+  // draw brush shapes
   if (isDrawMode) {
     if (mousePressed) {
       addPoint();
-      // isRefreshBuffer = true;
+    }
+    if (allPoints != null && allPoints.size() > 2) {
+      // draw the line we're making while we drag the mouse
+      PACurveUtility.lineDraw(this, allPoints, allPointsColor, allPointsWeight);
     }
     if (curveMaker != null) {
       freshDraw();
@@ -319,24 +327,24 @@ public void draw() {
     if (pointEventsArray != null) runPointEventsArray();
   } 
   runTimeArray();
-  if (isWriteToScreen) writeToScreen("Click to play a sound. Press 'd' to turn drawing on (or off). Draw something. Then press 'p' to play your drawing.");
+  if (isWriteToScreen) writeToScreen("Press 'd' to turn drawing on (or off). Draw something. Then press 'p' to play your drawing.");
 }
 
 public void freshDraw() {
   if (curveMaker.isReady()) {
     // curveMaker.RDPDraw(this);
     // curveMaker.curveDraw(this, false);
-    PABezShape brush = curveMaker.brushShape;
+    PABezShape brush = curveMaker.getBrushShape();
     brush.setFillColor(color(144, 34, 42, 233));
     brush.setWeight(2);
     brush.setStrokeColor(color(144, 34, 42, 233));
     brush.draw(this);
     // curveMaker.brushDraw(this, color(144, 34, 42, 233));
-    curveMaker.polyPointsDraw(this, polySteps, color(233, 199, 144, 192), 6);
+    curveMaker.eventPointsDraw(this, polySteps, color(233, 199, 144, 192), 6);
   }
   else {
-    if (curveMaker.allPoints != null && curveMaker.allPoints.size() > 2) 
-      curveMaker.allPointsDraw(this);
+    if (curveMaker.dragPoints != null && curveMaker.dragPoints.size() > 2) 
+      curveMaker.dragPointsDraw(this);
   }
 }
 
@@ -348,6 +356,19 @@ public void stepAnimation() {
   mapImage.updatePixels();
 }
 
+  // the modern way to loop (as of Java 8)
+  public void runTimeArrayBack() {
+    int currentTime = millis();
+    timeLocsArray.forEach(tl -> {
+      tl.setStale(tl.stopTime() < currentTime);
+      if (!tl.isStale()) {
+        drawCircle(tl.getX(), tl.getY());
+      }
+    });
+    timeLocsArray.removeIf(TimedLocation::isStale);
+  }
+
+// a more thread safe way to loop (but for now this application is single-threaded)
 public void runTimeArray() {
   int currentTime = millis();
   for (Iterator<TimedLocation> iter = timeLocsArray.iterator(); iter.hasNext();) {
@@ -445,7 +466,7 @@ public void keyPressed() {
     break;
   case 'p': case 'P':
     if (curveMaker.isReady()) {
-      eventPoints = curveMaker.bezPoints.getPointList(this, polySteps);
+      eventPoints = curveMaker.getCurveShape().getPointList(polySteps);
       playPoints();
     }
   break;
@@ -480,14 +501,14 @@ public void keyPressed() {
     writeAudioToImage();
     println("--->> Wrote audio to image as pixel data.");
     break;
-  case '?':
-    showHelp();
-    break;
   case 'k':
     displayColors();
     break;
   case 'K':
     loadFiles();
+    break;
+  case '?':
+    showHelp();
     break;
   default:
     break;
@@ -521,21 +542,33 @@ public void showHelp() {
 
 public void mousePressed() {
   if (this.isDrawMode) {
-    allPoints.clear();
-    curveMaker = new PACurveMaker(allPoints);
-    curveMaker.setEpsilon(epsilon);
-    
-    addPoint();
+    initAllPoints();
   } 
   else {
-    sampleX = mouseX;
-    sampleY = mouseY;
-    samplePos = mapper.lookupSample(sampleX, sampleY);
-    if (audioSignal == null || isBufferStale) {
-      isBufferStale = false;
-    }
-    playSample(samplePos);
+    handleMousePressed();
   }
+}
+
+/**
+ * Initializes allPoints and adds the current mouse location to it. 
+ */
+public void initAllPoints() {
+  allPoints = new ArrayList<PVector>();
+  addPoint();
+  sampleX = mouseX;
+  sampleY = mouseY;
+  samplePos = mapper.lookupSample(sampleX, sampleY);      
+}
+
+public void handleMousePressed() {
+  // a point event was triggered
+  sampleX = mouseX;
+  sampleY = mouseY;
+  samplePos = mapper.lookupSample(sampleX, sampleY);
+  if (audioSignal == null || isBufferStale) {
+    isBufferStale = false;
+  }
+  playSample(samplePos);
 }
 
 public void addPoint() {
@@ -546,19 +579,20 @@ public void addPoint() {
 }
 
 public void mouseReleased() {
-  if (isDrawMode && allPoints != null && allPoints.size() > 2) {
-    calculateDerivedPoints();
-      if (curveMaker.isReady()) {
-        eventPoints = curveMaker.bezPoints.getPointList(this, polySteps);
-        playPoints();
-      }
+  if (allPoints != null) {
+    if (isDrawMode && allPoints.size() > 2) {
+      initCurveMaker();
+    } 
+    else {
+      handleMousePressed();
+    }
+    allPoints.clear();
   }
-  // isRefreshBuffer = true;
 }
 
-public void calculateDerivedPoints() {
-  curveMaker.calculateDerivedPoints();
-}  
+public void initCurveMaker() {
+  curveMaker = PACurveMaker.buildCurveMakerComplete(allPoints, epsilon);
+}
 
 public void playPoints() {
   if (eventPoints != null) {
@@ -617,7 +651,7 @@ public int playSample(int samplePos) {
 
 public void loadOctet(Sampler sampler, ADSR adsr) {
   for (int i = 0; i < maxPlayers; i++) {
-    octet.add(new SamplerInstrument(sampler, adsr));
+    octet.add(new SamplerInstrument(audioOut, sampler, adsr));
   }
   nowPlaying = 0;
 }
@@ -626,17 +660,17 @@ public void loadOctet(Sampler sampler, ADSR adsr) {
 // ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- // 
   
 public int[] getHistoBounds(int[] source) {
-  int min = 255;
-  int max = 0;
-  for (int i = 0; i < source.length; i++) {
-    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-    for (int j = 0; j < comp.length; j++) {
-    if (comp[j] > max) max = comp[j];
-    if (comp[j] < min) min = comp[j];
+    int min = 255;
+    int max = 0;
+    for (int i = 0; i < source.length; i++) {
+      int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+      for (int j = 0; j < comp.length; j++) {
+        if (comp[j] > max) max = comp[j];
+        if (comp[j] < min) min = comp[j];
+      }
     }
-  }
-  println("--- min", min, " max ", max);
-  return new int[]{min, max};
+    println("--- min", min, " max ", max);
+    return new int[]{min, max};
 }
 
 // histogram stretch -- run getHistoBounds to determine low and high
@@ -644,25 +678,25 @@ public int[] stretch(int[] source, int low, int high) {
   int[] out = new int[source.length];
   int r = 0, g = 0, b = 0;
   for (int i = 0; i < out.length; i++) {
-  int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-  r = comp[0];
-  g = comp[1];
-  b = comp[2];
-  r = (int) constrain(map(r, low, high, 1, 254), 0, 255);
-  g = (int) constrain(map(g, low, high, 1, 254), 0, 255);
-  b = (int) constrain(map(b, low, high, 1, 254), 0, 255);
-  out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
+    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+    r = comp[0];
+    g = comp[1];
+    b = comp[2];
+    r = (int) constrain(map(r, low, high, 1, 254), 0, 255);
+    g = (int) constrain(map(g, low, high, 1, 254), 0, 255);
+    b = (int) constrain(map(b, low, high, 1, 254), 0, 255);
+    out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
   }
   return out;
 }
 
 public void setGamma(float gamma) {
   if (gamma != 1.0) {
-  this.gammaTable = new int[256];
-  for (int i = 0; i < gammaTable.length; i++) {
-    float c = i/(float)(gammaTable.length - 1);
-    gammaTable[i] = (int) Math.round(Math.pow(c, gamma) * (gammaTable.length - 1));
-  }
+    this.gammaTable = new int[256];
+    for (int i = 0; i < gammaTable.length; i++) {
+      float c = i/(float)(gammaTable.length - 1);
+      gammaTable[i] = (int) Math.round(Math.pow(c, gamma) * (gammaTable.length - 1));
+    }
   }
 }
 
@@ -670,349 +704,17 @@ public int[] adjustGamma(int[] source) {
   int[] out = new int[source.length];
   int r = 0, g = 0, b = 0;
   for (int i = 0; i < out.length; i++) {
-  int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-  r = comp[0];
-  g = comp[1];
-  b = comp[2];
-  r = gammaTable[r];
-  g = gammaTable[g];
-  b = gammaTable[b];
-  out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
+    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+    r = comp[0];
+    g = comp[1];
+    b = comp[2];
+    r = gammaTable[r];
+    g = gammaTable[g];
+    b = gammaTable[b];
+    out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
   }
   return out;
 }  
 
 
-// ------------------------------------------- //
-//             TIMED LOCATION CLASS       //
-// ------------------------------------------- //
-
-public class TimedLocation {
-  private int x;
-  private int y;
-  private int stopTime;
-  private boolean isStale;
-
-  public TimedLocation(int x, int y, int stop) {
-    this.x = x;
-    this.y = y;
-    this.stopTime = stop;
-    this.isStale = false;
-  }
-
-  public int getX() {
-    return this.x;
-  }
-
-  public int getY() {
-    return this.y;
-  }
-
-  public int stopTime() {
-    return this.stopTime;
-  }
-
-  public boolean isStale() {
-    return this.isStale;
-  }
-
-  public void setStale(boolean stale) {
-    this.isStale = stale;
-  }
-}
-
-
-// ------------------------------------------- //
-//          SAMPLER INSTRUMENT CLASS           //
-// ------------------------------------------- //
-
-// using minim's Instrument interface
-public class SamplerInstrument implements Instrument {
-  Sampler sampler;
-  ADSR adsr;
-
-  SamplerInstrument(Sampler sampler, ADSR adsr) {
-    this.sampler = sampler;
-    this.adsr = adsr;
-    sampler.patch(adsr);
-  }
-
-  public void play() {
-    // Trigger the ADSR envelope by calling noteOn()
-    // Duration of 0.0 means the note is sustained indefinitely
-    noteOn(0.0f);
-  }
-
-  public void play(float duration) {
-    // Trigger the ADSR envelope by calling noteOn()
-    // Duration of 0.0 means the note is sustained indefinitely
-    // Duration should be in seconds
-    // println("----->>> SamplerInstrument.play("+ duration +")");
-    noteOn(duration);
-  }
-
-  @Override
-  public void noteOn(float duration) {
-    // Trigger the ADSR envelope and sampler
-    adsr.noteOn();
-    sampler.trigger();
-    adsr.patch(audioOut);
-    if (duration > 0) {
-      // println("----->>> duration > 0");
-      int durationMillis = (int) (duration * 1000);
-      // schedule noteOff with an anonymous Timer and TimerTask
-      new java.util.Timer().schedule(new java.util.TimerTask() {
-        public void run() {
-          noteOff();
-        }
-      }, durationMillis);
-    }
-  }
-
-  @Override
-  public void noteOff() {
-    // println("----->>> noteOff event");
-    adsr.unpatchAfterRelease(audioOut);
-    adsr.noteOff();
-  }
-
-  // Getter for the Sampler instance
-  public Sampler getSampler() {
-    return sampler;
-  }
-
-  // Setter for the Sampler instance
-  public void setSampler(Sampler sampler) {
-    this.sampler = sampler;
-  }
-
-  // Getter for the ADSR instance
-  public ADSR getADSR() {
-    return adsr;
-  }
-
-  // Setter for the ADSR instance
-  public void setADSR(ADSR adsr) {
-    this.adsr = adsr;
-  }
-}
-
-// ------------------------------------------- //
-//          AUDIO and IMAGE FILE I/O           //
-// ------------------------------------------- //
-
-// ------------- LOAD AUDIO FILE ------------- //
-
-public void chooseFile() {
-  oldIsAnimating = isAnimating;
-  isAnimating = false;
-  isBufferStale = true;
-  selectInput("Choose an audio file or an image file: ", "fileSelected");
-}
-
-public void fileSelected(File selectedFile) {
-  if (null != selectedFile) {
-    String filePath = selectedFile.getAbsolutePath();
-    String fileName = selectedFile.getName();
-    String fileTag = fileName.substring(fileName.lastIndexOf('.') + 1);
-    fileName = fileName.substring(0, fileName.lastIndexOf('.'));
-    if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif")
-        || fileTag.equalsIgnoreCase("aiff")) {
-      audioFile = selectedFile;
-      audioFilePath = filePath;
-      audioFileName = fileName;
-      audioFileTag = fileTag;
-      println("----- Selected file " + fileName + "." + fileTag + " at "
-          + filePath.substring(0, filePath.length() - fileName.length()));
-      loadAudioFile(audioFile);
-      isLoadBoth = false;
-    } 
-    else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg") || fileTag.equalsIgnoreCase("jpeg")) {
-        imageFile = selectedFile;
-        imageFilePath = filePath;
-        imageFileName = fileName;
-        imageFileTag = fileTag;
-        loadImageFile(imageFile);
-        isLoadBoth = true;
-    }
-    else {
-      println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
-    }
-  } 
-  else {
-    println("----- No audio file was selected.");
-  }
-  isAnimating = oldIsAnimating;
-}
-
-public void loadAudioFile(File audFile) {
-  // read audio file into our MultiChannelBuffer
-  float sampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), audioBuffer);
-  // sampleRate > 0 means we read audio from the file
-  if (sampleRate > 0) {
-    // read an array of floats from the buffer
-    loadAudioSignal();
-    // load rgbSignal with rgb gray values corresponding to the audio sample values
-    if (isLoadBoth) writeAudioToImage();
-  }
-}
-
-public void loadAudioSignal() {
-  this.audioSignal = audioBuffer.getChannel(0);
-  this.audioLength = audioSignal.length;
-  if (audioLength < mapSize) {
-    audioSignal = Arrays.copyOf(audioSignal, mapSize);
-    audioLength = audioSignal.length;
-    audioBuffer.setChannel(0, audioSignal);
-  }
-  if (audioLength > mapSize) {
-    audioBuffer.setBufferSize(mapSize);
-    audioSignal = audioBuffer.getChannel(0);
-    audioLength = audioSignal.length;
-  }
-}
-
-public void writeAudioToImage() {
-  rgbSignal = mapper.pluckSamplesAsRGB(audioSignal, 0, mapSize);
-  if (rgbSignal.length < mapSize) {
-    // pad rgbSignal with 0's if necessary
-    rgbSignal = Arrays.copyOf(rgbSignal, mapSize);
-  }
-  if (isBlending) {
-    int alpha = 128;
-    Arrays.setAll(rgbSignal, index -> PixelAudioMapper.setAlpha(rgbSignal[index], alpha));
-  }
-  mapImage.loadPixels();
-  // write the rgbSignal pixels to mapImage, following the signal path
-  mapper.plantPixels(rgbSignal, mapImage.pixels, 0, rgbSignal.length, chan);
-  mapImage.updatePixels();
-}
-
-
-public void loadImageFile(File imgFile) {
-  PImage img = loadImage(imgFile.getAbsolutePath());
-  loadImagePixels(img);
-  if (isLoadBoth) writeImageToAudio();
-}
-
-public void loadImagePixels(PImage img) {
-  // TODO handle color channel setting for images
-  int w = img.width > mapImage.width ? mapImage.width : img.width;
-  int h = img.height > mapImage.height ? mapImage.height : img.height;
-  if (chan != PixelAudioMapper.ChannelNames.ALL) {
-    PImage mixImage = createImage(w, h, ARGB);
-    mixImage.copy(mapImage, 0, 0, w, h, 0, 0, w, h);
-    img.loadPixels();
-    mixImage.loadPixels();
-    mixImage.pixels = PixelAudioMapper.pushAudioPixel(img.pixels, mixImage.pixels, chan);
-    mixImage.updatePixels();
-    // TODO make it work!
-    mapImage.copy(mixImage,0, 0, w, h, 0, 0, w, h);
-  }
-  else {
-    mapImage.copy(img,0, 0, w, h, 0, 0, w, h);
-  }
-}
-
-public void writeImageToAudio() {
-  // println("----- writing image to signal ");
-  rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
-  audioBuffer.setBufferSize(mapSize);
-  mapImage.loadPixels();
-  // fetch pixels from mapImage in signal order, put them in rgbSignal
-  rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, rgbSignal.length);    
-  // write the Brightness channel of rgbPixels, transcoded to audio range, to audioBuffer
-  mapper.plantSamples(rgbSignal, audioBuffer.getChannel(0), 0, mapSize, PixelAudioMapper.ChannelNames.L);
-}
-
-
-// ------------- SAVE AUDIO FILE ------------- //
-
-public void saveToAudio() {
-  // File folderToStartFrom = new File(dataPath("") + "/");
-  // selectOutput("Select an audio file to write to:", "audioFileSelectedWrite", folderToStartFrom);
-  selectOutput("Select an audio file to write to:", "audioFileSelectedWrite");
-}
-
-public void audioFileSelectedWrite(File selection) {
-  if (selection == null) {
-    println("Window was closed or the user hit cancel.");
-    return;      
-  }
-  String fileName = selection.getAbsolutePath();
-  if (selection.getName().indexOf(".wav") != selection.getName().length() - 4) {
-    fileName += ".wav";
-  }
-  saveAudioFile(fileName);
-}
-
-public void saveAudioFile(String fileName) {
-  try {
-    saveAudioToFile(audioSignal, sampleRate, fileName);
-    println("Saved file to sketch path: "+ fileName);
-  } catch (IOException e) {
-    println("--->> There was an error outputting the audio file "+ fileName +".\n"+ e.getMessage());
-  } catch (UnsupportedAudioFileException e) {
-    println("--->> The file format is unsupported." + e.getMessage());
-  }
-}
-
-/**
- * Saves audio data to 16-bit integer PCM format, which Processing can also
- * open.
- * 
- * @param samples    an array of floats in the audio range (-1.0f, 1.0f)
- * @param sampleRate audio sample rate for the file
- * @param fileName   name of the file to save to
- * @throws IOException                   an Exception you'll need to handle to
- *                                       call this method (see keyPressed entry
- *                                       for 's')
- * @throws UnsupportedAudioFileException another Exception (see keyPressed entry
- *                                       for 's')
- */
-public static void saveAudioToFile(float[] samples, float sampleRate, String fileName)
-    throws IOException, UnsupportedAudioFileException {
-  // Convert samples from float to 16-bit PCM
-  byte[] audioBytes = new byte[samples.length * 2];
-  int index = 0;
-  for (float sample : samples) {
-    // Scale sample to 16-bit signed integer
-    int intSample = (int) (sample * 32767);
-    // Convert to bytes
-    audioBytes[index++] = (byte) (intSample & 0xFF);
-    audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
-  }
-  // Create an AudioInputStream
-  ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
-  AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
-  AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
-  // Save the AudioInputStream to a WAV file
-  File outFile = new File(fileName);
-  AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
-}
-
-// ------------- IMAGES ------------- //
-
-public void saveToImage() {
-  // File folderToStartFrom = new File(dataPath(""));
-  selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
-}
-
-public void imageFileSelectedWrite(File selection) {
-  if (selection == null) {
-    println("Window was closed or the user hit cancel.");
-    return;      
-  }
-  String fileName = selection.getAbsolutePath();
-  if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
-    fileName += ".png";
-  }
-  // saveImageToFile(mapImage, fileName);
-  save(fileName);
-}
-
-public void saveImageToFile(PImage img, String fileName) {
-  img.save(fileName);
-}
-  
   

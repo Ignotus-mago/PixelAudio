@@ -1,7 +1,14 @@
+/**
+ * A simple class for obtaining samples from an audio source that is 
+ * either a live stream or a stream from a file. In Processing, the 
+ * live stream is pretty much confined to the built-in mic in MacOS, 
+ * and works only in the Processing IDE--not in Eclipse. Implements the 
+ * AudioListener interface from the Minim audio library for Processing. 
+ */
 public class StreamCapture implements AudioListener {
   private float[] left;
   private float[] right;
- 
+
   public StreamCapture() {
     left = null;
     right = null;
@@ -21,8 +28,9 @@ public class StreamCapture implements AudioListener {
   }
 
   /**
-   * The tricky part is keeping the signal in the right order for playback: write the 
-   * buffer to the signal first, then rotate the signal left by the length of the buffer.
+   * The tricky part is keeping the signal in the right order for playback: write
+   * the buffer to the signal first, then rotate the signal left by the length of
+   * the buffer.
    */
   public synchronized void fillSignal() {
     if (left != null) {

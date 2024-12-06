@@ -4,7 +4,7 @@
  * We use a MultiGen to get things rolling. See the MultiGenDemo example for more information.
  * A MultiGen is constructed of two or more PixelMapGens that are merged into a single gen.
  *
- * There are 
+ * 
  *
  * Press ' ' to toggle animation that shifts pixels along the signal path.
  * Press 'j' to save currentGen data to a .json file.

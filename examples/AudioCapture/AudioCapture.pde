@@ -1,61 +1,86 @@
+/**
+ * AudioCapture shows how you can capture streaming audio from live input or from a file.
+ * The live input in the Processing IDE seems to be limited to the built-in microphone. Live input 
+ * is not available in the Eclipse IDE. 
+ * 
+ * Press the 'p' key to toggle between live streaming from the built-in microphone and
+ * streaming from a file. 
+ * Press the spacebar to record audio from the current stream. 
+ * Click on the image to play a sample. Clicking turns off recording. 
+ */
+
 import java.util.Arrays;
 
 import net.paulhertz.pixelaudio.*;
+import processing.core.*;
 import ddf.minim.*;
 import ddf.minim.ugens.*;
 
-/* PixelAudio library */
+
+/** PixelAudio library */
 public PixelAudio pixelaudio;
+/** A PixelMapGen to generate the signal path */
 HilbertGen hGen;
+/** A PixelAudioMapper to negotiate between image and audio */
 PixelAudioMapper mapper;
+/** the color channel we will draw to */
 PixelAudioMapper.ChannelNames chan;
 
-/* image for display, audio signal, RGB array */
+/** image for display */
 PImage mapImage;
+/** the number of pixels in the image, the number of samples in the audio signal, etc. */
 int mapSize;
+/** an array of colors through the RGB spectrum, handy for showing the shape of the signal path */
 int[] colors;
-float[] audioSignal;
-int audioLength;
-int[] rgbSignal;
 
-/* Minim audio library */
+/** Minim audio library */
 Minim minim;
 AudioInput audioIn;
 AudioOutput audioOut;
+/** A buffer for audio that we stream */
 MultiChannelBuffer audioBuffer;
+/** A Minim audio sampler to construct a sampling instrument */
 Sampler audioSampler;
+/** Our homemade audio sampling instrument */
 SamplerInstrument instrument;
+/** A source for streaming audio from a file */
 AudioPlayer anthem;
+/** The class that captures audio for us */
 StreamCapture streamCap;
-float sampleScale = 4;
-int sampleBase = 10250;
-int sampleLength = (int) (sampleScale * sampleBase);
-
-/* ADSR and parameters */
+/** audio signal as an array of floats */
+float[] audioSignal;
+/** audio signal transcoded to RGB data */
+int[] rgbSignal;
+int audioLength;
+/** audio sampling rate */
+int sampleRate = 44100;
+/** duration of a sample played by the SamplerInstrument, in seconds */
+float sampleLength = 1.0f;
+/** ADSR and parameters */
 ADSR adsr;
 float maxAmplitude = 0.9f;
 float attackTime = 0.2f;
 float decayTime = 0.125f;
 float sustainLevel = 0.5f;
 float releaseTime = 0.2f;
-
-/* audio variables */
-int sampleRate = 44100;
+/** audio variables */
 boolean listening = false;
 boolean listenLive = true;
 
-/* interaction */
-int pixelPos;
-int samplePos;
 
+/**
+ *  For the HilbertGen we require width == height == a power of 2. 
+ */
 public void settings() {
   size(512, 512);
 }
 
 public void setup() {
+  pixelaudio = new PixelAudio(this);
   initMapper();
   mapSize = mapper.getSize();
-  initAudio();
+  minim = new Minim(this);
+  initAudio();    
 }
 
 public int[] getColors() {
@@ -72,7 +97,6 @@ public int[] getColors() {
 }
 
 public void initMapper() {
-  pixelaudio = new PixelAudio(this);
   hGen = new HilbertGen(width, height);
   mapper = new PixelAudioMapper(hGen);
   chan = PixelAudioMapper.ChannelNames.L;
@@ -83,7 +107,6 @@ public void initMapper() {
 }
 
 public void initAudio() {
-  this.minim = new Minim(this);
   this.audioIn = minim.getLineIn(Minim.MONO);
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
   this.audioBuffer = new MultiChannelBuffer(mapSize, 1);
@@ -93,38 +116,26 @@ public void initAudio() {
   this.audioLength = audioSignal.length;
   this.audioBuffer.setChannel(0, audioSignal);
   streamCap = new StreamCapture();
-  // String path = "/Users/paulhz/Documents/Processing/libraries/PixelAudio/examples/LoadAudioToImage/data";
-  String path = this.dataPath("");
-  anthem = minim.loadFile(path +"/youthorchestra.wav");
+  // path to the folder where PixelAudio examples keep their data files 
+  // such as image, audio, .json, etc.
+  String daPath = sketchPath("") + "../examples_data/";
+  println("daPath: ", daPath);
+  anthem = minim.loadFile(daPath + "youthorchestra.wav");
   anthem.loop();
   anthem.pause();
-  //createSampler();
-}
-
-public void createSampler() {
-  // create a Minim Sampler from the buffer with 44.1 sampling
-  audioBuffer.setChannel(0, audioSignal);
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8); 
-  audioSampler.amplitude.setLastValue(0.9f); 
-  audioSampler.begin.setLastValue(0);
-  adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-}
+}  
 
 public void draw() {
   image(mapImage, 0, 0);
   textSize(18);
-  text( "Listening is currently " + listening + ".", 6, 18 );
-  if (listening) drawSignal();
+  text("Listening is currently " + listening + ".", 6, 18);
+  if (listening)
+    drawSignal();
   drawInput();
 }
 
 public void keyPressed() {
   switch (key) {
-  case 'm':
-  case'M':
-    if (audioIn.isMonitoring()) audioIn.disableMonitoring();
-    else audioIn.enableMonitoring();
-    break;
   case ' ':
     toggleListening();
     break;
@@ -133,9 +144,11 @@ public void keyPressed() {
     // change the audio source, but only if we are not listening
     if (!listening) {
       listenLive = !listenLive;
-      println("-- listenLive = "+ listenLive);
-      if (listenLive) anthem.pause();
-      else anthem.play();
+      println("-- listenLive = " + listenLive);
+      if (listenLive)
+        anthem.pause();
+      else
+        anthem.play();
     }
     break;
   case 'h':
@@ -146,45 +159,51 @@ public void keyPressed() {
 }
 
 public void toggleListening() {
-    if (listening) {
-      if (listenLive) audioIn.removeListener(streamCap);
-      else anthem.removeListener(streamCap);
-      listening = false;
-    } 
-    else {
-      if (listenLive) audioIn.addListener(streamCap);
-      else anthem.addListener(streamCap);
-      listening = true;
-    }
+  if (listening) {
+    if (listenLive)
+      audioIn.removeListener(streamCap);
+    else
+      anthem.removeListener(streamCap);
+    listening = false;
+  } 
+  else {
+    if (listenLive)
+      audioIn.addListener(streamCap);
+    else
+      anthem.addListener(streamCap);
+    listening = true;
+  }
 }
 
 public void mousePressed() {
   if (listening) {
     toggleListening();
-    if (anthem.isPlaying()) anthem.pause(); 
+    if (anthem.isPlaying())
+      anthem.pause();
   }
-  pixelPos = mouseX + mouseY * width;
-  samplePos = mapper.lookupSample(mouseX, mouseY);
+  // get the position in the audio buffer that corresponds to the pixel location in the image
+  int samplePos = mapper.lookupSample(mouseX, mouseY);
   playSample(samplePos);
 }
 
 public int playSample(int samplePos) {
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8); 
-  // ADSR 
+  audioSampler = new Sampler(audioBuffer, sampleRate, 8);
+  // ADSR
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   // set amplitude for the Sampler
-  audioSampler.amplitude.setLastValue(0.9f); 
-  // set the Sampler to begin playback at samplePos, which corresponds to the place the mouse was clicked
-  audioSampler.begin.setLastValue(samplePos); 
+  audioSampler.amplitude.setLastValue(0.9f);
+  // set the Sampler to begin playback at samplePos, which corresponds to the
+  // place the mouse was clicked
+  audioSampler.begin.setLastValue(samplePos);
   int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
-  int duration = sampleLength;
+  int duration = (int) (sampleLength * sampleRate);
   if (samplePos + sampleLength >= mapSize) {
     duration = mapSize - samplePos; // make sure we don't exceed the mapSize
     // println("----->>> duraton = " + duration);
   }
   int durationPlusRelease = duration + releaseDuration;
-  int end = (samplePos + durationPlusRelease >= this.mapSize) 
-            ? this.mapSize - 1 : samplePos + durationPlusRelease;
+  int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1
+      : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
   // println("----->>> audioBuffer size = "+ audioBuffer.getBufferSize());
@@ -196,7 +215,6 @@ public int playSample(int samplePos) {
   // return the length of the sample
   return duration;
 }
-
 
 public void drawInput() {
   if (listenLive) {
@@ -213,8 +231,8 @@ public void drawInput() {
 }
 
 public void drawSignal() {
-  rgbSignal = mapper.pluckSamplesAsRGB(audioSignal, 0, mapSize);  // rgbSignal is now an array of rgb gray
+  rgbSignal = mapper.pluckSamplesAsRGB(audioSignal, 0, mapSize); // rgbSignal is now an array of rgb gray
   mapImage.loadPixels();
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, rgbSignal.length, chan);
   mapImage.updatePixels();
-}
+}  

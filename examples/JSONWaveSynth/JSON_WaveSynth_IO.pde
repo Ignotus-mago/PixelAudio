@@ -5,7 +5,7 @@
 
 // select a file of WaveData objects in JSON format to open
 public void loadWaveData() {
-  File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
+  File folderToStartFrom = new File(jsonFolder + "*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }
 

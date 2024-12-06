@@ -36,6 +36,7 @@ boolean isLooping = true;
 String jsonFolder = "/JSON_data/";
 File currentDataFile;
 String currentFileName;
+String daPath;
 JSONObject json;
 
 public void settings() {
@@ -54,6 +55,10 @@ public void setup() {
   wavesynth = new WaveSynth(mapper, wdList);
   initWaveSynth(wavesynth);
   synthImage = wavesynth.mapImage;  // point synthImage to wavesynth's calculated image
+  // path to the folder where PixelAudio examples keep their data files 
+  // such as image, audio, .json, etc.
+  daPath = sketchPath("") + "../examples_data/";
+  jsonFolder = daPath + "JSON/";
   showHelp();
 }
 

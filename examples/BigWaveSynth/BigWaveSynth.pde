@@ -1,14 +1,10 @@
-import java.io.File;
-import java.util.ArrayList;
-import net.paulhertz.pixelaudio.*;
-
 /**
  * BigWaveSynth shows how you can load a WaveSynth into the pixel array of a
  * MultiGen. MultiGen is child class of PixelMapGen that allows you to use
  * multiple PixelMapGens as if they were a single image with a single signal
  * path through them. Initially, we call initWaveDataList() to create a WaveData 
  * array with two operators. This example also allows you to load JSON files 
- * (located in this example's data folder) to reconfigure the WaveSynth.
+ * to reconfigure the WaveSynth.
  * 
  * Press the spacebar to start and stop animation. 
  * Press 'o' to open a JSON file, 
@@ -16,6 +12,10 @@ import net.paulhertz.pixelaudio.*;
  * Press 'j' to save the current configuration to a JSON file. 
  * 
  */
+
+import java.io.File;
+import java.util.ArrayList;
+import net.paulhertz.pixelaudio.*;
 
 PixelAudio pixelaudio;
 HilbertGen hGen;
@@ -38,14 +38,14 @@ int step = 0;              // the current step in the animation
 String comments;           // a JSON field that provides information about the WaveSynth effects it produces
 
 // file i/o
-String jsonFolder = "/JSON_data/";
+String jsonFolder;
 File currentDataFile;
 String currentFileName;
+String daPath;
 JSONObject json;
 // animation
 boolean isAnimating = true;
 boolean oldIsAnimating;
-boolean isLooping = true;
 
 
 public void settings() {
@@ -63,6 +63,10 @@ public void setup() {
   wavesynth = new WaveSynth(mapper, wdList);
   initWaveSynth(wavesynth);
   synthImage = wavesynth.mapImage;
+  // path to the folder where PixelAudio examples keep their data files 
+  // such as image, audio, .json, etc.
+  daPath = sketchPath("") + "../examples_data/";
+  jsonFolder = daPath + "JSON";
 }
 
 public void loadGenLists() {
