@@ -8,8 +8,6 @@ import processing.core.PVector;
 import java.util.ArrayList;
 import java.util.ListIterator;
 
-import net.paulhertz.pixelaudio.PixelAudio;
-
 /**
  * Class to store a path composed of lines and Bezier curves, along with fill, stroke, weight and opacity values.
  * Adapted from IgnoCodeLib Processing library for use with PixelAudio library.

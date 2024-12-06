@@ -38,6 +38,7 @@ public class PACurveUtility {
 	 */
 
 	// TODO Maybe a distance squared evaluation instead of a distance evaluation would speed things up?
+	// TODO A version that also sifts time data to generate a sequence of timed PVectors.
 	
 	/**
 	 * Ramer-Douglas-Peucker point reduction algorithm (RDP), reduces points in allPoints and 
