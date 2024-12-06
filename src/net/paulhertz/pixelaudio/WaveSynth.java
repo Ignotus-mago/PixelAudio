@@ -4,7 +4,6 @@ import processing.core.PImage;
 import processing.core.PConstants;
 import java.util.ArrayList;
 
-import javax.annotation.processing.ProcessingEnvironment;
 
 /**
  * Implements a combination of color organ and additive audio synth.
