@@ -207,7 +207,7 @@ public int playSample(int samplePos) {
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
   // println("----->>> audioBuffer size = "+ audioBuffer.getBufferSize());
-  this.instrument = new SamplerInstrument(audioSampler, adsr);
+  this.instrument = new SamplerInstrument(audioOut, audioSampler, adsr);
   // play command takes a duration in seconds
   float dur = duration / (float) (sampleRate);
   instrument.play(dur);

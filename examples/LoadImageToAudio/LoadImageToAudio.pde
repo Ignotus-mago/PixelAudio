@@ -24,6 +24,7 @@
  * Press 'v' to load an image or audio file to the HSB saturation (vibrance) channel.
  * Press 'l' to load an image or audio file to the HSB brightness (lightness) channel.
  * Press 'O' to reload the most recent audio or image file.
+ * Press 'k' or 'K' to load the color spectrum along the signal path over the most recent image.
  * Press 'm' to apply a contrast enhancement (histogram stretch) to the image.
  * Press '=' or '+' to make the image brighter
  * Press '-' or '_' to make the image darker.
@@ -31,6 +32,10 @@
  * Press 'S' to save to an image file.
  * Press 'f' to show frameRate in the console.
  * Press 'w' to write the image to the audio buffer (expect noise)
+ * Press '1' to set sampleRate to 44100Hz
+ * Press '2' to set sampleRate to 22050Hz
+ * Press '3' to set sampleRate to 11025Hz
+ * Press '4' to set sampleRate to genWidth * genHeight = 262144Hz
  * Press '?' to show this help message.
  *
  * PLEASE NOTE: Hue (H) and Saturation (V) operations may have no effect on gray pixels.
@@ -64,7 +69,7 @@ int genHeight = 512;      // height of PixelMapGen objects, for hGen must be equ
 PixelAudioMapper mapper;  // object for reading, writing, and transcoding audio and image data
 int mapSize;              // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
 PImage mapImage;          // image for display
-PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
+PixelAudioMapper.ChannelNames chan;
 int[] colors;             // array of spectral colors
 
 /** Minim audio library */
@@ -72,7 +77,7 @@ Minim minim;              // library that handles audio
 AudioOutput audioOut;     // line out to sound hardware
 MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
 boolean isBufferStale = false;     // do we need to reset the audio buffer?
-int sampleRate = 41500;   // ----->> a critical value, see the setup method <<-----
+int sampleRate = 44100;   // ----->> a critical value, see the setup method <<-----
 float[] audioSignal;      // the audio signal as an array
 int[] rgbSignal;          // the colors in the display image, in the order the signal path visits them
 int audioLength;
@@ -103,6 +108,7 @@ String imageFilePath;
 String imageFileName;
 String imageFileTag;
 
+String daPath;                     // path to media files
 boolean isLoadFromImage = false;
 
 // animation
@@ -130,19 +136,13 @@ public void settings() {
 public void setup() {
   frameRate(30);
   pixelaudio = new PixelAudio(this);
+  chan = PixelAudioMapper.ChannelNames.ALL;
   minim = new Minim(this);
   // sampleRate affects image display and audio sample calculation.
   // For compatibility with other applications, including Processing, it's a good
   // idea to use a standard sampling rate, like 44100. However, you can experiment
   // with other sampling rates and probably can play audio and and save files.
   // Their behavior in Processing when you try to open them can be unpredictable.
-  //
-  // Setting sampleRate = genWidth * genHeight provides interesting symmetries in
-  // the image
-  // and will play audio and save to file -- but it's not a standard sample rate
-  // and
-  // though Processing may open files saved with non-standard sampling rates, it
-  // usually shifts the frequency according the sampleRate you have set.
   sampleRate = 44100; // = genWidth * genHeight;
   sampleBase = sampleRate / 4;
   initAudio();
@@ -154,10 +154,13 @@ public void setup() {
   mapSize = mapper.getSize();
   colors = getColors(); // create an array of rainbow colors
   mapImage = createImage(width, height, ARGB); // an image to use with mapper
-  mapImage.loadPixels();
-  mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
-  mapImage.updatePixels();
   timeLocsArray = new ArrayList<TimedLocation>();
+  // path to the folder where PixelAudio examples keep their data files 
+  // such as image, audio, .json, etc.
+  daPath = sketchPath("") + "../examples_data/";
+  // saucer_image.png is an image generated from an audio file
+  imageFile = new File(daPath + "saucer_image.png");
+  loadColors();
   showHelp();
 }
 
@@ -195,6 +198,21 @@ public int[] getColors() {
   }
   popStyle(); // restore styles, including the default RGB color space
   return colorWheel;
+}
+
+public void loadColors() {
+  PixelAudioMapper.ChannelNames oldChan = chan;
+  chan = PixelAudioMapper.ChannelNames.ALL;
+  mapImage.loadPixels();
+  // load the color spectrum in "colors" to mapImage
+  mapper.plantPixels(colors, mapImage.pixels, 0, mapSize, chan); // load colors to mapImage following signal path
+  mapImage.updatePixels();
+  if (imageFile != null) {
+    // use the L = brightness in the HSB color space as the channel. Color information will remain intact.
+    chan = PixelAudioMapper.ChannelNames.L;
+    loadImageFile(imageFile);
+  }
+  chan = oldChan;
 }
 
 public void draw() {
@@ -277,6 +295,9 @@ public void keyPressed() {
       }
     }
     break;
+  case 'k': case 'K':
+    loadColors();
+    break;
   case 'm':
     mapImage.loadPixels();
     int[] bounds = getHistoBounds(mapImage.pixels);
@@ -310,6 +331,18 @@ public void keyPressed() {
     writeImageToAudio();
     println("--->> Wrote image to audio as audio data.");
     break;
+  case '1':
+    sampleRate = 44100;
+    break;
+  case '2':
+    sampleRate = 22050;
+    break;
+  case '3':
+    sampleRate = 11025;
+    break;
+  case '4':
+    sampleRate = genWidth * genHeight;
+    break;
   case '?':
     showHelp();
     break;
@@ -328,6 +361,7 @@ public void showHelp() {
   println(" * Press 'v' to load an image or audio file to the HSB saturation (vibrance) channel.");
   println(" * Press 'l' to load an image or audio file to the HSB brightness (lightness) channel.");
   println(" * Press 'O' to reload the most recent audio or image file.");
+  println(" * Press 'k' or 'K' to load the color spectrum along the signal path over the most recent image.");
   println(" * Press 'm' to apply a contrast enhancement (histogram stretch) to the image.");
   println(" * Press '=' or '+' to make the image brighter");
   println(" * Press '-' or '_' to make the image darker.");
@@ -335,6 +369,10 @@ public void showHelp() {
   println(" * Press 'S' to save to an image file.");
   println(" * Press 'f' to show frameRate in the console.");
   println(" * Press 'w' to write the image to the audio buffer (expect noise)");
+  println(" * Press '1' to set sampleRate to 44100Hz");
+  println(" * Press '2' to set sampleRate to 22050Hz");
+  println(" * Press '3' to set sampleRate to 11025Hz");
+  println(" * Press '4' to set sampleRate to genWidth * genHeight = 262144Hz");
   println(" * Press '?' to show this help message.");
   println(" * ");
   println(" * PLEASE NOTE: Hue (H) and Saturation (V) may have no effect on gray pixels.");
@@ -371,7 +409,7 @@ public int playSample(int samplePos) {
   audioSampler.end.setLastValue(end);
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-  this.instrument = new SamplerInstrument(audioSampler, adsr);
+  this.instrument = new SamplerInstrument(audioOut, audioSampler, adsr);
   // play command takes a duration in seconds
   float duration = samplelen / (float) (sampleRate);
   instrument.play(duration);
@@ -451,308 +489,3 @@ public int[] adjustGamma(int[] source) {
   }
   return out;
 }  
-
-
-// ------------------------------------------- //
-//             TIMED LOCATION CLASS       //
-// ------------------------------------------- //
-
-public class TimedLocation {
-  private int x;
-  private int y;
-  private int stopTime;
-  private boolean isStale;
-
-  public TimedLocation(int x, int y, int stop) {
-    this.x = x;
-    this.y = y;
-    this.stopTime = stop;
-    this.isStale = false;
-  }
-
-  public int getX() {
-    return this.x;
-  }
-
-  public int getY() {
-    return this.y;
-  }
-
-  public int stopTime() {
-    return this.stopTime;
-  }
-
-  public boolean isStale() {
-    return this.isStale;
-  }
-
-  public void setStale(boolean stale) {
-    this.isStale = stale;
-  }
-}
-
-
-// ------------------------------------------- //
-//       SAMPLER INSTRUMENT CLASS       //
-// ------------------------------------------- //
-
-// using minim's Instrument interface
-public class SamplerInstrument implements Instrument {
-  Sampler sampler;
-  ADSR adsr;
-
-  SamplerInstrument(Sampler sampler, ADSR adsr) {
-    this.sampler = sampler;
-    this.adsr = adsr;
-    sampler.patch(adsr);
-  }
-
-  public void play() {
-    // Trigger the ADSR envelope by calling noteOn()
-    // Duration of 0.0 means the note is sustained indefinitely
-    noteOn(0.0f);
-  }
-
-  public void play(float duration) {
-    // Trigger the ADSR envelope by calling noteOn()
-    // Duration of 0.0 means the note is sustained indefinitely
-    // Duration should be in seconds
-    // println("----->>> SamplerInstrument.play("+ duration +")");
-    noteOn(duration);
-  }
-
-  @Override
-  public void noteOn(float duration) {
-    // Trigger the ADSR envelope and sampler
-    adsr.noteOn();
-    sampler.trigger();
-    adsr.patch(audioOut);
-    if (duration > 0) {
-      // println("----->>> duration > 0");
-      int durationMillis = (int) (duration * 1000);
-      // schedule noteOff with an anonymous Timer and TimerTask
-      new java.util.Timer().schedule(new java.util.TimerTask() {
-        public void run() {
-          noteOff();
-        }
-      }, durationMillis);
-    }
-  }
-
-  @Override
-  public void noteOff() {
-    // println("----->>> noteOff event");
-    adsr.unpatchAfterRelease(audioOut);
-    adsr.noteOff();
-  }
-
-  // Getter for the Sampler instance
-  public Sampler getSampler() {
-    return sampler;
-  }
-
-  // Setter for the Sampler instance
-  public void setSampler(Sampler sampler) {
-    this.sampler = sampler;
-  }
-
-  // Getter for the ADSR instance
-  public ADSR getADSR() {
-    return adsr;
-  }
-
-  // Setter for the ADSR instance
-  public void setADSR(ADSR adsr) {
-    this.adsr = adsr;
-  }
-}
-
-// ------------------------------------------- //
-//          AUDIO and IMAGE FILE I/O           //
-// ------------------------------------------- //
-
-// ------------- LOAD AUDIO FILE ------------- //
-
-public void chooseFile() {
-  oldIsAnimating = isAnimating;
-  isAnimating = false;
-  isBufferStale = true;
-  selectInput("Choose an audio file or an image file: ", "fileSelected");
-}
-
-public void fileSelected(File selectedFile) {
-  if (null != selectedFile) {
-    String filePath = selectedFile.getAbsolutePath();
-    String fileName = selectedFile.getName();
-    String fileTag = fileName.substring(fileName.lastIndexOf('.') + 1);
-    fileName = fileName.substring(0, fileName.lastIndexOf('.'));
-    if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif")
-        || fileTag.equalsIgnoreCase("aiff")) {
-      audioFile = selectedFile;
-      audioFilePath = filePath;
-      audioFileName = fileName;
-      audioFileTag = fileTag;
-      println("----- Selected file " + fileName + "." + fileTag + " at "
-              + filePath.substring(0, filePath.length() - fileName.length()));
-      loadAudioFile(audioFile);
-      isLoadFromImage = false;
-    } 
-    else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg") || fileTag.equalsIgnoreCase("jpeg")) {
-      imageFile = selectedFile;
-      imageFilePath = filePath;
-      imageFileName = fileName;
-      imageFileTag = fileTag;
-      loadImageFile(imageFile);
-      isLoadFromImage = true;
-    }
-    else {
-      println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
-    }
-  } 
-  else {
-    println("----- No audio file was selected.");
-  }
-  isAnimating = oldIsAnimating;
-}
-
-public void loadAudioFile(File audFile) {
-  // read audio file into our MultiChannelBuffer
-  float sampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), audioBuffer);
-  // sampleRate > 0 means we read audio from the file
-  if (sampleRate > 0) {
-    // read an array of floats from the buffer
-    this.audioSignal = audioBuffer.getChannel(0);
-    this.audioLength = audioSignal.length;
-    if (audioLength < mapSize) {
-      audioSignal = Arrays.copyOf(audioSignal, mapSize);
-      audioLength = audioSignal.length;
-      audioBuffer.setChannel(0, audioSignal);
-    }
-    if (audioLength > mapSize) {
-      audioBuffer.setBufferSize(mapSize);
-      audioSignal = audioBuffer.getChannel(0);
-      audioLength = audioSignal.length;
-    }
-    // load rgbSignal with rgb gray values corresponding to the audio sample values
-    rgbSignal = mapper.pluckSamplesAsRGB(audioSignal, 0, mapSize);
-    if (rgbSignal.length < mapSize) {
-      // pad rgbSignal with 0's if necessary
-      rgbSignal = Arrays.copyOf(rgbSignal, mapSize);
-    }
-    mapImage.loadPixels();
-    // write the rgbSignal pixels to mapImage, following the signal path
-    mapper.plantPixels(rgbSignal, mapImage.pixels, 0, rgbSignal.length, chan);
-    mapImage.updatePixels();
-  }
-}
-
-public void loadImageFile(File imgFile) {
-  PImage img = loadImage(imgFile.getAbsolutePath());
-  // TODO handle color channel setting for images
-  int w = img.width > mapImage.width ? mapImage.width : img.width;
-  int h = img.height > mapImage.height ? mapImage.height : img.height;
-  if (chan != PixelAudioMapper.ChannelNames.ALL) {
-    PImage mixImage = createImage(w, h, RGB);
-    mixImage.copy(mapImage, 0, 0, w, h, 0, 0, w, h);
-    img.loadPixels();
-    mixImage.loadPixels();
-    mixImage.pixels = PixelAudioMapper.pushAudioPixel(img.pixels, mixImage.pixels, chan);
-    mixImage.updatePixels();
-    // TODO make it work!
-    mapImage.copy(mixImage,0, 0, w, h, 0, 0, w, h);
-  }
-  else {
-    mapImage.copy(img,0, 0, w, h, 0, 0, w, h);
-  }
-  rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
-  audioBuffer.setBufferSize(mapSize);
-  writeImageToAudio();
-}
-
-// ------------- SAVE AUDIO FILE ------------- //
-
-public void saveToAudio() {
-  // File folderToStartFrom = new File(dataPath("") + "/");
-  // selectOutput("Select an audio file to write to:", "audioFileSelectedWrite", folderToStartFrom);
-  selectOutput("Select an audio file to write to:", "audioFileSelectedWrite");
-}
-
-public void audioFileSelectedWrite(File selection) {
-  if (selection == null) {
-    println("Window was closed or the user hit cancel.");
-    return;      
-  }
-  String fileName = selection.getAbsolutePath();
-  if (selection.getName().indexOf(".wav") != selection.getName().length() - 4) {
-    fileName += ".wav";
-  }
-  saveAudioFile(fileName);
-}
-
-public void saveAudioFile(String fileName) {
-  try {
-    saveAudioToFile(audioSignal, sampleRate, fileName);
-    println("Saved file to sketch path: "+ fileName);
-  } catch (IOException e) {
-    println("--->> There was an error outputting the audio file "+ fileName +".\n"+ e.getMessage());
-  } catch (UnsupportedAudioFileException e) {
-    println("--->> The file format is unsupported." + e.getMessage());
-  }
-}
-
-/**
- * Saves audio data to 16-bit integer PCM format, which Processing can also
- * open.
- * 
- * @param samples    an array of floats in the audio range (-1.0f, 1.0f)
- * @param sampleRate audio sample rate for the file
- * @param fileName   name of the file to save to
- * @throws IOException                   an Exception you'll need to handle to
- *                                       call this method (see keyPressed entry
- *                                       for 's')
- * @throws UnsupportedAudioFileException another Exception (see keyPressed entry
- *                                       for 's')
- */
-public static void saveAudioToFile(float[] samples, float sampleRate, String fileName)
-    throws IOException, UnsupportedAudioFileException {
-  // Convert samples from float to 16-bit PCM
-  byte[] audioBytes = new byte[samples.length * 2];
-  int index = 0;
-  for (float sample : samples) {
-    // Scale sample to 16-bit signed integer
-    int intSample = (int) (sample * 32767);
-    // Convert to bytes
-    audioBytes[index++] = (byte) (intSample & 0xFF);
-    audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
-  }
-  // Create an AudioInputStream
-  ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
-  AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
-  AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
-  // Save the AudioInputStream to a WAV file
-  File outFile = new File(fileName);
-  AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
-}
-
-// ------------- IMAGES ------------- //
-
-public void saveToImage() {
-  // File folderToStartFrom = new File(dataPath(""));
-  selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
-}
-
-public void imageFileSelectedWrite(File selection) {
-  if (selection == null) {
-    println("Window was closed or the user hit cancel.");
-    return;      
-  }
-  String fileName = selection.getAbsolutePath();
-  if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
-    fileName += ".png";
-  }
-  saveImageToFile(mapImage, fileName);
-}
-
-public void saveImageToFile(PImage img, String fileName) {
-  img.save(fileName);
-}

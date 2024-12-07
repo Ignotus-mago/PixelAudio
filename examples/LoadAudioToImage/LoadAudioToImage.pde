@@ -2,7 +2,7 @@
  * LoadAudioToImage shows how you can open audio files and transcode their image data to an image.
  * Once the image is loaded, you can click on it to play back the audio, which is stored in a 
  * MultiChannelBuffer. The <code>hightlightSample</code> method will highlight the pixels 
- * that correspond to the audio signal that is playes. The highlight will change the pixels, 
+ * that correspond to the audio signal that is played. The highlight will change the pixels, 
  * and can change the audio, too: just press the 'w' key to write the image, transcoded as an
  * audio signal, to the audio buffer. 
  * 
@@ -81,6 +81,7 @@ float sustainLevel = 0.5f;
 float releaseTime = 0.2f;
 
 // audio file
+String daPath;
 File audioFile;
 String audioFilePath;
 String audioFileName;
@@ -114,10 +115,13 @@ public void setup() {
   // load transcoded data from an audio file into the 
   // Brightness channel (ChannelNames.L) in the HSB color space
   chan = PixelAudioMapper.ChannelNames.L;
-  String path = this.dataPath("");
-  File audioSource = new File(path +"/youthorchestra.wav");
+  // path to the folder where PixelAudio examples keep their data files 
+  // such as image, audio, .json, etc.
+  daPath = sketchPath("") + "../examples_data/";
+  File audioSource = new File(daPath +"youthorchestra.wav");
   // load the file into audio buffer and Brightness channel of display image
   fileSelected(audioSource);
+  showHelp();
 }
 
 public void initMapper() {
@@ -275,7 +279,7 @@ public int playSample(int samplePos) {
     : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
-  this.instrument = new SamplerInstrument(audioSampler, adsr);
+  this.instrument = new SamplerInstrument(audioOut, audioSampler, adsr);
   // play command takes a duration in seconds
   instrument.play(sampleLength / (float) (sampleRate));
   // return the length of the sample

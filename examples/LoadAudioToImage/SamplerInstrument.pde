@@ -1,12 +1,19 @@
-// using minim's Instrument interface
-class SamplerInstrument implements Instrument {
+// ------------------------------------------- //
+//          SAMPLER INSTRUMENT CLASS           //
+// ------------------------------------------- //
+
+//using minim's Instrument interface
+public class SamplerInstrument implements Instrument {
+  AudioOutput audioOut;
   Sampler sampler;
   ADSR adsr;
 
-  SamplerInstrument(Sampler sampler, ADSR adsr) {
+  SamplerInstrument(AudioOutput audioOut, Sampler sampler, ADSR adsr) {
+    this.audioOut = audioOut;
     this.sampler = sampler;
     this.adsr = adsr;
     sampler.patch(adsr);
+    adsr.unpatchAfterRelease(sampler);
   }
 
   public void play() {
@@ -24,7 +31,7 @@ class SamplerInstrument implements Instrument {
   }
 
   @Override
-    public void noteOn(float duration) {
+  public void noteOn(float duration) {
     // Trigger the ADSR envelope and sampler
     adsr.noteOn();
     sampler.trigger();
@@ -37,13 +44,12 @@ class SamplerInstrument implements Instrument {
         public void run() {
           noteOff();
         }
-      }
-      , durationMillis);
+      }, durationMillis);
     }
   }
 
   @Override
-    public void noteOff() {
+  public void noteOff() {
     // println("----->>> noteOff event");
     adsr.unpatchAfterRelease(audioOut);
     adsr.noteOff();

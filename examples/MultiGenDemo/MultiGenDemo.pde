@@ -50,13 +50,17 @@ public void settings() {
 
 public void setup() {
   pixelaudio = new PixelAudio(this);
-  genList = new ArrayList<PixelMapGen>();
-  offsetList = new ArrayList<int[]>();
-  loadGenLists();
   /* try the other versions of MultiGen */
   // multigen = new MultiGen(width, height);
   // multigen = new MultiGen(width, height, rows, columns, genList);
+  /*
+  // loadLoopGen replaces the following code:
+  genList = new ArrayList<PixelMapGen>();       // initialize genList
+  offsetList = new ArrayList<int[]>();          // initialize offsetList
+  loadGenLists()                                // load PixelMapGens into genList and x,y coords into offsetList
   multigen = new MultiGen(width, height, offsetList, genList);
+  */
+  // multigen = loadLoopGen(genWidth, genHeight);
   mapper = new PixelAudioMapper(multigen);
   mapImage = createImage(width, height, RGB);
   mapImage.loadPixels();
@@ -82,6 +86,32 @@ public void loadGenLists() {
   genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
   offsetList.add(new int[] { 0, genHeight });
 }
+
+/**
+ * Adds PixelMapGen objects to the local variable genList. The genList 
+ * initializes a MultiGen, which can be used to map audio and pixel data.
+ * This method provides a big looping fractal consisting of 6 Hilbert curves.
+ */
+public MultiGen loadLoopGen(int loopGenW, int loopGenH) {
+  // list of PixelMapGens that create an image using mapper
+  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+  // list of x,y coordinates for placing gens from genList
+  ArrayList<int[]> offsetList = new ArrayList<int[]>();     
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90));
+  offsetList.add(new int[] { 0, 0 });
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.NADA));
+  offsetList.add(new int[] { loopGenW, 0 });
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90CCW));
+  offsetList.add(new int[] { 2 * loopGenW, 0 });
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90CCW));
+  offsetList.add(new int[] { 2 * loopGenW, loopGenH });
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.ROT180));
+  offsetList.add(new int[] { loopGenW, loopGenH });
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90));
+  offsetList.add(new int[] { 0, loopGenH });
+  return new MultiGen(width, height, offsetList, genList);
+}
+
 
 
 public int[] getColors() {
