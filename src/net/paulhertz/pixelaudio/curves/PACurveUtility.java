@@ -309,8 +309,8 @@ public class PACurveUtility {
 	  PABezShape bezLeft = calculateCurve(pointsLeft);
 	  PABezShape bezRight = calculateCurve(pointsRight);
 	  if (isDrawWeighted ) {
-	    calculateWeightedCurve(bezLeft, bias);
-	    calculateWeightedCurve(bezRight, bias);
+	    bezLeft = calculateWeightedCurve(bezLeft, bias);
+	    bezRight = calculateWeightedCurve(bezRight, bias);
 	  }
 	  // append points in bezLeft to bezRight
 	  ListIterator<PAVertex2DINF> it = bezLeft.curveIterator();

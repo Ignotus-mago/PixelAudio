@@ -221,9 +221,9 @@ public class PACurveMaker {
 	 */
 	public void calculateDerivedPoints() {
 		reducePoints(this.epsilon);
-		curveShape = PACurveUtility.calculateCurve(rdpPoints);
+		curveShape = this.getCurveShape();
 		eventPoints = curveShape.getPointList(polySteps);
-		brushShape = PACurveUtility.quickBrushShape(rdpPoints, brushSize);
+		brushShape = this.getBrushShape();
 		brushShape.setNoStroke();
 		brushShape.setFillColor(brushColor);
 		brushPoly = brushShape.getPointList(polySteps);
@@ -336,6 +336,7 @@ public class PACurveMaker {
 		if (this.curveShape == null) {
 			if (this.isDrawWeighted) {
 				this.curveShape = PACurveUtility.calculateWeightedCurve(this.getRdpPoints(), this.bezierBias);
+				//System.out.println("-- weighted curve, bias = "+ this.bezierBias);
 			}
 			else {
 				this.curveShape = PACurveUtility.calculateCurve(this.getRdpPoints());
@@ -352,11 +353,11 @@ public class PACurveMaker {
 	 * @return			a Bezier curve shape whose control points are adjusted using bezierBias. 
 	 */
 	public PABezShape getWeightedCurveShape(float bias) {
-		return PACurveUtility.calculateWeightedCurve(this.getCurveShape(), bias);
+		return PACurveUtility.calculateWeightedCurve(this.getRdpPoints(), bias);
 	}
 	
 	public PABezShape getWeightedCurveShape() {
-		return PACurveUtility.calculateWeightedCurve(this.getCurveShape(), this.bezierBias);
+		return PACurveUtility.calculateWeightedCurve(this.getRdpPoints(), this.bezierBias);
 	}
 
 	public void setCurveShape(PABezShape curveShape) {
@@ -383,6 +384,7 @@ public class PACurveMaker {
 		if (this.brushShape == null) {
 			if (this.isDrawWeighted) {
 				brushShape = PACurveUtility.quickBrushShape(this.getRdpPoints(), brushSize, true, this.bezierBias);
+				//System.out.println("-- weighted brush, bias = "+ this.bezierBias);
 			}
 			else {
 				brushShape = PACurveUtility.quickBrushShape(this.getRdpPoints(), brushSize);
