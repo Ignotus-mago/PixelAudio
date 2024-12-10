@@ -350,17 +350,17 @@ public void curveMakerDraw() {
   if (curveMaker.isReady()) {
     // curveMaker.RDPDraw(this);
     // curveMaker.curveDraw(this, false);
-    PABezShape brush = curveMaker.brushShape;
+    PABezShape brush = curveMaker.getBrushShape();
     brush.setFillColor(color(144, 34, 42, 233));
     brush.setWeight(2);
     brush.setStrokeColor(color(144, 34, 42, 233));
     brush.draw(this);
     // curveMaker.brushDraw(this, color(144, 34, 42, 233));
-    curveMaker.polyPointsDraw(this, polySteps, color(233, 199, 144, 192), 6);
+    curveMaker.eventPointsDraw(this, polySteps, color(233, 199, 144, 192), 6);
   }
   else {
-    if (curveMaker.allPoints != null && curveMaker.allPoints.size() > 2) 
-      curveMaker.allPointsDraw(this);
+    if (curveMaker.getDragPoints() != null && curveMaker.getDragPoints().size() > 2) 
+      curveMaker.dragPointsDraw(this);
   }
 }
 
@@ -583,35 +583,46 @@ public void showHelp() {
 
 public void mousePressed() {
   if (this.isDrawMode) {
-    allPoints.clear();
-    allTimes = new ArrayList<Integer>();
-    curveMaker = new PACurveMaker(allPoints);
-    curveMaker.setTimeStamp(millis());
-    curveMaker.setEpsilon(epsilon);
-    addPoint();
+    initAllPoints();
   } 
   else {
-    if (activeBrush != null) {
-      // a brushShape was triggered
-      eventPoints = activeBrush.polyPoints;
-      playPoints();
-      // probably don't want to send the brush, already sent 
-      // when it was created (see mouseReleased)
-      // nd.oscSendDrawPoints(activeBrush.drawPoints);
-      nd.oscSendTrig(activeIndex + 1);
-      activeBrush = null;
-    } 
-    else {
-      // a point event was triggered
-      sampleX = mouseX;
-      sampleY = mouseY;
-      samplePos = mapper.lookupSample(sampleX, sampleY);
-      if (audioSignal == null || isBufferStale) {
-        isBufferStale = false;
-      }
-      playSample(samplePos);
-      nd.oscSendMousePressed(sampleX, sampleY, samplePos);
+    handleMousePressed();
+  }
+}
+
+/**
+ * Initializes allPoints and adds the current mouse location to it. 
+ */
+public void initAllPoints() {
+  allPoints = new ArrayList<PVector>();
+  addPoint();
+  sampleX = mouseX;
+  sampleY = mouseY;
+  samplePos = mapper.lookupSample(sampleX, sampleY);      
+}
+
+public void handleMousePressed() {
+  // a point event was triggered
+  if (activeBrush != null) {
+    // a brushShape was triggered
+    eventPoints = activeBrush.polyPoints;
+    playPoints();
+    // probably don't want to send the brush, already sent 
+    // when it was created (see mouseReleased)
+    // nd.oscSendDrawPoints(activeBrush.drawPoints);
+    nd.oscSendTrig(activeIndex + 1);
+    activeBrush = null;
+  } 
+  else {
+    // a point event was triggered
+    sampleX = mouseX;
+    sampleY = mouseY;
+    samplePos = mapper.lookupSample(sampleX, sampleY);
+    if (audioSignal == null || isBufferStale) {
+      isBufferStale = false;
     }
+    playSample(samplePos);
+    nd.oscSendMousePressed(sampleX, sampleY, samplePos);
   }
 }
 
@@ -624,12 +635,29 @@ public void addPoint() {
 }
 
 public void mouseReleased() {
+  if (allPoints != null) {
+    if (isDrawMode && allPoints.size() > 2) {
+      initCurveMaker();
+    } 
+    else {
+      handleMousePressed();
+    }
+    allPoints.clear();
+  }
+}
+
+public void initCurveMaker() {
+  curveMaker = PACurveMaker.buildCurveMakerComplete(allPoints, epsilon);
+}
+
+
+public void mouseReleased() {
   if (isDrawMode && allPoints != null && allPoints.size() > 2) {
     calculateDerivedPoints();
     if (curveMaker.isReady()) {
       curveMaker.setTimeOffset(millis() - curveMaker.getTimeStamp());
-      PABezShape curve = curveMaker.bezPoints;
-      eventPoints = curve.getPointList(this, polySteps);
+      PABezShape curve = curveMaker.getCurveShape();
+      eventPoints = curve.getPointList(polySteps);
       playPoints();
       PABezShape brush = curveMaker.brushShape;
       addBrushShape(curve, brush, eventPoints, curveMaker.drawPoints, curveMaker.getTimeStamp(), curveMaker.getTimeOffset());
