@@ -63,8 +63,8 @@ public class WaveSynth {
 	/** scaling facotr for normalizing signal, see renderFrame method */
 	public float wscale = 0.5f;
 	
-	// ----- may be extraneous ----- //
-	public int videoFramerate = 24;
+	// ----- may be extraneous, but it appears in JSON data ----- //
+	public int videoFrameRate = 24;
 	public String videoFilename = "motion_study.mp4";
 
 
@@ -199,12 +199,12 @@ public class WaveSynth {
 		this.comments = comments;
 	}
 
-	public int getVideoFramerate() {
-		return videoFramerate;
+	public int getVideoFrameRate() {
+		return videoFrameRate;
 	}
 
-	public void setVideoFramerate(int videoFramerate) {
-		this.videoFramerate = videoFramerate;
+	public void setVideoFrameRate(int videoFrameRate) {
+		this.videoFrameRate = videoFrameRate;
 	}
 
 	public String getVideoFilename() {
@@ -250,7 +250,7 @@ public class WaveSynth {
 		myClone.setScaleHisto(this.isScaleHisto);
 		myClone.setHistoLow(this.histoLow);
 		myClone.setHistoHigh(this.histoHigh);
-		myClone.setVideoFramerate(this.videoFramerate);
+		myClone.setVideoFrameRate(this.videoFrameRate);
 		myClone.setVideoFilename(this.videoFilename);
 		myClone.setComments(this.comments);
 		// set waveDataList
