@@ -97,10 +97,11 @@ float sustainLevel = 0.125f;
 float releaseTime = 0.5f;
 
 // file i/o from JSON
-String jsonFolder = "/JSON_data/";
+String jsonFolder = "/JSON";
 File currentDataFile;
 String currentFileName;
 JSONObject json;
+String daPath;
 
 // animation
 boolean isWaveSynthAnimating = true;    // animation status
@@ -175,6 +176,10 @@ public void setup() {
   timeLocsArray = new ArrayList<TimedLocation>();     // initialize mouse event tracking array
   initDecimalFormats();             // initializes some utility functions for formatting numbers
   initWaveSynthList();              // sets up a sequencer using dbwfMusic, dbwfTimes, and dbwfAmps arrays
+  // path to the folder where PixelAudio examples keep their data files 
+  // such as image, audio, .json, etc.
+  daPath = sketchPath("") + "../examples_data";
+  println("daPath: ", daPath);
   showHelp();
 }
 
@@ -356,7 +361,9 @@ public void keyPressed() {
     saveWaveData();
     break;
   case 's': 
-    synthImage.save("wavesynth_"+ wsIndex +".png");
+    String fName = "wavesynth_"+ wsIndex +".png";
+    synthImage.save(fName);
+    println("--- saved image "+ fName);
     break;
   case 'S': 
     saveToAudio();

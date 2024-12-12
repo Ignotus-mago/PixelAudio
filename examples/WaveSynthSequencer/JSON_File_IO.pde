@@ -6,7 +6,8 @@
  * Show an Open File dialog for JSON files
  */
 public void loadWaveData() {
-  File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
+  File folderToStartFrom = new File(daPath + jsonFolder + "//*.json");
+  println(folderToStartFrom);
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }
 

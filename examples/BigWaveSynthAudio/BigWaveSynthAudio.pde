@@ -1,5 +1,7 @@
-import java.io.File;
+import java.io.*;
 import java.util.ArrayList;
+import javax.sound.sampled.*;
+
 
 import ddf.minim.AudioOutput;
 import ddf.minim.Minim;
@@ -72,6 +74,8 @@ PixelAudioMapper mapper;    // instance of a class for reading, writing, and tra
 int mapSize;                // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc. 
 ArrayList<WaveData> wdList; // a list of audio "operators" that drive a WaveSynth
 WaveSynth wavesynth;        // a sort of additive audio synthesis color organ that also produces sound
+int imgIndex = 1;
+int audIndex = 1;
 PImage synthImage;          // local variable that points to wavesynth's PImage instance variable
 
 // WaveSynth variables
@@ -342,6 +346,14 @@ public void keyPressed() {
   case '7':
     wavesynth.setSampleRate(this.sampleRate);
     isBufferStale = true;
+    break;
+  case 's': 
+    synthImage.save("wavesynth_"+ imgIndex +".png");
+    imgIndex++;
+    break;
+  case 'S': 
+    saveToAudio();
+    audIndex++;
     break;
   case 'h':
     showHelp();
