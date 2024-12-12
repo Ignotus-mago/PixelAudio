@@ -10,7 +10,7 @@ import java.util.ArrayList;
  * 
  */
 public class WaveData {
-	enum WaveState {
+	public enum WaveState {
 		ACTIVE, SOLO, MUTE, SUSPENDED
 	}; // muting and solo states
 
@@ -132,6 +132,11 @@ public class WaveData {
 		this.phaseCycles = cycles;
 		this.animSteps = steps;
 		this.phaseInc = (cycles * PConstants.TWO_PI) / animSteps;
+	}
+	
+	public void setCycles(float cycles) {
+		this.phaseCycles = cycles;
+		this.phaseInc = (cycles * PConstants.TWO_PI) / this.animSteps;
 	}
 	
 	public void setAnimationSteps(int newSteps) {
