@@ -1,0 +1,71 @@
+{
+  "waves": [
+    {
+      "phase": 0.9166666269302368,
+      "color": {
+        "r": 212,
+        "b": 179,
+        "g": 174
+      },
+      "amp": 0.5,
+      "phaseInc": 0.021816616877913475,
+      "freq": 5888,
+      "index": 0,
+      "cycles": 2,
+      "dc": 0
+    },
+    {
+      "phase": 0.5833333730697632,
+      "color": {
+        "r": 157,
+        "b": 233,
+        "g": 199
+      },
+      "amp": 0.5,
+      "phaseInc": 0.021816616877913475,
+      "freq": 5888,
+      "index": 1,
+      "cycles": 2,
+      "dc": 0
+    },
+    {
+      "phase": 0.4583333134651184,
+      "color": {
+        "r": 53,
+        "b": 227,
+        "g": 172
+      },
+      "amp": 0.5,
+      "phaseInc": -0.010908308438956738,
+      "freq": 6144,
+      "index": 2,
+      "cycles": -1,
+      "dc": 0
+    },
+    {
+      "phase": 0.5416666865348816,
+      "color": {
+        "r": 243,
+        "b": 110,
+        "g": 220
+      },
+      "amp": 0.5,
+      "phaseInc": -0.010908308438956738,
+      "freq": 6144,
+      "index": 3,
+      "cycles": -1,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.625,
+  "contrastFactor": 1,
+  "comments": "5888.0 Hz barrio, 6144.0 Hz barrio,  patterns and phase blocking. ",
+  "filename": "test164.mp4",
+  "dataFormat": 2,
+  "scanner": 2,
+  "scaleHisto": false,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 576,
+  "gamma": 1.600000023841858
+}

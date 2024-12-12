@@ -1,0 +1,99 @@
+{
+  "waves": [
+    {
+      "phase": 0.9502313137054443,
+      "color": {
+        "r": 229,
+        "b": 254,
+        "g": 172
+      },
+      "amp": 0.125,
+      "phaseInc": 0.07999426126480103,
+      "freq": 832,
+      "index": 0,
+      "cycles": 11,
+      "dc": 0
+    },
+    {
+      "phase": 0.10532379150390625,
+      "color": {
+        "r": 241,
+        "b": 99,
+        "g": 241
+      },
+      "amp": 0.375,
+      "phaseInc": 0.050905440002679825,
+      "freq": 832,
+      "index": 1,
+      "cycles": 7,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 101,
+        "b": 241,
+        "g": 101
+      },
+      "amp": 0.5,
+      "phaseInc": 0.036361027508974075,
+      "freq": 832,
+      "index": 2,
+      "cycles": 5,
+      "dc": 0
+    },
+    {
+      "phase": 0.15393495559692383,
+      "color": {
+        "r": 159,
+        "b": 134,
+        "g": 216
+      },
+      "amp": 0.875,
+      "phaseInc": 0.13817189633846283,
+      "freq": 8160,
+      "index": 3,
+      "cycles": 19,
+      "dc": 0
+    },
+    {
+      "phase": 0.5,
+      "color": {
+        "r": 252,
+        "b": 144,
+        "g": 166
+      },
+      "amp": 0.875,
+      "phaseInc": 0.09453867375850677,
+      "freq": 32640,
+      "index": 4,
+      "cycles": 13,
+      "dc": 0
+    },
+    {
+      "phase": 0.3182864189147949,
+      "color": {
+        "r": 131,
+        "b": 240,
+        "g": 218
+      },
+      "amp": 0.625,
+      "phaseInc": 0.13817189633846283,
+      "freq": 32640,
+      "index": 5,
+      "cycles": 19,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.4124999940395355,
+  "contrastFactor": 1,
+  "comments": "Scaling by 4, managing phase relationships. 8160 base frequency.",
+  "filename": "test128b.mp4",
+  "dataFormat": 2,
+  "scanner": 2,
+  "scaleHisto": true,
+  "histoHigh": 246,
+  "histoLow": 5,
+  "steps": 864,
+  "gamma": 1.7999999523162842
+}

@@ -1,0 +1,43 @@
+{
+  "waves": [
+    {
+      "phase": 0.125,
+      "color": {
+        "r": 113,
+        "b": 253,
+        "g": 177
+      },
+      "amp": 1,
+      "phaseInc": 0.013089969754219055,
+      "freq": 24896.0,
+      "index": 0,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0.125,
+      "color": {
+        "r": 209,
+        "b": 69,
+        "g": 146
+      },
+      "amp": 1,
+      "phaseInc": 0.013089969754219055,
+      "freq": 24896.0,
+      "index": 1,
+      "cycles": 1,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.8,
+  "comments": "24896 Hz (389 * 64), 389 is prime",
+  "filename": "t344.mp4",
+  "stop": 1200,
+  "dataFormat": 2,
+  "scanner": 2,
+  "scaleHisto": true,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 480,
+  "gamma": 1.4
+}

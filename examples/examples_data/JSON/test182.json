@@ -1,0 +1,128 @@
+{
+  "waves": [
+    {
+      "phase": 0.042000047862529755,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.007551905233412981,
+      "freq": 3,
+      "index": 0,
+      "cycles": 0.75,
+      "dc": 0
+    },
+    {
+      "phase": 0.16700005531311035,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": -0.0050346036441624165,
+      "freq": 5,
+      "index": 1,
+      "cycles": -0.5,
+      "dc": 0
+    },
+    {
+      "phase": 0.29200005531311035,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": -0.007551905233412981,
+      "freq": 8188.75,
+      "index": 2,
+      "cycles": -0.75,
+      "dc": 0
+    },
+    {
+      "phase": 0.16699989140033722,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": 0.0050346036441624165,
+      "freq": 8188.75,
+      "index": 3,
+      "cycles": 0.5,
+      "dc": 0
+    },
+    {
+      "phase": 0.2919999063014984,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": 0.012586509808897972,
+      "freq": 8189,
+      "index": 4,
+      "cycles": 1.25,
+      "dc": 0
+    },
+    {
+      "phase": 0.2919999957084656,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.0025173018220812082,
+      "freq": 8189,
+      "index": 5,
+      "cycles": 0.25,
+      "dc": 0
+    },
+    {
+      "phase": 0.5420001745223999,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": -0.012586509808897972,
+      "freq": 8189.25,
+      "index": 6,
+      "cycles": -1.25,
+      "dc": 0
+    },
+    {
+      "phase": 0.2919999957084656,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.0025173018220812082,
+      "freq": 8189.25,
+      "index": 7,
+      "cycles": 0.25,
+      "dc": 0
+    }
+  ],
+  "comments": "Fractional cycles, bright colors, 8189 barrio. ",
+  "dataFormat": 2,
+  "scaleHisto": false,
+  "histoHigh": 233,
+  "steps": 624,
+  "blendFactor": 0.3125,
+  "contrastFactor": 1,
+  "filename": "test182_C.mp4",
+  "stop": 312,
+  "scanner": 1,
+  "histoLow": 8,
+  "gamma": 1.2000000476837158
+}

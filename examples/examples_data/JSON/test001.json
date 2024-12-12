@@ -7,7 +7,7 @@
         "b": 251,
         "g": 190
       },
-      "amp": 0.800000011920929,
+      "amp": 0.8,
       "phaseInc": 0.02617993950843811,
       "freq": 768,
       "index": 0,
@@ -21,7 +21,7 @@
         "b": 117,
         "g": 178
       },
-      "amp": 0.800000011920929,
+      "amp": 0.8,
       "phaseInc": 0.05235987901687622,
       "freq": 192,
       "index": 1,
@@ -29,9 +29,9 @@
       "dc": 0
     }
   ],
-  "blendFactor": 0.800000011920929,
-  "comments": "---",
-  "filename": "motion_study.mp4",
+  "blendFactor": 0.8,
+  "comments": "A very basic wavesynth with two operators.",
+  "filename": "basic_synth.mp4",
   "stop": 240,
   "dataFormat": 2,
   "scaleHisto": false,

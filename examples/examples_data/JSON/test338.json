@@ -1,0 +1,71 @@
+{
+  "waves": [
+    {
+      "phase": 0,
+      "color": {
+        "r": 159,
+        "b": 251,
+        "g": 190
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.02617993950843811,
+      "freq": 384,
+      "index": 0,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0.5,
+      "color": {
+        "r": 209,
+        "b": 117,
+        "g": 178
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.02617993950843811,
+      "freq": 384,
+      "index": 1,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 159,
+        "b": 251,
+        "g": 190
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.02617993950843811,
+      "freq": 480,
+      "index": 2,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 209,
+        "b": 117,
+        "g": 178
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.02617993950843811,
+      "freq": 480,
+      "index": 3,
+      "cycles": 1,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.5,
+  "comments": "---",
+  "filename": "t315.mov",
+  "stop": 720,
+  "dataFormat": 2,
+  "scanner": 2,
+  "scaleHisto": true,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 240,
+  "gamma": 1.399999976158142
+}

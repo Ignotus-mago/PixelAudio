@@ -1,0 +1,43 @@
+{
+  "waves": [
+    {
+      "phase": 0.875,
+      "color": {
+        "r": 252,
+        "b": 144,
+        "g": 166
+      },
+      "amp": 0.5,
+      "phaseInc": -0.05235987901687622,
+      "freq": 0.75,
+      "index": 0,
+      "cycles": -1,
+      "dc": 0.25
+    },
+    {
+      "phase": 0.875,
+      "color": {
+        "r": 131,
+        "b": 240,
+        "g": 218
+      },
+      "amp": 0.5,
+      "phaseInc": 0.05235987901687622,
+      "freq": 0.75,
+      "index": 1,
+      "cycles": 1,
+      "dc": 0.25
+    }
+  ],
+  "blendFactor": 0.6000000238418579,
+  "comments": "Overlay for Campos Rondo A2 clouds. ",
+  "filename": "rondo_A2_5sec.mp4",
+  "stop": 120,
+  "dataFormat": 2,
+  "scanner": 1,
+  "scaleHisto": false,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 120,
+  "gamma": 0.4000000059604645
+}

@@ -1,0 +1,71 @@
+{
+  "waves": [
+    {
+      "phase": 0.5000035762786865,
+      "color": {
+        "r": 136,
+        "b": 216,
+        "g": 141
+      },
+      "amp": 0.5,
+      "phaseInc": 0.021816615015268326,
+      "freq": 5888,
+      "index": 0,
+      "cycles": 3,
+      "dc": 0
+    },
+    {
+      "phase": 3.6208302844897844E-6,
+      "color": {
+        "r": 233,
+        "b": 34,
+        "g": 220
+      },
+      "amp": 0.5,
+      "phaseInc": 0.0145444106310606,
+      "freq": 5888.25,
+      "index": 1,
+      "cycles": 2,
+      "dc": 0
+    },
+    {
+      "phase": 0.10834468901157379,
+      "color": {
+        "r": 236,
+        "b": 41,
+        "g": 148
+      },
+      "amp": 1.2000000476837158,
+      "phaseInc": 0.04363323003053665,
+      "freq": 6160,
+      "index": 2,
+      "cycles": 6,
+      "dc": 0
+    },
+    {
+      "phase": 0.008344688452780247,
+      "color": {
+        "r": 40,
+        "b": 253,
+        "g": 137
+      },
+      "amp": 1.2000000476837158,
+      "phaseInc": 0.036361027508974075,
+      "freq": 6160.25,
+      "index": 3,
+      "cycles": 5,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.4000000059604645,
+  "contrastFactor": 1,
+  "comments": "Two interference patterns made by pairs of nearly identlical frequencies that are out-of-phase, working with each other. ",
+  "filename": "ms_194_C.mp4",
+  "dataFormat": 2,
+  "scanner": 1,
+  "scaleHisto": false,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 864,
+  "gamma": 1
+}

@@ -144,7 +144,7 @@ int[] gammaTable;
 
 // curve drawing and interaction
 public boolean isDrawMode = false;
-public float epsilon = 12.0f;
+public float epsilon = 24.0f;
 public ArrayList<PVector> allPoints;
 public int allPointsColor = color(220, 199, 212, 192);
 public float allPointsWeight = 4;
@@ -337,9 +337,11 @@ public void freshDraw() {
     PABezShape brush = curveMaker.getBrushShape();
     brush.setFillColor(color(144, 34, 42, 233));
     brush.setWeight(2);
-    brush.setStrokeColor(color(144, 34, 42, 233));
+    brush.setStrokeColor(color(144, 34, 42, 178));
     brush.draw(this);
-    // curveMaker.brushDraw(this, color(144, 34, 42, 233));
+    curveMaker.dragPointsDraw(this);
+    curveMaker.reducedPointsDraw(this);
+   // curveMaker.brushDraw(this, color(144, 34, 42, 233));
     curveMaker.eventPointsDraw(this, polySteps, color(233, 199, 144, 192), 6);
   }
   else {
@@ -591,7 +593,13 @@ public void mouseReleased() {
 }
 
 public void initCurveMaker() {
-  curveMaker = PACurveMaker.buildCurveMakerComplete(allPoints, epsilon);
+  // method with calculateDerivedPoints
+  curveMaker = PACurveMaker.buildCurveMaker(allPoints, 2.0);
+  curveMaker.setDrawWeighted(true);
+  curveMaker.setBezierBias(PABezShape.LAMBDA);
+  curveMaker.calculateDerivedPoints();
+  // method with a single call
+  //  curveMaker = PACurveMaker.buildCurveMakerComplete(allPoints, epsilon);
 }
 
 public void playPoints() {

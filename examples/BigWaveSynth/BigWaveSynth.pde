@@ -15,6 +15,7 @@
 
 import java.io.File;
 import java.util.ArrayList;
+import com.hamoid.*;
 import net.paulhertz.pixelaudio.*;
 
 PixelAudio pixelaudio;
@@ -44,8 +45,13 @@ String currentFileName;
 String daPath;
 JSONObject json;
 // animation
+// animation
 boolean isAnimating = true;
 boolean oldIsAnimating;
+// video export
+boolean isRecordingVideo = false;
+VideoExport videx = null;    // hamoid library class for video export (requires ffmpeg)
+String videoFilename = "pixelAudio_video.mp4";
 
 
 public void settings() {
@@ -146,6 +152,21 @@ public void keyPressed() {
   case 'J':
     saveWaveData();
     break;
+  case 'r':
+  case 'R':
+    step = 0;
+    wavesynth.renderFrame(step);
+    break;
+  case 'v':
+  case 'V':
+    isRecordingVideo = !isRecordingVideo;
+    println("isRecordingVideo is "+ isRecordingVideo);
+    if (isRecordingVideo) {
+      step = 0;
+      wavesynth.renderFrame(step);
+      isAnimating = true;
+    }
+    break;
   case 'h':
     break;
   default:
@@ -154,7 +175,27 @@ public void keyPressed() {
 }
 
 public void stepAnimation() {
-  step += 1;
-  step %= animSteps;
+  if (!isAnimating) return;
+  if (step >= animStop) {
+    println("--- Completed video at frame "+ animStop);
+    step = 0;
+    if (isRecordingVideo) {
+      isRecordingVideo = false;
+      videx.endMovie();
+    }
+  }
+  else {
+    step += 1;
+    if (isRecordingVideo) {
+      if (videx == null) {
+        println("----->>> start video recording ");
+        videx = new VideoExport(this, videoFilename);
+        videx.setFrameRate(wavesynth.videoFrameRate);
+        videx.startMovie();
+      }
+      videx.saveFrame();
+      println("-- video recording frame "+ step +" of "+ animStop);
+    }
+  }
   wavesynth.renderFrame(step);
 }

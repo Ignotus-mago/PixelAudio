@@ -1,3 +1,6 @@
+// BUGGY ===== WAIT FOR THE REVISED VERSION
+// Meanwhile, the AriaDemoApp has a much better version of UDP communications.
+
 /**
  *
  * This version of the LoadAudioToImage, LoadAudioToImageOSC sends and receives

@@ -1,0 +1,43 @@
+{
+  "waves": [
+    {
+      "phase": 0.125,
+      "color": {
+        "r": 113,
+        "b": 253,
+        "g": 177
+      },
+      "amp": 1,
+      "phaseInc": 0.20943951606750488,
+      "freq": 24501.5,
+      "index": 0,
+      "cycles": 8,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 209,
+        "b": 69,
+        "g": 146
+      },
+      "amp": 1,
+      "phaseInc": -0.13089969754219055,
+      "freq": 24501.5,
+      "index": 1,
+      "cycles": -5,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.699999988079071,
+  "comments": "4331.0 Hz * 5 * sqrt(2) ",
+  "filename": "t324.mp4",
+  "stop": 1200,
+  "dataFormat": 2,
+  "scanner": 1,
+  "scaleHisto": false,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 240,
+  "gamma": 1.399999976158142
+}

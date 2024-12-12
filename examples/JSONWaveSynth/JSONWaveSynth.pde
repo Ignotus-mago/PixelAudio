@@ -5,6 +5,7 @@
 
 import java.io.File;
 import java.util.ArrayList;
+import com.hamoid.*;
 import net.paulhertz.pixelaudio.*;
 
 PixelAudio pixelaudio;
@@ -29,15 +30,20 @@ int animSteps = 240;         // number of steps in the animation
 int animStop = animSteps;    // The step at which the animation should stop (not used here)
 int step = 0;                // the current step in the animation
 String comments;             // a JSON field that provides information about the WaveSynth effects it produces
-boolean isAnimating = true;
-boolean oldIsAnimating;
-boolean isLooping = true;
 // file i/o
 String jsonFolder = "/JSON_data/";
 File currentDataFile;
 String currentFileName;
 String daPath;
 JSONObject json;
+// animation
+boolean isAnimating = true;
+boolean oldIsAnimating;
+boolean isLooping = true;
+// video export
+boolean isRecordingVideo = false;
+VideoExport videx = null;    // hamoid library class for video export (requires ffmpeg)
+String videoFilename = "pixelAudio_video.mp4";
 
 public void settings() {
   size(imageWidth, imageHeight, JAVA2D);
@@ -97,6 +103,9 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
 
 public void swapGen(PixelMapGen gen) {
   mapper.setGenerator(gen);
+  if (!isAnimating) {
+    wavesynth.renderFrame(step);
+  }
 }
 
 public void draw() {
@@ -106,16 +115,30 @@ public void draw() {
 
 public void stepAnimation() {
   if (!isAnimating) return;
-  step += 1;
-  if (step >= animSteps) {
-    println("--- Completed "+ animSteps +" frames of animation.");
+  if (step >= animStop) {
+    println("--- Completed video at frame "+ animStop);
     if (!isLooping) {
       isAnimating = false;
-    } else {
-      step = 0;
+    }
+    step = 0;
+    if (isRecordingVideo) {
+      isRecordingVideo = false;
+      videx.endMovie();
     }
   }
-  // step through the wavesynth animation rendering
+  else {
+    step += 1;
+    if (isRecordingVideo) {
+      if (videx == null) {
+        println("----->>> start video recording ");
+        videx = new VideoExport(this, videoFilename);
+        videx.setFrameRate(wavesynth.videoFrameRate);
+        videx.startMovie();
+      }
+      videx.saveFrame();
+      println("-- video recording frame "+ step +" of "+ animStop);
+    }
+  }
   wavesynth.renderFrame(step);
 }
 
@@ -123,15 +146,15 @@ public void keyPressed() {
   switch (key) {
   case ' ':
     isAnimating = !isAnimating;
-    println (isAnimating ? "Starting animation at frame "+ step +" of "+ animSteps
-      : "Stopping animation at frame "+ step +" of "+ animSteps);
+    println(isAnimating ? "Starting animation at frame " + step + " of " + animSteps
+                        : "Stopping animation at frame " + step + " of " + animSteps);
     break;
   case 'o':
-      // turn off animation while reading new settings for wavesynth
-      oldIsAnimating = isAnimating;
-      isAnimating = false;
-      this.loadWaveData();
-      break;
+    // turn off animation while reading new settings for wavesynth
+    oldIsAnimating = isAnimating;
+    isAnimating = false;
+    this.loadWaveData();
+    break;
   case 'O':
     if (currentDataFile == null) {
       loadWaveData();
@@ -165,10 +188,22 @@ public void keyPressed() {
     // rotate gen 90 degrees clockwise
     gen.setTransformType(AffineTransformType.ROT90);
     swapGen(gen);
+    wavesynth.renderFrame(step);
     break;
   case 'r':
   case 'R':
     step = 0;
+    wavesynth.renderFrame(step);
+    break;
+  case 'v':
+  case 'V':
+    isRecordingVideo = !isRecordingVideo;
+    println("isRecordingVideo is "+ isRecordingVideo);
+    if (isRecordingVideo) {
+      step = 0;
+      wavesynth.renderFrame(step);
+      isAnimating = true;
+    }
     break;
   case 'h':
     showHelp();
