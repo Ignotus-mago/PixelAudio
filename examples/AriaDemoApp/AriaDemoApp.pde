@@ -187,7 +187,7 @@ int[] zoneNums = {2, 4, 8, 10,   1, 10, 4, 10,   14, 11, 10, 11,   10, 12, 0, 11
 
 // network communications
 NetworkDelegate nd;
-boolean isUseNetworkDelegate = true;  // @ //
+boolean isUseNetworkDelegate = false;  // @ //
 
 
 String dataPath;  // @ //

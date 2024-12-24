@@ -50,41 +50,13 @@ public void settings() {
 
 public void setup() {
   pixelaudio = new PixelAudio(this);
-  /* try the other versions of MultiGen */
-  // multigen = new MultiGen(width, height);
-  // multigen = new MultiGen(width, height, rows, columns, genList);
-  /*
-  // loadLoopGen replaces the following code:
-  genList = new ArrayList<PixelMapGen>();       // initialize genList
-  offsetList = new ArrayList<int[]>();          // initialize offsetList
-  loadGenLists()                                // load PixelMapGens into genList and x,y coords into offsetList
-  multigen = new MultiGen(width, height, offsetList, genList);
-  */
-  // multigen = loadLoopGen(genWidth, genHeight);
+  multigen = loadLoopGen(genWidth, genHeight);
   mapper = new PixelAudioMapper(multigen);
   mapImage = createImage(width, height, RGB);
   mapImage.loadPixels();
   colors = getColors();
   mapper.plantPixels(colors, mapImage.pixels, 0, mapper.getSize());
   mapImage.updatePixels();
-}
-
-// generate HilbertGens and pixel offsets where they will be placed
-// AfineTransformType arguments determine the rotation and reflection of the gens
-// in such a was as to make the pixels look continuous along the signal path.
-public void loadGenLists() {
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
-  offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.NADA));
-  offsetList.add(new int[] { genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90CCW));
-  offsetList.add(new int[] { 2 * genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90CCW));
-  offsetList.add(new int[] { 2 * genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.ROT180));
-  offsetList.add(new int[] { genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
-  offsetList.add(new int[] { 0, genHeight });
 }
 
 /**
@@ -111,8 +83,6 @@ public MultiGen loadLoopGen(int loopGenW, int loopGenH) {
   offsetList.add(new int[] { 0, loopGenH });
   return new MultiGen(width, height, offsetList, genList);
 }
-
-
 
 public int[] getColors() {
   int[] colorWheel = new int[mapper.getSize()];
