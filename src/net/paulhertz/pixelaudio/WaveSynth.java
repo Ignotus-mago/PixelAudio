@@ -356,22 +356,34 @@ public class WaveSynth {
 		this.setStep(frame);
 	}
 	
-	// render one pixel, return its RGB value
+	/**
+	 * 	Render one pixel, return its RGB value.
+	 * 
+	 *  NOTES
+	 *  Our basic equation:
+	 *  ::::: sample amplitude = sin(initial phase + phase shift + frequency * i * (TWO_PI/n)) :::::
+	 *  Restated, in two parts:
+	 *  wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / mapSize;
+	 *  float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff) * wscale + wd.dc;
+	 *  Instead of incrementing phase at each step, we subtract (frame * phase increment)
+	 *  from the initial phase: instead of adding, we subtract so that animation data files 
+	 *  give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.
+	 *  For the latest version:
+	 *  We now let the WaveData object calculate the signal: this is much more flexible and barely affects the time
+	 *   
+	 * @param frame
+	 * @param pos
+	 * @param wdList
+	 * @return
+	 */
 	public int renderPixel(int frame, int pos, ArrayList<WaveData> wdList) {
-		// float freqShift = 1.0f;
+		// noisiness is an experiment, left for future development
 		float freqShift = noisiness != 0.0f ? noiseAt(pos % mapper.width, (int) Math.floor(pos / mapper.width)) : 1;
 	    // if (pos == 0) System.out.println("==> freqShift = "+ freqShift);
 		for (int j = 0; j < dataLength; j++) {
 			WaveData wd = waveDataList.get(j);
 			// TODO this logic has a performance hit. Move it out of here.
 			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED) continue;
-			// ::::: sample amplitude = sin(initial phase + phase shift + frequency * i * (TWO_PI/n)) :::::
-			// wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / mapSize; 
-			// Instead of incrementing phase at each step, we subtract (frame * phase increment)
-			// from the initial phase. (instead of adding, we subtract so that animation data files 
-			// give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.)
-			// float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff) * wscale + wd.dc;
-			// we now let the WaveData object calculate the signal: this is much more flexible and barely affects the time
 			float val = (wd.waveValue(frame, pos, freqShift, mapInc) + woff) * wscale + wd.dc;
 			weights[j] = val * wd.amp * this.gain;
 		}
