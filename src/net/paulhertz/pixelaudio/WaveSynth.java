@@ -18,7 +18,7 @@ public class WaveSynth {
 	public float[] renderSignal;
 	boolean isRenderAudio = false;
 	public ArrayList<WaveData>  waveDataList;
-	private ArrayList<WaveData>  editModeWDList;
+	// private ArrayList<WaveData>  editModeWDList;
 	boolean isEditMode = false;
 	private int w;
 	private int h;
@@ -92,6 +92,17 @@ public class WaveSynth {
 			waveColors[j] = waveDataList.get(j).waveColor;
 		}
 		this.weights = new float[dataLength];
+	}
+	
+	public void updateWaveColors() {
+		this.dataLength = this.waveDataList.size();
+		if (this.waveColors == null || this.waveColors.length != this.dataLength) {
+			this.waveColors = new int[dataLength];
+			this.weights = new float[dataLength];
+		}
+		for (int j = 0; j < dataLength; j++) {
+			waveColors[j] = waveDataList.get(j).waveColor;
+		}
 	}
 	
 	
@@ -305,7 +316,6 @@ public class WaveSynth {
 
 	public void setEditMode(boolean isEditMode) {
 		this.isEditMode = isEditMode;
-		prepareAnimation();
 	}
 
 	// set up mapImage for editing, set mapInc
@@ -313,6 +323,7 @@ public class WaveSynth {
 		this.mapImage.loadPixels();
 		this.colorSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
 		this.mapInc = PConstants.TWO_PI / this.sampleRate;
+		/*
 		this.editModeWDList = new ArrayList<WaveData>();
 		for (int j = 0; j < dataLength; j++) {
 			WaveData wd = waveDataList.get(j);
@@ -322,30 +333,21 @@ public class WaveSynth {
 			}
 			editModeWDList.add(wd);
 		}
+		*/
 	}
 	
 	// loop to render all the pixels in a frame
 	// We want it to complete a frame before any changes to the WaveSynth, so it's synchronized.
 	public synchronized void renderFrame(int frame) {
 		// load variables with prepareAnimation() at start of animation loop
-		if (frame == 0)
+		if (frame == 0) {
 			prepareAnimation();
-		// loop through the image/signal, calculating a value for each pixel/sample
-		// we only check once per frame for editMode, gaining some performance speed
-		// over the previous check in renderPixel
-		if (!isEditMode) {
-			for (int i = 0; i < this.mapSize; i++) {
-				this.colorSignal[i] = this.renderPixel(frame, i, this.waveDataList);
-			}
 		}
-		else {
-			for (int i = 0; i < this.mapSize; i++) {
-				this.colorSignal[i] = this.renderPixel(frame, i, this.editModeWDList);
-			}
+		for (int i = 0; i < this.mapSize; i++) {
+			this.colorSignal[i] = this.renderPixel(frame, i, this.waveDataList);
 		}
 		// write scanSignal's pixel color values to scanImage pixels
 		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, mapSize);
-		// mapImage.pixels = this.colorSignal;
 		this.mapImage.updatePixels();
 		if (isRenderAudio) {
 			audioSignal = renderSignal;
@@ -357,10 +359,11 @@ public class WaveSynth {
 	// render one pixel, return its RGB value
 	public int renderPixel(int frame, int pos, ArrayList<WaveData> wdList) {
 		// float freqShift = 1.0f;
-		// float freqShift = noisiness != 0.0F ? noiseAt(pos % mapper.width, (int) Math.floor(pos / mapper.width)) : 1;
+		float freqShift = noisiness != 0.0f ? noiseAt(pos % mapper.width, (int) Math.floor(pos / mapper.width)) : 1;
+	    // if (pos == 0) System.out.println("==> freqShift = "+ freqShift);
 		for (int j = 0; j < dataLength; j++) {
 			WaveData wd = waveDataList.get(j);
-			// TODO this logic has a significant performance hit. Move it out of here.
+			// TODO this logic has a performance hit. Move it out of here.
 			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED) continue;
 			// ::::: sample amplitude = sin(initial phase + phase shift + frequency * i * (TWO_PI/n)) :::::
 			// wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / mapSize; 
@@ -369,7 +372,7 @@ public class WaveSynth {
 			// give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.)
 			// float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff) * wscale + wd.dc;
 			// we now let the WaveData object calculate the signal: this is much more flexible and barely affects the time
-			float val = (wd.waveValue(frame, pos, mapInc) + woff) * wscale + wd.dc;
+			float val = (wd.waveValue(frame, pos, freqShift, mapInc) + woff) * wscale + wd.dc;
 			weights[j] = val * wd.amp * this.gain;
 		}
 		if (isRenderAudio) {

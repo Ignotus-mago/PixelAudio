@@ -3,6 +3,7 @@
  */
 package net.paulhertz.pixelaudio;
 
+import java.awt.Color;
 import java.util.ArrayList;
 
 /**
@@ -203,6 +204,18 @@ public class WaveSynthBuilder {
 
 	public static float frequencyPianoKey(float freq) {
 		return 49 + 12 * (float) (Math.log(freq / 440) / Math.log(2));
+	}
+	
+	/**
+	 * @param c			an RGB color 
+	 * @param shift		the shift [0..1] of the hue in the HSB representation of color c
+	 * @return			the RGB representation of the shifted color
+	 */
+	public static int colorShift(int c, float shift) {
+		float[] hsb = new float[3];
+		float h = PixelAudioMapper.hue(c, hsb);
+		h = (h + shift);
+		return Color.HSBtoRGB(h, hsb[1], hsb[2]);
 	}
 
 }
