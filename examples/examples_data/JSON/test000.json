@@ -1,0 +1,42 @@
+{
+  "waves": [
+    {
+      "phase": 0,
+      "color": {
+        "r": 159,
+        "b": 251,
+        "g": 190
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.008726646192371845,
+      "freq": 768,
+      "index": 0,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0,
+      "color": {
+        "r": 209,
+        "b": 117,
+        "g": 178
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.01745329238474369,
+      "freq": 192,
+      "index": 1,
+      "cycles": 2,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.800000011920929,
+  "comments": "---",
+  "filename": "pixelaudio_01.mp4",
+  "stop": 720,
+  "dataFormat": 2,
+  "scaleHisto": false,
+  "histoHigh": 254,
+  "histoLow": 1,
+  "steps": 720,
+  "gamma": 1
+}
