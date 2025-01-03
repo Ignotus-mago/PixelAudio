@@ -143,6 +143,19 @@ public class MultiGen extends PixelMapGen {
 	/*                                                                                      */
 	/* ------------------------------------------------------------------------------------ */
 
+	/* ------------------------------ HILBERT MULTIGEN BUILDER ------------------------------ */
+	
+	public static MultiGen buildHilbertMultigen(int genEdge, int rows, int cols) {
+		/*
+		 * rows even, cols even
+		 * rows odd, cols even
+		 * rows even, cols odd
+		 * rows odd, cols odd
+		 * 
+		 * 
+		 */
+		return null;
+	}
 
 
 }

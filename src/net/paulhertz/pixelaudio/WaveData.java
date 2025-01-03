@@ -168,9 +168,25 @@ public class WaveData {
 	// wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / mapSize; 
 	// Instead of incrementing phase at each step, we subtract (frame * phase increment)
 	// from the initial phase, for historic reasons 8^).
+	
+	/**
+	 * Experimenting with noise to change the wave forms. 
+	 * 
+	 * @param frame			current frame
+	 * @param pos			pixel/audio sample index on signal path
+	 * @param freqShift		experiment with shifting frequency
+	 * @param mapInc		the increment in phase over the image pixels, typically TWO_PI / image size
+	 * @return				amplitude value of wave for frame and pos
+	 */
 	public float waveValue(int frame, int pos, float freqShift, float mapInc) {
 		return (float) Math.sin(this.phaseTwoPi - frame * this.phaseInc + this.freq * freqShift * pos * mapInc);
 	}
+	/**
+	 * @param frame			current frame
+	 * @param pos			pixel/audio sample index on signal path
+	 * @param mapInc		the increment in phase over the image pixels, typically TWO_PI / image size
+	 * @return				amplitude value of wave for frame and pos
+	 */
 	public float waveValue(int frame, int pos, float mapInc) {
 		return (float) Math.sin(this.phaseTwoPi - frame * this.phaseInc + this.freq * pos * mapInc);
 	}

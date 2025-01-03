@@ -378,13 +378,14 @@ public class WaveSynth {
 	 */
 	public int renderPixel(int frame, int pos, ArrayList<WaveData> wdList) {
 		// noisiness is an experiment, left for future development
-		float freqShift = noisiness != 0.0f ? noiseAt(pos % mapper.width, (int) Math.floor(pos / mapper.width)) : 1;
+		// float freqShift = noisiness != 0.0f ? noiseAt(pos % mapper.width, (int) Math.floor(pos / mapper.width)) : 1;
 	    // if (pos == 0) System.out.println("==> freqShift = "+ freqShift);
 		for (int j = 0; j < dataLength; j++) {
 			WaveData wd = waveDataList.get(j);
 			// TODO this logic has a performance hit. Move it out of here.
 			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED) continue;
-			float val = (wd.waveValue(frame, pos, freqShift, mapInc) + woff) * wscale + wd.dc;
+			// float val = (wd.waveValue(frame, pos, freqShift, mapInc) + woff) * wscale + wd.dc;
+			float val = (wd.waveValue(frame, pos, mapInc) + woff) * wscale + wd.dc;
 			weights[j] = val * wd.amp * this.gain;
 		}
 		if (isRenderAudio) {
