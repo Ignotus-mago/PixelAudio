@@ -1,0 +1,70 @@
+{
+  "waves": [
+    {
+      "phase": 0,
+      "color": {
+        "r": 159,
+        "b": 251,
+        "g": 190
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.008726646192371845,
+      "freq": 192,
+      "index": 0,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0,
+      "color": {
+        "r": 209,
+        "b": 117,
+        "g": 178
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.01745329238474369,
+      "freq": 192,
+      "index": 1,
+      "cycles": 2,
+      "dc": 0
+    },
+    {
+      "phase": 0,
+      "color": {
+        "r": 169,
+        "b": 242,
+        "g": 231
+      },
+      "amp": 0.5,
+      "phaseInc": 0.008726646192371845,
+      "freq": 18465,
+      "index": 2,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0,
+      "color": {
+        "r": 254,
+        "b": 181,
+        "g": 192
+      },
+      "amp": 0.5,
+      "phaseInc": 0.01745329238474369,
+      "freq": 18465,
+      "index": 3,
+      "cycles": 2,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.5,
+  "comments": "---",
+  "filename": "test002.mp4",
+  "stop": 720,
+  "dataFormat": 2,
+  "scaleHisto": false,
+  "histoHigh": 254,
+  "histoLow": 1,
+  "steps": 720,
+  "gamma": 1
+}
