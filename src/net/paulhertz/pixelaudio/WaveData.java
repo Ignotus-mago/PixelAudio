@@ -20,7 +20,7 @@ public class WaveData {
 	public float amp;
 	/** fraction of TWO_PI in the range 0..1, */
 	public float phase;
-	/** TWO_PI * phase */
+	/** TWO_PI * phase, used internally to calculate wave value */
 	public float phaseTwoPi;
 	/** number of times to cycle through TWO_PI over the duration of the animation */
 	public float phaseCycles;
@@ -36,11 +36,14 @@ public class WaveData {
 	public boolean isMuted = false;
 	/** tracking variable for mute, solo, etc. */
 	public WaveState waveState;
-	/** animation steps TODO remove animSteps and defaultAnimSteps as superfluous, WaveSynth and application context will handle */
+	/** TODO animSteps is an external value from a WaveSynth and application context -- is there a better way to handle it? */
 	public int animSteps = WaveData.defaultAnimSteps;
-	/** convenience variable, 30 seconds of animation at 24 frames per second */
+	/** convenience variable, 30 seconds of animation at 24 frames per second, also context dependent */
 	public static int defaultAnimSteps = 720; 	//  24 * 30 = 720
-	/** support for old JSON format where phase was already scaled by TWO_PI */
+	/** support for old JSON format where phase was already scaled by TWO_PI 
+	 *  in the new format phase ranges over the open interval (0, 1), so we
+	 *  scale it by TWO_PI and store the result in phaseTwoPi, which tracks phase information.
+	 */
 	public static final boolean phaseScalesTwoPI = true;
 	
 
@@ -189,6 +192,15 @@ public class WaveData {
 	 */
 	public float waveValue(int frame, int pos, float mapInc) {
 		return (float) Math.sin(this.phaseTwoPi - frame * this.phaseInc + this.freq * pos * mapInc);
+	}
+	
+	public float phaseAtFrame(int frame) {
+		return this.phaseTwoPi - frame * this.phaseInc;
+	}
+	
+	public float scaledPhaseAtFrame(int frame) {
+		// return (this.phaseTwoPi - frame * this.phaseInc) / PConstants.TWO_PI;
+		return this.phase - (frame * this.phaseCycles) / this.animSteps;
 	}
 	
 	public static ArrayList<WaveData> waveDataListCopy(ArrayList<WaveData> wdList) {
