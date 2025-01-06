@@ -194,14 +194,40 @@ public class WaveData {
 		return (float) Math.sin(this.phaseTwoPi - frame * this.phaseInc + this.freq * pos * mapInc);
 	}
 	
-	public float phaseAtFrame(int frame) {
+	
+	public float rawPhaseAtFrame(int frame) {
 		return this.phaseTwoPi - frame * this.phaseInc;
 	}
 	
-	public float scaledPhaseAtFrame(int frame) {
-		// return (this.phaseTwoPi - frame * this.phaseInc) / PConstants.TWO_PI;
-		return this.phase - (frame * this.phaseCycles) / this.animSteps;
+	public float phaseAtFrame(int frame) {
+		return ((rawPhaseAtFrame(frame) % PConstants.TWO_PI) + PConstants.TWO_PI) % PConstants.TWO_PI;
 	}
+	
+	public float scaledPhaseAtFrame(int frame) {
+		float range = 1.0f;
+		float value = this.phase - (frame * this.phaseCycles / this.animSteps);
+		return ((value % range) + range) % range;
+	}
+	
+	/**
+	 * Maps a value to a specified range (of a cyclic function)
+	 * Explanation:
+	 * 1. Subtract a: Translates the interval to [0,b−a)[0,b−a).
+	 * 2. value % range: Reduces the value to (−range,range).
+	 * 3. Adding range: Ensures the result is positive.
+	 * 4. Final % range: Maps the result to [0,range)[0,range).
+	 * 5. Adding a: Shifts the result back to the original interval [a,b).
+	 * 
+	 * @param value		float value to be mapped
+	 * @param a			lower bound
+	 * @param b			upper bound
+	 * @return			value mapped to interval [a,b)
+	*/
+	public static float mapToPositivePhase(float value, float a, float b) {
+	  float range = b - a;
+	  return ((value - a) % range + range) % range + a;
+	}
+
 	
 	public static ArrayList<WaveData> waveDataListCopy(ArrayList<WaveData> wdList) {
 		ArrayList<WaveData> wdListCopy = new ArrayList<WaveData>();
