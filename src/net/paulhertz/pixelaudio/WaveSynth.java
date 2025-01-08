@@ -8,24 +8,44 @@ import java.util.ArrayList;
 /**
  * Implements a combination of color organ and additive audio synth.
  * Animates pixels using phase shifting of audio generators in <code>waveDataList</code>. 
+ * 
+ * WaveSynth is organized around properties, such as gain (i.e. loudness or brightness) 
+ * and gamma (a sort of contrast setting), and data objects. The data objects include a 
+ * a bitmap, mapImage, that is a Processing PImage instance for the image representation
+ * of the WaveSynth, a PixelAudioMapper that allows the WaveSynth to mediate between audio 
+ * data and image data, arrays for the WaveSynth's audio signal and the image data ordered 
+ * by the PixelAudioMapper signal path, and an array of WaveData objects, waveDataList,
+ * that holds the individual sine wave components of the WaveSynth with their frequency,
+ * amplitude, phase, and other properties. There are also a series of properties concerned 
+ * with animation and video output. 
+ * 
+ * When a WaveSynth is used to produce color patterns, each WaveData object in the waveDataList
+ * controls a color. The colors of the various WaveData objects are added together, much 
+ * as the audio sine waves are to produce audio, with the brightness of each color determined
+ * by the amplitude of the controlling sine wave. The WaveSynthAnimation example code 
+ * provides a graphical user interface for editing the WaveSynth properties and the individual
+ * WaveData objects. Experimenting with it to get an idea of what WaveSynth can do to 
+ * produce patterns. 
+ * 
+ * 
  */
 public class WaveSynth {
-	// WaveSynth objects
+	// WaveSynth data objects
 	public PixelAudioMapper mapper;
 	public PImage mapImage;
 	public int[] colorSignal;
 	public float[] audioSignal;
 	public float[] renderSignal;
-	boolean isRenderAudio = false;
 	public ArrayList<WaveData>  waveDataList;
-	// private ArrayList<WaveData>  editModeWDList;
-	boolean isEditMode = false;
+
+	// ------ Properties derived from data objects -------- //
+	boolean isRenderAudio = false;
 	private int w;
 	private int h;
 	public int mapSize;
 	public int dataLength;
-	
-	// ------ WaveSynth control variables ----- //
+
+	// ------ WaveSynth control variable attributes ----- //
 	public float gain = 1.0f;
 	public float gamma = 1.0f;
 	public int[] gammaTable;
@@ -36,7 +56,7 @@ public class WaveSynth {
 	public int animSteps = 720;
 	public int step = 0;
 	public int stop = 0;
-	public float noisiness = 0.0f;
+	public float noisiness = 0.0f;		// for future development
 	/** comments for JSON file */
 	public String comments = "---";
 	
@@ -308,14 +328,6 @@ public class WaveSynth {
 			this.renderSignal = new float[audioSignal.length];
 		}
 		this.isRenderAudio = isRenderAudio;
-	}
-
-	public boolean isEditMode() {
-		return isEditMode;
-	}
-
-	public void setEditMode(boolean isEditMode) {
-		this.isEditMode = isEditMode;
 	}
 
 	// set up mapImage for editing, set mapInc

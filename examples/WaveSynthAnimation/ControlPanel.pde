@@ -792,6 +792,7 @@ public void delWave_hit(GButton source, GEvent event) {
 // see enum WaveData.WaveState {ACTIVE, SOLO, MUTE, SUSPENDED};
 public void muteWave_hit(GCheckbox source, GEvent event) { 
   //println("muteWave - GCheckbox >> GEvent." + event + " @ " + millis());
+  // if the soloWave checkbox is selected, set currentWD WaveState to SOLO, otherwise, to ACTIVE
   currentWD.isMuted = muteWave.isSelected();
   currentWD.waveState = muteWave.isSelected() ? WaveData.WaveState.MUTE : WaveData.WaveState.ACTIVE;
   loadWaveDataPanelValues(currentWD);
@@ -806,6 +807,7 @@ public void soloWave_hit(GCheckbox source, GEvent event) {
       if (currentWD == wd) continue;
       if (wd.waveState == WaveData.WaveState.ACTIVE) {
         wd.waveState = WaveData.WaveState.SUSPENDED;
+        wd.isMuted = true;
       }
     }
   }
@@ -818,6 +820,7 @@ public void soloWave_hit(GCheckbox source, GEvent event) {
       for (WaveData wd : wavesynth.waveDataList) {
         if (wd.waveState == WaveData.WaveState.SUSPENDED) {
           wd.waveState = WaveData.WaveState.ACTIVE;
+          wd.isMuted = false;
         }
       }
     }

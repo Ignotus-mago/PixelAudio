@@ -18,12 +18,31 @@ import g4p_controls.*;
 
 /**
  * PixelAudio demo application WaveSynthAnimation created by Paul Hertz,  
- * makes pretty animated patterns and outputs them to video. 
+ * makes hypnotic animated patterns and outputs them to video. 
  * 
  * Use this application to edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI (g4p_controls) for Processing. This should provide some idea 
  * of what you can do with the HilbertGen for making patterns with the WaveSynth. There
- * are lots of other possibilities. 
+ * are lots of other possibilities. Patterns can be loaded from and saved to JSON files. 
+ * 
+ * For audio signals, a WaveSynth behaves exactly like an audio synthesizer adds together 
+ * sine waves at different frequencies. The BigWaveSynthAudio and WaveSynthSequencer 
+ * examples show how to produce audio with a WaveSynth. This examples provides a graphical
+ * user interface for editing the colors and other properties of a WaveSynth. 
+ * 
+ * A WaveSynth is organized around attributes, such as gain (i.e. loudness or brightness) 
+ * and gamma (a sort of contrast setting), and data objects. The data objects include a 
+ * a bitmap, mapImage, that is a Processing PImage instance for the image representation
+ * of the WaveSynth, a PixelAudioMapper that allows the WaveSynth to mediate between audio 
+ * data and image data, arrays for the audio signal and the image data ordered along the 
+ * PixelAudioMapper signal path, and an array of WaveData objects that define the individual
+ * sine wave components of the WaveSynth. 
+ * 
+ * When a WaveSynth is used to produce color patterns, each WaveData object in the waveDataList
+ * controls a color. The colors of the various WaveData objects are added together. The 
+ * amplitude of the controlling sine wave controls the brightness of each color. The control
+ * panel in this example allows to isolate individual WaveData operators to see how they 
+ * affect the color patterns. 
  * 
  * In addition to the GUI commands, there are some useful key commands.
  *
@@ -31,6 +50,7 @@ import g4p_controls.*;
  * Key commands will not work when the control panel is the active window.
  * Click on the display window to make it the active window and then try the commands. 
  * See the parseKey() method and the methods it calls for more information about key commands.
+ * 
  * 
  * Note that the quickest way to record a video, from frame 0 to the stop frame value in the 
  * control panel, is press the 'V' (capital vee) key. 
@@ -762,8 +782,10 @@ public void toggleRecording() {
 public void scaleAmps(ArrayList<WaveData> waveDataList, float scale) {
   int i = 0;
   for (WaveData wd : waveDataList) {
-    if (wd.isMuted)
+    if (wd.isMuted) {
+      i++;
       continue;
+    }
     wd.setAmp(wd.amp * scale);
     if (isVerbose) println("----- set amplitude " + i + " to " + wd.amp);
   }
@@ -791,8 +813,10 @@ public void shiftColors(ArrayList<WaveData> waveDataList, float shift) {
 public void scaleFreqs(ArrayList<WaveData> waveDataList, float scale) {
   int i = 0;
   for (WaveData wd : waveDataList) {
-    if (wd.isMuted)
+    if (wd.isMuted) {
+      i++;
       continue;
+    }
     wd.setFreq(wd.freq * scale);
     if (isVerbose) println("----- set frequency " + i + " to " + wd.freq);
   }
