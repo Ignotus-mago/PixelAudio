@@ -1,4 +1,4 @@
-As of August 29, we have the following examples:
+As of January 8, 2025, we have the following examples:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
@@ -17,3 +17,5 @@ As of August 29, we have the following examples:
 - **AriaDemoApp**: draw lines to trigger sound, connect to Max with UDP, auto-load files
 - **AudioCapture**: capture streaming or live audio and turn it into a bitmap.
 - **GenerateAndSaveAudio** use a Wave Synth to generate audio and animation simultaneously.
+
+You can open the examples with the File menu->Examples... command. See Contributed Libraries in the Java Examples dialog. 
