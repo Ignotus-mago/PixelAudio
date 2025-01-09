@@ -25,16 +25,16 @@ import g4p_controls.*;
  * of what you can do with the HilbertGen for making patterns with the WaveSynth. There
  * are lots of other possibilities. Patterns can be loaded from and saved to JSON files. 
  * 
- * For audio signals, a WaveSynth behaves exactly like an audio synthesizer adds together 
+ * For audio signals, a WaveSynth behaves like an audio synthesizer that adds together 
  * sine waves at different frequencies. The BigWaveSynthAudio and WaveSynthSequencer 
- * examples show how to produce audio with a WaveSynth. This examples provides a graphical
+ * examples show how to produce audio with a WaveSynth. This example provides a graphical
  * user interface for editing the colors and other properties of a WaveSynth. 
  * 
  * A WaveSynth is organized around attributes, such as gain (i.e. loudness or brightness) 
  * and gamma (a sort of contrast setting), and data objects. The data objects include a 
  * a bitmap, mapImage, that is a Processing PImage instance for the image representation
  * of the WaveSynth, a PixelAudioMapper that allows the WaveSynth to mediate between audio 
- * data and image data, arrays for the audio signal and the image data ordered along the 
+ * data and image data using arrays for the audio signal and the image data ordered along the 
  * PixelAudioMapper signal path, and an array of WaveData objects that define the individual
  * sine wave components of the WaveSynth. 
  * 
@@ -46,14 +46,16 @@ import g4p_controls.*;
  * 
  * In addition to the GUI commands, there are some useful key commands.
  *
+ * --------------------------------------------------------------------------------------------
  * ***>> NOTE: Key commands only work when the image display window is the active window. <<***
+ * --------------------------------------------------------------------------------------------
+ * 
  * Key commands will not work when the control panel is the active window.
  * Click on the display window to make it the active window and then try the commands. 
  * See the parseKey() method and the methods it calls for more information about key commands.
  * 
- * 
- * Note that the quickest way to record a video, from frame 0 to the stop frame value in the 
- * control panel, is press the 'V' (capital vee) key. 
+ * The quickest way to record a video, from frame 0 to the stop frame value in the 
+ * control panel, is to press the 'V' (capital 'v') key. 
  * 
  * The code in this example is extensively annotated. We the author heartily recommend you 
  * read the notes for the various methods. 
