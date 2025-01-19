@@ -12,7 +12,7 @@ import java.util.HashMap;
  * There will be demos, but probably not for the early beta release. 
  * 
  */
-public class Lindenmeyer extends Object {
+public class Lindenmayer extends Object {
 	// our handy tables
 	/** transition table for string production */
 	private HashMap<String, String> transTable;
@@ -21,7 +21,7 @@ public class Lindenmeyer extends Object {
 	/**
 	 * Creates a new Lindenmeyer instance;
 	 */
-	public Lindenmeyer() {
+	public Lindenmayer() {
 		this.transTable = new HashMap<>();
 	}
 
@@ -72,7 +72,7 @@ public class Lindenmeyer extends Object {
 	 * F : forward (n) units
 	 */
 	public ArrayList<String> hilbert(int depth) {
-		Lindenmeyer lind = new Lindenmeyer();
+		Lindenmayer lind = new Lindenmayer();
 		lind.put("L", "+RF-LFL-FR+");
 		lind.put("R", "-LF+RFR+FL-");
 		ArrayList<String> buf = new ArrayList<>();

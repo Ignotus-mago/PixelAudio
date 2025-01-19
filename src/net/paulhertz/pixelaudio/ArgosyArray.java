@@ -440,7 +440,7 @@ public class ArgosyArray {
 	 * @return          an ArrayList of String values "1" and "0".
 	 */
 	public ArrayList<String> fibo(int depth, boolean verbose) {
-		Lindenmeyer lind = new Lindenmeyer();
+		Lindenmayer lind = new Lindenmayer();
 		lind.put("0", "1");
 		lind.put("1", "01");
 		ArrayList<String> buf = new ArrayList<>();
