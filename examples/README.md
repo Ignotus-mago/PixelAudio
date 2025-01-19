@@ -10,7 +10,7 @@ As of January 8, 2025, we have the following examples:
 - **BuildFromPathGenDemo**: read and write data from a PixelMapGen in JSON format. 
 - **BigWaveSynth** use a WaveSynth with a large bitmap mapped to a MultiGen. 
 - **BigWaveSynthAudio** use a WaveSynth as an additive audio synthesizer.
-- **WaveSynthAnimation** use a GUI to load, edit, save and output WaveSynth data to video
+- **WaveSynthEditor** use a GUI to load, edit, save and output WaveSynth data to video
 - **WaveSynthSequencer** use WaveSynth as an audio synthesizer to play sequences of notes
 - **LoadAudioToImage**: read an audio file, trancode it into an image and then play audio samples. 
 - **LoadImageToAudio**: read, write, play, and mix channels of images and audio files. 
