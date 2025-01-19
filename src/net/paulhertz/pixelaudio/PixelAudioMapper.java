@@ -11,10 +11,10 @@ import java.util.Arrays;
 
 /**
  * <p>
- * As of pre-release version 0.8.1-beta PixelAudioMapper is reasonably complete. However, 
+ * As of pre-release version 0.8.5-beta PixelAudioMapper is reasonably complete. However, 
  * the "peel" and "stamp" methods have not been tested or supplied with example applications.
  * The Javadocs for these methods are also minimal or missing. They will change. You should
- * avoid using them for now. 
+ * probably avoid using them for now. 
  * </p>
  * 
  * <p>
@@ -180,10 +180,11 @@ import java.util.Arrays;
  * <p>
  * The following are suggestions for methods that could be implemented using PixelArrayMapper.
  * <ul>
- *	 <li>audio synthesis (the WaveSynth algorithm used in the animation for Campos | Temporales)</li>
- *	 <li>pattern generation (the Argosy pattern algorithm for Campos | Temporales, https://vimeo.com/856300250)</li>
- * 	 <li>phase shifting, amplitude modulation, etc. </li>
- *	 <li>FFT operations on both image and signal data</li>
+ *	 <li>additive audio synthesis + color organ, implemented with the WaveSynth and WaveData classes</li>
+ *	 <li>granular synthesis (AriaDemoApp is not quite GS, but very similar)</li>
+ *	 <li>pattern generation (Argosy and Lindenmeyer classes)</li>
+ * 	 <li>phase shifting, amplitude modulation, etc.  </li>
+ *	 <li>FFT operations on both image and signal data (AriaDemoApp) </li>
  *	 <li>pixel sorting, typically on image data</li>
  *	 <li>blur, sharpen, etc.</li>
  *	 <li>blending images</li>
