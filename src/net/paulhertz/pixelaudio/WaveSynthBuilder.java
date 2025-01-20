@@ -6,6 +6,10 @@ package net.paulhertz.pixelaudio;
 import java.awt.Color;
 import java.util.ArrayList;
 
+import processing.core.PApplet;
+
+import net.paulhertz.pixelaudio.WaveData.WaveState;
+
 /**
  * 
  */
@@ -217,5 +221,161 @@ public class WaveSynthBuilder {
 		h = (h + shift);
 		return Color.HSBtoRGB(h, hsb[1], hsb[2]);
 	}
+	
+	
+	/* ------------------------------------------------ */
+	/*               WaveDataList Methods               */
+	/* ------------------------------------------------ */
+	
+	/**
+	 * Scales the amplitude of an ArrayList of WaveData objects.
+	 * 
+	 * @param waveDataList  an ArrayList of WaveData objects
+	 * @param scale         the amount to scale the amplitude of each WaveData object
+	 * @param isVerbose	    if true, output changes to data to the console
+	 */
+	public static void scaleAmps(ArrayList<WaveData> waveDataList, float scale, boolean isVerbose) {
+		int i = 0;
+		for (WaveData wd : waveDataList) {
+			if (wd.isMuted) {
+				i++;
+				continue;
+			}
+			wd.setAmp(wd.amp * scale);
+			if (isVerbose) System.out.println("----- set amplitude " + i + " to " + wd.amp);
+		}
+	}
+	
+	/**
+	 * Shifts the colors of an ArrayList of WaveData objects.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 * @param shift		    the amount shift each color
+	 * @param isVerbose	    if true, output changes to data to the console
+	 */
+	public static void shiftColors(ArrayList<WaveData> waveDataList, float shift, boolean isVerbose) {
+		for (WaveData wd : waveDataList) {
+			if (wd.isMuted)
+				continue;
+			wd.setWaveColor(WaveSynthBuilder.colorShift(wd.waveColor, shift));
+		}
+		if (isVerbose) System.out.println("----->>> shift colors " + shift);
+	}
+	
+	/**
+	 * Scales the frequencies of an ArrayList of WaveData objects.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 * @param scale		the amount to scale the frequency of each WaveData object
+	 * @param isVerbose	   if true, output changes to data to the console
+	 */
+	public static void scaleFreqs(ArrayList<WaveData> waveDataList, float scale, boolean isVerbose) {
+		int i = 0;
+		for (WaveData wd : waveDataList) {
+			if (wd.isMuted) {
+				i++;
+				continue;
+			}
+			wd.setFreq(wd.freq * scale);
+			if (isVerbose) System.out.println("----- set frequency " + i + " to " + wd.freq);
+		}
+	}	
+	
+	/**
+	 * Shifts the phase of an ArrayList of WaveData objects.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 * @param shift			amount to shift the phase of each WaveData object
+	 * @param isVerbose	   if true, output changes to data to the console
+	 */
+	public static void shiftPhases(ArrayList<WaveData> waveDataList, float shift, boolean isVerbose) {
+		for (WaveData wd : waveDataList) {
+			if (wd.isMuted)
+				continue;
+			// wd.setPhase(wd.phase + shift - floor(wd.phase + shift));
+			wd.setPhase(wd.phase + shift);
+		}
+		if (isVerbose) System.out.println("----->>> shiftPhase " + shift);
+	}
+	
+	/**
+	 * Outputs the phase values of a WaveSynth's array of WaveData objects to the console.
+	 * @param wavesynth		an WaveSynth 
+	 */
+	public static void showPhaseValues(WaveSynth wavesynth) {
+		ArrayList<WaveData> waveDataList = wavesynth.getWaveDataList();
+		int phaseStep = wavesynth.getStep();
+		StringBuffer sb = new StringBuffer("\n----- current phase values scaled over (0, 1) -----\n");
+		int i = 1;
+		for (WaveData wd : waveDataList) {
+			float m = wd.scaledPhaseAtFrame(phaseStep);
+			sb.append(i++ +": "+ PApplet.nf(m) + "; ");
+		}
+		sb.append("\n----- current phase values scaled over (0, TWO_PI) -----\n");
+		i = 1;
+		for (WaveData wd : waveDataList) {
+			float m = wd.phaseAtFrame(phaseStep);
+			sb.append(i++ +": "+ PApplet.nf(m) + "; ");
+		}
+		System.out.println(sb);
+	}
+	
+	/**
+	 * Applies the current phase values to the initial values of the WaveSynth, so that
+	 * the current state of the image display will appear as the first frame of 
+	 * animation. Save the WaveSynth to a JSON file to keep the new phase values. 
+	 * 
+	 * @param wavesynth		an WaveSynth whose current WaveData phase values will be captured
+	 */
+	public static void capturePhaseValues(WaveSynth wavesynth) {
+		ArrayList<WaveData> waveDataList = wavesynth.getWaveDataList();
+		int phaseStep = wavesynth.getStep();
+		for (WaveData wd : waveDataList) {
+			float currentPhase = wd.scaledPhaseAtFrame(phaseStep);
+			wd.setPhase(currentPhase);
+		}
+	}
+	
+	/**
+	 * Mutes or unmutes a WaveData operator (view in the control panel).
+	 * @param wavesynth		a WaveSynth
+	 * @param elem			the index number of a WaveData object stored in a WaveSynth's waveDataList field
+	 */
+	public static void toggleWDMute(WaveSynth wavesynth, int elem) {
+		if (wavesynth.waveDataList.size() < elem + 1) return;
+		WaveData wd = wavesynth.waveDataList.get(elem);
+		wd.isMuted = !wd.isMuted;
+		if (wd.isMuted) {
+			wd.waveState = WaveState.MUTE;
+		}
+		else {
+			wd.waveState = WaveState.ACTIVE;
+		}
+	}
+	
+	/**
+	 * Prints mute/active status of WaveData operators in supplied waveDataList. 
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 */
+	public static void printWDStates(ArrayList<WaveData> waveDataList) {
+		StringBuffer sb = new StringBuffer("Audio operators\n");
+		int n = 1;
+		for (WaveData wd :waveDataList) {
+			sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
+		}
+		System.out.println(sb.toString());
+	}
+	
+	/**
+	 * Unmutes all the operators in supplied waveDataList.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 */
+	public static void unmuteAllWD(ArrayList<WaveData> waveDataList) {
+		StringBuffer sb = new StringBuffer("Audio operators\n");
+		int n = 1;
+		for (WaveData wd :waveDataList) {
+			wd.setWaveState(WaveState.ACTIVE);
+			sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
+		}
+		System.out.println(sb.toString());		
+	}
+	
 
 }
