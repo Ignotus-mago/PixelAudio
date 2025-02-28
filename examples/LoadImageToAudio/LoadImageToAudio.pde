@@ -1,8 +1,7 @@
 /**
  * LoadImageToAudio shows how to load an image and turn it into an audio file
- * that can be played by clicking on the image. You can also load an image file
- * and turn it into an audio signal. It will probably be noisy, both because it's
- * an image and because its resolution is only 8 bits. When you load an audio, it
+ * that can be played by clicking on the image. It will probably be noisy, both because
+ * it's an image and because its resolution is only 8 bits. When you load an audio, it
  * will exist both as a floating point audio signal and as an image. When you
  * click in the image, you will be playing a sample from the signal. You can write
  * the image to the audio signal ('w' key command).

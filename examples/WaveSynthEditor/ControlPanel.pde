@@ -157,24 +157,8 @@ public void createGlobalControls() {
   gamma_label.setText("Gamma");
   gamma_label.setOpaque(false);
   /* ----->>>  <<<----- */
-  ypos += yinc;
+  // ypos += yinc;
   /* space for additional controls */
-  /* ----->>>  <<<----- */
-  ypos += yinc;
-  stepsSpinner = new GSpinner(controlWindow, 10, ypos, 120, 20);
-  stepsSpinner.setLimits(240, 8, 24000, 1);
-  stepsSpinner.addEventHandler(this, "stepsSpinner_hit");
-  steps_label = new GLabel(controlWindow, 140, ypos, 80, 20);
-  steps_label.setText("Steps");
-  steps_label.setOpaque(false);
-  /* ----->>>  <<<----- */
-  ypos += yinc;
-  stopSpinner = new GSpinner(controlWindow, 10, ypos, 120, 20);
-  stopSpinner.setLimits(240, 8, 36000, 1);
-  stopSpinner.addEventHandler(this, "stopSpinner_hit");
-  stop_label = new GLabel(controlWindow, 140, ypos, 80, 20);
-  stop_label.setText("Stop frame");
-  stop_label.setOpaque(false);
   /* ----->>>  <<<----- */
   ypos += yinc;
   histoCheck = new GCheckbox(controlWindow, 10, ypos, 120, 20);
@@ -202,6 +186,22 @@ public void createGlobalControls() {
   /* ----->>>  <<<----- */
   ypos += yinc;
   /* space for additional controls */
+  /* ----->>>  <<<----- */
+  ypos += yinc;
+  stepsSpinner = new GSpinner(controlWindow, 10, ypos, 120, 20);
+  stepsSpinner.setLimits(240, 8, 24000, 1);
+  stepsSpinner.addEventHandler(this, "stepsSpinner_hit");
+  steps_label = new GLabel(controlWindow, 140, ypos, 80, 20);
+  steps_label.setText("Steps");
+  steps_label.setOpaque(false);
+  /* ----->>>  <<<----- */
+  ypos += yinc;
+  stopSpinner = new GSpinner(controlWindow, 10, ypos, 120, 20);
+  stopSpinner.setLimits(240, 8, 36000, 1);
+  stopSpinner.addEventHandler(this, "stopSpinner_hit");
+  stop_label = new GLabel(controlWindow, 140, ypos, 80, 20);
+  stop_label.setText("Stop frame");
+  stop_label.setOpaque(false);
   /* ----->>>  <<<----- */
   ypos += yinc;
   fpsMenu = new GDropList(controlWindow, 10, ypos, 40, 80, 3, 10);
@@ -653,7 +653,7 @@ public void capCheck_hit(GCheckbox source, GEvent event) {
 
 // handled globally with calls on wavesynth or list of WaveAnimators, when relevant
 public void runVideoBtn_hit(GButton source, GEvent event) {
-  toggleAnimation(); //<>// //<>//
+  toggleAnimation(); //<>//
 }
 
 public void openBtn_hit(GButton source, GEvent event) { 
