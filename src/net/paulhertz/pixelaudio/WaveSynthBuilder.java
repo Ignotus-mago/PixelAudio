@@ -211,6 +211,10 @@ public class WaveSynthBuilder {
 	}
 	
 	/**
+	 * Moves an RGB color into the HSB color space and shifts it by a decimal fraction
+	 * in the range (0.0,1.0) that represents a portion of the circle of hue values.
+	 * For example, 1.0f/24 is 15 degrees around the 360-degree HSB color circle.
+	 * 
 	 * @param c			an RGB color 
 	 * @param shift		the shift [0..1] of the hue in the HSB representation of color c
 	 * @return			the RGB representation of the shifted color
@@ -297,7 +301,7 @@ public class WaveSynthBuilder {
 	
 	/**
 	 * Outputs the phase values of a WaveSynth's array of WaveData objects to the console.
-	 * @param wavesynth		an WaveSynth 
+	 * @param wavesynth		a WaveSynth whose waveDataList's phase values will be output
 	 */
 	public static void showPhaseValues(WaveSynth wavesynth) {
 		ArrayList<WaveData> waveDataList = wavesynth.getWaveDataList();
@@ -350,18 +354,18 @@ public class WaveSynthBuilder {
 		}
 	}
 	
-	/**
-	 * Prints mute/active status of WaveData operators in supplied waveDataList. 
-	 * @param waveDataList	an ArrayList of WaveData objects
-	 */
-	public static void printWDStates(ArrayList<WaveData> waveDataList) {
-		StringBuffer sb = new StringBuffer("Audio operators\n");
-		int n = 1;
-		for (WaveData wd :waveDataList) {
-			sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
-		}
-		System.out.println(sb.toString());
+	public void muteWaveData(WaveSynth wavesynth, int elem) {
+		if (wavesynth.waveDataList.size() < elem + 1) return;
+		WaveData wd = wavesynth.waveDataList.get(elem);
+		wd.waveState = WaveState.MUTE;
 	}
+	
+	public void unmuteWaveData(WaveSynth wavesynth, int elem) {
+		if (wavesynth.waveDataList.size() < elem + 1) return;
+		WaveData wd = wavesynth.waveDataList.get(elem);
+		wd.waveState = WaveState.ACTIVE;
+	}
+	
 	
 	/**
 	 * Unmutes all the operators in supplied waveDataList.
@@ -376,6 +380,64 @@ public class WaveSynthBuilder {
 		}
 		System.out.println(sb.toString());		
 	}
-	
+
+	/**
+	 * Sets a specified WaveData element in the waveDataList of a supplied WaveSynth
+	 * to WaveData.WaveState.SOLO if isSolo is true, otherwise sets it to WaveData.WaveState.ACTIVE.
+	 * If isSolo is true, all other WaveData elements taht are ACTIVE will be set to SUSPENDED.
+	 * Any elements that are currently muted will remain muted, any elements whose waveState 
+	 * is SOLO will remain unchanged. Call unmuteAllWD() to set all elements to ACTIVE.
+	 * TODO improve on the logic for WaveState changes. 
+	 * 
+	 * @param wavesynth		a WaveSynth whose waveDataList will be affected
+	 * @param elem			index of an element in the waveDataList
+	 * @param isSolo		if true, set WaveData element to WaveData.WaveState.SOLO
+	 * 						otherwise, set it to WaveData.WaveState.ACTIVE
+	 */
+	public void toggleWDSolo(WaveSynth wavesynth, int elem, boolean isSolo) {
+		if (wavesynth.waveDataList.size() < elem + 1)
+			return;
+		WaveData currentWD = wavesynth.waveDataList.get(elem);
+		currentWD.waveState = isSolo ? WaveData.WaveState.SOLO : WaveData.WaveState.ACTIVE;
+		if (currentWD.waveState == WaveData.WaveState.SOLO) {
+			for (WaveData wd : wavesynth.waveDataList) {
+				if (wd == currentWD)
+					continue;
+				if (wd.waveState == WaveData.WaveState.ACTIVE) {
+					wd.waveState = WaveData.WaveState.SUSPENDED;
+					wd.isMuted = true;
+				}
+			}
+		} 
+		else {
+			boolean listHasSolos = false;
+			for (WaveData wd : wavesynth.waveDataList) {
+				if (wd.waveState == WaveData.WaveState.SOLO)
+					listHasSolos = true;
+			}
+			if (!listHasSolos) {
+				for (WaveData wd : wavesynth.waveDataList) {
+					if (wd.waveState == WaveData.WaveState.SUSPENDED) {
+						wd.waveState = WaveData.WaveState.ACTIVE;
+						wd.isMuted = false;
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Prints mute/active status of WaveData operators in supplied waveDataList. 
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 */
+	public static void printWDStates(ArrayList<WaveData> waveDataList) {
+		StringBuffer sb = new StringBuffer("Audio operators\n");
+		int n = 1;
+		for (WaveData wd :waveDataList) {
+			sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
+		}
+		System.out.println(sb.toString());
+	}
+		
 
 }
