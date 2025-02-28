@@ -467,7 +467,7 @@ public class ArgosyArray {
 	 * @param verbose   if true, tells the console what's up
 	 * @return          an array of ints determined by a Fibonacci tree generator and your inputs v1 and v2
 	 */
-	public int[] argosyGen(int depth, int v1, int v2, boolean verbose) {
+	public int[] fibonacciPattern(int depth, int v1, int v2, boolean verbose) {
 		ArrayList<String> buf = fibo(depth, verbose);
 		int[] argo = new int[buf.size()];
 		for (int i = 0; i < argo.length; i++) {
