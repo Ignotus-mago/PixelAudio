@@ -1,6 +1,7 @@
 package net.paulhertz.pixelaudio;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 /**
@@ -14,21 +15,25 @@ import java.util.ArrayList;
  *
  */
 public class ArgosyArray {
+	/** PixelAudioMapper that provides values for several variables and maps bigArray to bitmaps or audio signals */
+	PixelAudioMapper mapper;
 	/** Array of color values used for animation of PixelScannerINF instances */
 	int[] bigArray;
 	/** the number of pixels in an argosy unit */
 	int unitSize;
 	/** number of pixels in a shiftLeft animation Step */
 	int animStep;
+	/** subunit divisor for animStep */
+	float animStepDivisor = 16.0f;
 	/** colors for argosy units */
-	int[] argosyColors = {PixelAudio.myParent.color(255, 255), PixelAudio.myParent.color(0, 255) };
+	int[] argosyColors = {PixelAudioMapper.composeColor(255, 255, 255, 255), PixelAudioMapper.composeColor(0, 0, 0, 255) };
 	/** scaling for number of units in gap between argosies */
 	float argosyGapScale = 55.0f;
 	/** number of pixels in the gap between argosy patterns */
 	int argosyGap;
 	/** color of pixels in the gap */
-	int argosyGapColor = PixelAudio.myParent.color(127, 255);
-	/** how many times to repeat the pattern */
+	int argosyGapColor = PixelAudioMapper.composeColor(127, 127, 127, 255);
+	/** how many times to repeat the pattern, 0 to fill array */
 	int argosyReps = 0;
 	/** margin on either side of the argosy patterns */
 	int argosyMargin;
@@ -47,26 +52,28 @@ public class ArgosyArray {
     /** count the number of unit shifts */
     int argosyShiftStep = 0;
 
-  // an argosy pattern with 55 elements, 89 = (34 * 2 + 21) units long, derived from a Fibonacci L-system
+    // an argosy pattern with 55 elements, 89 = (34 * 2 + 21 * 1) units long, derived from a Fibonacci L-system
 	public static int[] argosy55 = new int[]{2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
                                            1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
                                            1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2};
 
 
 	/**
-	 * @param bigSize       size of the array
+	 * @param mapper		PixelAudioMapper
 	 * @param unitSize      size of a unit of the argosy
 	 * @param reps          number of repetitions of the argosy pattern, pass in 0 for maximum that fit
 	 * @param isCentered    true if argosy array should be centered in bigArray
 	 */
-	public ArgosyArray(int bigSize, int unitSize, int reps, boolean isCentered) {
+	public ArgosyArray(PixelAudioMapper mapper, int unitSize, int reps, boolean isCentered) {
+		this.mapper = mapper;
+		int bigSize = mapper.getSize();
 		this.bigArray = new int[bigSize];
 		this.unitSize = unitSize;
 		argosyPattern = new int[argosy55.length];
 		for (int i = 0; i < argosy55.length; i++) {
 			argosyPattern[i] = argosy55[i];
 		}
-		this.animStep = Math.round(this.unitSize / 16.0f);
+		this.animStep = Math.round(this.unitSize / animStepDivisor);
 		this.argosyGap = Math.round((this.argosyGapScale * this.unitSize));
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
@@ -74,24 +81,25 @@ public class ArgosyArray {
 	}
 
 	/**
-	 * @param bigSize       size of the array
+	 * @param mapper		PixelAudioMapper
 	 * @param unitSize      size of a unit of the argosy
 	 * @param reps          number of repetitions of the argosy pattern, pass in 0 for maximum that fit
 	 * @param isCentered    true if argosy array should be centered in bigArray
 	 * @param colors        an array of colors for the argosy patterns
 	 * @param gapColor      a color for the spaces between argosy patterns
 	 * @param gapScale      scaling for number of units in gap between argosies
-   * @param argosy        a pattern of numbers, will be copied to argosyPattern
+	 * @param argosy        a pattern of numbers, will be copied to argosyPattern
 	 */
-	public ArgosyArray(int bigSize, int unitSize, int reps, boolean isCentered,
-			               int[]colors, int gapColor, float gapScale, int[] argosy) {
+	public ArgosyArray(PixelAudioMapper mapper, int unitSize, int reps, boolean isCentered, 
+					   int[] colors, int gapColor, float gapScale, int[] argosy) {
+		int bigSize = mapper.getSize();
 		this.bigArray = new int[bigSize];
 		this.unitSize = unitSize;
-    this.argosyPattern = new int[argosy.length];
-    for (int i = 0; i < argosy.length; i++) {
-      this.argosyPattern[i] = argosy[i];
-    }
-		this.animStep = Math.round(this.unitSize / 16.0f);
+		this.argosyPattern = new int[argosy.length];
+		for (int i = 0; i < argosy.length; i++) {
+			this.argosyPattern[i] = argosy[i];
+		}
+		this.animStep = Math.round(this.unitSize / animStepDivisor);
 		this.argosyGap = Math.round((this.argosyGapScale * this.unitSize));
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
@@ -119,7 +127,8 @@ public class ArgosyArray {
 			argosySize += element;
 		}
 		int maxReps = Math.round(bigSize / (argosySize * unitSize + argosyGap));
-		if (argosyReps > maxReps || argosyReps == 0) argosyReps = maxReps;
+		if (argosyReps > maxReps || argosyReps == 0)
+			argosyReps = maxReps;
 		if (isCentered) {
 			// calculate how many repetitions of argosy + argosy gap fit into the array,
 			// minding that there is one less gap than the number of argosies
@@ -127,100 +136,110 @@ public class ArgosyArray {
 			// margin on either side, to center the argosies in the array
 			// TODO review, revise argosyMargin calculations
 			argosyMargin /= 2;
+		} 
+		else {
+			argosyMargin = 0;
 		}
-		else argosyMargin = 0;
-    argosyIntervals = new int[argosyPattern.length];
-	  for (int i = 0; i < argosyPattern.length; i++) {
-	    argosyIntervals[i] = argosyPattern[i] * unitSize;
-	  }
-	  this.argosyPixelShift = 0;
-	  argosyFill();
+		argosyIntervals = new int[argosyPattern.length];
+		for (int i = 0; i < argosyPattern.length; i++) {
+			argosyIntervals[i] = argosyPattern[i] * unitSize;
+		}
+		this.argosyPixelShift = 0;
+		argosyFill();
 	}
 
 	/**
-	 * Fill the big array with the argosy pattern, called by bigArrayFill.
+	 * Fill the big array with colors from argosyColors following the argosy pattern
+	 * stored in argosyIntervals. 
+	 * TODO it looks like we may need to consider the color fill of pixels in bigArray before it gets filled. 
 	 */
 	public void argosyFill() {
 		int bigSize = this.bigArray.length;
 		int reps = 0;
-    int vi = 0;    // argosyIntervals index
-    int ci = 0;    // argosyColors index
-    int si = 0;    // bigArray index
-    int i = 0;     // local index
-    while (si < bigSize) {
-      for (i = si; i < si + argosyIntervals[vi]; i++) {
-        if (i >= bigSize) break;
-        bigArray[i] = argosyColors[ci];
-      }
-      si = i;
-      ci = (ci + 1) % argosyColors.length;
-      vi = (vi + 1) % argosyIntervals.length;
-      if (vi == 0) {
-        reps++;
-        for (i = si; i < si + argosyGap; i++) {
-          if (i >= bigSize) break;
-          bigArray[i] = argosyGapColor;
-        }
-        si = i;
-      }
-      if (reps == argosyReps) break;
-    }
+		int vi = 0; 	// argosyIntervals index
+		int ci = 0; 	// argosyColors index
+		int si = 0; 	// bigArray index
+		int i = 0; 		// local index
+		while (si < bigSize) {
+			for (i = si; i < si + argosyIntervals[vi]; i++) {
+				if (i >= bigSize)
+					break;
+				bigArray[i] = argosyColors[ci];
+			}
+			si = i;
+			ci = (ci + 1) % argosyColors.length;
+			vi = (vi + 1) % argosyIntervals.length;
+			// fill in the argosyGapColor
+			if (vi == 0) {
+				reps++;
+				for (i = si; i < si + argosyGap; i++) {
+					if (i >= bigSize)
+						break;
+					bigArray[i] = argosyGapColor;
+				}
+				si = i;
+			}
+			if (reps == argosyReps)
+				break;
+		}
 	}
-
 
 	/* ----->>> ANIMATION <<<----- */
 
 	/**
 	 * Rotates bigArray left by d values. Uses efficient "Three Rotation" algorithm.
-	 * @param d     number of elements to shift
+	 * 
+	 * @param d number of elements to shift
 	 */
 	public void rotateLeft(int d) {
 		int[] arr = this.bigArray;
-	  if (d < 0) {
-	    d = arr.length - (-d % arr.length);
-	  }
-	  else {
-	    d = d % arr.length;
-	  }
-	  reverseArray(arr, 0, d - 1);
-	  reverseArray(arr, d, arr.length - 1);
-	  reverseArray(arr, 0, arr.length - 1);
-	  if (isCountShift) argosyPixelShift += d;
+		if (d < 0) {
+			d = arr.length - (-d % arr.length);
+		} else {
+			d = d % arr.length;
+		}
+		reverseArray(arr, 0, d - 1);
+		reverseArray(arr, d, arr.length - 1);
+		reverseArray(arr, 0, arr.length - 1);
+		if (isCountShift)
+			argosyPixelShift += d;
 	}
-
 
 	/**
 	 * Reverses an arbitrary subset of an array.
-	 * @param arr   array to modify
-	 * @param l     left bound of subset to reverse
-	 * @param r     right bound of subset to reverse
+	 * 
+	 * @param arr array to modify
+	 * @param l   left bound of subset to reverse
+	 * @param r   right bound of subset to reverse
 	 */
 	private void reverseArray(int[] arr, int l, int r) {
-	  int temp;
-	  while (l < r) {
-	    temp = arr[l];
-	    arr[l] = arr[r];
-	    arr[r] = temp;
-	    l++;
-	    r--;
-	  }
+		int temp;
+		while (l < r) {
+			temp = arr[l];
+			arr[l] = arr[r];
+			arr[r] = temp;
+			l++;
+			r--;
+		}
 	}
 
 	/**
-	 * basic animation, rotate right by animStep pixels, decrement the step counter argosyShiftStep
+	 * basic animation, rotate right by animStep pixels, decrement the step counter
+	 * argosyShiftStep
 	 */
 	public void shiftRight() {
 		rotateLeft(-this.animStep);
 		argosyShiftStep--;
 	}
+
 	/**
-	 * basic animation, rotate left by animStep pixels, inccrement the step counter argosyShiftStep
+	 * basic animation, rotate left by animStep pixels, increment the step counter
+	 * argosyShiftStep
 	 */
 	public void shiftLeft() {
 		rotateLeft(this.animStep);
 		argosyShiftStep++;
 	}
-
 
 
 	/**
@@ -245,10 +264,11 @@ public class ArgosyArray {
 
 
 	/* ----->>> GETTERS AND SETTERS <<<----- */
+	
 	/*
 	 * These may have consequences, but implementation will have to wait.
 	 * For the moment, we just set up the array and animate.
-	 * Calling bigArryFill() should reset everything after a change.
+	 * Calling bigArrayFill() should reset everything after a change.
 	 */
 
 	/**
@@ -261,26 +281,23 @@ public class ArgosyArray {
 	 * @return a copy of bigArray
 	 */
 	public int[] getBigArrayCopy() {
-		int[] copy = new int[bigArray.length];
-		for (int i = 0; i < bigArray.length; i++) {
-			copy[i] = bigArray[i];
-		}
-		return copy;
+		return Arrays.copyOf(bigArray, bigArray.length);
 	}
 
-  /**
-   * @param bigArray  the big array to set, must be same length as this.bigArray
-   *                  use at your own risk, for example to load a very big image into the big array
-   */
-  public void setBigArray(int[] bigArray) {
-    if (bigArray.length != this.bigArray.length) {
-      System.out.println("----->>> ERROR : big arrays must both be the same size!");
-      return;
-    }
-   for (int i = 0; i < bigArray.length; i++) {
-     this.bigArray[i] = bigArray[i];
-   }
-  }
+	/**
+	 * @param bigArray the big array to set, must be same length as this.bigArray
+	 *                 use at your own risk, for example to load a very big image
+	 *                 into the big array
+	 */
+	public void setBigArray(int[] bigArray) {
+		if (bigArray.length != this.bigArray.length) {
+			System.out.println("----->>> ERROR : big arrays must both be the same size!");
+			return;
+		}
+		for (int i = 0; i < bigArray.length; i++) {
+			this.bigArray[i] = bigArray[i];
+		}
+	}
 
 	/**
 	 * @return the unitSize
@@ -433,13 +450,14 @@ public class ArgosyArray {
 
 
 	/**
-	 * An L-System generator for Fibonacci trees represented as a sequence of 0s and 1s.
+	 * An L-System generator for Fibonacci trees represented as a sequence of 0s and 1s. 
+	 * There are two generation rules: 0 -> 1; 1 -> 01. The initial state is 0. 
 	 *
 	 * @param depth     depth of iteration of the L-System. A depth of 8 gets you an ArrayList with 34 elements.
 	 * @param verbose   Keep me informed. Or not.
 	 * @return          an ArrayList of String values "1" and "0".
 	 */
-	public ArrayList<String> fibo(int depth, boolean verbose) {
+	public static ArrayList<String> fibo(int depth, boolean verbose) {
 		Lindenmayer lind = new Lindenmayer();
 		lind.put("0", "1");
 		lind.put("1", "01");
@@ -467,7 +485,7 @@ public class ArgosyArray {
 	 * @param verbose   if true, tells the console what's up
 	 * @return          an array of ints determined by a Fibonacci tree generator and your inputs v1 and v2
 	 */
-	public int[] fibonacciPattern(int depth, int v1, int v2, boolean verbose) {
+	public static int[] fibonacciPattern(int depth, int v1, int v2, boolean verbose) {
 		ArrayList<String> buf = fibo(depth, verbose);
 		int[] argo = new int[buf.size()];
 		for (int i = 0; i < argo.length; i++) {
