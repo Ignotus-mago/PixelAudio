@@ -354,13 +354,13 @@ public class WaveSynthBuilder {
 		}
 	}
 	
-	public void muteWaveData(WaveSynth wavesynth, int elem) {
+	public static void muteWaveData(WaveSynth wavesynth, int elem) {
 		if (wavesynth.waveDataList.size() < elem + 1) return;
 		WaveData wd = wavesynth.waveDataList.get(elem);
 		wd.waveState = WaveState.MUTE;
 	}
 	
-	public void unmuteWaveData(WaveSynth wavesynth, int elem) {
+	public static void unmuteWaveData(WaveSynth wavesynth, int elem) {
 		if (wavesynth.waveDataList.size() < elem + 1) return;
 		WaveData wd = wavesynth.waveDataList.get(elem);
 		wd.waveState = WaveState.ACTIVE;
@@ -394,7 +394,7 @@ public class WaveSynthBuilder {
 	 * @param isSolo		if true, set WaveData element to WaveData.WaveState.SOLO
 	 * 						otherwise, set it to WaveData.WaveState.ACTIVE
 	 */
-	public void toggleWDSolo(WaveSynth wavesynth, int elem, boolean isSolo) {
+	public static void toggleWDSolo(WaveSynth wavesynth, int elem, boolean isSolo) {
 		if (wavesynth.waveDataList.size() < elem + 1)
 			return;
 		WaveData currentWD = wavesynth.waveDataList.get(elem);

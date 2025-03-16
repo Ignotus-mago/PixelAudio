@@ -1476,6 +1476,13 @@ public class PixelAudioMapper {
 		 return (argb & 0x00FFFFFF) | (alpha << 24);
 	}
 
+	public static int[] setAlpha(int[] argb, int alpha) {
+		for (int i = 0; i < argb.length; i++) {
+			argb[i] = (argb[i] & 0x00FFFFFF) | (alpha << 24);
+		}
+		return argb;
+	}
+	
 	/**
 	 * Creates a Processing ARGB color from r, g, b, and alpha channel values. Note the order
 	 * of arguments, the same as the Processing color(value1, value2, value3, alpha) method.
@@ -1658,7 +1665,7 @@ public class PixelAudioMapper {
 		int a = Math.round(PixelAudio.map(sample, -1.0f, 1.0f, 0, 255));						// map audio sample to [0, 255]
 		return (a << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF);	// apply to alpha channel
 	}
-
+	
 	public static int applyAll(float sample, int rgb) {
 		sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;			// a precaution, keep values within limits
 		int v = Math.round(PixelAudio.map(sample, -1.0f, 1.0f, 0, 255));			// map audio sample to [0, 255]

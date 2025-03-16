@@ -111,6 +111,7 @@ public class Argosy {
 			this.argosyPattern[i] = pattern[i];
 		}
 		this.animStep = Math.round(this.unitSize / animStepDivisor);
+		if (animStep == 0) animStep = 1;
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
 		this.argosyColors = colors;
@@ -284,7 +285,7 @@ public class Argosy {
 	 */
 
 	/**
-	 * @return argosyArray, but you really should get a copy if you want to do anything with it
+	 * @return argosyArray, not a copy
 	 */
 	public int[] getArgosyArray() {
 		return argosyArray;
