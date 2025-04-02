@@ -76,7 +76,7 @@ public class MultiGen extends PixelMapGen {
 	}
 
 	/**
-	 * Generically-named method that calls the custom coordinate generation method (here, generateZigzagDiagonalCoordinates).
+	 * Generically-named method that calls the custom coordinate generation method (here, generateMultiCoordinates).
 	 * Consider putting additional initializations here, if required by your coordinate generation method,
 	 * rather than in the generate() method, which will then only handle coords initialization and the
 	 * built-in pixelMap and sampleMap initializations.
@@ -142,16 +142,38 @@ public class MultiGen extends PixelMapGen {
 	/* getSampleMap(), get SampleMapCopy(), getCoordinates(), getCoordinatesCopy().         */
 	/*                                                                                      */
 	/* ------------------------------------------------------------------------------------ */
+	
+
+	public int getRows() {
+		return rows;
+	}
+
+
+	public int getColumns() {
+		return columns;
+	}
+
+
+	public ArrayList<PixelMapGen> getGenList() {
+		return genList;
+	}
+
+
+	public ArrayList<int[]> getOffsetList() {
+		return offsetList;
+	}
+	
 
 	/* ------------------------------ HILBERT MULTIGEN BUILDER ------------------------------ */
 	
+	// placeholder
 	public static MultiGen buildHilbertMultigen(int genEdge, int rows, int cols) {
 		/*
 		 * rows even, cols even
 		 * rows odd, cols even
 		 * rows even, cols odd
 		 * rows odd, cols odd
-		 * 
+		 * symmetrical or not
 		 * 
 		 */
 		return null;

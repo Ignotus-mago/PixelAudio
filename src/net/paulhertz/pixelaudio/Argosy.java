@@ -102,6 +102,7 @@ public class Argosy {
 	 */
 	public Argosy(PixelAudioMapper mapper, int unitSize, int reps, boolean isCentered, 
 					   int[] colors, int gapColor, float gapScale, int[] pattern) {
+		this.mapper = mapper;
 		int size = mapper.getSize();
 		this.argosyArray = new int[size];
 		Arrays.fill(argosyArray, bgColor);
@@ -423,6 +424,14 @@ public class Argosy {
 		return argosyReps;
 	}
 
+	
+
+	/**
+	 * @return the PixelAudioMapper associated with this Argosy
+	 */
+	public PixelAudioMapper getMapper() {
+		return mapper;
+	}
 
 	/**
 	 * @return argosyMargin, the left and right margin to argosy patterns in the array,
