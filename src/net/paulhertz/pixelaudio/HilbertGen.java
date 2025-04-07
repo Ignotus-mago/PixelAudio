@@ -133,6 +133,44 @@ public class HilbertGen extends PixelMapGen {
 	/* getSampleMap(), get SampleMapCopy(), getCoordinates(), getCoordinatesCopy().         */
 	/*                                                                                      */
 	/* ------------------------------------------------------------------------------------ */
+	
+	/* ------------------------------ HILBERT MULTIGEN BUILDER ------------------------------ */
+	
+	// placeholder
+	/**
+	 * @param genEdge	number of pixels for the edge of each Hilbert curve, must be a power of 2
+	 * @param rows		number of rows of curves
+	 * @param cols		number of columns of curves
+	 * @return			a MultiGen consisting of rows rows and cols columns of Hilbert curves
+	 */
+	public static MultiGen buildHilbertMultigen(int genEdge, int rows, int cols) {
+		/*
+		 * rows even, cols even
+		 * rows odd, cols even
+		 * rows even, cols odd
+		 * rows odd, cols odd
+		 * symmetrical or not
+		 * 
+		 */
+		if (rows % 2 == 0) {
+			if (cols % 2 == 0) {
+				// even number of rows, even number of columns
+			}
+			else {
+				// even number of rows, odd number of columns
+			}
+		}
+		else {
+			if (cols % 2 == 0) {
+				// odd number of rows, even number of columns
+			}
+			else {
+				// odd number of rows, odd number of columns
+			}
+		}
+		return null;
+	}
+
 
 
 }

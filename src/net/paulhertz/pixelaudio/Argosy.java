@@ -22,6 +22,8 @@ import java.util.Arrays;
  * and assigns it the current color in the argosyColors, which it also steps through. The arrays 
  * do not have to be the same size. 
  * 
+ * TODO implement pixel offset
+ * 
  */
 public class Argosy {
 	/** PixelAudioMapper that provides values for several variables and maps bigArray to bitmaps or audio signals */
@@ -46,6 +48,8 @@ public class Argosy {
 	int argosyGapColor = PixelAudioMapper.composeColor(127, 127, 127, 255);
 	/** how many times to repeat the pattern, 0 to fill array */
 	int argosyReps = 0;
+	/** maximum number of repetitions, used internally */
+	int maxReps;
 	/** margin on either side of the argosy patterns */
 	int argosyMargin;
 	/** current pattern to fill bigArray  */
@@ -62,6 +66,8 @@ public class Argosy {
 	boolean isCountShift = true;
     /** count the number of unit shifts */
     int argosyShiftStep = 0;
+    /** pixel count by which to shift the argosy pixels  at initialization */
+    int argosyOffset = 0;
 
     // an argosy pattern with 55 elements, 89 = (34 * 2 + 21 * 1) units long, derived from a Fibonacci L-system
 	public static final int[] argosy55 = new int[]{ 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
@@ -76,14 +82,14 @@ public class Argosy {
 	 */
 	public Argosy(PixelAudioMapper mapper, int unitSize, int reps, boolean isCentered) {
 		this.mapper = mapper;
-		int size = mapper.getSize();
-		this.argosyArray = new int[size];
-		this.unitSize = unitSize;
 		argosyPattern = new int[argosy55.length];
 		for (int i = 0; i < argosy55.length; i++) {
 			argosyPattern[i] = argosy55[i];
 		}
-		this.animStep = Math.round(this.unitSize / animStepDivisor);
+		int size = mapper.getSize();
+		this.argosyArray = new int[size];
+		this.unitSize = unitSize;
+		this.animStep = (int) Math.ceil(this.unitSize / animStepDivisor);
 		this.argosyGap = Math.round((this.argosyGapScale * this.unitSize));
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
@@ -105,7 +111,6 @@ public class Argosy {
 		this.mapper = mapper;
 		int size = mapper.getSize();
 		this.argosyArray = new int[size];
-		Arrays.fill(argosyArray, bgColor);
 		this.unitSize = unitSize;
 		this.argosyPattern = new int[pattern.length];
 		for (int i = 0; i < pattern.length; i++) {
@@ -118,34 +123,38 @@ public class Argosy {
 		this.argosyColors = colors;
 		this.argosyGapColor = gapColor;
 		this.argosyGapScale = gapScale;
-		this.argosyGap = Math.round((this.argosyGapScale * this.unitSize));
-		this.argosySize = 0;
-		for (int element : argosyPattern) {
-			argosySize += element;
-		}
 		this.initArgosy();
 	}
 
 	/* --------------------------------------------------------------------------- */
 	/*                                                                             */
-	/*    Initialization: call bigArrayFill(() when you change other values that   */
+	/*    Initialization: call argosyFill(() when you change other values that     */
 	/*    affect the ordering of patterns and colors (just about everything).      */
 	/*                                                                             */
 	/* --------------------------------------------------------------------------- */
 
 
 	/**
-	 * Sets up the big array and fills it with colors using the argosy pattern.
+	 * Sets up the argosy array and fills it with colors using the argosy pattern.
 	 */
 	public void initArgosy() {
+		this.argosyGap = Math.round((this.argosyGapScale * this.unitSize));
+		this.argosySize = 0;
+		for (int element : argosyPattern) {
+			argosySize += element;
+		}
+		Arrays.fill(argosyArray, bgColor);
 		int size = this.argosyArray.length;
-		int maxReps = Math.round(size / (argosySize * unitSize + argosyGap));
-		if (argosyReps > maxReps || argosyReps == 0)
-			argosyReps = maxReps;
+		maxReps = Math.round(size / (argosySize * unitSize + argosyGap));
+		// System.out.println("-- max reps: "+ maxReps);
+		if (argosyReps != 0 && argosyReps < maxReps) {
+			maxReps = argosyReps;
+		}
+		// System.out.println("-- max reps: "+ maxReps);
 		if (isCentered) {
 			// calculate how many repetitions of argosy + argosy gap fit into the array,
 			// minding that there is one less gap than the number of argosies
-			argosyMargin = size - (argosyReps * (argosySize * unitSize) + argosyReps * (argosyGap - 1));
+			argosyMargin = size - (maxReps * (argosySize * unitSize) + maxReps * (argosyGap - 1));
 			// margin on either side, to center the argosies in the array
 			// TODO review, revise argosyMargin calculations
 			argosyMargin /= 2;
@@ -193,7 +202,7 @@ public class Argosy {
 				}
 				si = i;
 			}
-			if (reps == argosyReps)
+			if (reps == maxReps)
 				break;
 		}
 	}
@@ -280,9 +289,10 @@ public class Argosy {
 	/* ----->>> GETTERS AND SETTERS <<<----- */
 	
 	/*
-	 * These may have consequences, but implementation will have to wait.
-	 * For the moment, we just set up the array and animate.
-	 * Calling bigArrayFill() should reset everything after a change.
+	 * Where setting a value would change the argosy array, we call initArgosy().
+	 * Of course, this could be left to the user, too, allowing several values to 
+	 * be changes before the call to initArgosy(). 
+	 * 
 	 */
 
 	/**
@@ -299,12 +309,12 @@ public class Argosy {
 	}
 
 	/**
-	 * @param newArgosyArray 	the big array to set, must be same length as this.argosyArray.
+	 * @param newArgosyArray 	the int[] array to set, must be same length as this.argosyArray.
 	 * 
 	 */
 	public void setArgosyArray(int[] newArgosyArray) {
 		if (newArgosyArray.length != this.argosyArray.length) {
-			System.out.println("----->>> ERROR : big arrays must both be the same size!");
+			System.out.println("----->>> ERROR : new argosy array must be the same sizen as the old array!");
 			return;
 		}
 		for (int i = 0; i < newArgosyArray.length; i++) {
@@ -331,6 +341,7 @@ public class Argosy {
 	 */
 	public void setUnitSize(int unitSize) {
 		this.unitSize = unitSize;
+		this.animStep = (int) Math.ceil(this.unitSize / animStepDivisor);
 		initArgosy();
 	}
 
@@ -389,7 +400,7 @@ public class Argosy {
 		return argosyGap;
 	}
 	/**
-	 * Sets argosyGap and triggers a call to bigArrayFill() to reset the pattern in bigArray.
+	 * Sets argosyGap and triggers a call to initArgosy() to reset the pattern in argosyArray.
 	 * Usually it's better to set the argosyGapScale, but if you want a gap that isn't a
 	 * multiple of unitSize, this is the way to do it.
 	 * @param argosyGap
@@ -407,7 +418,7 @@ public class Argosy {
 		return argosyGapColor;
 	}
 	/**
-	 * Sets argosyGapColor and triggers a call to bigArrayFill() to reset the pattern in bigArray.
+	 * Sets argosyGapColor and triggers a call to argosyFill() to reset the pattern in bigArray.
 	 * @param argosyGapColor
 	 */
 	public void setArgosyGapColor(int argosyGapColor) {
@@ -418,10 +429,14 @@ public class Argosy {
 
 	/**
 	 * @return argosyReps, the number of repetitions of the argosy pattern in the array,
-	 * set by bigArrayFill().
+	 * set by argosyFill().
 	 */
 	public int getArgosyReps() {
 		return argosyReps;
+	}
+	public void setArgosyReps(int newReps) {
+		this.argosyReps = newReps;
+		initArgosy();
 	}
 
 	
@@ -435,12 +450,24 @@ public class Argosy {
 
 	/**
 	 * @return argosyMargin, the left and right margin to argosy patterns in the array,
-	 * set by bigArrayFill().
+	 * set by argosyFill().
 	 */
 	public int getArgosyMargin() {
 		return argosyMargin;
 	}
+	
+	public int getArgosyOffset() {
+		return argosyOffset;
+	}
 
+	public void setArgosyOffset(int argosyOffset) {
+		this.argosyOffset = argosyOffset;
+		this.shift(argosyOffset, false);
+	}
+
+	public int getMaxReps() {
+		return maxReps;
+	}
 
 	/**
 	 * @return the argosyPattern, an array with a numeric pattern.
@@ -449,17 +476,19 @@ public class Argosy {
 		return argosyPattern;
 	}
 	/**
-	 * Sets a new argosy pattern and triggers a call to bigArrayFill() to reset the pattern in bigArray.
+	 * Sets a new argosy pattern and triggers a call to argosyFill() to reset the pattern in bigArray.
 	 * @param argosyPattern
 	 */
-	public void setArgosyPattern(int[] argosyPattern) {
-		this.argosyPattern = argosyPattern;
+	public void setArgosyPattern(int[] pattern) {
+		this.argosyPattern = new int[pattern.length];
+		for (int i = 0; i < pattern.length; i++) {
+			this.argosyPattern[i] = pattern[i];
+		}
 		initArgosy();
 	}
 
-
 	/**
-	 * Sets new argosy colors and argosy gap color, triggers a call to bigArrayFill().
+	 * Sets new argosy colors and argosy gap color, triggers a call to argosyFill().
 	 * @param argosyColors
 	 * @param argosyGapColor
 	 */
