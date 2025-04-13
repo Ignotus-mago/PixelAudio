@@ -31,17 +31,17 @@ public class Argosy {
 	/** Array of color values used for animation of PixelScannerINF instances */
 	int[] argosyArray;
 	/** the number of pixels in an argosy unit */
-	int unitSize;
+	int argosyUnitSize;
 	/** number of pixels in a shiftLeft animation Step */
 	int animStep;
 	/** subunit divisor for animStep */
 	float animStepDivisor = 16.0f;
 	/** background color, fills the argosy array before colors are added */
 	int bgColor = PixelAudioMapper.composeColor(0, 0, 0, 0);
-	/** colors for argosy units */
+	/** default colors for argosy units */
 	int[] argosyColors = {PixelAudioMapper.composeColor(255, 255, 255, 255), PixelAudioMapper.composeColor(0, 0, 0, 255) };
 	/** scaling for number of units in gap between argosies */
-	float argosyGapScale = 55.0f;
+	float argosyGapScale = 1.0f;
 	/** number of pixels in the gap between argosy patterns */
 	int argosyGap;
 	/** color of pixels in the gap */
@@ -82,15 +82,16 @@ public class Argosy {
 	 */
 	public Argosy(PixelAudioMapper mapper, int unitSize, int reps, boolean isCentered) {
 		this.mapper = mapper;
+		int size = mapper.getSize();
+		this.argosyArray = new int[size];
+		this.argosyUnitSize = unitSize;
 		argosyPattern = new int[argosy55.length];
 		for (int i = 0; i < argosy55.length; i++) {
 			argosyPattern[i] = argosy55[i];
 		}
-		int size = mapper.getSize();
-		this.argosyArray = new int[size];
-		this.unitSize = unitSize;
-		this.animStep = (int) Math.ceil(this.unitSize / animStepDivisor);
-		this.argosyGap = Math.round((this.argosyGapScale * this.unitSize));
+		this.animStep = (int) Math.round(this.argosyUnitSize / animStepDivisor);
+		if (animStep == 0) animStep = 1;
+		this.argosyGap = Math.round((this.argosyGapScale * this.argosyUnitSize));
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
 		this.initArgosy();
@@ -111,24 +112,57 @@ public class Argosy {
 		this.mapper = mapper;
 		int size = mapper.getSize();
 		this.argosyArray = new int[size];
-		this.unitSize = unitSize;
+		this.argosyUnitSize = unitSize;
 		this.argosyPattern = new int[pattern.length];
 		for (int i = 0; i < pattern.length; i++) {
 			this.argosyPattern[i] = pattern[i];
 		}
-		this.animStep = Math.round(this.unitSize / animStepDivisor);
+		this.animStep = Math.round(this.argosyUnitSize / animStepDivisor);
 		if (animStep == 0) animStep = 1;
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
 		this.argosyColors = colors;
 		this.argosyGapColor = gapColor;
 		this.argosyGapScale = gapScale;
+		this.argosyGap = Math.round((this.argosyGapScale * this.argosyUnitSize));
 		this.initArgosy();
 	}
 
+	/**
+	 * @param mapper		PixelAudioMapper
+	 * @param pattern       a pattern of numbers, will be copied to argosyPattern
+	 * @param unitSize      size of a unit of the argosy
+	 * @param reps          number of repetitions of the argosy pattern, pass in 0 for maximum that fit
+	 * @param isCentered    true if argosy array should be centered in bigArray
+	 * @param colors        an array of colors for the argosy patterns
+	 * @param gap           number of pixels in gap between pattern repeats (argosyGapScale * argosyUnitSize)
+	 * @param gapColor      a color for the spaces between argosy patterns
+	 * @param animStep		number of pixels on each animation step, when calling shiftLeft() or shiftRight()
+	 */
+	public Argosy(PixelAudioMapper mapper, int[] pattern, int unitSize, int reps, boolean isCentered, 
+					   int[] colors, int gap, int gapColor, int animStep) {
+		this.mapper = mapper;
+		int size = mapper.getSize();
+		this.argosyArray = new int[size];
+		this.argosyPattern = new int[pattern.length];
+		for (int i = 0; i < pattern.length; i++) {
+			this.argosyPattern[i] = pattern[i];
+		}
+		this.argosyUnitSize = unitSize;
+		this.argosyReps = reps;
+		this.isCentered = isCentered;
+		this.argosyColors = colors;
+        this.argosyGap = gap;
+		this.argosyGapScale = ((float)this.argosyGap)/this.argosyUnitSize;
+		this.argosyGapColor = gapColor;
+		this.animStep = animStep;
+		this.initArgosy();
+	}
+	
+
 	/* --------------------------------------------------------------------------- */
 	/*                                                                             */
-	/*    Initialization: call argosyFill(() when you change other values that     */
+	/*    Initialization: call initArgosy(() when you change other values that     */
 	/*    affect the ordering of patterns and colors (just about everything).      */
 	/*                                                                             */
 	/* --------------------------------------------------------------------------- */
@@ -138,14 +172,14 @@ public class Argosy {
 	 * Sets up the argosy array and fills it with colors using the argosy pattern.
 	 */
 	public void initArgosy() {
-		this.argosyGap = Math.round((this.argosyGapScale * this.unitSize));
+		// determine the number of units in a single argosy pattern
 		this.argosySize = 0;
 		for (int element : argosyPattern) {
 			argosySize += element;
 		}
 		Arrays.fill(argosyArray, bgColor);
 		int size = this.argosyArray.length;
-		maxReps = Math.round(size / (argosySize * unitSize + argosyGap));
+		maxReps = Math.round(size / (argosySize * argosyUnitSize + argosyGap));
 		// System.out.println("-- max reps: "+ maxReps);
 		if (argosyReps != 0 && argosyReps < maxReps) {
 			maxReps = argosyReps;
@@ -154,7 +188,7 @@ public class Argosy {
 		if (isCentered) {
 			// calculate how many repetitions of argosy + argosy gap fit into the array,
 			// minding that there is one less gap than the number of argosies
-			argosyMargin = size - (maxReps * (argosySize * unitSize) + maxReps * (argosyGap - 1));
+			argosyMargin = size - (maxReps * (argosySize * argosyUnitSize) + maxReps * (argosyGap - 1));
 			// margin on either side, to center the argosies in the array
 			// TODO review, revise argosyMargin calculations
 			argosyMargin /= 2;
@@ -162,37 +196,40 @@ public class Argosy {
 		else {
 			argosyMargin = 0;
 		}
+		// calculate the number of pixels in each argosy element
 		argosyIntervals = new int[argosyPattern.length];
 		for (int i = 0; i < argosyPattern.length; i++) {
-			argosyIntervals[i] = argosyPattern[i] * unitSize;
+			argosyIntervals[i] = argosyPattern[i] * argosyUnitSize;
 		}
 		this.argosyPixelShift = 0;
 		argosyFill();
 	}
 
 	/**
-	 * Fill the big array with colors from argosyColors following the argosy pattern
-	 * stored in argosyIntervals. 
-	 * TODO it looks like we may need to consider the color fill of pixels in bigArray before it gets filled. 
+	 * Fills <code>argosyArray</code> with colors from argosyColors following the argosy pattern
+	 * stored in argosyIntervals. Tbis method is generally called from initArgosy(), which fills
+	 * argosyArray with the bgColor pixels. 
 	 */
 	public void argosyFill() {
 		int size = this.argosyArray.length;
 		int reps = 0;
 		int vi = 0; 	// argosyIntervals index
 		int ci = 0; 	// argosyColors index
-		int si = 0; 	// bigArray index
+		int si = 0; 	// argosyArray index
 		int i = 0; 		// local index
 		if (isCentered) si += argosyMargin;
 		while (si < size) {
+			// fill in one color element
 			for (i = si; i < si + argosyIntervals[vi]; i++) {
 				if (i >= size)
 					break;
 				argosyArray[i] = argosyColors[ci];
 			}
+			// increment counter variables
 			si = i;
 			ci = (ci + 1) % argosyColors.length;
 			vi = (vi + 1) % argosyIntervals.length;
-			// fill in the argosyGapColor
+			// fill in the argosyGapColor if we hit the end of the argosyIntervals array (vi == 0)
 			if (vi == 0) {
 				reps++;
 				for (i = si; i < si + argosyGap; i++) {
@@ -224,8 +261,10 @@ public class Argosy {
 		reverseArray(arr, 0, d - 1);
 		reverseArray(arr, d, arr.length - 1);
 		reverseArray(arr, 0, arr.length - 1);
-		if (isCountShift)
+		if (isCountShift) {
 			argosyPixelShift += d;
+			argosyPixelShift %= mapper.getSize();
+		}
 	}
 
 	/**
@@ -271,10 +310,21 @@ public class Argosy {
 	public int getArgosyPixelShift() {
 		return argosyPixelShift;
 	}
+	
+	public void setArgosyPixelShift(int newShift) {
+		this.argosyPixelShift = newShift;
+	}
+
+	public void zeroArgosyPixelShift() {
+		setArgosyPixelShift(0);
+	}
 
 	/**
 	 * Shifts left by a specified number of pixels, summing them to argosyPixelShift
-	 * if isCounted is true.
+	 * if isCounted is true. This is the most flexible animation method with animation
+	 * steps set externally. The other methods, shiftLeft() and shiftRight(), use
+	 * this.animStep to determine pixel shift. 
+	 *  
 	 * @param pixelShift
 	 * @param isCounted
 	 */
@@ -314,7 +364,7 @@ public class Argosy {
 	 */
 	public void setArgosyArray(int[] newArgosyArray) {
 		if (newArgosyArray.length != this.argosyArray.length) {
-			System.out.println("----->>> ERROR : new argosy array must be the same sizen as the old array!");
+			System.out.println("----->>> ERROR : new argosy array must be the same size as the old array!");
 			return;
 		}
 		for (int i = 0; i < newArgosyArray.length; i++) {
@@ -333,15 +383,16 @@ public class Argosy {
 	 * @return the unitSize
 	 */
 	public int getUnitSize() {
-		return unitSize;
+		return argosyUnitSize;
 	}
 	/**
 	 * Sets unitSize and triggers a call to initArgosy() to reset the pattern in argosyArray.
 	 * @param unitSize the new unitSize
 	 */
 	public void setUnitSize(int unitSize) {
-		this.unitSize = unitSize;
-		this.animStep = (int) Math.ceil(this.unitSize / animStepDivisor);
+		this.argosyUnitSize = unitSize;
+		this.animStep = Math.round(this.argosyUnitSize / animStepDivisor);
+		if (animStep == 0) animStep = 1;
 		initArgosy();
 	}
 
@@ -389,6 +440,7 @@ public class Argosy {
 	 */
 	public void setArgosyGapScale(float argosyGapScale) {
 		this.argosyGapScale = argosyGapScale;
+		this.argosyGap = Math.round((this.argosyGapScale * this.argosyUnitSize));
 		initArgosy();
 	}
 
@@ -407,6 +459,7 @@ public class Argosy {
 	 */
 	public void setArgosyGap(int argosyGap) {
 		this.argosyGap = argosyGap;
+		this.argosyGapScale = ((float)this.argosyGap)/this.argosyUnitSize;
 		initArgosy();
 	}
 
