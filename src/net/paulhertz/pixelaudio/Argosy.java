@@ -33,7 +33,7 @@ public class Argosy {
 	/** the number of pixels in an argosy unit */
 	int argosyUnitSize;
 	/** number of pixels in a shiftLeft animation Step */
-	int animStep;
+	int argosyStep;
 	/** subunit divisor for animStep */
 	float animStepDivisor = 16.0f;
 	/** background color, fills the argosy array before colors are added */
@@ -89,8 +89,8 @@ public class Argosy {
 		for (int i = 0; i < argosy55.length; i++) {
 			argosyPattern[i] = argosy55[i];
 		}
-		this.animStep = (int) Math.round(this.argosyUnitSize / animStepDivisor);
-		if (animStep == 0) animStep = 1;
+		this.argosyStep = (int) Math.round(this.argosyUnitSize / animStepDivisor);
+		if (argosyStep == 0) argosyStep = 1;
 		this.argosyGap = Math.round((this.argosyGapScale * this.argosyUnitSize));
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
@@ -117,8 +117,8 @@ public class Argosy {
 		for (int i = 0; i < pattern.length; i++) {
 			this.argosyPattern[i] = pattern[i];
 		}
-		this.animStep = Math.round(this.argosyUnitSize / animStepDivisor);
-		if (animStep == 0) animStep = 1;
+		this.argosyStep = Math.round(this.argosyUnitSize / animStepDivisor);
+		if (argosyStep == 0) argosyStep = 1;
 		this.argosyReps = reps;
 		this.isCentered = isCentered;
 		this.argosyColors = colors;
@@ -155,7 +155,7 @@ public class Argosy {
         this.argosyGap = gap;
 		this.argosyGapScale = ((float)this.argosyGap)/this.argosyUnitSize;
 		this.argosyGapColor = gapColor;
-		this.animStep = animStep;
+		this.argosyStep = animStep;
 		this.initArgosy();
 	}
 	
@@ -290,7 +290,7 @@ public class Argosy {
 	 * argosyShiftStep
 	 */
 	public void shiftRight() {
-		rotateLeft(-this.animStep);
+		rotateLeft(-this.argosyStep);
 		argosyShiftStep--;
 	}
 
@@ -299,7 +299,7 @@ public class Argosy {
 	 * argosyShiftStep
 	 */
 	public void shiftLeft() {
-		rotateLeft(this.animStep);
+		rotateLeft(this.argosyStep);
 		argosyShiftStep++;
 	}
 
@@ -391,8 +391,8 @@ public class Argosy {
 	 */
 	public void setUnitSize(int unitSize) {
 		this.argosyUnitSize = unitSize;
-		this.animStep = Math.round(this.argosyUnitSize / animStepDivisor);
-		if (animStep == 0) animStep = 1;
+		this.argosyStep = Math.round(this.argosyUnitSize / animStepDivisor);
+		if (argosyStep == 0) argosyStep = 1;
 		initArgosy();
 	}
 
@@ -400,15 +400,15 @@ public class Argosy {
 	/**
 	 * @return the animStep, number of pixels to shift in an animation
 	 */
-	public int getAnimStep() {
-		return animStep;
+	public int getArgosyStep() {
+		return argosyStep;
 	}
 	/**
 	 * Set the animStep, with no side effects (but animation calls will use the new value)
 	 * @param animStep
 	 */
-	public void setAnimStep(int animStep) {
-		this.animStep = animStep;
+	public void setArgosyStep(int argoStep) {
+		this.argosyStep = argoStep;
 	}
 
 
