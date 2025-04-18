@@ -47,6 +47,11 @@ public class HilbertGen extends PixelMapGen {
 
 	@Override
 	public boolean validate(int width, int height) {
+		return HilbertGen.prevalidate(width, height);
+	}
+	
+	// static version of validate
+	public static boolean prevalidate(int width, int height) {
 		if (width < 2) {
 			System.out.println("HilbertGen Error: 2 is the minimum value for width and height, 1 is the minimum value for depth.");
 			return false;
@@ -141,9 +146,13 @@ public class HilbertGen extends PixelMapGen {
 	 * @param genEdge	number of pixels for the edge of each Hilbert curve, must be a power of 2
 	 * @param rows		number of rows of curves
 	 * @param cols		number of columns of curves
+	 * @param isLoopRequested	caller requested a looping path, possible only if rows or cols are an even number
 	 * @return			a MultiGen consisting of rows rows and cols columns of Hilbert curves
+	 *                  check for null return value
 	 */
-	public static MultiGen buildHilbertMultigen(int genEdge, int rows, int cols) {
+	public static MultiGen buildHilbertMultigenLoop(int genEdge, int rows, int cols, boolean isLoopRequested) {
+		// prevalidate here, maybe throw appropriate error instead of returning null
+		if (!HilbertGen.prevalidate(genEdge, genEdge)) return null;
 		/*
 		 * rows even, cols even
 		 * rows odd, cols even
@@ -155,17 +164,35 @@ public class HilbertGen extends PixelMapGen {
 		if (rows % 2 == 0) {
 			if (cols % 2 == 0) {
 				// even number of rows, even number of columns
+				if (isLoopRequested) {
+					
+				}
+				else {
+					
+				}
 			}
 			else {
 				// even number of rows, odd number of columns
+				if (isLoopRequested) {
+					
+				}
+				else {
+					
+				}
 			}
 		}
 		else {
 			if (cols % 2 == 0) {
 				// odd number of rows, even number of columns
+				if (isLoopRequested) {
+					
+				}
+				else {
+					
+				}
 			}
 			else {
-				// odd number of rows, odd number of columns
+				// odd number of rows, odd number of columns, no loop is possible
 			}
 		}
 		return null;
