@@ -118,7 +118,7 @@ public abstract class PixelMapGen {
 	 */
 	public abstract String describe();
 
-
+	
 	/**
 	 * @param 	width
 	 * @param 	height
