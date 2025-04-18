@@ -67,7 +67,7 @@ public class DiagonalZigzagGen extends PixelMapGen {
 
 	/**
 	 * The coordinate generation method for this class. Both lookup tables are derived from the coordinate list created
-	 * by this method.
+	 * by this method. The initial step in the algorithm is down (y--). 
 	 *
 	 * @param   width		width of the 2D bitmap pixel array
 	 * @param   height		height of the 2D bitmap pixel array
@@ -76,7 +76,7 @@ public class DiagonalZigzagGen extends PixelMapGen {
 	private ArrayList<int[]> generateZigzagDiagonalCoordinates(int width, int height) {
 		ArrayList<int[]> coordinates = new ArrayList<int[]>(width * height);
 		int x = 0, y = 0;
-		boolean movingUp = false;
+		boolean movingUp = true;
 		while (x < width && y < height) {
 			coordinates.add(new int[]{x, y});
 			if (movingUp) {                  	// movingUp is true, diagonal step is x++, y--
