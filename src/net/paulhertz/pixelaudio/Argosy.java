@@ -23,7 +23,8 @@ import java.util.Arrays;
  * do not have to be the same size. 
  * 
  * TODO implement pixel offset
- * 
+ * TODO interpolating version of Argosy patterns
+ * TODO dynamic functional version of patterns and other parameters
  */
 public class Argosy {
 	/** PixelAudioMapper that provides values for several variables and maps bigArray to bitmaps or audio signals */
