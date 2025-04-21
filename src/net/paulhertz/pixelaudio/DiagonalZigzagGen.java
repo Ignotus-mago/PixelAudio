@@ -76,7 +76,7 @@ public class DiagonalZigzagGen extends PixelMapGen {
 	private ArrayList<int[]> generateZigzagDiagonalCoordinates(int width, int height) {
 		ArrayList<int[]> coordinates = new ArrayList<int[]>(width * height);
 		int x = 0, y = 0;
-		boolean movingUp = true;
+		boolean movingUp = false;
 		while (x < width && y < height) {
 			coordinates.add(new int[]{x, y});
 			if (movingUp) {                  	// movingUp is true, diagonal step is x++, y--

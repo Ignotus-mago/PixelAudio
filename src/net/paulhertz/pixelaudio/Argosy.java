@@ -173,6 +173,8 @@ public class Argosy {
 	 * Sets up the argosy array and fills it with colors using the argosy pattern.
 	 */
 	public void initArgosy() {
+		this.argosyStep = Math.round(this.argosyUnitSize / animStepDivisor);
+		if (argosyStep == 0) argosyStep = 1;
 		// determine the number of units in a single argosy pattern
 		this.argosySize = 0;
 		for (int element : argosyPattern) {
@@ -393,6 +395,7 @@ public class Argosy {
 	public void setUnitSize(int unitSize) {
 		this.argosyUnitSize = unitSize;
 		this.argosyStep = Math.round(this.argosyUnitSize / animStepDivisor);
+		// System.out.println("--->> argosyStep = "+ argosyStep);
 		if (argosyStep == 0) argosyStep = 1;
 		initArgosy();
 	}
