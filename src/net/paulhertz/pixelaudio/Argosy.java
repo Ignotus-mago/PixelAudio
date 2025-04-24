@@ -25,6 +25,8 @@ import java.util.Arrays;
  * TODO implement pixel offset
  * TODO interpolating version of Argosy patterns
  * TODO dynamic functional version of patterns and other parameters
+ * TODO perhaps filling should permit one less gap than repetitions of pattern -- the first and last pattern will abut
+ *      more precisely, we should provide conditions for partial filling (but not in version 1).
  */
 public class Argosy {
 	/** PixelAudioMapper that provides values for several variables and maps bigArray to bitmaps or audio signals */
