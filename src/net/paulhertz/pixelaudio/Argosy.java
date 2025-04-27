@@ -376,6 +376,16 @@ public class Argosy {
 			this.argosyArray[i] = newArgosyArray[i];
 		}
 	}
+	
+	public float[] getArgosySignal() {
+		float[] signal = new float[argosyArray.length];
+		return PixelAudioMapper.pullPixelAudio(argosyArray, signal, PixelAudioMapper.ChannelNames.L);
+	}
+
+	public float[] getArgosySignal(PixelAudioMapper.ChannelNames chan) {
+		float[] signal = new float[argosyArray.length];
+		return PixelAudioMapper.pullPixelAudio(argosyArray, signal, chan);
+	}
 
 	/**
 	 * @return argosySize, the number of argsoyUnits in argosyPattern
