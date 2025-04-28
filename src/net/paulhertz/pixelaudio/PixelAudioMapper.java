@@ -480,30 +480,28 @@ public class PixelAudioMapper {
 
 	/* TODO do we replace all identical calls to map() in transcode with calls to transcode?
 	 * This would seem to be a Good Idea, because then we can override transcode in child classes
-	 * to get new behavior across all methods that involve transcoding.
+	 * to get new behavior across all methods that involve transcoding. IN PROGRESS
 	 */
 
-	 /**
+    /**
 	 * Converts a float value in the range  [-1.0, 1.0] to an int value in the range [0..255].
 	 *
 	 * @param val	a float value in the range  [-1.0, 1.0]
 	 * @return		an int mapped to the range [0..255]
 	 */
 	public int transcode(float val) {
-		 float vout = PixelAudio.map(val, -1.0f, 1.0f, 0, 255);
-		 return Math.round(vout);
-	 }
+	    return (int)(127.5f * (val + 1.0f) + 0.5f); 
+	}
 
-	 /**
+	/**
 	 * Converts an int value in the range [0..255] to a float value in the range [-1.0, 1.0].
 	 *
-	 * @param val	an int int he range [0..255]
+	 * @param val	an int in the range [0..255]
 	 * @return		a float mapped to the range [-1.0, 1.0]
 	 */
 	public float transcode(int val) {
-		 float vout = PixelAudio.map(val, 0, 255, -1.0f, 1.0f);
-		 return vout;
-	 }
+	    return (val / 127.5f) - 1.0f;
+	}
 
 	
 	// ------------- PIXEL AND SAMPLE LOOKUP ------------- //
