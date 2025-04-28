@@ -387,6 +387,24 @@ public class Argosy {
 		return PixelAudioMapper.pullPixelAudio(argosyArray, signal, chan);
 	}
 
+	public float[] getArgosySignal(float scale) {
+		float[] signal = new float[argosyArray.length];
+		PixelAudioMapper.pullPixelAudio(argosyArray, signal, PixelAudioMapper.ChannelNames.L);
+		for (int i = 0; i < signal.length; i++) {
+			signal[i] *= scale;
+		}
+		return signal;
+	}
+
+	public float[] getArgosySignal(PixelAudioMapper.ChannelNames chan, float scale) {
+		float[] signal = new float[argosyArray.length];
+		PixelAudioMapper.pullPixelAudio(argosyArray, signal, chan);
+		for (int i = 0; i < signal.length; i++) {
+			signal[i] *= scale;
+		}
+		return signal;
+	}
+
 	/**
 	 * @return argosySize, the number of argsoyUnits in argosyPattern
 	 */
