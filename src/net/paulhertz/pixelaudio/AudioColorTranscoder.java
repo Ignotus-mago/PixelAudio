@@ -26,13 +26,19 @@ public class AudioColorTranscoder {
         this.maxColor = maxColor;
     }
 
-    public int transcode(float val) {
+    public int transcodeFloat(float val) {
         val = clamp(val, minAudio, maxAudio);
         float norm = (val - minAudio) / (maxAudio - minAudio); // normalize to [0,1]
         return Math.round(norm * (maxColor - minColor) + minColor);
     }
 
-    public float inverseTranscode(int val) {
+    public float transcodeInt(int val) {
+        val = clamp(val, minColor, maxColor);
+        float norm = (val - minColor) / (float)(maxColor - minColor); // normalize to [0,1]
+        return norm * (maxAudio - minAudio) + minAudio;
+    }
+
+    public float transcodeIntF(float val) {
         val = clamp(val, minColor, maxColor);
         float norm = (val - minColor) / (float)(maxColor - minColor); // normalize to [0,1]
         return norm * (maxAudio - minAudio) + minAudio;
