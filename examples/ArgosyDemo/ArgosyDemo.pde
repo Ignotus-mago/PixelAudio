@@ -1,12 +1,14 @@
 
 /**
- * ArgosyDemo shows some features of the Argosy class.
+ * ArgosyDemo shows some features of the Argosy class. 
+ * See ArgosyMixer, a complete application with GUI, for more about the Argosy class.
+ *
  * The Argosy class create pixel patterns ordered by the signal path of a PixelAudioMapper.
  * Argosy patterns consist of an array of numbers, an array of colors, a gap between patterns
  * and a color for the gap. Each number in the pattern array determines the length of a run
  * of pixels in a color specified by the color array. The pattern numbers are scaled by the 
  * argosyGapScale value and the argosyUnitSize value. Experiment with changing them to see 
- * what happens. 
+ * what happens (or try ArgosyMixer to experiment using a graphical user interface). 
  * 
  * Press 'l' to shift pattern left by argosy.animStep pixels.
  * Press 'r' to shift pattern right by argosy.animStep pixels.
