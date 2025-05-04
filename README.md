@@ -26,6 +26,6 @@ At this point (January 8, 2025) PixelAudio is at the beta testing stage, functio
 
 ### Release Notes
 
-The first beta release of the PixelAudio library happened November 9, 2024, at [Experimental Sound Studio](https://ess.org/) in Chicago, where I was the Spain-Chicago artist in residence. A new workshop and beta release arrived in January, 2025. I hope to get the publication release, version 1.0, out in March 2025, when Christopher Walczak and I are presenting music and animation that uses PixelAudio in performance at the Outside the Box New Music Festival in Carbondale, Illinois. 
+The first beta release of the PixelAudio library happened November 9, 2024, at [Experimental Sound Studio](https://ess.org/) in Chicago, where I was the Spain-Chicago artist in residence. A new workshop and beta release arrived in January, 2025. I hope to get the publication release, version 1.0, out in late May 2025. In July I will be presenting PixelAudio at the [EVA London Conference](http://www.eva-london.org/). 
 
 
