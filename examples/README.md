@@ -1,4 +1,4 @@
-As of March 2, 2025, we have the following examples:
+As of May 4, 2025, we have the following examples:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
