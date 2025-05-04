@@ -71,6 +71,19 @@ public abstract class PixelMapGen {
 	public AffineTransformType transformType = AffineTransformType.NADA;
 	public final static String description = "Declare the description variable in your class and describe your PixelMapGen.";
 
+	// short names for transforms from
+	// public enum AffineTransformType {ROT90CW, ROT90CCW, ROT180, FLIPX, FLIPX90, FLIPX90CCW, FLIPY, NADA};
+	public static AffineTransformType     r90cw     = AffineTransformType.ROT90;
+	public static AffineTransformType     r90ccw    = AffineTransformType.ROT90CCW;
+	public static AffineTransformType     r180      = AffineTransformType.ROT180;
+	public static AffineTransformType     flipx     = AffineTransformType.FLIPX;
+	public static AffineTransformType     fxr90cw   = AffineTransformType.FLIPX90;
+	public static AffineTransformType     fxr90ccw  = AffineTransformType.FLIPX90CCW;
+	public static AffineTransformType     flipy     = AffineTransformType.FLIPY;
+	public static AffineTransformType     nada      = AffineTransformType.NADA;
+	// transArray is useful for random selections
+	public static AffineTransformType[]   transArray = {r90cw, r90ccw, r180, flipx, fxr90cw, fxr90ccw, flipy, nada}; 
+
 
 	/**
 	 * Constructor for classes that extend PixelMapGen. You will need to create you own constructor

@@ -10,9 +10,8 @@ package net.paulhertz.pixelaudio;
  *   FLIPX90CCW   reflect vertically, then rotate 90 counterclockwise = reflect on the primary diagonal, upper right to lower left, primary diagonal does not change
  *   FLIPY        reflect horizontally, x coordinates do not change
  *   NADA         no operation
- *   </pre>
+ *  </pre>
  *   
  *   @see BitmapTransform
- *   @see ImageTransform
  */
 public enum AffineTransformType {ROT90, ROT90CCW, ROT180, FLIPX, FLIPX90, FLIPX90CCW, FLIPY, NADA}

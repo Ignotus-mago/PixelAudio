@@ -35,7 +35,7 @@ import java.util.Arrays;
  * </p>
  * <p>
  * Some typical uses for this class include:
- * <ul>
+ *   <ul>
  * 	  <li> Reading an audio file or audio stream into the signal array and then writing its
  *		   values, transcoded to RGB integer values, to the image array for display as a visualization.</li>
  *	  <li> Using interaction with an image to trigger audio events at precise locations in a signal.</li>
@@ -43,7 +43,8 @@ import java.util.Arrays;
  *    <li> Running image algorithms on a signal-as-image and writing the results back to the signal.</li>
  *    <li> Synthesizing image data and audio and then animating the data while interactively
  *         triggering audio events. </li>
- *  </p>
+ *  </ul>
+ *</p>
  *
  * <h2>DATA REPRESENTATION</h2>
  * <p>
@@ -165,7 +166,7 @@ import java.util.Arrays;
  * peelPixelsAsFloat, and peelSamplesAsInt.
  * </p>
  *
- * <h2>ARRAY SHIFTING<?h2>
+ * <h2>ARRAY SHIFTING</h2>
  * <p>
  * Standard operations we can perform with the signal array:
  * <pre>

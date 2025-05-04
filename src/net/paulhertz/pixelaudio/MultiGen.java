@@ -7,17 +7,22 @@ public class MultiGen extends PixelMapGen {
 	public int columns = 0;
 	public ArrayList<PixelMapGen> genList;
 	public ArrayList<int[]> offsetList = null;
-	public final static String description = "A PixelMapGen that creates a continuous signal over multiple PixelMapGens.";
+	public final static String description = "A PixelMapGen that creates a single signal path over multiple PixelMapGens.";
 
 	
 	// we'll create two DiagonalZigzagGens by default.
-	public MultiGen(int width, int height, AffineTransformType type) {
-		super(width, height, type);
+	/**
+	 * @param width
+	 * @param height
+	 * @param transform
+	 */
+	public MultiGen(int width, int height, AffineTransformType transform) {
+		super(width, height, transform);
 		genList = new ArrayList<PixelMapGen>();
 		offsetList = new ArrayList<int[]>();
 		int halfway = 0;
-		boolean tall = (width < height);
-		if (tall) {
+		boolean isTall = (width < height);
+		if (isTall) {
 			halfway = height / 2;
 			genList.add(new DiagonalZigzagGen(width, halfway));
 			offsetList.add(new int[]{0, 0});
@@ -163,5 +168,45 @@ public class MultiGen extends PixelMapGen {
 		return offsetList;
 	}
 	
+	
+	/**
+	 * This method creates a MultiGen consisting of a mix of zigzag and Hilbert curves
+	 * in 6 columns and 4 rows arranged to provide a continuous loop.
+	 * 
+	 * @param genW
+	 * @param genH
+	 * @return
+	 */
+	public static MultiGen hilbertZigzagLoop6x4(int genW, int genH) {
+	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+		ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+		// list of x,y coordinates for placing gens from genList
+		ArrayList<int[]> offsetList = new ArrayList<int[]>(); 		
+		int[][] locs = {{0,0}, {0,1}, {0,2}, {0,3}, {1,3}, {1,2}, {2,2}, {2,3}, 
+						{3,3}, {3,2}, {4,2}, {4,3}, {5,3}, {5,2}, {5,1}, {5,0},
+						{4,0}, {4,1}, {3,1}, {3,0}, {2,0}, {2,1}, {1,1}, {1,0}};
+		AffineTransformType[] trans = {r90cw, r90cw, nada, r90cw, r90ccw, fxr90cw, nada, r90cw, 
+				                       r90ccw, r90ccw, fxr90ccw, nada, r90ccw, r90ccw, r180, r90ccw, 
+				                       r90cw, fxr90ccw, r180, r90ccw, r90cw, r90cw, fxr90cw, r180};
+		char[] cues = {'H','D','D','H','D','H','D','H', 
+				       'H','D','H','D','H','D','D','H',
+				       'D','H','D','H','H','D','H','D'}; 
+		int i = 0;
+		for (AffineTransformType att: trans) {
+			int x = locs[i][0] * genW;
+			int y = locs[i][1] * genH;
+			offsetList.add(new int[] {x,y});
+			// println("locs: ", locs[i][0], locs[i][1]);
+			if (cues[i] == 'H') {
+				genList.add(new HilbertGen(genW, genH, att));		
+			}
+			else {
+				genList.add(new DiagonalZigzagGen(genW, genH, att));		
+			}
+			i++;
+		}
+		return new MultiGen(6 * genW, 4 * genH, offsetList, genList);
+	}
+
 
 }

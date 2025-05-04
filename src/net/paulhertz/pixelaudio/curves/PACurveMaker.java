@@ -255,7 +255,7 @@ public class PACurveMaker {
 	}
 
 	public void setEpsilon(float epsilon) {
-		this.epsilon = (float) Math.abs(epsilon);
+		this.epsilon = Math.abs(epsilon);
 		if (epsilon < 1.0f) epsilon = 1.0f;
 		this.epsilon = epsilon;
 	}

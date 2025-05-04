@@ -14,7 +14,8 @@ public class HilbertGen extends PixelMapGen {
 
 	public final static String description = "HilbertGen generates a Hilbert curve over a square bitmap starting at (0,0) and ending at (width-1, 0). "
 			   + "Width and height must be equal powers of 2. You can also call HilbertGen(int depth) and width and height will equal Math.pow(2, depth). ";
-
+	
+	
 	public HilbertGen(int width, int height, AffineTransformType type) {
 		super(width, height, type);								// necessary first call
 		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// calculate depth before we generate the Hilbert curve
@@ -139,7 +140,39 @@ public class HilbertGen extends PixelMapGen {
 	/*                                                                                      */
 	/* ------------------------------------------------------------------------------------ */
 	
-	/* ------------------------------ HILBERT MULTIGEN BUILDER ------------------------------ */
+	
+	
+	/* ------------------------------ HILBERT MULTIGEN BUILDERS ------------------------------
+	
+	 * MultiGens create a PixelMapGen from from a list of PixelMapGen 
+	 * objects (genList) and coordinate points (offsetList) where they 
+	 * will be displayed. A MultiGen creates a single signal path over all
+	 * the PixelMapGen objects. The path may be *continuous*, which is to say that
+	 * the path through each PixelMapGen object ("gen" for short) only has to step
+	 * one pixel up, down, left, or right to connect to the next gen. It may even
+	 * create a loop, where the last pixel in the path is one step away from the
+	 * first pixel. This is reflected in the naming conventions. 
+	 * 
+	 * In the method names, "ortho" refers to gens that are aligned in rows (or
+	 * columns) where each new row begins one unit down from the previous row,
+	 * always adding new gens in the same direction. In the "bou" methods 
+	 * (named for boustrophodon, a method of writing text in alternating directions), 
+	 * each successive row or column goes in the opposite direction from the previous
+	 * one. The bou methods may provide continuous paths, the ortho methods are
+	 * inherently discontinous, like row major bitmaps or video scanlines. 
+	 * 
+	 * Looping methods are are almost always more complex than bou and necessarily 
+	 * more complex than ortho methods. Like the Hilbert curve, they involve
+	 * changes in direction reminiscent of folding. Looping methods often have
+	 * constraints on the numbers of rows and columns that can produce a loop.
+	 * The constraints arise from the connectivity offered by the different
+	 * PixelMapGen child classes: Hilbert gens have connections at two adjacent
+	 * corners, DiagonalZigzag gens have connections at opposite corners. 
+	 * Moore gens are loops to begin with, and have no connections, but are
+	 * good for very symmetrical pattern-making.  
+
+	---------------------------------------------------------------------------------------- */
+	
 	
 	// placeholder
 	/**
@@ -150,7 +183,7 @@ public class HilbertGen extends PixelMapGen {
 	 * @return			a MultiGen consisting of rows rows and cols columns of Hilbert curves
 	 *                  check for null return value
 	 */
-	public static MultiGen buildHilbertMultigenLoop(int genEdge, int rows, int cols, boolean isLoopRequested) {
+	public static MultiGen hilbertMultigenLoop(int genEdge, int rows, int cols, boolean isLoopRequested) {
 		// prevalidate here, maybe throw appropriate error instead of returning null
 		if (!HilbertGen.prevalidate(genEdge, genEdge)) return null;
 		/*
@@ -198,6 +231,39 @@ public class HilbertGen extends PixelMapGen {
 		return null;
 	}
 
+	/**
+	 * Generates a looping fractal signal path consisting of 6 HilbertGens,
+	 * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
+	 * This particular MultiGen configuration was used so extensively in
+	 * my sample code that I've given it its own method. 
+	 * 
+	 * Note that genH must equal genW and both must be powers of 2. For the 
+	 * image size we're using in this example, genW = image width / 3 and 
+	 * genH = image height / 2.
+	 * 
+	 * @param genW    width of each HilbertGen 
+	 * @param genH    height of each HilbertGen
+	 * @return
+	 */
+	public MultiGen hilbertLoop3x2(int genW, int genH) {
+	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+		ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+		// list of x,y coordinates for placing gens from genList
+		ArrayList<int[]> offsetList = new ArrayList<int[]>(); 		
+		genList.add(new HilbertGen(genW, genH, fxr90cw));
+		offsetList.add(new int[] { 0, 0 });
+		genList.add(new HilbertGen(genW, genH, nada));
+		offsetList.add(new int[] { genW, 0 });
+		genList.add(new HilbertGen(genW, genH, fxr90ccw));
+		offsetList.add(new int[] { 2 * genW, 0 });
+		genList.add(new HilbertGen(genW, genH, fxr90ccw));
+		offsetList.add(new int[] { 2 * genW, genH });
+		genList.add(new HilbertGen(genW, genH, r180));
+		offsetList.add(new int[] { genW, genH });
+		genList.add(new HilbertGen(genW, genH,fxr90cw));
+		offsetList.add(new int[] { 0, genH });
+		return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
+	}
 
 
 }
