@@ -16,7 +16,7 @@ public class MooreGen extends PixelMapGen {
 	public int depth;
 
 	public final static String description = "MooreGen generates a Moore curve over a square bitmap starting at (width/2 - 1, 0) and ending at (width/2, 0). "
-			   + "Width and height must be equal powers of 2. You can also call MooreGen(int depth) and width and height will equal Math.pow(2, depth). ";
+			   + "\nWidth and height must be equal powers of 2. You can also call MooreGen(int depth) and width and height will equal Math.pow(2, depth). ";
 
 
 	public MooreGen(int width, int height, AffineTransformType type) {

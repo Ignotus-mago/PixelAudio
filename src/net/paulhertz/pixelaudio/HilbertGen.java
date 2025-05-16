@@ -13,7 +13,7 @@ public class HilbertGen extends PixelMapGen {
 	private boolean doXYSwap;
 
 	public final static String description = "HilbertGen generates a Hilbert curve over a square bitmap starting at (0,0) and ending at (width-1, 0). "
-			   + "Width and height must be equal powers of 2. You can also call HilbertGen(int depth) and width and height will equal Math.pow(2, depth). ";
+			   + "\nWidth and height must be equal powers of 2. You can also call HilbertGen(int depth) and width and height will equal Math.pow(2, depth). ";
 	
 	
 	public HilbertGen(int width, int height, AffineTransformType type) {
@@ -79,6 +79,10 @@ public class HilbertGen extends PixelMapGen {
 		return this.generateHilbertCoordinates(this.getSize());
 	}
 
+	/**
+	 * @param n    size of the array of Hilbert curve coordinates, necessarily a power of 4
+	 * @return     an ArrayList of integer pairs {x,y} representing the coordinates of a Hilbert curve
+	 */
 	private ArrayList<int[]> generateHilbertCoordinates(int n) {
 		ArrayList<int[]> coordinates = new ArrayList<>(n);
 		if (n == 4) {
