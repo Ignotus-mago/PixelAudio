@@ -58,7 +58,7 @@ public class RandomContinousGen extends PixelMapGen {
 	 *
 	 */
 	private ArrayList<int[]> generateCoordinates() {
-		return this.generateHamiltonianPath(this.w, this.h, 10000);
+		return this.generateHamiltonianPath(this.w, this.h, 1024);
 	}
 	
 	/**
@@ -86,81 +86,77 @@ public class RandomContinousGen extends PixelMapGen {
 	 * @param height
 	 * @return
 	 */
-	private ArrayList<int[]> generateHamiltonianPath(int width, int height, int limit) {
-	    int tries = 0;
-	    int endX = width - 1;
-	    int endY = 0;
-	    while (tries < limit) {
-	        ArrayList<int[]> path = new ArrayList<>(width * height);
-	        boolean[][] visited = new boolean[height][width];
-	        if (backtrackWarnsdorffWithFixedEnd(0, 0, width, height, visited, path, endX, endY)) {
-	            return path;
-	        }
-	        tries++;
-	    }
+	public ArrayList<int[]> generateHamiltonianPath(int width, int height, int maxAttempts) {
+		int endX = width - 1;
+		int endY = 0;
+
+		for (int attempt = 0; attempt < maxAttempts; attempt++) {
+			boolean[][] visited = new boolean[height][width];
+			ArrayList<int[]> path = new ArrayList<>(width * height);
+
+			if (dfs(0, 0, width, height, visited, path, endX, endY)) {
+				return path;
+			}
+		}
 	    // Fallback: discontinuous but complete traversal
-	    System.out.println("--->> Hamiltonian path calculation failed over "+ limit +" tries.");
+	    System.out.println("--->> Hamiltonian path calculation failed over "+ maxAttempts +" tries.");
 	    return generateRandomContinuousCoordinates(width, height);
 	}
 
-	private boolean backtrackWarnsdorffWithFixedEnd(int x, int y, int width, int height,
-	                                                boolean[][] visited, ArrayList<int[]> path,
-	                                                int endX, int endY) {
-	    visited[y][x] = true;
-	    path.add(new int[]{x, y});
+	private boolean dfs(int x, int y, int width, int height, boolean[][] visited, ArrayList<int[]> path, int endX,
+			int endY) {
+		if (visited[y][x])
+			return false;
 
-	    if (path.size() == width * height) {
-	        // Must end at the desired endpoint
-	        return (x == endX && y == endY);
-	    }
+		visited[y][x] = true;
+		path.add(new int[] { x, y });
 
-	    List<int[]> neighbors = getUnvisitedNeighborsSortedByFewestOptions(x, y, visited, width, height);
+		if (path.size() == width * height) {
+			return (x == endX && y == endY);
+		}
 
-	    for (int[] neighbor : neighbors) {
-	        int nx = neighbor[0], ny = neighbor[1];
-	        if (backtrackWarnsdorffWithFixedEnd(nx, ny, width, height, visited, path, endX, endY)) {
-	            return true;
-	        }
-	    }
+		for (int[] dir : shuffledDirections()) {
+			int nx = x + dir[0];
+			int ny = y + dir[1];
+			if (inBounds(nx, ny, width, height) && !visited[ny][nx]) {
+				if (dfs(nx, ny, width, height, visited, path, endX, endY)) {
+					return true;
+				}
+			}
+		}
 
-	    // Backtrack
-	    visited[y][x] = false;
-	    path.remove(path.size() - 1);
-	    return false;
+		visited[y][x] = false;
+		path.remove(path.size() - 1);
+		return false;
 	}
 
-	private List<int[]> getUnvisitedNeighborsSortedByFewestOptions(int x, int y,
-	                                                               boolean[][] visited,
-	                                                               int width, int height) {
-	    int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-	    List<int[]> neighbors = new ArrayList<>();
-
-	    for (int[] d : directions) {
-	        int nx = x + d[0];
-	        int ny = y + d[1];
-	        if (nx >= 0 && ny >= 0 && nx < width && ny < height && !visited[ny][nx]) {
-	            neighbors.add(new int[]{nx, ny});
-	        }
-	    }
-
-	    neighbors.sort(Comparator.comparingInt(n -> countUnvisitedNeighbors(n[0], n[1], visited, width, height)));
-	    return neighbors;
+	private boolean inBounds(int x, int y, int width, int height) {
+		return x >= 0 && y >= 0 && x < width && y < height;
 	}
 
-	private int countUnvisitedNeighbors(int x, int y, boolean[][] visited, int width, int height) {
-	    int count = 0;
-	    int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-	    for (int[] d : directions) {
-	        int nx = x + d[0];
-	        int ny = y + d[1];
-	        if (nx >= 0 && ny >= 0 && nx < width && ny < height && !visited[ny][nx]) {
-	            count++;
-	        }
-	    }
-	    return count;
+	private int[][] shuffledDirections() {
+		int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+		List<int[]> dirList = Arrays.asList(dirs);
+		Collections.shuffle(dirList);
+		return dirList.toArray(new int[0][]);
 	}
 
-	
+	private ArrayList<int[]> generateBoustrophedonPath(int width, int height) {
+		ArrayList<int[]> path = new ArrayList<>(width * height);
+		for (int y = 0; y < height; y++) {
+			if (y % 2 == 0) {
+				for (int x = 0; x < width; x++) {
+					path.add(new int[] { x, y });
+				}
+			} else {
+				for (int x = width - 1; x >= 0; x--) {
+					path.add(new int[] { x, y });
+				}
+			}
+		}
+		return path;
+	}
+
 	private ArrayList<int[]> generateRandomContinuousCoordinates(int width, int height) {
 	    ArrayList<int[]> path = new ArrayList<>(width * height);
 	    boolean[][] visited = new boolean[height][width];
