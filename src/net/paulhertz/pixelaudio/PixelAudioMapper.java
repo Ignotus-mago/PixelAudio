@@ -240,7 +240,7 @@ public class PixelAudioMapper {
 	private float[] hsbPixel = new float[3];
 
 	/** List of available color channels, "L" for lightness, since "B" for brightness is taken */
-	public static enum ChannelNames {
+    public static enum ChannelNames {
 		R, G, B, H, S, L, A, ALL;
 	}
 
@@ -375,7 +375,7 @@ public class PixelAudioMapper {
 	 * This section contains optimized math for conversion between color and audio formats.
 	 * It assumes that RGB values are 8-bit numbers in three or four channels, RGB or RGBA. 
 	 * The int values handled here are thus in the range [0, 255]. HSB values (brightness, 
-	 * hue, saturation) are constrained to [0,1]. Audio values range over [-1.0f, 1.0f]. 
+	 * hue, saturation) are constrained to [0.0f,1.0f]. Audio values range over [-1.0f, 1.0f]. 
 	 * Note that input values are not checked or clamped to the desired interval. 
 	 * 
 	 * If you are using a different color depth per channel, such as 16-bit, you can override 

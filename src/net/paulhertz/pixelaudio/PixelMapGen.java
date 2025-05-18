@@ -169,7 +169,7 @@ public abstract class PixelMapGen {
 	 * @return the <code>pixelMap</code> value, which has already been set in this method and may be ignored
 	 */
 	public int[] setMapsFromCoords(ArrayList<int[]> coordinates) {
-		if (this.transformType != AffineTransformType.NADA) transformCoords(coordinates, this.transformType);
+	    if (this.transformType != AffineTransformType.NADA) transformCoords(coordinates, this.transformType);
 		loadIndexMaps();
 		return this.pixelMap;	// return the pixelMap value, which can be ignored
 	}
