@@ -26,12 +26,18 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 public class PixelAudio {
 	/** myParent is a reference to the parent sketch, we make it static so it's available to other classes */
 	public static PApplet myParent;
-	/** a variable to set */
-	int myVariable = 0;
 	/** Java Random */
-	public static Random rando;
+	private static Random rando;
 	/** SHould be set by Ant script (?), but that is not happening */
 	public final static String VERSION = "##library.prettyVersion##";
+
+	// audio sampling rates
+	public static final int SR_96k = 96000;
+	public static final int SR_48k = 48000;
+	public static final int SR_44dot1k = 44100;
+	public static final int SR_256x256 = 65536;
+	public static final int SR_512x512 = 262144;
+	public static final int SR_1024x1024 = 1048576;
 
 
 	/**
@@ -63,23 +69,6 @@ public class PixelAudio {
 	 */
 	public static String version() {
 		return VERSION;
-	}
-
-	/**
-	 *
-	 * @param theA the width of test
-	 * @param theB the height of test
-	 */
-	public void setVariable(int theA, int theB) {
-		myVariable = theA + theB;
-	}
-
-	/**
-	 *
-	 * @return int
-	 */
-	public int getVariable() {
-		return myVariable;
 	}
 
 
