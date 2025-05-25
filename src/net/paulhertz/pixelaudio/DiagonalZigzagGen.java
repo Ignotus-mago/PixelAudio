@@ -121,5 +121,71 @@ public class DiagonalZigzagGen extends PixelMapGen {
 	/*                                                                                      */
 	/* ------------------------------------------------------------------------------------ */
 
+	
+	
+	/* -------------------------- DIAGONAL ZIGZAG MULTIGEN FACTORIES --------------------------
+	
+	 * MultiGens create a PixelMapGen from from a list of PixelMapGen 
+	 * objects (genList) and coordinate points (offsetList) where they 
+	 * will be displayed. A MultiGen creates a single signal path over all
+	 * the PixelMapGen objects. The path may be *continuous*, which is to say that
+	 * the path through each PixelMapGen object ("gen" for short) only has to step
+	 * one pixel up, down, left, or right to connect to the next gen. It may even
+	 * create a loop, where the last pixel in the path is one step away from the
+	 * first pixel. This is reflected in the naming conventions. 
+	 * 
+	 * In the method names, "ortho" refers to gens that are aligned in rows (or
+	 * columns) where each new row begins one unit down or over from the previous row,
+	 * always adding new gens in the same direction. In the "bou" methods 
+	 * (named for boustrophodon, a method of writing text in alternating directions), 
+	 * each successive row or column goes in the opposite direction from the previous
+	 * one. The bou methods may provide continuous paths, the ortho methods are
+	 * inherently discontinuous, like row major bitmaps or video scanlines. 
+	 * 
+	 * Looping methods are are almost always more complex than bou and necessarily 
+	 * more complex than ortho methods. Like the fractal curves, they involve
+	 * changes in direction reminiscent of folding. Looping methods often have
+	 * constraints on the numbers of rows and columns that can produce a loop.
+	 * The constraints arise from the connectivity offered by the different
+	 * PixelMapGen child classes: Hilbert gens have connections at two adjacent
+	 * corners, DiagonalZigzag gens have connections at opposite corners. 
+	 * Moore gens are loops to begin with, and have no connections, but are
+	 * good for very symmetrical pattern-making. BoustropheGens will vary their
+	 * connectivity depending on whether their dimensions are odd or even numbers. 
+
+	---------------------------------------------------------------------------------------- */
+
+
+	
+	/**
+	 * @param genW    width of each zigzag gen
+	 * @param genH    height of each zigzag gen
+	 * @return        a looping MultiGen with 6 rows x 4 columns of DiagonalZigzagGen instances
+	 */
+	public static MultiGen zigzagLoop6x4(int genW, int genH) {
+	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+	    // list of x,y coordinates for placing gens from genList
+	    ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	    int[][] locs = {{0,0}, {1,0}, {2,0}, {3,0}, {4,0}, {5,0}, 
+	    		{5,1}, {5,2}, {5,3}, {4,3}, {4,2}, {4,1},
+	    		{3,1}, {3,2}, {3,3}, {2,3}, {2,2}, {2,1},
+	    		{1,1}, {1,2}, {1,3}, {0,3}, {0,2}, {0,1}};
+		AffineTransformType[] trans = {r90, fx90, r90, fx90, r90, fx90, 
+				                       r270, fx90, r270, fx270, r90, fx270, 
+				                       r270, fx90, r270, fx270, r90, fx270, 
+				                       r270, fx90, r270, fx270, r90, fx270};
+		int i = 0;
+		for (AffineTransformType att: trans) {
+		    int x = locs[i][0] * genW;
+		    int y = locs[i][1] * genH;
+		    offsetList.add(new int[] {x,y});
+		    // println("locs: ", locs[i][0], locs[i][1]);
+		    genList.add(new DiagonalZigzagGen(genW, genH, att));
+		    i++;
+		}
+		return new MultiGen(6 * genW, 4 * genH, offsetList, genList);
+	}
+
 
 }

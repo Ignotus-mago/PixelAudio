@@ -146,7 +146,7 @@ public class HilbertGen extends PixelMapGen {
 	
 	
 	
-	/* ------------------------------ HILBERT MULTIGEN BUILDERS ------------------------------
+	/* ------------------------------ HILBERT MULTIGEN FACTORIES ------------------------------
 	
 	 * MultiGens create a PixelMapGen from from a list of PixelMapGen 
 	 * objects (genList) and coordinate points (offsetList) where they 
@@ -158,12 +158,12 @@ public class HilbertGen extends PixelMapGen {
 	 * first pixel. This is reflected in the naming conventions. 
 	 * 
 	 * In the method names, "ortho" refers to gens that are aligned in rows (or
-	 * columns) where each new row begins one unit down from the previous row,
+	 * columns) where each new row begins one unit down or over from the previous row,
 	 * always adding new gens in the same direction. In the "bou" methods 
 	 * (named for boustrophodon, a method of writing text in alternating directions), 
 	 * each successive row or column goes in the opposite direction from the previous
 	 * one. The bou methods may provide continuous paths, the ortho methods are
-	 * inherently discontinous, like row major bitmaps or video scanlines. 
+	 * inherently discontinuous, like row major bitmaps or video scanlines. 
 	 * 
 	 * Looping methods are are almost always more complex than bou and necessarily 
 	 * more complex than ortho methods. Like the Hilbert curve, they involve
@@ -187,7 +187,7 @@ public class HilbertGen extends PixelMapGen {
 	 * @return			a MultiGen consisting of rows rows and cols columns of Hilbert curves
 	 *                  check for null return value
 	 */
-	public static MultiGen hilbertMultigenLoop(int genEdge, int rows, int cols, boolean isLoopRequested) {
+	public static MultiGen hilbertMultigenLoop(int genEdge, int rows, int cols) {
 		// prevalidate here, maybe throw appropriate error instead of returning null
 		if (!HilbertGen.prevalidate(genEdge, genEdge)) return null;
 		/*
@@ -195,41 +195,29 @@ public class HilbertGen extends PixelMapGen {
 		 * rows odd, cols even
 		 * rows even, cols odd
 		 * rows odd, cols odd
-		 * symmetrical or not
+		 * symmetrical or not?
 		 * 
 		 */
 		if (rows % 2 == 0) {
 			if (cols % 2 == 0) {
 				// even number of rows, even number of columns
-				if (isLoopRequested) {
-					
-				}
-				else {
-					
-				}
+
 			}
 			else {
 				// even number of rows, odd number of columns
-				if (isLoopRequested) {
-					
-				}
-				else {
-					
-				}
+
 			}
 		}
 		else {
 			if (cols % 2 == 0) {
 				// odd number of rows, even number of columns
-				if (isLoopRequested) {
-					
-				}
-				else {
-					
-				}
+
 			}
 			else {
 				// odd number of rows, odd number of columns, no loop is possible
+				// the solution is to double rows and cols and divide genEdge by 2
+				// then do the even/even conditional
+				
 			}
 		}
 		return null;
@@ -249,25 +237,103 @@ public class HilbertGen extends PixelMapGen {
 	 * @param genH    height of each HilbertGen
 	 * @return
 	 */
-	public MultiGen hilbertLoop3x2(int genW, int genH) {
+	public static MultiGen hilbertLoop3x2(int genW, int genH) {
 	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
 		ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
 		// list of x,y coordinates for placing gens from genList
 		ArrayList<int[]> offsetList = new ArrayList<int[]>(); 		
-		genList.add(new HilbertGen(genW, genH, fxr90cw));
+		genList.add(new HilbertGen(genW, genH, fx270));
 		offsetList.add(new int[] { 0, 0 });
 		genList.add(new HilbertGen(genW, genH, nada));
 		offsetList.add(new int[] { genW, 0 });
-		genList.add(new HilbertGen(genW, genH, fxr90ccw));
+		genList.add(new HilbertGen(genW, genH, fx90));
 		offsetList.add(new int[] { 2 * genW, 0 });
-		genList.add(new HilbertGen(genW, genH, fxr90ccw));
+		genList.add(new HilbertGen(genW, genH, fx90));
 		offsetList.add(new int[] { 2 * genW, genH });
 		genList.add(new HilbertGen(genW, genH, r180));
 		offsetList.add(new int[] { genW, genH });
-		genList.add(new HilbertGen(genW, genH,fxr90cw));
+		genList.add(new HilbertGen(genW, genH,fx270));
 		offsetList.add(new int[] { 0, genH });
 		return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 	}
 
+	/**
+	 * This method creates a vertical stacks of rows of HilbertGens. Each row
+	 * begins genH pixels down from the previous row, back at the beginning
+	 * of the previous row (i.e., in "row major" order, like a bitmap). This 
+	 * method pairs nicely with an image with 3 columns of with 8 rows of words,
+	 * using the image as a control surface for sampling an audio file with 
+	 * words recorded at the appropriate locations to match the screen order. 
+	 * I used it for a performance work, DeadBodyWorkFlow, which is included
+	 * in the 
+	 * The signal path jumps from the end of the last gen in each row to the 
+	 * beginning of the first gen int he next row. The path in each row is
+	 * continuous, which provides some interesting optical effects. 
+	 * 
+	 * @param stacks    the number of stacks 
+	 * @param rows      the number of rows in each stack
+	 * @param units     the number of gens in each row
+	 * @param genW      the width of each gen, a power of 2
+	 * @param genH      the height of each gen, equal to genW
+	 * @return          a Multigen consisting of stacks * rows * units PixelMapGens
+	 */
+	public static MultiGen hilbertVerticalStackOrtho(int stacks, int rows, int units, int genW, int genH) {
+	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+	    // list of x,y coordinates for placing gens from genList
+	    ArrayList<int[]> offsetList = new ArrayList<int[]>(); 	
+	    for (int s = 0; s < stacks; s++) {
+	        for (int r = 0; r < rows; r++) {
+	        	int shift = s * units;
+	            for (int u = 0; u < units; u++) {
+	                genList.add(new HilbertGen(genW, genH));
+	                offsetList.add(new int[] {(u + shift) * genW, r * genH});
+	            }
+	        }
+	    }
+	    return new MultiGen(stacks * units * genW, rows * genH, offsetList, genList);
+	}
 
+	/**
+	 * This method creates a vertical stacks of rows of HilbertGens. Each row
+	 * begins genH pixels down from the previous row. Alternating rows add units
+	 * in opposite directions. This means path continuity is possible in each 
+	 * stack by changing the orientation of the gens; however, it isn't fully 
+	 * implemented in this example. Hint: choosing the right orientation for 
+	 * each gen will assure path continuity. 
+	 * 
+	 * @param stacks    the number of stacks 
+	 * @param rows      the number of rows in each stack
+	 * @param units     the number of gens in each row
+	 * @param genW      the width of each gen, a power of 2
+	 * @param genH      the height of each gen, equal to genW
+	 * @return          a Multigen consisting of stacks * rows * units PixelMapGens
+	 */
+	public static MultiGen hilbertVerticalStackBou(int stacks, int rows, int units, int genW, int genH) {
+	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+	    // list of x,y coordinates for placing gens from genList
+	    ArrayList<int[]> offsetList = new ArrayList<int[]>(); 	
+	    for (int s = 0; s < stacks; s++) {
+	        for (int r = 0; r < rows; r++) {
+	        	int shift = s * units;
+	            if (r % 2 == 1) {
+	                for (int u = 0; u < units; u++) {
+	                    genList.add(new HilbertGen(genW, genH, flipx));
+	                    offsetList.add(new int[] {(u + shift) * genW, r * genH});
+	                }
+	            }
+	            else {
+	                for (int u = units; u > 0; u--) {
+	                    genList.add(new HilbertGen(genW, genH, flipy));
+	                    offsetList.add(new int[] {(u + shift - 1) * genW, r * genH});
+	                }
+	            }
+	        }
+	    }
+	    return new MultiGen(stacks * units * genW, rows * genH, offsetList, genList);
+	}
+
+	// public static hilbertVerticalStackPathBou(int stacks, int rows, int units, int genW, int genH);
+	
 }
