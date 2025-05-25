@@ -2,6 +2,7 @@ package net.paulhertz.pixelaudio;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 
 /**
  *
@@ -73,16 +74,16 @@ public abstract class PixelMapGen {
 
 	// short names for transforms from
 	// public enum AffineTransformType {ROT90CW, ROT90CCW, ROT180, FLIPX, FLIPX90, FLIPX90CCW, FLIPY, NADA};
-	public static AffineTransformType     r90cw     = AffineTransformType.ROT90;
-	public static AffineTransformType     r90ccw    = AffineTransformType.ROT90CCW;
-	public static AffineTransformType     r180      = AffineTransformType.ROT180;
+	public static AffineTransformType     r270      = AffineTransformType.R270;
+	public static AffineTransformType     r90       = AffineTransformType.R90;
+	public static AffineTransformType     r180      = AffineTransformType.R180;
 	public static AffineTransformType     flipx     = AffineTransformType.FLIPX;
-	public static AffineTransformType     fxr90cw   = AffineTransformType.FLIPX90;
-	public static AffineTransformType     fxr90ccw  = AffineTransformType.FLIPX90CCW;
+	public static AffineTransformType     fx270     = AffineTransformType.FX270;
+	public static AffineTransformType     fx90      = AffineTransformType.FX90;
 	public static AffineTransformType     flipy     = AffineTransformType.FLIPY;
 	public static AffineTransformType     nada      = AffineTransformType.NADA;
 	// transArray is useful for random selections
-	public static AffineTransformType[]   transArray = {r90cw, r90ccw, r180, flipx, fxr90cw, fxr90ccw, flipy, nada}; 
+	public static AffineTransformType[]   transArray = {r270, r90, r180, flipx, fx270, fx90, flipy, nada}; 
 
 
 	/**
@@ -183,9 +184,9 @@ public abstract class PixelMapGen {
 		}
 		this.coords = transformedCoords;
 		// some rotations and reflections swap width and height
-		if (type == AffineTransformType.ROT90 || type == AffineTransformType.ROT90CCW
-				|| type == AffineTransformType.FLIPX90
-				|| type == AffineTransformType.FLIPX90CCW) {
+		if (type == AffineTransformType.R270 || type == AffineTransformType.R90
+				|| type == AffineTransformType.FX270
+				|| type == AffineTransformType.FX90) {
 			int temp = this.w;
 			this.w = this.h;
 			this.h = temp;
@@ -327,12 +328,15 @@ public abstract class PixelMapGen {
         return p >> 1; 		// Shift right to get the previous power of 2
     }
     
+
+    // ------------- UTILITY METHODS FOR PIXELMAPS ------------- //
+    
     /**
      * @param coordsList   	a list of coordinate pairs representing the (x,y) pixel locations along a path that visits every pixel in a bitmap
      * @param w				the width of the bitmap
      * @return				the bitmap index numbers of the coordinates
      */
-    public static int[] getPixelMapFromCoordinatess(ArrayList<int[]> coordsList, int w) {
+    public static int[] getPixelMapFromCoordinates(ArrayList<int[]> coordsList, int w) {
 		if (coordsList == null) {
 			throw(new IllegalArgumentException("ERROR: The coordList argument must be non-null."));
 		}
@@ -354,5 +358,12 @@ public abstract class PixelMapGen {
     	return inverseArr;
     }
 
+    
+    // ------------- RANDOM TRANSFORM ------------- //
+    
+	public AffineTransformType randomTransform(Random rand) {
+		return PixelMapGen.transArray[rand.nextInt(PixelMapGen.transArray.length)];
+	}
 
+    
 }
