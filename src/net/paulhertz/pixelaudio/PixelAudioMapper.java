@@ -376,7 +376,8 @@ public class PixelAudioMapper {
 	 * It assumes that RGB values are 8-bit numbers in three or four channels, RGB or RGBA. 
 	 * The int values handled here are thus in the range [0, 255]. HSB values (brightness, 
 	 * hue, saturation) are constrained to [0.0f,1.0f]. Audio values range over [-1.0f, 1.0f]. 
-	 * Note that input values are not checked or clamped to the desired interval. 
+	 * Note that input values are not checked or clamped to the desired interval. That puts the 
+	 * burden of normalizing values on the caller before the call. 
 	 * 
 	 * If you are using a different color depth per channel, such as 16-bit, you can override 
 	 * these methods by subclassing PixelAudioMapper. The thread-safe AudioColorTranscoder class 
