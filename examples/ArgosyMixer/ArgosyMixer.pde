@@ -65,7 +65,8 @@ import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
  *   Hold frames  -- number of frames to hold after a run of frames, sets Argosy 1 and Argosy 2 separately
  *   Duration     -- number of frames in the animation
  *   Record Video -- press to run and record animation from current display 
- *
+ *   
+ *   
  * I suggest you start by experimenting with the patterns "The One" and "One-one". They create
  * create repeating patterns of one or two elements. Setting the Unit value (the number of pixels
  * in each pattern element) to a power of 2 or a sum of powers of 2 is a good place to start, 
@@ -75,7 +76,7 @@ import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
  * produce step or pulse (square) waves, so they are buzzy. Opacity will change how loud the sound is.
  * 
  * Press the spacebar to start or stop animation. 
- * 
+ *   
  *   
  * --------------------------------------------------------------------------------------------
  * ***>> NOTE: Key commands only work when the image display window is the active window. <<***
@@ -90,19 +91,20 @@ import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
  * Press 'B' to shift right one argosy length.
  * Press 'c' to shift left one argosy length + argosy gap.
  * Press 'C' to shift right one argosy length + argosy gap.
- * Press 'd' to perform one animation step and increment count.
- * Press 'D' report current animation step count and then zero it.
- * Press 'g' or 'G' to set the pixelShift of argosies to zero (reset return point).
+ * Press 'd' to move animation forward one step.
+ * Press 'D' to move animation back one step.
  * Press 'l' or 'L' to shift argosies left one animation step.
  * Press 'r' or 'R' to shift argosies right one animation step.
  * Press 'p' to shift argosies left one pixel.
  * Press 'P' to shift argosies right one pixel.
+ * Press 'u' or 'U' to reinitialize argosies.
+ * Press 'g' or 'G' to set the pixelShift of argosies to zero (reset return point).
  * Press 'f' to freeze changes to argosy 1.
  * Press 'F' to freeze changes to argosy 2.
  * Press 'i' or 'I' to show stats about argosies.
  * Press 's' or 'S' to save current display to a PNG file.
  * Press 'v' or 'V' to toggle video recording.
- * Press 'u' or 'U' to reinitialize argosies.
+ * Press 'w' or 'W' to set animation variables to beginning values.
  * Press 'z' to reset argosy 1 to initial position.
  * Press 'Z' to reset argosy 2 to inttial position.
  * Press 'h' or 'H' to show help message in console.
@@ -110,6 +112,7 @@ import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
  * 
  * TODO save two image files, two audio files -- one for each Argosy
  * TODO bug, when changing gap color argosy resets with 0 shift
+ * TODO reset animation with a key command 
  * 
  */
 // PApplet settings
@@ -123,20 +126,26 @@ PImage mapImage;
 PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
 // short names for transforms from
 // public enum AffineTransformType {ROT90CW, ROT90CCW, ROT180, FLIPX, FLIPX90, FLIPX90CCW, FLIPY, NADA};
-AffineTransformType     r90cw     = AffineTransformType.ROT90;
-AffineTransformType     r90ccw    = AffineTransformType.ROT90CCW;
-AffineTransformType     r180      = AffineTransformType.ROT180;
+// also used in PixelMapGen
+AffineTransformType     r270      = AffineTransformType.R270;
+AffineTransformType     r90       = AffineTransformType.R90;
+AffineTransformType     r180      = AffineTransformType.R180;
 AffineTransformType     flipx     = AffineTransformType.FLIPX;
-AffineTransformType     fxr90cw   = AffineTransformType.FLIPX90;
-AffineTransformType     fxr90ccw  = AffineTransformType.FLIPX90CCW;
+AffineTransformType     fx270     = AffineTransformType.FX270;
+AffineTransformType     fx90      = AffineTransformType.FX90;
 AffineTransformType     flipy     = AffineTransformType.FLIPY;
 AffineTransformType     nada      = AffineTransformType.NADA;
 // transArray is useful for random selections
-AffineTransformType[]   transArray = {r90cw, r90ccw, r180, flipx, fxr90cw, fxr90ccw, flipy, nada}; 
+AffineTransformType[]   transArray = {r270, r90, r180, flipx, fx270, fx90, flipy, nada}; 
+Random rand;
 // some color variables
 int roig = 0xfff64c2f; int groc = 0xfff6e959; int blau = 0xff5990e9; int blau2 = 0xff90b2dc; 
 int blanc = 0xfffef6e9; int gris = 0xffa09faa; int negre = 0xff080d15; int grana = 0xffe56ad8;
 int vert = 0xff7bb222; int taronja = 0xfffea537; int roigtar = 0xffE9907B; int violet = 0xffb29de9;
+// Standard black, gray, white colors without transparency
+int black = color(0, 0, 0);
+int white = color(255, 255, 255);
+int gray = color(128, 128, 128);
 // Argosy pattern variables
 int[] theOne = new int[]{1};
 int[] oneOne = new int[]{1,1};
@@ -148,10 +157,10 @@ int[] fiboLSystem55 = new int[]{ 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2,
 int[] fibo13To89 = {13, 21, 55, 89};
 int[] lucas18To76 = {18, 29, 47, 76};
 // Argosy color palette variables
-int[] blackAlone = {negre};
-int[] blackWhite = {negre, blanc};
-int[] whiteBlack = {blanc, negre};
-int[] blackGrayWhite = {negre, gris, blanc};
+int[] blackAlone = {black};
+int[] blackWhite = {black, white};
+int[] whiteBlack = {white, black};
+int[] blackGrayWhite = {black, gray, white};
 int[] grayRamp = {color(16), color(48), color(80), color(112), color(144), color(176), color(208), color(240)};
 int[] grayTriangle = {color(12), color(41), color(70), color(99), color(128), color(157), color(186), color(215), 
                       color(244), color(215), color(186), color(157), color(128), color(99), color(70), color(41)};
@@ -162,10 +171,6 @@ int[] multicolor = {roig, blau, groc, vert, violet};
 int[] blueCream = {color(144, 157, 186), color(233, 220, 199)};
 int[] creamBlue = {color(233, 220, 199), color(144, 157, 186)};
 int[] fourColor = {color(204, 212, 164), color(81, 121, 127), color(210, 202, 250), color(136, 97, 90)};
-// Standard black, gray, white colors without transparency
-int black = color(0, 0, 0);
-int white = color(255, 255, 255);
-int gray = color(127, 127, 127);
 // variables for first Argosy instance
 // set argo1, argo2 and animation values in initArgosies()
 Argosy argo1;
@@ -178,6 +183,7 @@ int argo1Reps;
 int argo1Unit;
 int argo1Gap;
 int argo1GapColor;
+int argo1GapColorIndex = 0;
 int argo1GapAlpha;
 boolean argo1IsCentered;
 PImage argo1Image;
@@ -193,6 +199,7 @@ int argo2Reps;
 int argo2Unit;
 int argo2Gap;
 int argo2GapColor;
+int argo2GapColorIndex = 0;
 int argo2GapAlpha;
 boolean argo2IsCentered;
 PImage argo2Image;
@@ -230,30 +237,34 @@ int currentFrame = 0;
 boolean isRecordingVideo = false;
 // image export
 boolean isSavePatterns = false;   // for future use
+
 /* ------------------------------------------------------------------ */
 /*                                                                    */
 /*                          AUDIO VARIABLES                           */
 /*                                                                    */
 /* ------------------------------------------------------------------ */
+
 /** Minim audio library */
-Minim minim;                    // library that handles audio 
-AudioOutput audioOut;            // line out to sound hardware
+Minim minim;                       // library that handles audio 
+AudioOutput audioOut;              // line out to sound hardware
 MultiChannelBuffer argo1Buffer;    // data structure to hold audio samples from argo1
 MultiChannelBuffer argo2Buffer;    // data structure to hold audio samples from argo2
 boolean isBufferStale = false;     // flags that audioBuffer needs to be reset
 int sampleRate = 48000;            // a critical value for display and audio, see the setup method
-float[] audioSignal;            // the audio signal as an array of floats
-float[] argo1Signal;            // audio signal (float array) for argo1
-float[] argo2Signal;            // audio signal (float array) for argo2
-int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
+float[] audioSignal;               // the audio signal as an array of floats
+float[] argo1Signal;               // audio signal (float array) for argo1
+float[] argo2Signal;               // audio signal (float array) for argo2
+int audioLength;                   // length of the audioSignal, same as the number of pixels in the display image
+
 // SampleInstrument setup
-float sampleScale = 4;          // 
+float sampleScale = 4;             // 
 int sampleBase = (int) (sampleRate/sampleScale);
 int samplelen = (int) (sampleScale * sampleBase);
-Sampler audioSampler;           // minim class for sampled sound
-WFInstrument instrument;        // local class to wrap audioSampler
+Sampler audioSampler;              // minim class for sampled sound
+WFInstrument instrument;           // local class to wrap audioSampler
+
 // ADSR and params
-ADSR adsr;                      // good old attack, decay, sustain, release
+ADSR adsr;                         // good old attack, decay, sustain, release
 float maxAmplitude = 0.7f;
 float attackTime = 0.8f;
 float decayTime = 0.5f;
@@ -266,8 +277,8 @@ int sampleY;
 int argo1SamplePos;            // position of a mouse click along the argo1 signal path, index into the argo1 audio array
 int argo2SamplePos;            // position of a mouse click along the argo2 signal path, index into the argo2 audio array
 ArrayList<TimedLocation> timeLocsArray;
-int count = 0;
-int wsIndex = 0;
+int count = 0;    
+int fileIndex = 0;
 
 /* ---------------- end audio variables ---------------- */
 
@@ -279,6 +290,7 @@ public void settings() {
 public void setup() {
     frameRate(videoFrameRate);
     pixelaudio = new PixelAudio(this);
+    rand = new Random();
     argo1Mapper = selectMapper(argo1GenSelect, argo1Gen);
     argo2Mapper = selectMapper(argo2GenSelect, argo2Gen);
     mapSize = argo1Mapper.getSize();
@@ -301,6 +313,7 @@ int argo1PaletteSelect;    // "Black, White"
 int argo2PaletteSelect;    // "Black, White"
 int argo1PatternSelect;
 int argo2PatternSelect;
+
 /**
  * Initializes argo1 and argo2 Argosy instances, sets some values for GUI, 
  * sets animation variables: your one-stop setup method for the argosies. 
@@ -308,32 +321,34 @@ int argo2PatternSelect;
  */
 public void initArgosies() {
     // first Argosy instance
-    argo1GenSelect = 0;          // menu item "Hilbert Loop 3x2"
+    argo1GenSelect = 14;          // menu item "Hilbert Random Two"
     argo1Alpha = 255;
     argo1Colors = setArgoColorsAlpha(blackWhite, argo1Alpha);
     argo1PaletteSelect = 1;      // menu item "Black, White"
     argo1Pattern = oneOne;
     argo1PatternSelect = 1;      // menu item "One-one"
     argo1Reps = 0;
-    argo1Unit = 1280;
-    argo1Gap = 0;
-    argo1GapColor = black;
+    argo1Unit = 256;
+    argo1Gap = 256;
+    argo1GapColor = white;
+    argo1GapColorIndex = 1;
     argo1IsCentered = false;     // not in the GUI
     argo1GapAlpha = 255;
     initArgo1(0);
     // second Argosy instance
-    argo2GenSelect = 14;         // menu item "Hilbert Random Two"
+    argo2GenSelect = 15;         // menu item "Hilbert Random Two"
     argo2Alpha = 127;
-    argo2Colors = setArgoColorsAlpha(blackWhite, argo2Alpha);
-    argo2PaletteSelect = 1;     // menu item "Black, White"
-    argo2Pattern = theOne;
-    argo2PatternSelect = 0;      // menu item "The One"
+    argo2Colors = setArgoColorsAlpha(whiteBlack, argo2Alpha);
+    argo2PaletteSelect = 2;     // menu item "White, Black"
+    argo2Pattern = oneOne;
+    argo2PatternSelect = 1;      // menu item "One-one"
     argo2Reps = 0;
-    argo2Unit = 512;
-    argo2Gap = 0;
-    argo2GapColor = gray;
+    argo2Unit = 256;
+    argo2Gap = 256;
+    argo2GapColor = black;
+    argo2GapColorIndex = 0;
     argo2IsCentered = false;     // not in the GUI
-    argo2GapAlpha = 0;
+    argo2GapAlpha = 255;
     initArgo2(0);
     // visibility and frozen state
     isShowArgo1 = true;
@@ -341,14 +356,14 @@ public void initArgosies() {
     isArgo1Freeze = false;
     isArgo2Freeze = false;
     // animation
-    argo1Step = 16;
-    argo2Step = -4;
+    argo1Step = 4;
+    argo2Step = -1;
     animOpen = 16;
     animClose = 16;
-    animRun1 = 108;
-    animHold1 = 36;
-    animRun2 = 120;
-    animHold2 = 72;
+    animRun1 = 36;
+    animHold1 = 60;
+    animRun2 = 16;
+    animHold2 = 32;
     animDuration = 720;   // number of frames
 }
 
@@ -375,6 +390,7 @@ public int[] setArgoColorsAlpha(int[] colorArray, int alpha) {
  * @param shift    number of pixels to rotate left argo1.argosyArray
  */
 public void initArgo1(int shift) {
+    argo1Mapper = selectMapper(argo1GenSelect, argo1Gen);
     argo1GapColor = PixelAudioMapper.setAlpha(argo1GapColor, argo1GapAlpha);
     argo1 = getArgosy(argo1Mapper, argo1Pattern, argo1Unit, argo1Reps, argo1IsCentered, argo1Colors, argo1Gap, argo1GapColor, argo1Step);
     if (shift != 0) {
@@ -391,6 +407,7 @@ public void initArgo1(int shift) {
  * @param shift    number of pixels to rotate left argo2.argosyArray
  */
 public void initArgo2(int shift) {
+    argo2Mapper = selectMapper(argo2GenSelect, argo2Gen);
     argo2GapColor = PixelAudioMapper.setAlpha(argo2GapColor, argo2GapAlpha);
     argo2 = getArgosy(argo2Mapper, argo2Pattern, argo2Unit, argo2Reps, argo2IsCentered, argo2Colors, argo2Gap, argo2GapColor, argo2Step);
     if (shift > 0) {
@@ -444,6 +461,8 @@ public void initAnimation() {
         holdCount1 = animOpen;
         holdCount2 = animOpen;
     }
+    animstep1 = 1;
+    animstep2 = 1;
 }
 
 public void draw() {
@@ -467,6 +486,7 @@ public void animate() {
     }
     animateArgosies();
 }
+
 /**
  * Animates argo1 and argo2 argosy arrays. Note that we are supplying our own
  * animation step values by calling the Argosy.shift() method.
@@ -496,7 +516,9 @@ public void animateArgosies() {
         if (!isArgo2Freeze) argo2.shift(argo2Step, true);
         animstep2++;
     }
-}    
+}
+
+
 
 /**
  * record a frame of video
@@ -546,7 +568,7 @@ public void mousePressed() {
  * @return true if Caps Lock is down, false otherwise.
  */
 public boolean isCapsLockDown() {
-  return Toolkit.getDefaultToolkit().getLockingKeyState(java.awt.event.KeyEvent.VK_CAPS_LOCK);
+    return Toolkit.getDefaultToolkit().getLockingKeyState(java.awt.event.KeyEvent.VK_CAPS_LOCK);
 }
 
 /**
@@ -601,12 +623,14 @@ public void parseKey(char key, int keyCode) {
         break;
     }
     case 'd': { // advance one animation step
-        animateArgosies();
+        if (!isArgo1Freeze) argo1.shift(argo1Step, true);
+        if (!isArgo2Freeze) argo2.shift(argo2Step, true);
         count++;
         break;
     }
-    case 'D': { // print information about manual animation steps
-        println("-- count: "+ count);
+    case 'D': { // go back one animation step
+        if (!isArgo1Freeze) argo1.shift(-argo1Step, true);
+        if (!isArgo2Freeze) argo2.shift(-argo2Step, true);
         count = 0;
         break;
     }
@@ -622,8 +646,8 @@ public void parseKey(char key, int keyCode) {
         break;
     }
     case 'l': case 'L': { // shift argosies left one animation step
-        if (!isArgo1Freeze) argo1.shiftLeft();         // shift pattern left by argosy.argoStep pixels
-        if (!isArgo2Freeze) argo2.shiftLeft();         // shift pattern left by argosy.argoStep pixels
+        if (!isArgo1Freeze) argo1.shiftLeft();        // shift pattern left by argosy.argoStep pixels
+        if (!isArgo2Freeze) argo2.shiftLeft();        // shift pattern left by argosy.argoStep pixels
         break;
     }
     case 'r': case 'R': { // shift argosies right one animation step
@@ -658,12 +682,11 @@ public void parseKey(char key, int keyCode) {
         break;
     }
     case 'S': { // save current display to an PNG file
-        isSavePatterns = true;
-        saveImage();
+        saveToAudio();
+        println("Saved audio signals to stereo audio file.");
         break;
     }
     case 's': { // save current display to an PNG file
-        isSavePatterns = false;
         saveImage();
         break;
     }
@@ -674,7 +697,7 @@ public void parseKey(char key, int keyCode) {
         }
         if (!isArgo2Freeze) {
             initArgo2(0);
-            println("--->> reinitialized argosy 1");
+            println("--->> reinitialized argosy 2");
         }
         break;
     }
@@ -688,7 +711,18 @@ public void parseKey(char key, int keyCode) {
         }
         else {
             println("-- video recording is on, press spacebar to toggle animation");
+            initAnimation();
         }
+        break;
+    }
+    case 'w': {    // reset animation tracking
+        initAnimation();
+        println("-- reset animation variables");
+        break;
+    }
+    case 'W': {    // reset animation tracking
+        initAnimation();
+        println("-- reset animation variables");
         break;
     }
     case 'z': { // reset argosy 1 to initial position
@@ -710,6 +744,7 @@ public void parseKey(char key, int keyCode) {
     // many commands change the argosy array, so we'll just set the stale flag for all of them
     isBufferStale = true;
 }
+
 /**
  * Posts some information about the state of argo1 and argo2 to the console.
  */
@@ -735,19 +770,20 @@ public void showHelp() {
     println(" * Press 'B' to shift right one argosy length.");
     println(" * Press 'c' to shift left one argosy length + argosy gap.");
     println(" * Press 'C' to shift right one argosy length + argosy gap.");
-    println(" * Press 'd' to perform one animation step and increment count.");
-    println(" * Press 'D' report current animation step count and then zero it.");
-    println(" * Press 'g' or 'G' to set the pixelShift of argosies to zero (reset return point).");
+    println(" * Press 'd' to move animation forward one step.");
+    println(" * Press 'D' to move animation back one step.");
     println(" * Press 'l' or 'L' to shift argosies left one animation step.");
     println(" * Press 'r' or 'R' to shift argosies right one animation step.");
     println(" * Press 'p' to shift argosies left one pixel.");
     println(" * Press 'P' to shift argosies right one pixel.");
+    println(" * Press 'u' or 'U' to reinitialize argosies.");
+    println(" * Press 'g' or 'G' to set the pixelShift of argosies to zero (reset return point).");
     println(" * Press 'f' to freeze changes to argosy 1.");
     println(" * Press 'F' to freeze changes to argosy 2.");
     println(" * Press 'i' or 'I' to show stats about argosies.");
     println(" * Press 's' or 'S' to save current display to a PNG file.");
     println(" * Press 'v' or 'V' to toggle video recording.");
-    println(" * Press 'u' or 'U' to reinitialize argosies.");
+    println(" * Press 'w' or 'W' to set animation variables to beginning values.");
     println(" * Press 'z' to reset argosy 1 to initial position.");
     println(" * Press 'Z' to reset argosy 2 to inttial position.");
     println(" * Press 'h' or 'H' to show help message in console.");
@@ -763,6 +799,7 @@ public void saveImage() {
     // File folderToStartFrom = new File(dataPath(""));
     selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
 }
+
 /**
  * Handles image file output once an output file is selected.
  * 
@@ -803,6 +840,7 @@ public PImage drawOffscreen() {
     offscreen.endDraw();
     return offscreen.get();
 }
+
 /*----------------------------------------------------------------*/
 /*                                                                */
 /*                 BEGIN PATTERN MAKING METHODS                   */
@@ -858,17 +896,17 @@ public MultiGen hilbertLoop3x2(int genW, int genH) {
     ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
     // list of x,y coordinates for placing gens from genList
     ArrayList<int[]> offsetList = new ArrayList<int[]>();         
-    genList.add(new HilbertGen(genW, genH, fxr90cw));
+    genList.add(new HilbertGen(genW, genH, fx270));
     offsetList.add(new int[] { 0, 0 });
     genList.add(new HilbertGen(genW, genH, nada));
     offsetList.add(new int[] { genW, 0 });
-    genList.add(new HilbertGen(genW, genH, fxr90ccw));
+    genList.add(new HilbertGen(genW, genH, fx90));
     offsetList.add(new int[] { 2 * genW, 0 });
-    genList.add(new HilbertGen(genW, genH, fxr90ccw));
+    genList.add(new HilbertGen(genW, genH, fx90));
     offsetList.add(new int[] { 2 * genW, genH });
     genList.add(new HilbertGen(genW, genH, r180));
     offsetList.add(new int[] { genW, genH });
-    genList.add(new HilbertGen(genW, genH,fxr90cw));
+    genList.add(new HilbertGen(genW, genH,fx270));
     offsetList.add(new int[] { 0, genH });
     return new MultiGen(width, height, offsetList, genList);
 }
@@ -889,9 +927,9 @@ public MultiGen hilbertZigzagLoop6x4(int genW, int genH) {
     int[][] locs = {{0,0}, {0,1}, {0,2}, {0,3}, {1,3}, {1,2}, {2,2}, {2,3}, 
                     {3,3}, {3,2}, {4,2}, {4,3}, {5,3}, {5,2}, {5,1}, {5,0},
                     {4,0}, {4,1}, {3,1}, {3,0}, {2,0}, {2,1}, {1,1}, {1,0}};
-    AffineTransformType[] trans = {r90cw, r90cw, nada, r90cw, r90ccw, fxr90cw, nada, r90cw, 
-                                   r90ccw, r90ccw, fxr90ccw, nada, r90ccw, r90ccw, r180, r90ccw, 
-                                   r90cw, fxr90ccw, r180, r90ccw, r90cw, r90cw, fxr90cw, r180};
+    AffineTransformType[] trans = {r270, r270, nada, r270, r90, fx270, nada, r270, 
+                                   r90, r90, fx90, nada, r90, r90, r180, r90, 
+                                   r270, fx90, r180, r90, r270, r270, fx270, r180};
     char[] cues = {'H','D','D','H','D','H','D','H', 
                    'H','D','H','D','H','D','D','H',
                    'D','H','D','H','H','D','H','D'}; 
@@ -948,6 +986,7 @@ public MultiGen hilbertStackOrtho(int stacks, int rows, int units, int genW, int
     }
     return new MultiGen(width, height, offsetList, genList);
 }
+
 /**
  * This method creates a vertical stacks of rows of HilbertGens. Each row
  * begins genH pixels down from the previous row. Alternating rows add units
@@ -1037,10 +1076,10 @@ public MultiGen hilbertColumnOrtho(int rows, int cols, int genW, int genH) {
     for (int x = 0; x < cols; x++) {
         for (int y = 0; y < rows; y++) {
             if (x % 2 == 0) {
-                genList.add(new HilbertGen(genW, genH, r90cw));
+                genList.add(new HilbertGen(genW, genH, r270));
             }
             else {
-                genList.add(new HilbertGen(genW, genH, r90ccw));
+                genList.add(new HilbertGen(genW, genH, r90));
             }
             offsetList.add(new int[] {x * genW, y * genH});
         }
@@ -1062,10 +1101,10 @@ public MultiGen zigzagLoop6x4(int genW, int genH) {
             {5,1}, {5,2}, {5,3}, {4,3}, {4,2}, {4,1},
             {3,1}, {3,2}, {3,3}, {2,3}, {2,2}, {2,1},
             {1,1}, {1,2}, {1,3}, {0,3}, {0,2}, {0,1}};
-    AffineTransformType[] trans = {r90ccw, fxr90ccw, r90ccw, fxr90ccw, r90ccw, fxr90ccw, 
-                                   r90cw, fxr90ccw, r90cw, fxr90cw, r90ccw, fxr90cw, 
-                                   r90cw, fxr90ccw, r90cw, fxr90cw, r90ccw, fxr90cw, 
-                                   r90cw, fxr90ccw, r90cw, fxr90cw, r90ccw, fxr90cw};
+    AffineTransformType[] trans = {r90, fx90, r90, fx90, r90, fx90, 
+                               r270, fx90, r270, fx270, r90, fx270, 
+                               r270, fx90, r270, fx270, r90, fx270, 
+                               r270, fx90, r270, fx270, r90, fx270};
     int i = 0;
     for (AffineTransformType att: trans) {
         int x = locs[i][0] * genW;
@@ -1177,16 +1216,17 @@ public MultiGen zigzagColumnOrtho(int rows, int cols, int genW, int genH) {
     for (int x = 0; x < cols; x++) {
         for (int y = 0; y < rows; y++) {
             if (x % 2 == 0) {
-                genList.add(new DiagonalZigzagGen(genW, genH, fxr90cw));
+                genList.add(new DiagonalZigzagGen(genW, genH, fx270));
             } 
             else {
-                genList.add(new DiagonalZigzagGen(genW, genH, r90ccw));
+                genList.add(new DiagonalZigzagGen(genW, genH, r90));
             }
             offsetList.add(new int[] { x * genW, y * genH });
         }
     }
     return new MultiGen(width, height, offsetList, genList);
 }
+
 /**
  * Creates a MultiGen with rows * cols DiagonalZigzagGens. 
  * Note that you should set values for such that:
@@ -1211,18 +1251,18 @@ public MultiGen zigzagColumnAltOrtho(int rows, int cols, int genW, int genH) {
         for (int y = 0; y < rows; y++) {
             if (y % 2 == 0) {
                 if (x % 2 == 0) {
-                    genList.add(new DiagonalZigzagGen(genW, genH, fxr90cw));
+                    genList.add(new DiagonalZigzagGen(genW, genH, fx270));
                 }
                 else {
-                    genList.add(new DiagonalZigzagGen(genW, genH, r90ccw));
+                    genList.add(new DiagonalZigzagGen(genW, genH, r90));
                 }                    
             }
             else {
                 if (x % 2 == 0) {
-                    genList.add(new DiagonalZigzagGen(genW, genH, r90ccw));
+                    genList.add(new DiagonalZigzagGen(genW, genH, r90));
                 }
                 else {
-                    genList.add(new DiagonalZigzagGen(genW, genH, fxr90cw));
+                    genList.add(new DiagonalZigzagGen(genW, genH, fx270));
                 }                    
             }
             offsetList.add(new int[] {x * genW, y * genH});
@@ -1252,13 +1292,38 @@ public MultiGen zigzagRowRandomFlip(int rows, int cols, int genW, int genH) {
     ArrayList<int[]> offsetList = new ArrayList<int[]>();
     for (int y = 0; y < rows; y++) {
         for (int x = 0; x < cols; x++) {
-            transArrayShuffle();
-            genList.add(new DiagonalZigzagGen(genW, genH, transArray[0]));
+            genList.add(new DiagonalZigzagGen(genW, genH, randomTransform()));
             offsetList.add(new int[] {x * genW, y * genH});
         }
     }
     return new MultiGen(width, height, offsetList, genList);
 }
+
+/**
+ * Creates a MultiGen with rows * cols BoustropheGens. 
+ * Note that you should set values for such that:
+ * (rows * genW) == width and (cols * genH) == height.
+ * 
+ * @param rows    number of horiaontal rows 
+ * @param cols    number of vertical columns
+ * @param genW    width of an individual PixelMapGen
+ * @param genH    height of an indvidual PixelMapGen
+ * @return        a MultiGen created from rows * cols PixelMapGens
+ */ 
+public MultiGen boustrophRowRandom(int rows, int cols, int genW, int genH) {
+    // list of PixelMapGens that create an image using mapper
+    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+    // list of x,y coordinates for placing gens from genList
+    ArrayList<int[]> offsetList = new ArrayList<int[]>();
+    for (int y = 0; y < rows; y++) {
+        for (int x = 0; x < cols; x++) {
+            genList.add(new BoustropheGen(genW, genH, randomTransform()));
+            offsetList.add(new int[] {x * genW, y * genH});
+        }
+    }
+    return new MultiGen(width, height, offsetList, genList);
+}
+
 /**
  * Creates a MultiGen with rows * cols HilbertGens.
  * Note that you should set values for such that:
@@ -1279,26 +1344,19 @@ public MultiGen hilbertRowRandomFlip(int rows, int cols, int genW, int genH) {
     ArrayList<int[]> offsetList = new ArrayList<int[]>();
     for (int y = 0; y < rows; y++) {
         for (int x = 0; x < cols; x++) {
-            transArrayShuffle();
-            genList.add(new HilbertGen(genW, genH, transArray[0]));
+            genList.add(new HilbertGen(genW, genH, randomTransform()));
             offsetList.add(new int[] {x * genW, y * genH});
         }
     }
     return new MultiGen(width, height, offsetList, genList);
 }
 
+
 /**
- * Shuffles transArray, an array of AffineTransformType used to 
- * rotate and reflect PixelMapGens.
+ * @return    a random element from transArray
  */
-public void transArrayShuffle() {
-    Random rand = new Random();
-    for (int i = 0; i < transArray.length; i++) {
-        int swapIndex = rand.nextInt(transArray.length);
-        AffineTransformType temp = transArray[swapIndex];
-        transArray[swapIndex] = transArray[i];
-        transArray[i] = temp;
-    }
+public AffineTransformType randomTransform() {
+  return this.transArray[rand.nextInt(this.transArray.length)];
 }
 
 /**
@@ -1351,9 +1409,12 @@ public PixelAudioMapper selectMapper(int selector, PixelMapGen gen) {
         gen = zigzagRowRandomFlip(8, 12, width/12, height/8);
         break;
     case(13): 
-        gen = hilbertRowRandomFlip(4, 6, width/6, height/4);
+        gen = boustrophRowRandom(4, 6, width/6, height/4);
         break;
     case(14): 
+        gen = hilbertRowRandomFlip(4, 6, width/6, height/4);
+        break;
+    case(15): 
         gen = hilbertRowRandomFlip(8, 12, width/12, height/8);
         break;
     default: 
@@ -1368,7 +1429,6 @@ public PixelAudioMapper selectMapper(int selector, PixelMapGen gen) {
 /*                    END PATTERN MAKING METHODS                    */
 /*                                                                  */
 /*------------------------------------------------------------------*/
-
 
 /*----------------------------------------------------------------*/
 /*                                                                */
@@ -1398,7 +1458,7 @@ public void initAudio() {
 public void saveToAudio() {
     renderSignals();
     try {
-        saveAudioToFile(argo1Signal, sampleRate, "argo1_"+ wsIndex +".wav");
+        saveStereoAudioToFile(argo1Signal, argo2Signal, sampleRate, "argo1+2_"+ fileIndex +".wav");
     }
     catch (IOException e) {
         println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());
@@ -1406,27 +1466,8 @@ public void saveToAudio() {
     catch (UnsupportedAudioFileException e) {
         println("--->> The file format is unsupported "+ e.getMessage());
     }
-    try {
-        saveAudioToFile(argo2Signal, sampleRate, "argo2_"+ wsIndex +".wav");
-    }
-    catch (IOException e) {
-        println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());
-    }
-    catch (UnsupportedAudioFileException e) {
-        println("--->> The file format is unsupported "+ e.getMessage());
-    }
+    fileIndex++;
 }
-
-//   public void writeImageToAudio() {
-//    // println("----- writing image to signal ");
-//    rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
-//    argo1Buffer.setBufferSize(mapSize);
-//    mapImage.loadPixels();
-//    // fetch pixels from mapImage in signal order, put them in rgbSignal
-//    rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, rgbSignal.length);        
-//    // write the Brightness channel of rgbPixels, transcoded to audio range, to audioBuffer
-//    mapper.plantSamples(rgbSignal, argo1Buffer.getChannel(0), 0, mapSize, PixelAudioMapper.ChannelNames.L);
-//}
 
 /**
  * Calls Argosy to get a floating point representation of an argosy array.
@@ -1443,6 +1484,7 @@ public void renderSignals() {
     argo2Buffer.setChannel(0, argo2Signal);                        // copy argo2Signal to channel 1 of audioBuffer
     // println("--->> generated new audio signals");
 }
+
 /**
  * Typically called from mousePressed with mouseX and mouseY, generates audio events.
  * 
@@ -1520,6 +1562,7 @@ public void runTimeArray() {
     });
     timeLocsArray.removeIf(TimedLocation::isStale);
 }
+
 /**
  * Draws a circle at the location of an audio trigger (mouseDown event).
  * @param x        x coordinate of circle
@@ -1530,15 +1573,16 @@ public void drawCircle(int x, int y) {
     fill(color(233, 220, 199));
     noStroke();
     circle(x, y, 60);
-}    
+}
+
 /**
  * Saves audio data to 16-bit integer PCM format, which Processing can also open.
  * 
  * @param samples            an array of floats in the audio range (-1.0f, 1.0f)
  * @param sampleRate        audio sample rate for the file
  * @param fileName            name of the file to save to
- * @throws IOException        an Exception you'll need to catch to call this method (see keyPressed entry for 's')
- * @throws UnsupportedAudioFileException        another Exception (see keyPressed entry for 's')
+ * @throws IOException        
+ * @throws UnsupportedAudioFileException
  */
 public static void saveAudioToFile(float[] samples, float sampleRate, String fileName)
         throws IOException, UnsupportedAudioFileException {
@@ -1557,6 +1601,41 @@ public static void saveAudioToFile(float[] samples, float sampleRate, String fil
     AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
     AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
     // Save the AudioInputStream to a WAV file
+    File outFile = new File(fileName);
+    AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
+}
+
+/**
+ * Saves stereo audio data to 16-bit integer PCM WAV format.
+ *
+ * @param leftSamples   float array for the left channel (-1.0f to 1.0f)
+ * @param rightSamples  float array for the right channel (-1.0f to 1.0f)
+ * @param sampleRate    sample rate in Hz (e.g., 44100)
+ * @param fileName      name of the WAV file to save
+ * @throws IOException
+ * @throws UnsupportedAudioFileException
+ */
+public static void saveStereoAudioToFile(float[] leftSamples, float[] rightSamples, float sampleRate, String fileName)
+        throws IOException, UnsupportedAudioFileException {
+    if (leftSamples.length != rightSamples.length) {
+        throw new IllegalArgumentException("Left and right channel sample arrays must have the same length.");
+    }
+    int totalSamples = leftSamples.length;
+    byte[] audioBytes = new byte[totalSamples * 2 * 2]; // 2 bytes per sample, 2 channels
+    int index = 0;
+    for (int i = 0; i < totalSamples; i++) {
+        int left = (int) (leftSamples[i] * 32767);
+        int right = (int) (rightSamples[i] * 32767);
+        // Left channel (little endian)
+        audioBytes[index++] = (byte) (left & 0xFF);
+        audioBytes[index++] = (byte) ((left >> 8) & 0xFF);
+        // Right channel (little endian)
+        audioBytes[index++] = (byte) (right & 0xFF);
+        audioBytes[index++] = (byte) ((right >> 8) & 0xFF);
+    }
+    ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+    AudioFormat format = new AudioFormat(sampleRate, 16, 2, true, false); // 2 channels for stereo
+    AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, totalSamples);
     File outFile = new File(fileName);
     AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
 }
