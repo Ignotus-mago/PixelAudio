@@ -295,6 +295,8 @@ public void loadFiles() {
 
 
 /**
+ * Adds PixelMapGen objects to the local variable genList. The genList 
+ * initializes a MultiGen, which can be used to map audio and pixel data.
  * This method provides a big looping fractal consisting of 6 Hilbert curves.
  */
 public MultiGen loadLoopGen(int loopGenW, int loopGenH) {
@@ -302,17 +304,17 @@ public MultiGen loadLoopGen(int loopGenW, int loopGenH) {
   ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
   // list of x,y coordinates for placing gens from genList
   ArrayList<int[]> offsetList = new ArrayList<int[]>();     
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90));
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, 0 });
   genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.NADA));
   offsetList.add(new int[] { loopGenW, 0 });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90CCW));
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX90));
   offsetList.add(new int[] { 2 * loopGenW, 0 });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90CCW));
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX90));
   offsetList.add(new int[] { 2 * loopGenW, loopGenH });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.ROT180));
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.R180));
   offsetList.add(new int[] { loopGenW, loopGenH });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FLIPX90));
+  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, loopGenH });
   return new MultiGen(width, height, offsetList, genList);
 }

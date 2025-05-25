@@ -54,13 +54,13 @@ public void showHelp() {
 public void keyPressed() {
   switch (key) {
     case 'f':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.ROT90);
+      img = BitmapTransform.imageTransform(img, AffineTransformType.R270);
       break;
     case 'b':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.ROT90CCW);
+      img = BitmapTransform.imageTransform(img, AffineTransformType.R90);
       break;
     case 'r':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.ROT180);
+      img = BitmapTransform.imageTransform(img, AffineTransformType.R180);
       break;
     case 'x':
       img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPX);
@@ -69,10 +69,10 @@ public void keyPressed() {
       img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPY);
       break;
     case '1':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPX90CCW);
+      img = BitmapTransform.imageTransform(img, AffineTransformType.FX90);
       break;
     case '2':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPX90);
+      img = BitmapTransform.imageTransform(img, AffineTransformType.FX270);
       break;
     case 'o': 
       // reload the image

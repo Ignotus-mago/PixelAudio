@@ -174,17 +174,17 @@ public void initAudio() {
  * initialize a MultiGen, which in turn is passed to a WaveSynth.
  */
 public void loadGenLists() {
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, 0 });
   genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.NADA));
   offsetList.add(new int[] { genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90CCW));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX90));
   offsetList.add(new int[] { 2 * genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90CCW));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX90));
   offsetList.add(new int[] { 2 * genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.ROT180));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.R180));
   offsetList.add(new int[] { genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, genHeight });
 }
 

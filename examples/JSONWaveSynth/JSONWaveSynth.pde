@@ -186,7 +186,7 @@ public void keyPressed() {
     break;
   case 'f':
     // rotate gen 90 degrees clockwise
-    gen.setTransformType(AffineTransformType.ROT90);
+    gen.setTransformType(AffineTransformType.R270);
     swapGen(gen);
     wavesynth.renderFrame(step);
     break;

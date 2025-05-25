@@ -62,6 +62,17 @@ import g4p_controls.*;
  * panel in this example allows to isolate individual WaveData operators to see how they 
  * affect the color patterns. 
  * 
+ * SAMPLING RATES FOR AUDIO AND FOR WAVESYNTH IMAGES
+ * 
+ * We use different sampling rates for audio playback and recording and for WaveSynth's 
+ * additive synthesis algorithm. We use the standard sampling rate 48000 for audio. 
+ * For the WaveSynth, which in this demo app relies on Hilbert curves to make patterns, 
+ * we use (genWidth * genWidth) as the sampling rate for the sine waves that are added 
+ * together to produce the WaveSynth image. If genWidth = 512, this value is 262144.
+ * You can change the audio sampling rate in the instance variables list or in setup(). 
+ * You can change WaveSynth's sampling rate in the initWaveSynth() method. 
+ * 
+ * 
  * In addition to the GUI commands, there are some useful key commands.
  *
  * --------------------------------------------------------------------------------------------
@@ -221,7 +232,7 @@ Minim minim;                       // library that handles audio
 AudioOutput audioOut;              // line out to sound hardware
 MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
 boolean isBufferStale = false;     // flags that audioBuffer needs to be reset: i.e., after loading JSON data to wavesynth
-int sampleRate = 48000;            // a critical value for display and audio, see the setup method
+int sampleRate = 48000;            // sample rate for audio playback and output to file, see notes above
 float[] audioSignal;               // the audio signal as an array of floats
 int audioLength;                   // length of the audioSignal, same as the number of pixels in the display image
 // SampleInstrument setup
@@ -272,7 +283,7 @@ public void setup() {
     bgFillColor = color(0, 0, 0, 255);
     pixelaudio = new PixelAudio(this);
     initAudio();
-    gen = isDesignMode ? createHilbertGen(genWidth) : createMultiGen(genWidth);
+    gen = isDesignMode ? createHilbertGen(genWidth) : hilbertLoop3x2(genWidth, genHeight);
     mapper = new PixelAudioMapper(gen);
     mapSize = mapper.getSize();                    // size of the image, and of various other entities
     wdList = initWaveDataList();
@@ -300,27 +311,39 @@ public HilbertGen createHilbertGen(int edgeLength) {
 }
 
 /**
- * @param edgeLength    length in pixels of Hilbert edge
- * @return    a 3 x 2 array of Hilbert curves, connected in a loop (3 * genWidth by 2 * genHeight pixels)
+ * Generates a looping fractal signal path consisting of 6 HilbertGens,
+ * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
+ * This particular MultiGen configuration is used so extensively in my 
+ * sample code that I've given it a factory method in the HilbertGen class.
+ * It's written out here so you can see how it works. 
+ * 
+ * Note that genH must equal genW and both must be powers of 2. For the 
+ * image size we're using in this example, genW = image width / 3 and 
+ * genH = image height / 2.
+ * 
+ * @param genW    width of each HilbertGen 
+ * @param genH    height of each HilbertGen
+ * @return              a 3 x 2 array of Hilbert curves, connected in 
+ *                      a loop (3 * genWidth by 2 * genHeight pixels)
  */
-public MultiGen createMultiGen(int edgeLength) {
+public MultiGen hilbertLoop3x2(int genW, int genH) {
     // list of PixelMapGens that create an image using mapper
     ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
     // list of x,y coordinates for placing gens from genList
     ArrayList<int[]> offsetList = new ArrayList<int[]>();
-    genList.add(new HilbertGen(edgeLength, edgeLength, AffineTransformType.FLIPX90));
+    genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
     offsetList.add(new int[] { 0, 0 });
-    genList.add(new HilbertGen(edgeLength, edgeLength, AffineTransformType.NADA));
-    offsetList.add(new int[] { edgeLength, 0 });
-    genList.add(new HilbertGen(edgeLength, edgeLength, AffineTransformType.FLIPX90CCW));
-    offsetList.add(new int[] { 2 * edgeLength, 0 });
-    genList.add(new HilbertGen(edgeLength, edgeLength, AffineTransformType.FLIPX90CCW));
-    offsetList.add(new int[] { 2 * edgeLength, edgeLength });
-    genList.add(new HilbertGen(edgeLength, edgeLength, AffineTransformType.ROT180));
-    offsetList.add(new int[] { edgeLength, edgeLength });
-    genList.add(new HilbertGen(edgeLength, edgeLength, AffineTransformType.FLIPX90));
-    offsetList.add(new int[] { 0, edgeLength });
-    return new MultiGen(width, height, offsetList, genList);
+    genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
+    offsetList.add(new int[] { genW, 0 });
+    genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+    offsetList.add(new int[] { 2 * genW, 0 });
+    genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+    offsetList.add(new int[] { 2 * genW, genH });
+    genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
+    offsetList.add(new int[] { genW, genH });
+    genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
+    offsetList.add(new int[] { 0, genH });
+    return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 /**
@@ -353,8 +376,8 @@ public ArrayList<WaveData> initWaveDataList() {
  * rates are not standard for saving to file, so you may want to use a standard rate
  * such as 48000Hz if you want to save audio to a file. 
  * 
- * @param synth        a WaveSynth instance
- * @return            the WaveSynth with initial values set
+ * @param synth    a WaveSynth instance
+ * @return         the WaveSynth with initial values set
  */
 public WaveSynth initWaveSynth(WaveSynth synth) {
     synth.setGain(0.8f);
@@ -367,6 +390,7 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
     // synth.setSampleRate(genWidth / 4 * genWidth / 4);
     // synth.setSampleRate(gen.getWidth() * gen.getHeight());
     // synth.setSampleRate(48000);
+    // See the PixelAudio class for some public static final values for sampleRate
     println("\n====================================================");
     println("--- mapImage size = " + synth.mapImage.pixels.length);
     println("--- WaveSynth sample rate = " + synth.getSampleRate());
@@ -416,7 +440,7 @@ public void stepAnimation() {
             println("-- video recording frame " + step + " of " + animStop);
         }
     }
-    wavesynth.renderFrame(step);
+    renderFrame(step);
 }
 
 public void renderFrame(int frame) {
@@ -516,6 +540,7 @@ public void mousePressed() {
 public void keyPressed() {
     parseKey(key);
 }
+
 /**
  * ParseKey handles keyPressed events. Unlike keyPressed, it can be called by other methods.
  * Note that keyPressed events only work when the image window, not the GUI control panel, 
@@ -848,6 +873,8 @@ public void toggleRecording() {
     refreshGlobalPanel();
 }
 
+// ------------- WaveData methods ------------- //
+
 /**
  * Scales the amplitude of an ArrayList of WaveData objects.
  * 
@@ -994,8 +1021,6 @@ public void unmuteAllWD(ArrayList<WaveData> waveDataList) {
     println(sb.toString());        
 }
 
-// -------- NEW CODE -------- //
-
 /**
  * Comparator class for sorting waveDataList by frequency or phase
  */
@@ -1030,9 +1055,11 @@ public void stepWaveData(boolean up) {
     currentWD = wavesynth.waveDataList.get(waveDataIndex);
     loadWaveDataPanelValues(currentWD);
 }
+
 public void incWaveData() {
     stepWaveData(true);
 }
+
 public void decWaveData() {
     stepWaveData(false);
 }

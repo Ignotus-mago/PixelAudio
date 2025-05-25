@@ -29,6 +29,7 @@ PImage mapImage;                 // A PImage to display
 int[] colors;                    // an array of color values for pixels
 int shift = 512;                 // amount to displace pixels for animation
 boolean isAnimating = false;     // well, are we animating or not?
+boolean oldIsAnimating = isAnimating;          // save animation state
 
 String currentFileName;
 PixelMapGen currentGen;
@@ -70,17 +71,17 @@ public void setup() {
 // AfineTransformType arguments determine the rotation and reflection of the gens
 // in such a was as to make the pixels look continuous along the signal path.
 public void loadGenLists() {
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, 0 });
   genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.NADA));
   offsetList.add(new int[] { genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90CCW));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX90));
   offsetList.add(new int[] { 2 * genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90CCW));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX90));
   offsetList.add(new int[] { 2 * genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.ROT180));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.R180));
   offsetList.add(new int[] { genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FLIPX90));
+  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, genHeight });
 }
 
@@ -112,6 +113,8 @@ public void keyPressed() {
     exportGenData(currentGen);
     break;
   case 'o':
+    oldIsAnimating = isAnimating;
+    isAnimating = false;
     importGenData();
     break;
   default:
