@@ -39,6 +39,7 @@ public void importGenData() {
 public void fileSelectedOpen(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
+    isAnimating = oldIsAnimating;
     return;
   }
   File currentDataFile = selection;
@@ -59,6 +60,7 @@ public void fileSelectedOpen(File selection) {
     mapper.plantPixels(colors, mapImage.pixels, 0, mapper.getSize());
     mapImage.updatePixels();
   }
+  isAnimating = oldIsAnimating;
 }
 
 public PixelMapGen importGenDataJSON(JSONObject json) {
