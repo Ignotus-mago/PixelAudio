@@ -26,15 +26,15 @@ public class BitmapTransform {
 	 */
 	public static PImage imageTransform(PImage img, AffineTransformType type) {
 		switch (type) {
-		case ROT90: {
+		case R270: {
 			img = rotate90(img);
 			break;
 		}
-		case ROT90CCW: {
+		case R90: {
 			img = rotate90CCW(img);
 			break;
 		}
-		case ROT180: {
+		case R180: {
 			img = rotate180(img);
 			break;
 		}
@@ -46,11 +46,11 @@ public class BitmapTransform {
 			img = flipY(img);
 			break;
 		}
-		case FLIPX90: {
+		case FX270: {
 			img = flipX90(img);		// secondary diagonal
 			break;
 		}
-		case FLIPX90CCW: {
+		case FX90: {
 			img = flipX90CCW(img);  // primary diagonal
 			break;
 		}
@@ -76,13 +76,13 @@ public class BitmapTransform {
 	 */
 	public static int[] pixelsTransform(int[] pixels, int width, int height, AffineTransformType type) {
 		switch (type) {
-		case ROT90: {
+		case R270: {
 			return BitmapTransform.rotate90(pixels, width, height);
 		}
-		case ROT90CCW: {
+		case R90: {
 			return BitmapTransform.rotate90CCW(pixels, width, height);
 		}
-		case ROT180: {
+		case R180: {
 			return BitmapTransform.rotate180(pixels, width, height);
 		}
 		case FLIPX: {
@@ -91,10 +91,10 @@ public class BitmapTransform {
 		case FLIPY: {
 			return BitmapTransform.flipY(pixels, width, height);
 		}
-		case FLIPX90: {
+		case FX270: {
 			return BitmapTransform.flipX90(pixels, width, height);		// secondary diagonal
 		}
-		case FLIPX90CCW: {
+		case FX90: {
 			return BitmapTransform.flipX90CCW(pixels, width, height);  // primary diagonal
 		}
 		case NADA: {
@@ -119,13 +119,13 @@ public class BitmapTransform {
 	 */
 	public static int[] coordTransform(int x, int y, int width, int height, AffineTransformType type) {
 		switch (type) {
-		case ROT90: {
+		case R270: {
 			return BitmapTransform.rotate90Coord(x, y, width, height);
 		}
-		case ROT90CCW: {
+		case R90: {
 			return BitmapTransform.rotate90CCWCoord(x, y, width, height);
 		}
-		case ROT180: {
+		case R180: {
 			return BitmapTransform.rotate180Coord(x, y, width, height);
 		}
 		case FLIPX: {
@@ -134,10 +134,10 @@ public class BitmapTransform {
 		case FLIPY: {
 			return BitmapTransform.flipYCoord(x, y, width, height);
 		}
-		case FLIPX90: {
+		case FX270: {
 			return BitmapTransform.flipX90Coord(x, y, width, height);		// secondary diagonal
 		}
-		case FLIPX90CCW: {
+		case FX90: {
 			return BitmapTransform.flipX90CCWCoord(x, y, width, height);  // primary diagonal
 		}
 		case NADA: {
@@ -158,13 +158,13 @@ public class BitmapTransform {
 	 */
 	public static int[] getIndexMap(int w, int h, AffineTransformType type) {
 		switch (type) {
-		case ROT90: {
+		case R270: {
 			return rotate90Map(w, h);
 		}
-		case ROT90CCW: {
+		case R90: {
 			return rotate90CCWMap(w, h);
 		}
-		case ROT180: {
+		case R180: {
 			return rotate180Map(w, h);
 		}
 		case FLIPX: {
@@ -173,10 +173,10 @@ public class BitmapTransform {
 		case FLIPY: {
 			return flipYMap(w, h);
 		}
-		case FLIPX90CCW: {
+		case FX90: {
 			return flipX90CCWMap(w, h);
 		}
-		case FLIPX90: {
+		case FX270: {
 			return flipX90Map(w, h);
 		}
 		case NADA: {

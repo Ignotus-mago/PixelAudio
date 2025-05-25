@@ -186,9 +186,9 @@ public class MultiGen extends PixelMapGen {
 		int[][] locs = {{0,0}, {0,1}, {0,2}, {0,3}, {1,3}, {1,2}, {2,2}, {2,3}, 
 						{3,3}, {3,2}, {4,2}, {4,3}, {5,3}, {5,2}, {5,1}, {5,0},
 						{4,0}, {4,1}, {3,1}, {3,0}, {2,0}, {2,1}, {1,1}, {1,0}};
-		AffineTransformType[] trans = {r90cw, r90cw, nada, r90cw, r90ccw, fxr90cw, nada, r90cw, 
-				                       r90ccw, r90ccw, fxr90ccw, nada, r90ccw, r90ccw, r180, r90ccw, 
-				                       r90cw, fxr90ccw, r180, r90ccw, r90cw, r90cw, fxr90cw, r180};
+		AffineTransformType[] trans = {r270, r270, nada, r270, r90, fx270, nada, r270, 
+				                       r90, r90, fx90, nada, r90, r90, r180, r90, 
+				                       r270, fx90, r180, r90, r270, r270, fx270, r180};
 		char[] cues = {'H','D','D','H','D','H','D','H', 
 				       'H','D','H','D','H','D','D','H',
 				       'D','H','D','H','H','D','H','D'}; 
