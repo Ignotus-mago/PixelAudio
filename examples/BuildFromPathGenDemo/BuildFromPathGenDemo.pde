@@ -69,7 +69,7 @@ public void setup() {
 
 // generate HilbertGens and pixel offsets where they will be placed
 // AfineTransformType arguments determine the rotation and reflection of the gens
-// in such a was as to make the pixels look continuous along the signal path.
+// in such a was as to make the pixels look continuous along the signal path.f
 public void loadGenLists() {
   genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, 0 });
