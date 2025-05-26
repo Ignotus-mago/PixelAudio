@@ -73,7 +73,7 @@ public abstract class PixelMapGen {
 	public final static String description = "Declare the description variable in your class and describe your PixelMapGen.";
 
 	// short names for transforms from
-	// public enum AffineTransformType {ROT90CW, ROT90CCW, ROT180, FLIPX, FLIPX90, FLIPX90CCW, FLIPY, NADA};
+	// public enum AffineTransformType 
 	public static AffineTransformType     r270      = AffineTransformType.R270;
 	public static AffineTransformType     r90       = AffineTransformType.R90;
 	public static AffineTransformType     r180      = AffineTransformType.R180;
@@ -361,7 +361,7 @@ public abstract class PixelMapGen {
     
     // ------------- RANDOM TRANSFORM ------------- //
     
-	public AffineTransformType randomTransform(Random rand) {
+	public static AffineTransformType randomTransform(Random rand) {
 		return PixelMapGen.transArray[rand.nextInt(PixelMapGen.transArray.length)];
 	}
 

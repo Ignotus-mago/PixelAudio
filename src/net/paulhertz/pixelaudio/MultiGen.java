@@ -2,12 +2,17 @@ package net.paulhertz.pixelaudio;
 
 import java.util.ArrayList;
 
+/**
+ * A PixelMapGen child class that combines multiple PixelMapGen instances with a single signal path. 
+ * The signal path is not necessarily continuous over a 4-connected grid, i.e., the bitmap used by
+ * a PixelAudioMapper instance initialized with a MultiGen, but it may be. 
+ */
 public class MultiGen extends PixelMapGen {
 	public int rows = 0;
 	public int columns = 0;
 	public ArrayList<PixelMapGen> genList;
 	public ArrayList<int[]> offsetList = null;
-	public final static String description = "A PixelMapGen that creates a single signal path over multiple PixelMapGens.";
+	public final static String description = "MultiGen is a PixelMapGen that creates a single signal path over multiple PixelMapGens.";
 
 	
 	// we'll create two DiagonalZigzagGens by default.

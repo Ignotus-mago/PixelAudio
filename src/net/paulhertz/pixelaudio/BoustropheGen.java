@@ -88,5 +88,64 @@ public class BoustropheGen extends PixelMapGen {
 		}
 		return coordinates;
 	}
+	
+	
+	/* ------------------------- BOUSTROPHEGEN MULTIGEN FACTORIES --------------------------
+	
+	 * MultiGens create a PixelMapGen from from a list of PixelMapGen 
+	 * objects (genList) and coordinate points (offsetList) where they 
+	 * will be displayed. A MultiGen creates a single signal path over all
+	 * the PixelMapGen objects. The path may be *continuous*, which is to say that
+	 * the path through each PixelMapGen object ("gen" for short) only has to step
+	 * one pixel up, down, left, or right to connect to the next gen. It may even
+	 * create a loop, where the last pixel in the path is one step away from the
+	 * first pixel. This is reflected in the naming conventions. 
+	 * 
+	 * In the method names, "ortho" refers to gens that are aligned in rows (or
+	 * columns) where each new row begins one unit down or over from the previous row,
+	 * always adding new gens in the same direction. In the "bou" methods 
+	 * (named for boustrophodon, a method of writing text in alternating directions), 
+	 * each successive row or column goes in the opposite direction from the previous
+	 * one. The bou methods may provide continuous paths, the ortho methods are
+	 * inherently discontinuous, like row major bitmaps or video scanlines. 
+	 * 
+	 * Looping methods are are almost always more complex than bou and necessarily 
+	 * more complex than ortho methods. Like the Hilbert curve, they involve
+	 * changes in direction reminiscent of folding. Looping methods often have
+	 * constraints on the numbers of rows and columns that can produce a loop.
+	 * The constraints arise from the connectivity offered by the different
+	 * PixelMapGen child classes: Hilbert gens have connections at two adjacent
+	 * corners, DiagonalZigzag gens have connections at opposite corners. 
+	 * Moore gens are loops to begin with, and have no connections, but are
+	 * good for very symmetrical pattern-making.  
+
+	---------------------------------------------------------------------------------------- */
+	
+	/**
+	 * Creates a MultiGen with rows * cols BoustropheGens. 
+	 * Note that you should set values for such that:
+	 * (rows * genW) == width and (cols * genH) == height.
+	 * 
+	 * @param rows    number of horiaontal rows 
+	 * @param cols    number of vertical columns
+	 * @param genW    width of an individual PixelMapGen
+	 * @param genH    height of an indvidual PixelMapGen
+	 * @return        a MultiGen created from rows * cols PixelMapGens
+	 */ 
+	public static MultiGen boustrophRowRandom(int rows, int cols, int genW, int genH) {
+	    // list of PixelMapGens that create an image using mapper
+	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+	    // list of x,y coordinates for placing gens from genList
+	    ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	    for (int y = 0; y < rows; y++) {
+	        for (int x = 0; x < cols; x++) {
+	            genList.add(new BoustropheGen(genW, genH, randomTransform(PixelAudio.rando())));
+	            offsetList.add(new int[] {x * genW, y * genH});
+	        }
+	    }
+	    return new MultiGen(cols * genW, rows * genH, offsetList, genList);
+	}
+
+	
 
 }

@@ -154,6 +154,11 @@ public class PixelAudio {
 		return rando;
 	}
 	
+	public static Random rando(long seed) {
+		rando = new Random(seed);
+		return rando;
+	}
+	
 	
 	
 	//-------------------------------------------//
