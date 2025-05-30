@@ -27,11 +27,11 @@ public class BitmapTransform {
 	public static PImage imageTransform(PImage img, AffineTransformType type) {
 		switch (type) {
 		case R270: {
-			img = rotate90(img);
+			img = rotate270(img);
 			break;
 		}
 		case R90: {
-			img = rotate90CCW(img);
+			img = rotate90(img);
 			break;
 		}
 		case R180: {
@@ -47,11 +47,11 @@ public class BitmapTransform {
 			break;
 		}
 		case FX270: {
-			img = flipX90(img);		// secondary diagonal
+			img = flipX270(img);		// secondary diagonal
 			break;
 		}
 		case FX90: {
-			img = flipX90CCW(img);  // primary diagonal
+			img = flipX90(img);  // primary diagonal
 			break;
 		}
 		case NADA: {
@@ -77,10 +77,10 @@ public class BitmapTransform {
 	public static int[] pixelsTransform(int[] pixels, int width, int height, AffineTransformType type) {
 		switch (type) {
 		case R270: {
-			return BitmapTransform.rotate90(pixels, width, height);
+			return BitmapTransform.rotate270(pixels, width, height);
 		}
 		case R90: {
-			return BitmapTransform.rotate90CCW(pixels, width, height);
+			return BitmapTransform.rotate90(pixels, width, height);
 		}
 		case R180: {
 			return BitmapTransform.rotate180(pixels, width, height);
@@ -92,10 +92,10 @@ public class BitmapTransform {
 			return BitmapTransform.flipY(pixels, width, height);
 		}
 		case FX270: {
-			return BitmapTransform.flipX90(pixels, width, height);		// secondary diagonal
+			return BitmapTransform.flipX270(pixels, width, height);		// secondary diagonal
 		}
 		case FX90: {
-			return BitmapTransform.flipX90CCW(pixels, width, height);  // primary diagonal
+			return BitmapTransform.flipX90(pixels, width, height);  // primary diagonal
 		}
 		case NADA: {
 			return Arrays.copyOf(pixels, pixels.length);
@@ -120,10 +120,10 @@ public class BitmapTransform {
 	public static int[] coordTransform(int x, int y, int width, int height, AffineTransformType type) {
 		switch (type) {
 		case R270: {
-			return BitmapTransform.rotate90Coord(x, y, width, height);
+			return BitmapTransform.rotate270Coord(x, y, width, height);
 		}
 		case R90: {
-			return BitmapTransform.rotate90CCWCoord(x, y, width, height);
+			return BitmapTransform.rotate90Coord(x, y, width, height);
 		}
 		case R180: {
 			return BitmapTransform.rotate180Coord(x, y, width, height);
@@ -135,10 +135,10 @@ public class BitmapTransform {
 			return BitmapTransform.flipYCoord(x, y, width, height);
 		}
 		case FX270: {
-			return BitmapTransform.flipX90Coord(x, y, width, height);		// secondary diagonal
+			return BitmapTransform.flipX270Coord(x, y, width, height);		// secondary diagonal
 		}
 		case FX90: {
-			return BitmapTransform.flipX90CCWCoord(x, y, width, height);  // primary diagonal
+			return BitmapTransform.flipX90Coord(x, y, width, height);       // primary diagonal
 		}
 		case NADA: {
 			return BitmapTransform.nadaCoord(x, y, width, height);
@@ -159,10 +159,10 @@ public class BitmapTransform {
 	public static int[] getIndexMap(int w, int h, AffineTransformType type) {
 		switch (type) {
 		case R270: {
-			return rotate90Map(w, h);
+			return rotate270Map(w, h);
 		}
 		case R90: {
-			return rotate90CCWMap(w, h);
+			return rotate90Map(w, h);
 		}
 		case R180: {
 			return rotate180Map(w, h);
@@ -174,10 +174,10 @@ public class BitmapTransform {
 			return flipYMap(w, h);
 		}
 		case FX90: {
-			return flipX90CCWMap(w, h);
+			return flipX90Map(w, h);
 		}
 		case FX270: {
-			return flipX90Map(w, h);
+			return flipX270Map(w, h);
 		}
 		case NADA: {
 			return nadaMap(w, h);
@@ -194,13 +194,14 @@ public class BitmapTransform {
 
 	/**
 	 * Rotates an array of integers 90 degrees clockwise, as determined by width and height arguments. 
+	 * In computer graphics standards, rotation counterclockwise, so this is rotate270 in CG parlance.
 	 * 
 	 * @param pixels	an array of integer values, possibly RGB or ARGB colors or array indices
 	 * @param width		width of the bitmap for the pixels array 
 	 * @param height	height of the bitmap for the pixels array 
 	 * @return			a transformed copy of the pixels array
 	 */
-	public static int[] rotate90(int[] pixels, int width, int height) {
+	public static int[] rotate270(int[] pixels, int width, int height) {
 		int[] newPixels = new int[pixels.length];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -216,13 +217,14 @@ public class BitmapTransform {
 
 	/**
 	 * Rotates an array of integers 90 degrees counter-clockwise, as determined by width and height arguments. 
+	 * In computer graphices, this is a standard 90 degree rotation. 
 	 * 
 	 * @param pixels	an array of integer values, possibly RGB or ARGB colors or array indices
 	 * @param width		width of the bitmap for the pixels array 
 	 * @param height	height of the bitmap for the pixels array 
 	 * @return			a transformed copy of the pixels array
 	 */
-	public static int[] rotate90CCW(int[] pixels, int width, int height) {
+	public static int[] rotate90(int[] pixels, int width, int height) {
 		int[] newPixels = new int[pixels.length];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -310,7 +312,7 @@ public class BitmapTransform {
 	 * @param height	height of the bitmap for the pixels array 
 	 * @return			a transformed copy of the pixels array
 	 */
-	public static int[] flipX90CCW(int[] pixels, int width, int height) {
+	public static int[] flipX90(int[] pixels, int width, int height) {
 		int[] newPixels = new int[pixels.length];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -332,7 +334,7 @@ public class BitmapTransform {
 	 * @param height	height of the bitmap for the pixels array 
 	 * @return			a transformed copy of the pixels array
 	 */
-	public static int[] flipX90(int[] pixels, int width, int height) {
+	public static int[] flipX270(int[] pixels, int width, int height) {
 		int[] newPixels = new int[pixels.length];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -359,9 +361,9 @@ public class BitmapTransform {
 	 * @param img	a PImage
 	 * @return		transformed image
 	 */
-	public static PImage rotate90(PImage img) {
+	public static PImage rotate270(PImage img) {
 		img.loadPixels();
-		img.pixels = rotate90(img.pixels, img.width, img.height);
+		img.pixels = rotate270(img.pixels, img.width, img.height);
 		img.updatePixels();
         PImage newImage = PixelAudio.myParent.createImage(img.height, img.width, PConstants.ARGB);
         newImage.pixels = img.pixels;
@@ -375,9 +377,9 @@ public class BitmapTransform {
 	 * @param img	a PImage
 	 * @return		transformed image
 	 */
-	public static PImage rotate90CCW(PImage img) {
+	public static PImage rotate90(PImage img) {
 		img.loadPixels();
-		img.pixels = rotate90CCW(img.pixels, img.width, img.height);
+		img.pixels = rotate90(img.pixels, img.width, img.height);
 		img.updatePixels();
         PImage newImage = PixelAudio.myParent.createImage(img.height, img.width, PConstants.ARGB);
         newImage.pixels = img.pixels;
@@ -430,9 +432,9 @@ public class BitmapTransform {
 	 * @param img	a PImage
 	 * @return		transformed image
 	 */
-	public static PImage flipX90CCW(PImage img) {
+	public static PImage flipX90(PImage img) {
 		img.loadPixels();
-		img.pixels = flipX90CCW(img.pixels, img.width, img.height);
+		img.pixels = flipX90(img.pixels, img.width, img.height);
 		img.updatePixels();
         PImage newImage = PixelAudio.myParent.createImage(img.height, img.width, PConstants.ARGB);
         newImage.pixels = img.pixels;
@@ -446,9 +448,9 @@ public class BitmapTransform {
 	 * @param img	a PImage
 	 * @return		transformed image
 	 */
-	public static PImage flipX90(PImage img) {
+	public static PImage flipX270(PImage img) {
 		img.loadPixels();
-		img.pixels = flipX90(img.pixels, img.width, img.height);
+		img.pixels = flipX270(img.pixels, img.width, img.height);
 		img.updatePixels();
         PImage newImage = PixelAudio.myParent.createImage(img.height, img.width, PConstants.ARGB);
         newImage.pixels = img.pixels;
@@ -467,7 +469,7 @@ public class BitmapTransform {
 	 * @param h		height of bitmap
 	 * @return		transformed coordinates {x, y}
 	 */
-	public static int[] rotate90Coord(int x, int y, int w, int h) {
+	public static int[] rotate270Coord(int x, int y, int w, int h) {
 		int newX = h - 1 - y; // Calculate rotated x-coordinate
 		int newY = x; // and rotated y-coordinate
 		return new int[] { newX, newY };
@@ -480,7 +482,7 @@ public class BitmapTransform {
 	 * @param h		height of bitmap
 	 * @return		transformed coordinates {x, y}
 	 */
-	public static int[] rotate90CCWCoord(int x, int y, int w, int h) {
+	public static int[] rotate90Coord(int x, int y, int w, int h) {
 		int newX = y;
 		int newY = w - 1 - x;
 		return new int[] { newX, newY };
@@ -535,7 +537,7 @@ public class BitmapTransform {
 	 * @param h		height of bitmap
 	 * @return		transformed coordinates {x, y}
 	 */
-	public static int[] flipX90CCWCoord(int x, int y, int w, int h) {
+	public static int[] flipX90Coord(int x, int y, int w, int h) {
 		int newX = y;
 		int newY = x;
 		return new int[] { newX, newY };
@@ -550,7 +552,7 @@ public class BitmapTransform {
 	 * @param h		height of bitmap
 	 * @return		transformed coordinates {x, y}
 	 */
-	public static int[] flipX90Coord(int x, int y, int w, int h) {
+	public static int[] flipX270Coord(int x, int y, int w, int h) {
 		int newX = h - 1 - y;
 		int newY = w - 1 - x;
 		return new int[] { newX, newY };
@@ -580,7 +582,7 @@ public class BitmapTransform {
 	 * @param height	height of transformation map
 	 * @return			look up table for a geometric transform of 90 degrees CW
 	 */
-	public static int[] rotate90Map(int width, int height) {
+	public static int[] rotate270Map(int width, int height) {
 		int[] newPixels = new int[width * height];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -601,7 +603,7 @@ public class BitmapTransform {
 	 * @param height	height of transformation map
 	 * @return			look up table for a geometric transform of 90 degrees CCW
 	 */
-	public static int[] rotate90CCWMap(int width, int height) {
+	public static int[] rotate90Map(int width, int height) {
 		int[] newPixels = new int[width * height];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -685,7 +687,7 @@ public class BitmapTransform {
 	 * @param height	height of transformation map
 	 * @return			look up table for a geometric transform that reflects on primary diagonal
 	 */
-	public static int[] flipX90CCWMap(int width, int height) {
+	public static int[] flipX90Map(int width, int height) {
 		int[] newPixels = new int[width * height];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
@@ -706,7 +708,7 @@ public class BitmapTransform {
 	 * @param height	height of transformation map
 	 * @return			look up table for a geometric transform that reflects on secondary diagonal
 	 */
-	public static int[] flipX90Map(int width, int height) {
+	public static int[] flipX270Map(int width, int height) {
 		int[] newPixels = new int[width * height];
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
