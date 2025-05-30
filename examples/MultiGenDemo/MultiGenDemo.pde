@@ -50,7 +50,7 @@ public void settings() {
 
 public void setup() {
   pixelaudio = new PixelAudio(this);
-  multigen = loadLoopGen(genWidth, genHeight);
+  multigen = hilbertLoop3x2(genWidth, genHeight);
   mapper = new PixelAudioMapper(multigen);
   mapImage = createImage(width, height, RGB);
   mapImage.loadPixels();
@@ -60,11 +60,33 @@ public void setup() {
 }
 
 /**
- * Adds PixelMapGen objects to the local variable genList. The genList 
- * initializes a MultiGen, which can be used to map audio and pixel data.
- * This method provides a big looping fractal consisting of 6 Hilbert curves.
+ * Generates a looping fractal signal path consisting of 6 HilbertGens,
+ * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
+ * 
+ * This method creates a MultiGen instance from a list of PixelMapGen objects 
+ * (genList) and a list of  coordinate points (offsetList) where they will
+ * be displayed. The MultiGen class creates a single signal path over all
+ * its PixelMapGen objects. The path may be *continuous*, which is to say that
+ * the path through each PixelMapGen object ("gen" for short) only has to step
+ * one pixel up, down, left, or right to connect to the next gen. It may even
+ * create a *loop*, where the last pixel in the path is one step away from the
+ * first pixel. This method creates a MultiGen that is both continuous and looped. 
+ *
+ * This method may be called as factory method of the HilbertGen class:
+ * public static MultiGen hilbertLoop3x2(int genW, int genH)
+ * example: MultiGen multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
+ *
+ *
+ * Note that genH must equal genW and both must be powers of 2. For the 
+ * image size we're using in this example, genW = image width / 3 and 
+ * genH = image height / 2.
+ * 
+ * @param genW    width of each HilbertGen 
+ * @param genH    height of each HilbertGen
+ * @return        a MultiGen consisting of 6 HilbertGens linked together by one signal path
+ * 
  */
-public MultiGen loadLoopGen(int loopGenW, int loopGenH) {
+public MultiGen hilbertLoop3x2(int genWidth, int genHeight) {
   // list of PixelMapGens that create an image using mapper
   ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
   // list of x,y coordinates for placing gens from genList

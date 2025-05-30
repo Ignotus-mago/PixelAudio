@@ -35,6 +35,9 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * by following the signal path order and reading the black numbers. Read the
  * imageToSignalLUT values by following the black pixel numbers in order and
  * reading the white numbers.
+ *
+ * This example can be a good place to test your own MultiGen creation methods. 
+ *
  * 
  * KEY COMMANDS
  * 
@@ -52,13 +55,13 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * 
  * 
  * TODO There are some annoying bugs associated with some of the transforms and window resizing. 
- * For the moment, I've commented out the key commands for the r90, r270, fx90, and fx270 
+ * For the moment, I've removed the key commands for the r90, r270, fx90, and fx270 
  * transforms that cause the problem. 
  * 
  */
 
 PixelAudio pixelaudio;     // our library
-PixelMapGen hilb3x2Loop;   // a 3x2 Hilbert MultiGen 
+PixelMapGen hilb6x4Loop;   // a 3x2 Hilbert MultiGen 
 PixelMapGen mixGen;        // a hilbertZigzagLoop6x4 curve generator
 PixelMapGen zz6x4Loop;     // diagonal zigzag generator
 PixelMapGen randoBou;      // Boustrophedon generator
@@ -68,10 +71,11 @@ int[] spectrum;            // an array of values for our mapper
 ArrayList<int[]> coords;   // local copy of generator coordinates
 int[] imageLUT;            // the imageToSignalLUT from mapper, also the sampleMap field from the generator
 int[] signalLUT;           // the signalToImageLUT from mapper, also the pixelMap field from the generator
+
 int imageWidth = 1536;     // we are using a rectangular image and display window for MultiGen instances
 int imageHeight = 1024;    // imageWidth:imageHeight == 3:2
 int genW = 4;              // the width of generator: must be a power of 2 for Hilbert and Moore curves,
-                   // 4 the minimum and probably is best for your MultiGens, but 8 might be worth a try. 
+                           // 4 is the minimum and probably is best for testing your MultiGens. 
 int genH = 4;              // the height of generator: must be a power of 2 for Hilbert and Moore
                            // and equal to genW (in this context, and always for Hilbert and Moore curves)
 int drawingScale = 1;      // scaling of drawing
@@ -83,7 +87,8 @@ boolean isHideNumbers = false;    // show or hide the numbers, good idea when ge
 boolean isHideLines = false;      // show or hide the lines, good idea when genW and genH greater than 128...
 PGraphics offscreen;
 
-// short names for transforms from public enum AffineTransformType 
+// short names for transforms from
+// public enum AffineTransformType 
 public static AffineTransformType     r270      = AffineTransformType.R270;
 public static AffineTransformType     r90       = AffineTransformType.R90;
 public static AffineTransformType     r180      = AffineTransformType.R180;
@@ -94,7 +99,7 @@ public static AffineTransformType     flipy     = AffineTransformType.FLIPY;
 public static AffineTransformType     nada      = AffineTransformType.NADA;
 
 AffineTransformType currentTransform = nada;
-
+  
 // display window sizes for resizing images to fit the screen, 
 // most are calculated by the setScaling() method
 boolean isOversize = false;      // if false, image is not too big to display
@@ -119,11 +124,6 @@ public void setup() {
   windowResizable(true);
   offscreen = createGraphics(imageWidth, imageHeight);
   pixelaudio = new PixelAudio(this);
-  println("---- generator size: " + genW + " * " + genH);
-  initGens();
-  initMapper(hilb3x2Loop);
-  // printLUTs();
-  spectrum = initColors();
   listDisplays();
   setScaling(true);
   if (isOversize) {
@@ -131,7 +131,8 @@ public void setup() {
     resizeWindow();
     println("Window is resized");
   }
-  setDrawingVars();
+  initGens();
+  loadNewGen(hilb6x4Loop);    
   showHelp();
 }
 
@@ -149,9 +150,9 @@ public void setDrawingVars() {
  * in 6 columns and 4 rows arranged to provide a continuous loop. This method shows
  * one approach to mixing different PixelMapGens in a MultiGen. 
  * 
- * @param genW    width of each PixelMapGen in the MultiGen we're going to create
- * @param genH    height of each PixelMapGen in the MultiGen we're going to create
- * @return        a MultiGen with a looping signal path over a mix of HilbertGens and DiagonalZigzagGens
+ * @param genW
+ * @param genH
+ * @return
  */
 public MultiGen hilbertZigzagLoop6x4(int genW, int genH) {
     // list of PixelMapGens that create a path through an image using PixelAudioMapper
@@ -187,25 +188,18 @@ public MultiGen hilbertZigzagLoop6x4(int genW, int genH) {
   return multi;
 }
 
-/**
- * Initialize the various PixelMapGens we want to visualize in this app
- */
 public void initGens() {
   // get a HIlbert curve generator
-  hilb3x2Loop = HilbertGen.hilbertLoop3x2(genW, genH);
+  hilb6x4Loop = HilbertGen.hilbertMultigenLoop(6, 4, genW/2);
   // get a diagonal zigzag generator and flip the x-coordinates (same as
   // reflecting it on the y-axis)
   zz6x4Loop = DiagonalZigzagGen.zigzagLoop6x4(genW, genH);
   // get a Moore curve generator
   mixGen = hilbertZigzagLoop6x4(genW, genH);
   // get a bou curve generator
-  randoBou = BoustropheGen.boustrophRowRandom(2, 3, genW, genH);
+  randoBou = BoustropheGen.boustrophRowRandom(3, 2, genW, genH);
 }
 
-/**
- * Initialize the PixelAudioMapper instance we use for drawing colorful pixels to the screen.
- * @param gen    a PixelMapGen used to initialize this.mapper
- */
 public void initMapper(PixelMapGen gen) {
   this.mapper = new PixelAudioMapper(gen);
   this.coords = gen.getCoordinatesCopy();
@@ -214,10 +208,6 @@ public void initMapper(PixelMapGen gen) {
   this.gen = gen;
 }
 
-/**
- * Update the PixelAudioMapper instance we use for drawing colorful pixels to the screen.
- * @param gen    a PixelMapGen used to update this.mapper
- */
 public void updateMapper(PixelMapGen gen) {
   this.mapper.setGenerator(gen);
   this.coords = gen.getCoordinatesCopy();
@@ -226,9 +216,6 @@ public void updateMapper(PixelMapGen gen) {
   this.gen = gen;
 }
 
-/**
- * Update the window, checking to see if it needs to be resized.
- */
 public void updateWindow() {
   if (mapper.getWidth() * drawingScale != width || mapper.getHeight() * drawingScale != height) {
     int newWidth = mapper.getWidth() * drawingScale;
@@ -252,51 +239,47 @@ public void draw() {
 
 public void keyPressed() {
   switch (key) {
-  case 'a':    // step array shift animation forward one step
+  case 'a':
     stepAnimation(1);
     break;
-  case 'A':    // step array shift animation back one step
+  case 'A':
     stepAnimation(-1);
     break;
-  case 'd':    // print the description of the MultiGen to the console 
+  case 'd':
     println("\n" + mapper.getGeneratorDescription());
     println("Dimensions: "+ mapper.getWidth(), mapper.getHeight());
     break;
-  case 'g':    // swap in different MultiGens for visualization
+  case 'g':
     if (gen == zz6x4Loop) {
-      gen = hilb3x2Loop;
-      println("\nhilb3x2Loop");
+      loadNewGen(hilb6x4Loop);
+      println("\nhilb6x4Loop");
     }
-    else if (gen == hilb3x2Loop) {
-      gen = mixGen;
+    else if (gen == hilb6x4Loop) {
+      loadNewGen(mixGen);
       println("\nmixGen");
     }
     else if (gen == mixGen) {
-      gen = randoBou;
+      loadNewGen(randoBou);
       println("\nrandoBou");
     }
     else if (gen == randoBou) {
-      gen = zz6x4Loop;
+      loadNewGen(zz6x4Loop);
       println("\nzz6x4Loop");
     }
-    initMapper(gen);
-    spectrum = initColors();
-    gen.setTransformType(currentTransform);
-    setDrawingVars();
-    updateWindow();
+    loadNewGen(gen);
     break;
-  case 'n':    // show or hide numbers in display window
+  case 'n':
     isHideNumbers = !isHideNumbers;
     break;
-  case 'l':    // show or hide lines in display window
+  case 'l':
     isHideLines = !isHideLines;
     break;
   case 'k':
-  case 'K':    // print LUTs to the console
+  case 'K':
     printLUTs();
     break;
   case 't':
-  case 'T':    // list some affine maps (reordering of a pixelmap) for geometric transforms
+  case 'T':
     testAffineMap(genW, genH);
     break;
   case 'r':
@@ -314,7 +297,7 @@ public void keyPressed() {
     gen.setTransformType(currentTransform);
     updateMapper(gen);
     break;
-  case 'w':
+  case 'w': 
     // toggles display window to fit screen or display at size
       isFitToScreen = !isFitToScreen;
       resizeWindow();
@@ -329,9 +312,17 @@ public void keyPressed() {
 }
 
 /**
- * Initialize the array of colors that is used to visualize each MultiGen's signal path.
- * Needa to be the same size as the PixelAudioMapper for the MultiGenb you want to visualize.
+ * 
  */
+public void loadNewGen(PixelMapGen newGen) {
+  gen = newGen;
+  initMapper(gen);
+  spectrum = initColors();
+  gen.setTransformType(currentTransform);
+  setDrawingVars();
+  updateWindow();
+}
+
 public int[] initColors() {
   int[] colorWheel = new int[mapper.getSize()];
   pushStyle();
@@ -345,9 +336,6 @@ public int[] initColors() {
   return colorWheel;
 }
 
-/**
- * Print LUTs for the current gen to the console.
- */
 public void printLUTs() {
   println("\n----- imageToSignalLUT -----");
   for (int i = 0; i < imageLUT.length; i++) {
@@ -365,9 +353,6 @@ public void printLUTs() {
   }
 }
 
-/**
- * a test of some library code for affine transforms
- */
 public void testAffineMap(int w, int h) {
   println("\n" + w + " x " + h + " bitmap index remapping\n");
   for (AffineTransformType type : AffineTransformType.values()) {
@@ -384,9 +369,6 @@ public void testAffineMap(int w, int h) {
   }
 }
 
-/**
- * Draws squares representing pixels to the display.
- */
 public void drawSquares() {
   int x1 = 0;
   int y1 = 0;
@@ -416,9 +398,6 @@ public void drawSquares() {
   offscreen.endDraw();
 }
 
-/**
- * Draws lines for the signal path to the display.
- */
 public void drawLines() {
   int x1 = 0;
   int y1 = 0;
@@ -447,10 +426,6 @@ public void drawLines() {
   offscreen.endDraw();
 }
 
-/**
- * Draws number indicating the order of pixels a bitmap (black numbers) and the order
- * of coordinates along the signal path (white numbers).
- */
 public void drawNumbers() {
   int x1 = 0;
   int y1 = 0;
@@ -494,15 +469,12 @@ public void showHelp() {
     println(" * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
   if (genW <= 4)
     println(" * Press 't' to print affine maps to the console."); // omit for published version
-  println(" * Press 'f' to rotate 90 degress clockwise.");
-  println(" * Press 'b' to rotate 90 degress counterclockwise.");
   println(" * Press 'r' to rotate 180 degress.");
   println(" * Press 'x' to flip x-coordinates (reflect on y-axis).");
   println(" * Press 'y' to flip y-coordinates (reflect on x-axis).");
-  println(" * Press '1' to flip on primary diagonal.");
-  println(" * Press '2' to flip on secondary diagonal.");
   println(" * Press 'h' to show this help text in the console.");
 }
+  
 
 /********************************************************************/
 /* ----->>>             DISPLAY SCALING METHODS            <<<----- */
@@ -536,7 +508,7 @@ void listDisplays() {
         }
     }
 }
-      
+        
 /**
  * Calculates window sizes for displaying mapImage at actual size and at full screen. 
  * Press the 'r' key to resize the display window.
@@ -574,7 +546,7 @@ public void setScaling(boolean isVerbose) {
               + "oversize image is " + isOversize);
     }
 }
-
+  
 public void resizeWindow() {
   if (offscreen.width > offscreen.height) {
       if (isFitToScreen) {
@@ -595,4 +567,5 @@ public void resizeWindow() {
   }
 }
 
+  
 // ------------- END DISPLAY SCALING METHODS ------------- //

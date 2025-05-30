@@ -332,15 +332,19 @@ public void keyPressed() {
     break;
   case '1':
     sampleRate = 44100;
+    println("--->> Sample rate = "+ sampleRate);
     break;
   case '2':
     sampleRate = 22050;
+    println("--->> Sample rate = "+ sampleRate);
     break;
   case '3':
     sampleRate = 11025;
+    println("--->> Sample rate = "+ sampleRate);
     break;
   case '4':
     sampleRate = genWidth * genHeight;
+    println("--->> Sample rate = "+ sampleRate);
     break;
   case '?':
     showHelp();
