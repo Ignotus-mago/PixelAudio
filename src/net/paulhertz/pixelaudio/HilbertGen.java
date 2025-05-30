@@ -180,47 +180,125 @@ public class HilbertGen extends PixelMapGen {
 	
 	// placeholder
 	/**
+	 * @param columns	number of columns of gens wide
+	 * @param rows		number of rows of gens high
 	 * @param genEdge	number of pixels for the edge of each Hilbert curve, must be a power of 2
-	 * @param rows		number of rows of curves
-	 * @param cols		number of columns of curves
-	 * @param isLoopRequested	caller requested a looping path, possible only if rows or cols are an even number
 	 * @return			a MultiGen consisting of rows rows and cols columns of Hilbert curves
 	 *                  check for null return value
 	 */
-	public static MultiGen hilbertMultigenLoop(int genEdge, int rows, int cols) {
+	public static MultiGen hilbertMultigenLoop(int columns, int rows, int genEdge) {
+		// if rows or columns is 1, or if rows and columns are both odd numbers, 
+		// double rows and columns and divide genEdge by 2.
+		if (columns == 1 || rows == 1) {
+			columns *= 2;
+			rows *= 2;
+			genEdge /= 2;
+		}
+		if (columns % 2 == 1 && rows % 2 == 1) {
+			columns *= 2;
+			rows *= 2;
+			genEdge /= 2;
+		}
 		// prevalidate here, maybe throw appropriate error instead of returning null
-		if (!HilbertGen.prevalidate(genEdge, genEdge)) return null;
-		/*
-		 * rows even, cols even
-		 * rows odd, cols even
-		 * rows even, cols odd
-		 * rows odd, cols odd
-		 * symmetrical or not?
-		 * 
-		 */
-		if (rows % 2 == 0) {
-			if (cols % 2 == 0) {
-				// even number of rows, even number of columns
-
+		if (!HilbertGen.prevalidate(genEdge, genEdge)) {
+			return null;
+		}
+	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+		ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+		// list of x,y coordinates for placing gens from genList
+		ArrayList<int[]> offsetList = new ArrayList<int[]>();
+		int y = 0;
+		int x = 0;
+		if (columns % 2 == 0) {
+			// even number of columns, number of rows may be odd or even
+			// first, for y == 0, the top row
+			for (x = 0; x < columns; x++) {
+				genList.add(new HilbertGen(genEdge, genEdge, flipy));
+				offsetList.add(new int[] { x * genEdge, y * genEdge });
+				// System.out.println("--- columns even, first row");
+			}
+			y++;
+			// now all the other rows, which repeat a two column vertical structure
+			// except in the special case where there are only two rows (probably don't need special case)
+			if (rows == 2) {
+				for (x = columns - 1; x >= 0; x--) {
+					genList.add(new HilbertGen(genEdge, genEdge, flipx));
+					offsetList.add(new int[] { x * genEdge, y * genEdge });					
+				}
 			}
 			else {
-				// even number of rows, odd number of columns
-
-			}
+				for (x = columns - 1; x >= 0; x--) {
+					if (x % 2 == 1) {
+						// x is odd, column of gens goes down from second row down (1) to bottom (rows - 1)
+						for (y = 1; y < rows - 1; y++) {
+							genList.add(new HilbertGen(genEdge, genEdge, r270));
+							offsetList.add(new int[] { x * genEdge, y * genEdge });					
+							// System.out.println("--- columns even, x odd, x = "+ x +", y = "+ y);
+						}
+						// now y == rows - 1
+						genList.add(new HilbertGen(genEdge, genEdge, flipx));
+						offsetList.add(new int[] { x * genEdge, y * genEdge });
+						// System.out.println("--> columns even, x odd, x = "+ x +", y = "+ y);
+					}
+					else {
+						// x is even, column of gens goes up from bottom (rows - 1) to second row down (1)
+						y = rows - 1;
+						genList.add(new HilbertGen(genEdge, genEdge, flipx));
+						offsetList.add(new int[] { x * genEdge, y * genEdge });
+						// System.out.println("--> columns even, x even, x = "+ x +", y = "+ y);
+						for (y = rows - 2; y > 0; y--) {
+							//System.out.println("--- giddyup ---");
+							genList.add(new HilbertGen(genEdge, genEdge, r90));
+							offsetList.add(new int[] { x * genEdge, y * genEdge });					
+							// System.out.println("--- columns even, x even, x = "+ x +", y = "+ y);
+						}
+					}
+				}
+			}			
 		}
 		else {
-			if (cols % 2 == 0) {
-				// odd number of rows, even number of columns
-
+			// odd number of columns, number of rows must be even
+			// first, for x == 0, the leftmost column
+			for (y = 0; y < rows; y++) {
+				genList.add(new HilbertGen(genEdge, genEdge, r270));
+				offsetList.add(new int[] { x * genEdge, y * genEdge });					
+			}
+			x++;
+			// now all the other columns, which repeat a two row horizontal structure
+			// except in the special case where there are only two columns (probably don't need special case)
+			if (columns == 2) {
+				for (y = rows - 1; y >= 0; y--) {
+					genList.add(new HilbertGen(genEdge, genEdge, flipy));
+					offsetList.add(new int[] { x * genEdge, y * genEdge });					
+				}
 			}
 			else {
-				// odd number of rows, odd number of columns, no loop is possible
-				// the solution is to double rows and cols and divide genEdge by 2
-				// then do the even/even conditional
-				
-			}
+				for (y = rows - 1; y >= 0; y--) {
+					if (y % 2 == 1) {
+						// y is odd, row of gens goes right from second column (1) to right edge (columns - 1)
+						for (x = 1; x < columns - 1; x++) {
+							genList.add(new HilbertGen(genEdge, genEdge, flipy));
+							offsetList.add(new int[] { x * genEdge, y * genEdge });					
+						}
+						// now x == columns - 1
+						genList.add(new HilbertGen(genEdge, genEdge, r90));
+						offsetList.add(new int[] { x * genEdge, y * genEdge});
+					}
+					else {
+						// y is even, row of gens goes left from right edge (columns - 1) to second column (1)
+						x = columns - 1;
+						genList.add(new HilbertGen(genEdge, genEdge, r90));
+						offsetList.add(new int[] { x * genEdge, y * genEdge });
+						for (x = columns - 2; x > 0; x--) {
+							genList.add(new HilbertGen(genEdge, genEdge, flipx));
+							offsetList.add(new int[] { x * genEdge, y * genEdge });					
+						}
+					}
+				}
+			}			
 		}
-		return null;
+		// System.out.println("--->> complete, width = "+ columns * genEdge +", height = "+ rows * genEdge);
+		return new MultiGen(columns * genEdge, rows * genEdge, offsetList, genList);
 	}
 
 	/**
