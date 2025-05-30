@@ -1,8 +1,9 @@
 package net.paulhertz.pixelaudio;
 
 /**
- * Helper class for PixelAudioMapper and other classes or methods that transcode audio and color values.
+ * Experimental helper class for PixelAudioMapper and other classes or methods that transcode audio and color values.
  * This is thread-safe but it does have to have all fields initialized in the constructor. 
+ * It has not yet been used in any code and may be removed at a future date. 
  * 
  * // Standard 8-bit audio → color mapping
  * AudioColorTranscoder defaultTranscoder = new AudioColorTranscoder(-1.0f, 1.0f, 0, 255);
