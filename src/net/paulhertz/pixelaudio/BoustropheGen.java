@@ -126,13 +126,13 @@ public class BoustropheGen extends PixelMapGen {
 	 * Note that you should set values for such that:
 	 * (rows * genW) == width and (cols * genH) == height.
 	 * 
-	 * @param rows    number of horiaontal rows 
-	 * @param cols    number of vertical columns
+	 * @param cols    number of vertical columns, same as number of gens wide
+	 * @param rows    number of horizontal rows, same as number of gens high
 	 * @param genW    width of an individual PixelMapGen
 	 * @param genH    height of an indvidual PixelMapGen
 	 * @return        a MultiGen created from rows * cols PixelMapGens
 	 */ 
-	public static MultiGen boustrophRowRandom(int rows, int cols, int genW, int genH) {
+	public static MultiGen boustrophRowRandom(int cols, int rows, int genW, int genH) {
 	    // list of PixelMapGens that create an image using mapper
 	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
 	    // list of x,y coordinates for placing gens from genList
