@@ -803,36 +803,18 @@ public class PixelAudioMapper {
 	 * @param length		number of values from sprout to insert into img array
 	 */
 	public void plantPixels(int[] sprout, int[] img, int signalPos, int length) {
-		int j = 0;														// index for sprout
-		for (int i = signalPos; i < signalPos + length; i++) {			// step through signal positions    TODO if signalPos + length > img.length we're in trouble
-			img[signalToImageLUT[i]] = sprout[j++];						// assign values from sprout to img
-		}
-	}
-
-
-	/**
-	 * Writes values from sprout into img at positions mapped by the signal path, using the specified channel.
-	 * 
-	 * @param sprout      source array of RGB values to insert
-	 * @param img         target array of RGB values (image, row-major order)
-	 * @param signalPos   signal position to start writing
-	 * @param length      number of values to write
-	 * @param toChannel   channel to write into (R, G, B, L, etc.)
-	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
-	 */
-	public void plantPixels(int[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {
 	    if (sprout == null || img == null) 
 	    	throw new IllegalArgumentException("Input arrays cannot be null");
 	    if (signalPos < 0 || signalPos >= img.length)
 	        throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > img.length || length > sprout.length)
 	        throw new IllegalArgumentException("Invalid length: out of bounds");
-	    float[] hsbPixel = new float[3]; // local for thread safety
-	    for (int j = 0; j < length; j++) {
-	        int imgIdx = this.signalToImageLUT[signalPos + j];
-	        img[imgIdx] = applyChannelToPixel(sprout[j], img[imgIdx], toChannel, hsbPixel);
-	    }
+		int j = 0;														// index for sprout
+		for (int i = signalPos; i < signalPos + length; i++) {			// step through signal positions 
+			img[signalToImageLUT[i]] = sprout[j++];						// assign values from sprout to img
+		}
 	}
+
 
 	private int applyChannelToPixel(int sproutVal, int imgVal, ChannelNames channel, float[] hsbPixel) {
 	    switch (channel) {
@@ -874,71 +856,68 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Starting at <code>signalPos</code>, writes <code>length</code> transcoded values from audio sample array <code>sprout</code> 
-	 * into a specified channel of RGB array <code>img</code>, in signal order.
-     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
-	 *
-	 * Inserts elements from a source array of audio values (-1.0f..1.0f) into a specified color channel
-	 * in a target array of RGB pixel values following the signal path.
-	 *
-	 * @param sprout	source array of RGB values to insert into target array img, in signal order
-	 * @param img		   target array of RGB values, in image order
-	 * @param signalPos    position in the signal at which to start writing pixel values to the image, following the signal path
-	 * @param length	   number of values from sprout to insert into img array
-	 * @param toChannel    color channel to write the sprout values to
+	 * Writes values from sprout into img at positions mapped by the signal path, using the specified channel.
+	 * 
+	 * @param sprout      source array of RGB values to insert
+	 * @param img         target array of RGB values (image, row-major order)
+	 * @param signalPos   signal position to start writing
+	 * @param length      number of values to write
+	 * @param toChannel   channel to write into (R, G, B, L, etc.)
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
+	 */
+	public void plantPixels(int[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {
+	    if (sprout == null || img == null) 
+	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (signalPos < 0 || signalPos >= img.length)
+	        throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > img.length || length > sprout.length)
+	        throw new IllegalArgumentException("Invalid length: out of bounds");
+	    float[] hsbPixel = new float[3]; // local for thread safety
+	    for (int j = 0; j < length; j++) {
+	        int imgIdx = this.signalToImageLUT[signalPos + j];
+	        img[imgIdx] = applyChannelToPixel(sprout[j], img[imgIdx], toChannel, hsbPixel);
+	    }
+	}
+
+	/**
+	 * Helper: Applies a float audio sample to a pixel channel, using the channel kind.
+	 */
+	private int applyAudioToPixelChannel(float sample, int rgb, ChannelNames channel) {
+	    switch (channel) {
+	        case L:   return PixelAudioMapper.applyBrightness(sample, rgb);
+	        case H:   return PixelAudioMapper.applyHue(sample, rgb);
+	        case S:   return PixelAudioMapper.applySaturation(sample, rgb);
+	        case R:   return PixelAudioMapper.applyRed(sample, rgb);
+	        case G:   return PixelAudioMapper.applyGreen(sample, rgb);
+	        case B:   return PixelAudioMapper.applyBlue(sample, rgb);
+	        case A:   return PixelAudioMapper.applyAlpha(sample, rgb);
+	        case ALL: return PixelAudioMapper.applyAll(sample, rgb);
+	        default:  throw new AssertionError("Unknown channel: " + channel);
+	    }
+	}
+	
+	/**
+	 * Writes values from a float array (sprout) into the specified channel of the img array
+	 * at positions mapped by the signal path, starting at signalPos for the given length.
+  	 *
+	 * @param sprout	   source array audio samples ([-1.0, 1.0])
+	 * @param img		   target array of RGB values (image, row-major order)
+	 * @param signalPos    signal position to start writing 
+	 * @param length	   number of values to write
+	 * @param toChannel    color channel to write to
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
 	 */
 	public void plantPixels(float[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {
-		int j = 0;
-		switch (toChannel) {
-		case L: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applyBrightness(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		case H: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applyHue(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		case S: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applySaturation(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		case R: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applyRed(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		case G: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applyGreen(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		case B: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applyBlue(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		case A: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applyAlpha(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		case ALL: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[this.signalToImageLUT[i]] = PixelAudioMapper.applyAll(sprout[j++], img[this.signalToImageLUT[i]]);
-			}
-			break;
-		}
-		} // end switch
+	    if (sprout == null || img == null)
+	        throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (signalPos < 0 || signalPos >= img.length)
+	        throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > img.length || length > sprout.length)
+	        throw new IllegalArgumentException("Invalid length: out of bounds");
+	    for (int j = 0; j < length; j++) {
+	        int imgIdx = this.signalToImageLUT[signalPos + j];
+	        img[imgIdx] = applyAudioToPixelChannel(sprout[j], img[imgIdx], toChannel);
+	    }
 	}
 
 	/**
@@ -951,6 +930,12 @@ public class PixelAudioMapper {
 	 * @param length		number of values to copy from sprout array to sig array
 	 */
 	public void plantSamples(float[] sprout, float[] sig, int signalPos, int length) {
+	    if (sprout == null || sig == null) 
+	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (signalPos < 0 || signalPos >= sig.length)
+	        throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > sig.length || length > sprout.length)
+	        throw new IllegalArgumentException("Invalid length: out of bounds");
 		int j = 0;
 		for (int i = signalPos; i < signalPos + length; i++) {
 			sig[i] = sprout[j++];
@@ -967,6 +952,12 @@ public class PixelAudioMapper {
 	 * @param length
 	 */
 	public void plantSamples(int[] sprout, float[] sig, int signalPos, int length) {
+	    if (sprout == null || sig == null) 
+	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (signalPos < 0 || signalPos >= sig.length)
+	        throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > sig.length || length > sprout.length)
+	        throw new IllegalArgumentException("Invalid length: out of bounds");
 		int j = 0;
 		for (int i = signalPos; i < signalPos + length; i++) {
 			sig[i] = rgbChanToAudio(PixelAudioMapper.getGrayscale(sprout[j++]));
@@ -974,73 +965,27 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Starting at <code>signalPos</code>, insert <code>length</code> transcoded RGB samples from channel <code>fromChannel</code> 
-	 * of source array <code>sprout</code> into target array of audio samples <code>sig</code>. 
-	 * No redirection by lookup tables is is used.
+	 * Writes values from an int array (sprout) into the specified channel of the sig array
+	 * at positions starting at signalPos for the given length, converting pixel color to audio.
 	 *
-	 * @param sprout
-	 * @param sig
-	 * @param signalPos
-	 * @param length
-	 * @param fromChannel
+	 * @param sprout      source array of RGB pixel values
+	 * @param sig         target array of audio samples (float, [-1.0, 1.0])
+	 * @param signalPos   position to start writing into sig
+	 * @param length      number of values to write
+	 * @param fromChannel channel to extract from sprout values
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
 	 */
 	public void plantSamples(int[] sprout, float[] sig, int signalPos, int length, ChannelNames fromChannel) {
-		int j = 0;
-		switch (fromChannel) {
-		case L: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				sig[i] = hsbFloatToAudio(brightness(sprout[j++]));
-			}
-			break;
-		}
-		case H: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				sig[i] = hsbFloatToAudio(hue(sprout[j++]));
-			}
-			break;
-		}
-		case S: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				sig[i] = hsbFloatToAudio(saturation(sprout[j++]));
-			}
-			break;
-		}
-		case R: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				sig[i] = rgbChanToAudio(((sprout[j++] >> 16) & 0xFF));
-			}
-			break;
-		}
-		case G: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				sig[i] = rgbChanToAudio(((sprout[j++] >> 8) & 0xFF));
-			}
-			break;
-		}
-		case B: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				sig[i] = rgbChanToAudio((sprout[j++] & 0xFF));
-			}
-			break;
-		}
-		case A: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				sig[i] = rgbChanToAudio(((sprout[j++] >> 24) & 0xFF));
-			}
-			break;
-		}
-		case ALL: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				// convert to grayscale using the "luminosity equation."
-				sig[i] = PixelAudio.map((0.3f * ((sprout[i] >> 16) & 0xFF)
-						+ 0.59f * ((sprout[i] >> 8) & 0xFF)
-						+ 0.11f * (sprout[i] & 0xFF)), 0, 255, -1.0f, 1.0f);
-				j++;
-			}
-			break;
-		}
-		}
-
+	    if (sprout == null || sig == null)
+	        throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (signalPos < 0 || signalPos >= sig.length)
+	        throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > sig.length || length > sprout.length)
+	        throw new IllegalArgumentException("Invalid length: out of bounds");
+	    float[] hsbPixel = new float[3]; 		// local for thread safety
+	    for (int j = 0; j < length; j++) {
+	        sig[signalPos + j] = extractChannelAsAudio(sprout[j], fromChannel, hsbPixel);
+	    }
 	}
 	
 	/*-------------------------- PEEL AND STAMP METHODS --------------------------*/
