@@ -11,7 +11,7 @@ import java.util.Arrays;
 
 /**
  * <p>
- * As of pre-release version 0.8.5-beta PixelAudioMapper is reasonably complete. However, 
+ * As of pre-release version 0.9-beta PixelAudioMapper is reasonably complete. However, 
  * the "peel" and "stamp" methods have not been tested or supplied with example applications.
  * The Javadocs for these methods are also minimal or missing. They will change. You should
  * probably avoid using them for now. 
@@ -277,7 +277,7 @@ public class PixelAudioMapper {
 	/** @return a string representation of our data, possibly partial */
 	@Override
 	public String toString() {
-		return "Parent class for PixelAudioMapper objects, with documentation in its comments.";
+		return "Parent class for PixelAudioMapper objects, please see the documentation in its comments.";
 	}
 
 
@@ -381,7 +381,8 @@ public class PixelAudioMapper {
 	 * 
 	 * If you are using a different color depth per channel, such as 16-bit, you can override 
 	 * these methods by subclassing PixelAudioMapper. The thread-safe AudioColorTranscoder class 
-	 * provides methods that do limit input ranges and are generalized for any ranges.
+	 * provides methods that do limit input ranges and are generalized for any ranges. 
+	 * AudioColorTranscoder is an experiment that *may* be incorporated here later on. 
 	 * 
 	 */
 	
@@ -441,7 +442,9 @@ public class PixelAudioMapper {
 	}	
 	
 
-	// ------------- PIXEL AND SAMPLE LOOKUP ------------- //
+	// ------------- PIXEL AND SAMPLE INDEX LOOKUP ------------- //
+
+	/* Note that these methods are not returning pixel or sample values, but index values */
 	
 	/**
 	 * Given a coordinate pair (x,y) in an image, returns its index in a signal path
@@ -623,7 +626,7 @@ public class PixelAudioMapper {
 	//------------- SUBARRAYS -------------//
 
 	/*
-	 * In each case, a source subarray is either extracted from or inserted into a target larger array.
+	 * In each case, a source subarray is either extracted from or inserted into a larger target array.
 	 * When the small array, sprout, is inserted, it is indexed from 0..sprout.length. The larger array,
 	 * img or sig, is indexed from read or write point signalPos to signalPos + length.
 	 *
@@ -655,23 +658,13 @@ public class PixelAudioMapper {
 	 * @return 			a new array of pixel values in signal order
 	 */
 	public int[] pluckPixels(int[] img, int signalPos, int length) {
-		// We can have an error condition if signalPos + length exceeds img.length!
-		// If signalPos exceeds length, we return null. Let the caller take note and
-		// remedy the problem.
-		if (signalPos + length > img.length) {
-			length = img.length - signalPos;
-			System.out.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to " + length);
-		}
-		if (signalPos >= img.length) {
-			System.out.println("WARNING! signalPos " + signalPos + " exceeded img length " + img.length + ". Returning null.");
-			return null;
-		}
+	    if (img == null) throw new IllegalArgumentException("Image array cannot be null");
+	    if (signalPos < 0 || signalPos >= img.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > img.length) throw new IllegalArgumentException("Invalid length");
 		int[] pixels = new int[length]; // new array for pixel values
-		int j = 0; // index for pixels array
-		for (int i = signalPos; i < signalPos + length; i++) { // step through the signal with i as index
-			int rgb = img[this.signalToImageLUT[i]]; // get an rgb value from img at position signalToImageLUT[i]
-			pixels[j++] = rgb; // accumulate values in pixels array
-		}
+	    for (int i = 0; i < length; i++) {
+	        pixels[i] = img[this.signalToImageLUT[signalPos + i]];
+	    }
 		return pixels; // return the samples
 	}
 
@@ -696,6 +689,29 @@ public class PixelAudioMapper {
 		return petal;
 	}
 	*/
+	
+	
+	/**
+	 * Helper method for color channel operations
+	 * 
+	 * @param rgb		an RGB color value
+	 * @param channel   the channel to extract for the RGB color value
+	 * @param hsbPixel  a local array for HSB values
+	 * @return          the extracted channel as a float value
+	 */
+	private float extractChannelAsAudio(int rgb, ChannelNames channel, float[] hsbPixel) {
+	    switch (channel) {
+	        case L:   return hsbFloatToAudio(brightness(rgb, hsbPixel));
+	        case H:   return hsbFloatToAudio(hue(rgb, hsbPixel));
+	        case S:   return hsbFloatToAudio(saturation(rgb, hsbPixel));
+	        case R:   return rgbChanToAudio((rgb >> 16) & 0xFF);
+	        case G:   return rgbChanToAudio((rgb >> 8) & 0xFF);
+	        case B:   return rgbChanToAudio(rgb & 0xFF);
+	        case A:   return rgbChanToAudio((rgb >> 24) & 0xFF);
+	        case ALL: return rgbFloatToAudio(0.3f * ((rgb >> 16) & 0xFF) + 0.59f * ((rgb >> 8) & 0xFF) + 0.11f * (rgb & 0xFF));
+	        default:  throw new AssertionError("Unknown channel: " + channel);
+	    }
+	}
 
 
 	/**
@@ -713,81 +729,20 @@ public class PixelAudioMapper {
 	 * @return				a new array of audio values in signal order
 	 */
 	public float[] pluckPixelsAsAudio(int[] img, int signalPos, int length, ChannelNames fromChannel) {
-		// We can have an error condition if signalPos + length exceeds img.length! 
-		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
-		if (signalPos + length > img.length) {
-			length = img.length - signalPos;
-			System.out.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to "+ length);
-		}
-		if (signalPos >= img.length) {
-			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ img.length +". Returning null.");
-			return null;
-		}
-		float[] samples = new float[length];							// create an array of samples
-		int j = 0;														// TODO we can have an error condition if signalPos + length exceeds img.length!
-		switch (fromChannel) {
-		case L: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];						// get the RGB value from the pixel associated with the signal position
-				samples[j++] = hsbFloatToAudio(brightness(rgb, hsbPixel));	    // extract brightness and map it to the audio range
-			}																	
-			break;
-		}
-		case H: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];						// get the RGB value from the pixel associated with the signal position
-				samples[j++] = hsbFloatToAudio(hue(rgb, hsbPixel));	            // extract hue and map it to the audio range
-			}
-			break;
-		}
-		case S: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];				// get the RGB value from the pixel associated with the signal position
-				samples[j++] = hsbFloatToAudio(saturation(rgb, hsbPixel));	// extract saturation and map it to the audio range
-			}
-			break;
-		}
-		case R: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];				// get the RGB value from the pixel associated with the signal position
-				samples[j++] = rgbChanToAudio(((rgb >> 16) & 0xFF));	// extract red component and map it to the audio range
-			}
-			break;
-		}
-		case G: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];				// get the RGB value from the pixel associated with the signal position
-				samples[j++] = rgbChanToAudio(((rgb >> 8) & 0xFF));	    // extract green component and map it to the audio range
-			}
-			break;
-		}
-		case B: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];				// get the RGB value from the pixel associated with the signal position
-				samples[j++] = rgbChanToAudio((rgb & 0xFF));	        // extract blue component and map it to the audio range
-			}
-			break;
-		}
-		case A: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];				// get the RGB value from the pixel associated with the signal position
-				samples[j++] = rgbChanToAudio(((rgb >> 24) & 0xFF));    // extract alpha component and map it to the audio range
-			}
-			break;
-		}
-		case ALL: {
-            // not a simple case, but we'll convert to grayscale using the "luminosity equation."
-			// The brightness value in HSB (case L, above) or the L channel in Lab color spaces could be used, too.
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];				// get the RGB value from the pixel associated with the signal position
-				samples[j++] = rgbFloatToAudio((0.3f * ((rgb >> 16) & 0xFF) + 0.59f * ((rgb >> 8) & 0xFF) + 0.11f * (rgb & 0xFF)));
-			}
-			break;
-		}
-		}
+	    if (img == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (signalPos < 0 || signalPos >= img.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > img.length) throw new IllegalArgumentException("Invalid length: out of bounds");
+	    float[] samples = new float[length];							// create an array of samples
+	    float[] hsbPixel = new float[3]; 								// Local to avoid thread safety issues
+	    for (int j = 0; j < length; j++) {
+	        int i = signalPos + j;
+	        int rgb = img[this.signalToImageLUT[i]];
+	        samples[j] = extractChannelAsAudio(rgb, fromChannel, hsbPixel);
+	    }
 		return samples;
 	}
 
+	
 	/**
      * Starting at <code>signalPos</code>, reads <code>length</code> values from float array <code>sig</code> 
 	 * and returns a new array of audio values in signal order. No redirection is needed when reading from the signal.
@@ -799,20 +754,12 @@ public class PixelAudioMapper {
 	 * @return				a new array with the audio values we read
 	 */
 	public float[] pluckSamples(float[] sig, int signalPos, int length) {
-		// We can have an error condition if signalPos + length exceeds sig.length! 
-		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
-		if (signalPos + length > sig.length) {
-			length = sig.length - signalPos;
-			System.out.println("WARNING! signalPos + length exceeded sig array length. Length was trimmed to "+ length);
-		}
-		if (signalPos >= sig.length) {
-			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ sig.length +". Returning null.");
-			return null;
-		}
-		float[] samples = new float[length];
-		int j = 0;
-		for (int i = signalPos; i < signalPos + length; i++) {
-			samples[j++] = sig[i];
+	    if (sig == null) throw new IllegalArgumentException("sig array cannot be null");
+	    if (signalPos < 0 || signalPos >= sig.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > sig.length) throw new IllegalArgumentException("Invalid length: out of bounds");
+		float[] samples = new float[length];		
+		for (int j = 0; j < length; j++) {
+			samples[j] = sig[signalPos + j];
 		}
 		return samples;
 	}
@@ -828,16 +775,9 @@ public class PixelAudioMapper {
 	 * @return				an array of RGB values where r == g == b, derived from the sig values
 	 */
 	public int[] pluckSamplesAsRGB(float[] sig, int signalPos, int length) {
-		// We can have an error condition if signalPos + length exceeds sig.length! 
-		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
-		if (signalPos + length > sig.length) {
-			length = sig.length - signalPos;
-			System.out.println("WARNING! signalPos + length exceeded sig array length. Length was trimmed to "+ length);
-		}
-		if (signalPos >= sig.length) {
-			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ sig.length +". Returning null.");
-			return null;
-		}
+	    if (sig == null) throw new IllegalArgumentException("sig array cannot be null");
+	    if (signalPos < 0 || signalPos >= sig.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > sig.length) throw new IllegalArgumentException("Invalid length: out of bounds");
 		int[] rgbPixels = new int[length];
 		int j = 0;
 		for (int i = signalPos; i < signalPos + length; i++) {
@@ -871,104 +811,67 @@ public class PixelAudioMapper {
 
 
 	/**
-	 * Starting at <code>signalPos</code>, writes <code>length</code> values from RGB array <code>sprout</code> 
-	 * into a specified channel of RGB array <code>img</code>, in signal order.
-     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
-	 *
-	 * @param sprout	   source array of RGB values to insert into target array img, in signal order
-	 * @param img		   target array of RGB values, in image order
-	 * @param signalPos    position in the signal at which to start writing pixel values to the image, following the signal path
-	 * @param length	   number of values from sprout to insert into img array
-	 * @param toChannel    color channel to write the sprout values to
+	 * Writes values from sprout into img at positions mapped by the signal path, using the specified channel.
+	 * 
+	 * @param sprout      source array of RGB values to insert
+	 * @param img         target array of RGB values (image, row-major order)
+	 * @param signalPos   signal position to start writing
+	 * @param length      number of values to write
+	 * @param toChannel   channel to write into (R, G, B, L, etc.)
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
 	 */
-	public void plantPixels(int[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {  
-		// We can have an error condition if signalPos + length exceeds img.length! 
-		// If signalPos exceeds length, we return null. Let the caller take note and remedy the problem.
-		if (signalPos + length > img.length) {
-			length = img.length - signalPos;
-			System.out.println("WARNING! signalPos + length exceeded img array length. Length was trimmed to "+ length);
-		}
-		if (signalPos >= img.length) {
-			System.out.println("WARNING! signalPos "+ signalPos +" exceeded img length "+ img.length +". Returning null.");
-
-		}
-		int j = 0;		// index for sprout
-		switch (toChannel) {
-		case L: {
-			for (int i = signalPos; i < signalPos + length; i++) {		
-				int rgb = img[this.signalToImageLUT[i]];											// get the RGB value in img that is mapped to signal position i
-				Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	    // encode RGB value as HSB in hsbPixel array
-				rgb = Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], brightness(sprout[j]));				// encode HSB back to RGB, with brightness value from sprout
-				img[this.signalToImageLUT[i]] = rgb;												// write the new value to the img array
-				j++;
-			}
-			break;
-		}
-		case H: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];			// get the RGB value in img that is mapped to signal position i
-				Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);
-				rgb = Color.HSBtoRGB(hue(sprout[j]), hsbPixel[1], hsbPixel[2]);			// encode HSB back to RGB, with hue value from sprout
-				img[this.signalToImageLUT[i]] = rgb;
-				j++;
-			}
-			break;
-		}
-		case S: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];			// get the RGB value in img that is mapped to signal position i
-				Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);
-				rgb = Color.HSBtoRGB(hsbPixel[0], saturation(sprout[j]), hsbPixel[2]);	// encode HSB back to RGB, with saturation value from sprout
-				img[this.signalToImageLUT[i]] = rgb;
-				j++;
-			}
-			break;
-		}
-		case R: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];			// get the RGB value in img that is mapped to signal position i
-				int r = (sprout[j] >> 16) & 0xFF;					// get red value from sprout
-				img[this.signalToImageLUT[i]] = 255 << 24 | r << 16 | ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF;	// replace red channel
-				j++;
-			}
-			break;
-		}
-		case G: {
-				for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];			// get the RGB value in img that is mapped to signal position i
-				int g = (sprout[j] >> 8) & 0xFF;					// get the green value from sprout
-				img[this.signalToImageLUT[i]] = 255 << 24 | ((rgb >> 16) & 0xFF) << 16 | g << 8 | rgb & 0xFF;	// replace green channel
-				j++;
-			}
-			break;
-		}
-		case B: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];			// get the RGB value in img that is mapped to signal position i
-				int b = sprout[j] & 0xFF;							// get blue value from sprout
-				img[this.signalToImageLUT[i]] = 255 << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | b & 0xFF;		// replace blue channel
-				j++;
-			}
-			break;
-		}
-		case A: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				int rgb = img[this.signalToImageLUT[i]];			// get the RGB value in img that is mapped to signal position i
-				int a = (rgb >> 24) & 0xFF;							// get alpha value from sprout
-				img[this.signalToImageLUT[i]] = a << 24 | ((rgb >> 16) & 0xFF) << 16| ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF;		// replace alpha channel
-				j++;
-			}
-			break;
-		}
-		case ALL: {
-			for (int i = signalPos; i < signalPos + length; i++) {
-				img[signalToImageLUT[i]] = sprout[j++];				// replace RGB value in img with RGB value in sprout
-			}
-			break;
-		}
-		} // end switch
+	public void plantPixels(int[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {
+	    if (sprout == null || img == null) 
+	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (signalPos < 0 || signalPos >= img.length)
+	        throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > img.length || length > sprout.length)
+	        throw new IllegalArgumentException("Invalid length: out of bounds");
+	    float[] hsbPixel = new float[3]; // local for thread safety
+	    for (int j = 0; j < length; j++) {
+	        int imgIdx = this.signalToImageLUT[signalPos + j];
+	        img[imgIdx] = applyChannelToPixel(sprout[j], img[imgIdx], toChannel, hsbPixel);
+	    }
 	}
 
+	private int applyChannelToPixel(int sproutVal, int imgVal, ChannelNames channel, float[] hsbPixel) {
+	    switch (channel) {
+	        case L: {
+	            Color.RGBtoHSB((imgVal >> 16) & 0xff, (imgVal >> 8) & 0xff, imgVal & 0xff, hsbPixel);
+	            float br = brightness(sproutVal, hsbPixel);
+	            return Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], br);
+	        }
+	        case H: {
+	            Color.RGBtoHSB((imgVal >> 16) & 0xff, (imgVal >> 8) & 0xff, imgVal & 0xff, hsbPixel);
+	            float h = hue(sproutVal, hsbPixel);
+	            return Color.HSBtoRGB(h, hsbPixel[1], hsbPixel[2]);
+	        }
+	        case S: {
+	            Color.RGBtoHSB((imgVal >> 16) & 0xff, (imgVal >> 8) & 0xff, imgVal & 0xff, hsbPixel);
+	            float s = saturation(sproutVal, hsbPixel);
+	            return Color.HSBtoRGB(hsbPixel[0], s, hsbPixel[2]);
+	        }
+	        case R: {
+	            int r = (sproutVal >> 16) & 0xFF;
+	            return (255 << 24) | (r << 16) | ((imgVal >> 8) & 0xFF) << 8 | (imgVal & 0xFF);
+	        }
+	        case G: {
+	            int g = (sproutVal >> 8) & 0xFF;
+	            return (255 << 24) | ((imgVal >> 16) & 0xFF) << 16 | (g << 8) | (imgVal & 0xFF);
+	        }
+	        case B: {
+	            int b = sproutVal & 0xFF;
+	            return (255 << 24) | ((imgVal >> 16) & 0xFF) << 16 | ((imgVal >> 8) & 0xFF) << 8 | b;
+	        }
+	        case A: {
+	            int a = (sproutVal >> 24) & 0xFF;
+	            return (a << 24) | ((imgVal >> 16) & 0xFF) << 16 | ((imgVal >> 8) & 0xFF) << 8 | imgVal & 0xFF;
+	        }
+	        case ALL:
+	        default:
+	            return sproutVal;
+	    }
+	}
 
 	/**
 	 * Starting at <code>signalPos</code>, writes <code>length</code> transcoded values from audio sample array <code>sprout</code> 
