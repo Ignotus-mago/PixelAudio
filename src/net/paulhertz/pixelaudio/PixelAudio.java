@@ -236,26 +236,27 @@ public class PixelAudio {
 	 */
 	public static void saveStereoAudioToFile(float[] leftChannel, float[] rightChannel, float sampleRate, String fileName)
 	        throws IOException, UnsupportedAudioFileException {
+	    if (leftChannel.length != rightChannel.length) {
+	        throw new IllegalArgumentException("Left and right channel sample arrays must have the same length.");
+	    }
         int numSamples = leftChannel.length;
 	    // Convert samples from float to 16-bit PCM
 	    byte[] audioBytes = new byte[leftChannel.length * 2 * 2];
 	    int index = 0;
 	    for (int i = 0; i < numSamples; i++) {
-	        // Scale leftChannel sample to 16-bit signed integer
-	        int intSample = (int) (leftChannel[i] * 32767);
-	        // Convert to bytes
-	        audioBytes[index++] = (byte) (intSample & 0xFF);
-	        audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
-	        // Scale rightChannel sample to 16-bit signed integer
-	        intSample = (int) (rightChannel[i] * 32767);
-	        // Convert to bytes
-	        audioBytes[index++] = (byte) (intSample & 0xFF);
-	        audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
-	        
+	    	// sclae the samples to 16-bit integers
+	        int left = (int) (leftChannel[i] * 32767);
+	        int right = (int) (rightChannel[i] * 32767);
+	        // Left channel (little endian)
+	        audioBytes[index++] = (byte) (left & 0xFF);
+	        audioBytes[index++] = (byte) ((left >> 8) & 0xFF);
+	        // Right channel (little endian)
+	        audioBytes[index++] = (byte) (right & 0xFF);
+	        audioBytes[index++] = (byte) ((right >> 8) & 0xFF);
 	    }
 	    // Create an AudioInputStream
 	    ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
-	    AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+	    AudioFormat format = new AudioFormat(sampleRate, 16, 2, true, false);
 	    AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, numSamples);
 	    // Save the AudioInputStream to a WAV file
 	    File outFile = new File(fileName);
