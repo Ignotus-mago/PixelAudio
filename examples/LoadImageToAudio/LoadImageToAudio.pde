@@ -280,15 +280,22 @@ public void keyPressed() {
     chooseFile();
     break;
   case 'O':
-    if (audioFile == null && imageFile == null) {
-      chooseFile();
-    } else {
-      if (isLoadFromImage) {
+    if (isLoadFromImage) {
+      if (imageFile == null) {
+        chooseFile();
+      }
+      else {
         // reload image
         loadImageFile(imageFile);
         println("-------->>>>> Reloaded image file");
-      } else {
-        // reload image
+      }
+    }
+    else {
+      if (audioFile == null) {
+        chooseFile();
+      }
+      else {
+        // reload audio
         loadAudioFile(audioFile);
         println("-------->>>>> Reloaded audio file");
       }
