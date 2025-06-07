@@ -988,84 +988,126 @@ public class PixelAudioMapper {
 	    }
 	}
 	
+	
+	
 	/*-------------------------- PEEL AND STAMP METHODS --------------------------*/
 
 	/**
-	 * Copy a rectangular area of pixels in image (row major) order and return it as an array of RGB values.
-	 * This is a standard image method, as for example, PImage.get(int x, int y, int w, int h) in Processing.
-	 * TODO How much error checking do we want in the pluck/plant/peel/stamp methods?
-	 * If we check, do we fall through or post an error message?
-	 *
-	 * @param img
-	 * @param x
-	 * @param y
-	 * @param w
-	 * @param h
-	 * @return
+	 * Copies a rectangular area of pixels in image (row-major) order and returns it as an array of RGB values.
+	 * The array img must conform to the dimensions this.width and this.height. 
+	 * 
+	 * @param img the image pixel array (row-major, length == width * height)
+	 * @param x   left edge of rectangle
+	 * @param y   top edge of rectangle
+	 * @param w   width of rectangle
+	 * @param h   height of rectangle
+	 * @return    array of int (RGB values), length w*h
+	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
 	 */
 	public int[] peelPixels(int[] img, int x, int y, int w, int h) {
-		int len = w * h;
-		int[] rgbPixels = new int[len];
-		int j = 0;
-		for (int dy = y; dy < dy + h; dy++) {
-			for (int dx = x; dx < x + w; dx++) {
-				rgbPixels[j++] = img[dx + dy * w];
-			}
-		}
-		return rgbPixels;
+	    if (img == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match image dimensions");
+	    int[] rgbPixels = new int[w * h];
+	    int j = 0;
+	    for (int dy = y; dy < y + h; dy++) {
+	        int rowStart = dy * this.width;
+	        for (int dx = x; dx < x + w; dx++) {
+	            rgbPixels[j++] = img[rowStart + dx];
+	        }
+	    }
+	    return rgbPixels;
 	}
-
+	
 	/**
-	 * Copy a rectangular area of pixels in image (row major) order and return it as an array of audio values (-1.0f..1.0f).
-	 *
-	 * @param img
-	 * @param x
-	 * @param y
-	 * @param w
-	 * @param h
-	 * @return
+	 * Copies a rectangular area of pixels in image (row-major) order and returns 
+	 * it as an array of audio values ([-1.0, 1.0]).
+	 * The array img must conform to the dimensions this.width and this.height. 
+	 * 
+	 * @param img the image pixel array (row-major, length == width * height)
+	 * @param x   left edge of rectangle
+	 * @param y   top edge of rectangle
+	 * @param w   width of rectangle
+	 * @param h   height of rectangle
+	 * @return    array of float (audio values), length w*h
+	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
 	 */
 	public float[] peelPixelsAsAudio(int[] img, int x, int y, int w, int h) {
-		int len = w * h;
-		float[] samples = new float[len];
+	    if (img == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match image dimensions");
+		float[] samples = new float[w * h];
 		int j = 0;
-		for (int dy = y; dy < dy + h; dy++) {
+		for (int dy = y; dy < y + h; dy++) {
+	        int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
-				samples[j++] =  rgbChanToAudio(PixelAudioMapper.getGrayscale(img[dx + dy * w]));
+				samples[j++] =  rgbChanToAudio(PixelAudioMapper.getGrayscale(img[rowStart + dx]));
 			}
 		}
 		return samples;
 	}
 
 	/**
-	 * Follow the coordinates of rectangle defined by x, y, w, h and return the corresponding signal values.
+	 * Copies a rectangular area of audio values from a signal mapped to an image 
+	 * using imageToSignalLUT to index values.
 	 *
-	 * @param sig
-	 * @param x
-	 * @param y
-	 * @param w
-	 * @param h
-	 * @return
+	 * @param sig  an array of audio samples ([-1.0, 1.0]), where length == width * height
+	 * @param x    left edge of rectangle
+	 * @param y    top edge of rectangle
+	 * @param w    width of rectangle
+	 * @param h    height of rectangle
+	 * @return     array of float (audio values), length w*h
+	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
 	 */
 	public float[] peelSamples(float[] sig, int x, int y, int w, int h) {
-		int len = w * h;
-		float[] samples = new float[len];
+	    if (sig == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match image dimensions");
+		float[] samples = new float[w * h];
 		int j = 0;
-		for (int dy = y; dy < dy + h; dy++) {
+		for (int dy = y; dy < y + h; dy++) {
+			int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
-				samples[j++] =  sig[this.imageToSignalLUT[dx + dy * w]];
+				samples[j++] =  sig[this.imageToSignalLUT[rowStart + dx]];
 			}
 		}
 		return samples;
 	}
 
+	/**
+	 * Using imageToSignalLUT to index values in a rectangular area, 
+	 * copies value from an audio signal and returns the result as RGB. 
+	 *
+	 * @param sig  an array of audio values ([-1.0, 1.0])
+	 * @param x    left edge of rectangle
+	 * @param y    top edge of rectangle
+	 * @param w    width of rectangle
+	 * @param h    height of rectangle
+	 * @return     array of float (audio values), length w*h
+	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
+	 */
 	public int[] peelSamplesAsRGB(float[]sig, int x, int y, int w, int h) {
-		int len = w * h;
-		int[] rgbPixels = new int[len];
+	    if (sig == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match image dimensions");
+		int[] rgbPixels = new int[w * h];
 		int j = 0;
-		for (int dy = y; dy < dy + h; dy++) {
+		for (int dy = y; dy < y + h; dy++) {
 			for (int dx = x; dx < x + w; dx++) {
-				rgbPixels[j++] =  Math.round(rgbFloatToAudio(sig[this.imageToSignalLUT[dx + dy * w]]));
+				int rowStart = dy * w;
+				rgbPixels[j++] =  Math.round(rgbFloatToAudio(sig[this.imageToSignalLUT[rowStart + dx]]));
 			}
 		}
 		return rgbPixels;
