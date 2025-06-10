@@ -239,11 +239,61 @@ public class PixelAudioMapper {
 	/** container for HSB pixel values */
 	private float[] hsbPixel = new float[3];
 
-	/** List of available color channels, "L" for lightness, since "B" for brightness is taken */
-    public static enum ChannelNames {
-		R, G, B, H, S, L, A, ALL;
-	}
+	/** 
+	 * List of available color channels, "L" for lightness, since "B" for brightness is taken.
+	 * The expanded enum type allows me to provide some additional information, including extraction
+	 * methods for each channel. These all require a float[3] hsbPixel argument. Because of the 
+	 * overhead involved in allocation of the hsbPixel array, callers are advised to make it 
+	 * reusable for tight loops or to use the other extraction methods in the PixelAudioMapper class.
+	 * At the moment, I regard the extraction feature as experimental, but they may be worth 
+	 * extending to other extraction methods. 
+	 */
+	public enum ChannelNames {
+	    R("Red", 0, (rgb, hsb) -> (float)((rgb >> 16) & 0xFF)),
+	    G("Green", 1, (rgb, hsb) -> (float)((rgb >> 8) & 0xFF)),
+	    B("Blue", 2, (rgb, hsb) -> (float)(rgb & 0xFF)),
+	    H("Hue", 0, (rgb, hsb) -> {
+	        java.awt.Color.RGBtoHSB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, hsb);
+	        return hsb[0];
+	    }),
+	    S("Saturation", 1, (rgb, hsb) -> {
+	        java.awt.Color.RGBtoHSB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, hsb);
+	        return hsb[1];
+	    }),
+	    L("Brightness", 2, (rgb, hsb) -> {
+	        java.awt.Color.RGBtoHSB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, hsb);
+	        return hsb[2];
+	    }),
+	    A("Alpha", 3, (rgb, hsb) -> (float)((rgb >> 24) & 0xFF)),
+	    ALL("All channels", -1, (rgb, hsb) -> 0.3f * ((rgb >> 16) & 0xFF) + 0.59f * ((rgb >> 8) & 0xFF) + 0.11f * (rgb & 0xFF));
 
+	    private final String displayName;
+	    private final int index;
+	    private final ChannelExtractor extractor;
+
+	    @FunctionalInterface
+	    public interface ChannelExtractor {
+	        float extract(int rgb, float[] hsbPixel);
+	    }
+
+	    ChannelNames(String displayName, int index, ChannelExtractor extractor) {
+	        this.displayName = displayName;
+	        this.index = index;
+	        this.extractor = extractor;
+	    }
+
+	    public String getDisplayName() {
+	        return displayName;
+	    }
+
+	    public int getIndex() {
+	        return index;
+	    }
+
+	    public float extract(int rgb, float[] hsbPixel) {
+	        return extractor.extract(rgb, hsbPixel);
+	    }
+	}
 
 
 	/**
@@ -569,7 +619,7 @@ public class PixelAudioMapper {
 	 * @param img			an array of RGB pixel values
 	 */
 	public void mapImgToSig(int[] img, float[] sig) {
-		PixelAudioMapper.pullPixelAudio(img, imageToSignalLUT, sig, ChannelNames.L);
+		PixelAudioMapper.pullPixelAudio(img, imageToSignalLUT, sig, ChannelNames.L, hsbPixel);
 	 }
 
 	/**
@@ -582,7 +632,7 @@ public class PixelAudioMapper {
 	 * @param fromChannel	the color channel to get a value from
 	 */
 	public void mapImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
-		PixelAudioMapper.pullPixelAudio(img, imageToSignalLUT, sig, fromChannel);
+		PixelAudioMapper.pullPixelAudio(img, imageToSignalLUT, sig, fromChannel, hsbPixel);
 	 }
 
 	/**
@@ -593,7 +643,7 @@ public class PixelAudioMapper {
 	 * @param sig		target array of audio samples in the range [-1.0, 1.0]
 	 */
 	public void writeImgToSig(int[] img, float[] sig) {
-		PixelAudioMapper.pullPixelAudio(img, sig, ChannelNames.ALL);
+		PixelAudioMapper.pullPixelAudio(img, sig, ChannelNames.ALL, hsbPixel);
 	 }
 
 	/**
@@ -602,7 +652,7 @@ public class PixelAudioMapper {
 	 * @param fromChannel	channel in RGB or HSB color space, from ChannelNames enum
 	 */
 	public void writeImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
-		 PixelAudioMapper.pullPixelAudio(img, sig, fromChannel);
+		 PixelAudioMapper.pullPixelAudio(img, sig, fromChannel, hsbPixel);
 	 }
 
 	/**
@@ -1106,7 +1156,7 @@ public class PixelAudioMapper {
 		int j = 0;
 		for (int dy = y; dy < y + h; dy++) {
 			for (int dx = x; dx < x + w; dx++) {
-				int rowStart = dy * w;
+				int rowStart = dy * this.width;
 				rgbPixels[j++] =  Math.round(rgbFloatToAudio(sig[this.imageToSignalLUT[rowStart + dx]]));
 			}
 		}
@@ -1123,9 +1173,10 @@ public class PixelAudioMapper {
 
 	public void stampPixels(int[] stamp, int[] img, int x, int y, int w, int h) {
 		int j = 0;
-		for (int dy = y; dy < dy + h; dy++) {
+		for (int dy = y; dy < y + h; dy++) {
+			int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
-				img[dx + dy * w] = stamp[j++];
+				img[rowStart + dx] = stamp[j++];
 			}
 		}
 	}
@@ -1134,47 +1185,51 @@ public class PixelAudioMapper {
 		int j = 0;
 		switch (toChannel) {
 		case L: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;				
 				for (int dx = x; dx < x + w; dx++) {
-					int rgb = img[dx + dy * w];
+					int rgb = img[rowStart + dx];
 					Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);
 					rgb = Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], brightness(stamp[j], hsbPixel));
-					img[dx + dy * w] = rgb;
+					img[rowStart + dx] = rgb;
 					j++;
 				}
 			}
 			break;
 		}
 		case H: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 				for (int dx = x; dx < x + w; dx++) {
-					int rgb = img[dx + dy * w];
+					int rgb = img[rowStart + dx];
 					Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);
 					rgb = Color.HSBtoRGB(hue(stamp[j], hsbPixel), hsbPixel[1], hsbPixel[2]);
-					img[dx + dy * w] = rgb;
+					img[rowStart + dx] = rgb;
 					j++;
 				}
 			}
 			break;
 		}
 		case S: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 				for (int dx = x; dx < x + w; dx++) {
-					int rgb = img[dx + dy * w];
+					int rgb = img[rowStart + dx];
 					Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);
 					rgb = Color.HSBtoRGB(hsbPixel[0], saturation(stamp[j], hsbPixel), hsbPixel[2]);
-					img[dx + dy * w] = rgb;
+					img[rowStart + dx] = rgb;
 					j++;
 				}
 			}
 			break;
 		}
 		case R: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 				for (int dx = x; dx < x + w; dx++) {
-					int rgb = img[dx + dy * w];
+					int rgb = img[rowStart + dx];
 					int r = (stamp[j] << 16) & 0xFF;
-					img[dx + dy * w] = 255 << 24 | r << 16 | ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF;
+					img[rowStart + dx] = 255 << 24 | r << 16 | ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF;
 
 					j++;
 				}
@@ -1182,42 +1237,46 @@ public class PixelAudioMapper {
 			break;
 		}
 		case G: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 				for (int dx = x; dx < x + w; dx++) {
-					int rgb = img[dx + dy * w];
+					int rgb = img[rowStart + dx];
 					int g = (stamp[j] << 8) & 0xFF;
-					img[dx + dy * w] = 255 << 24 | ((rgb >> 16) & 0xFF) << 16 | g << 8 | rgb & 0xFF;
+					img[rowStart + dx] = 255 << 24 | ((rgb >> 16) & 0xFF) << 16 | g << 8 | rgb & 0xFF;
 					j++;
 				}
 			}
 			break;
 		}
 		case B: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 				for (int dx = x; dx < x + w; dx++) {
-					int rgb = img[dx + dy * w];
+					int rgb = img[rowStart + dx];
 					int b = stamp[j] & 0xFF;
-					img[dx + dy * w] = 255 << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | b & 0xFF;
+					img[rowStart + dx] = 255 << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | b & 0xFF;
 					j++;
 				}
 			}
 			break;
 		}
 		case A: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 				for (int dx = x; dx < x + w; dx++) {
-					int rgb = img[dx + dy * w];
+					int rgb = img[rowStart + dx];
 					int a = stamp[j] << 24;
-					img[dx + dy * w] = a << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF;
+					img[rowStart + dx] = a << 24 | ((rgb >> 16) & 0xFF) << 16 | ((rgb >> 8) & 0xFF) << 8 | rgb & 0xFF;
 					j++;
 				}
 			}
 			break;
 		}
 		case ALL: {
-			for (int dy = y; dy < dy + h; dy++) {
+			for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 				for (int dx = x; dx < x + w; dx++) {
-					img[dx + dy * w] = stamp[j];
+					img[rowStart + dx] = stamp[j];
 					j++;
 				}
 			}
@@ -1230,65 +1289,73 @@ public class PixelAudioMapper {
 		int j = 0;
 		switch (toChannel) {
 			case L: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applyBrightness(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applyBrightness(stamp[j++], img[rowStart + dx]);
 					}
 				}
 				break;
 			}
 			case H: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applyHue(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applyHue(stamp[j++], img[dx + dy * w]);
 					}
 				}
 				break;
 			}
 			case S: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applySaturation(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applySaturation(stamp[j++], img[rowStart + dx]);
 					}
 				}
 				break;
 			}
 			case R: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applyRed(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applyRed(stamp[j++], img[rowStart + dx]);
 					}
 				}
 				break;
 			}
 			case G: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applyGreen(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applyGreen(stamp[j++], img[rowStart + dx]);
 					}
 				}
 				break;
 			}
 			case B: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applyBlue(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applyBlue(stamp[j++], img[rowStart + dx]);
 					}
 				}
 				break;
 			}
 			case A: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applyAlpha(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applyAlpha(stamp[j++], img[rowStart + dx]);
 					}
 				}
 				break;
 			}
 			case ALL: {
-				for (int dy = y; dy < dy + h; dy++) {
+				for (int dy = y; dy < y + h; dy++) {
+				int rowStart = dy * this.width;
 					for (int dx = x; dx < x + w; dx++) {
-						img[dx + dy * w] = PixelAudioMapper.applyAll(stamp[j++], img[dx + dy * w]);
+						img[rowStart + dx] = PixelAudioMapper.applyAll(stamp[j++], img[dx + dy * w]);
 					}
 				}
 				break;
@@ -1298,7 +1365,8 @@ public class PixelAudioMapper {
 
 	public void stampSamples(float[] stamp, float[] sig, int x, int y, int w, int h) {
 		int j = 0;
-		for (int dy = y; dy < dy + h; dy++) {
+		for (int dy = y; dy < y + h; dy++) {
+			int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
 				sig[this.imageToSignalLUT[dx + dy * w]] = stamp[j++];
 			}
@@ -1307,7 +1375,8 @@ public class PixelAudioMapper {
 
 	public void stampSamples(int[] stamp, float[] sig, int x, int y, int w, int h) {
 		int j = 0;
-		for (int dy = y; dy < dy + h; dy++) {
+		for (int dy = y; dy < y + h; dy++) {
+			int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
 				sig[this.imageToSignalLUT[dx + dy * w]] = rgbChanToAudio(stamp[j++]);
 			}
@@ -1712,8 +1781,7 @@ public class PixelAudioMapper {
 	 * @param chan		channel to extract from the RGB pixel value
 	 * @return
 	 */
-	public static float pullPixelAudio(int rgb, ChannelNames chan) {
-		float[] hsbPixel = new float[3];		// local variable so we can make static method
+	public static float pullPixelAudio(int rgb, ChannelNames chan, float[] hsbPixel) {
 		float sample = 0;
 		switch (chan) {
 		case L: {
@@ -1765,8 +1833,7 @@ public class PixelAudioMapper {
 	 * 						Will be initialized and returned if null
 	 * @return              a array of floats mapped to the audio range, assigned to samples
 	 */
-     public static float[] pullPixelAudio(int[] rgbPixels, float[] samples, ChannelNames chan) {
- 		float[] hsbPixel = new float[3];		// local variable so we can make static method
+     public static float[] pullPixelAudio(int[] rgbPixels, float[] samples, ChannelNames chan, float[] hsbPixel) {
     	if (samples == null) {
     		samples = new float[rgbPixels.length];
     	}
@@ -1837,8 +1904,7 @@ public class PixelAudioMapper {
 	 * 						Will be initialized and returned if null.
 	 * @return              a array of floats mapped to the audio range, identical to samples
 	 */
-     public static float[] pullPixelAudio(int[] rgbPixels, int[] lut, float[] samples, ChannelNames chan) {
- 		float[] hsbPixel = new float[3];		// local variable so we can make static method
+     public static float[] pullPixelAudio(int[] rgbPixels, int[] lut, float[] samples, ChannelNames chan, float[] hsbPixel) {
     	if (samples == null) {
     		samples = new float[rgbPixels.length];
     	}
@@ -1917,8 +1983,7 @@ public class PixelAudioMapper {
 	 * @param chan      the channel to extract, a value from the ChannelNames enum
 	 * @return          the extracted channel values as an array of floats
 	 */
-	public static float[] pullRawChannel(int[] rgbPixels, ChannelNames chan) {
-	  float[] hsbPixel = new float[3];		// local variable so we can make static method
+	public static float[] pullRawChannel(int[] rgbPixels, ChannelNames chan, float[] hsbPixel) {
 	  // convert sample channel to float array buf
 	  float[] buf = new float[rgbPixels.length];
 	  int i = 0;
