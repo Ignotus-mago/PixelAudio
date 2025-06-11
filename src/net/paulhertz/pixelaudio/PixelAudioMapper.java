@@ -165,7 +165,8 @@ import java.util.Arrays;
  * a need for clarification, I have renamed the function, as in pluckPixelsAsFloat, pluckSamplesAsInt,
  * peelPixelsAsFloat, and peelSamplesAsInt.
  * </p>
- *
+ * 
+ *  
  * <h2>ARRAY SHIFTING</h2>
  * <p>
  * Standard operations we can perform with the signal array:
@@ -689,6 +690,10 @@ public class PixelAudioMapper {
 	 * Pluck and Plant methods follow the signal path.
 	 * Peel and Stamp methods follow the row major image path.
 	 * TODO more better explanations.
+	 * 
+	 * Where I use signalToImageLUT or imageToSignalLUT to redirect indexing the error checking for 
+	 * sig.length and img.length is critical. Elsewhere, it might not matter, but I should let users know 
+	 * that the arrays need to conform to the dimensions of the PixelAudioMapper instance. 
 	 *
 	 */
 
@@ -1274,7 +1279,7 @@ public class PixelAudioMapper {
 	 * @param toChannel    color channel to write to
 	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
 	 *         or if img.length != this.width * this.height
-	 */
+	 */ 
 	public void stampPixels(int[] stamp, int[] img, int x, int y, int w, int h, ChannelNames toChannel) {
 	    if (stamp == null) throw new IllegalArgumentException("stamp array cannot be null");
 	    if (img.length != this.width * this.height)
@@ -1764,7 +1769,7 @@ public class PixelAudioMapper {
 	/**
 	 * Extracts the hue component from an RGB value. The result is in the range (0, 1).
 	 * @param rgb		The RGB color from which we will obtain the hue component in the HSB color model.
-	 * @param hsbPixel 	array of float values filled in by this method
+	 * @param hsbPixel 	array of float values filled in by this method, caller can provide a reusable array
 	 * @return			A floating point number in the range (0..1) that can be multiplied by 360 to get the hue angle.
 	 */
 	public static float hue(int rgb, float[] hsbPixel) {
@@ -1843,6 +1848,13 @@ public class PixelAudioMapper {
 		return Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], sample);
 	}
 
+	public static int applyBrightness(float sample, int rgb, float[] hsbPixel) {
+		sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;				// a precaution, keep values within limits
+		sample = audioToHSBFloat(sample);						                        // map audio sample to (0..1)
+		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
+		return Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], sample);
+	}
+
 	public static int applyHue(float sample, int rgb) {
 		float[] hsbPixel = new float[3];												// local var so we can make static
 		sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;				// a precaution, keep values within limits
@@ -1851,8 +1863,22 @@ public class PixelAudioMapper {
 		return Color.HSBtoRGB(sample, hsbPixel[1], hsbPixel[2]);
 	}
 
+	public static int applyHue(float sample, int rgb, float[] hsbPixel) {
+		sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;				// a precaution, keep values within limits
+		sample = audioToHSBFloat(sample);						                        // map audio sample to (0..1)
+		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
+		return Color.HSBtoRGB(sample, hsbPixel[1], hsbPixel[2]);
+	}
+
 	public static int applySaturation(float sample, int rgb) {
 		float[] hsbPixel = new float[3];												// local var so we can make static
+		sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;				// a precaution, keep values within limits
+		sample = audioToHSBFloat(sample);						                        // map audio sample to (0..1)
+		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
+		return Color.HSBtoRGB(hsbPixel[0], sample, hsbPixel[2]);
+	}
+
+	public static int applySaturation(float sample, int rgb, float[] hsbPixel) {
 		sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;				// a precaution, keep values within limits
 		sample = audioToHSBFloat(sample);						                        // map audio sample to (0..1)
 		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
