@@ -630,6 +630,7 @@ public class PixelAudioMapper {
 	 * @param sig			an array of floats in the audio range [-1.0, 1.0]
 	 * @param img			an array of RGB pixel values
 	 * @param fromChannel	the color channel to get a value from
+	 * @param hsbPixel      a float[3] array for use with color channel extraction
 	 */
 	public void mapImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
 		PixelAudioMapper.pullPixelAudio(img, imageToSignalLUT, sig, fromChannel, hsbPixel);
@@ -641,6 +642,7 @@ public class PixelAudioMapper {
 	 *
 	 * @param img		source array of RGB pixel values
 	 * @param sig		target array of audio samples in the range [-1.0, 1.0]
+	 * @param hsbPixel  a float[3] array for use with color channel extraction
 	 */
 	public void writeImgToSig(int[] img, float[] sig) {
 		PixelAudioMapper.pullPixelAudio(img, sig, ChannelNames.ALL, hsbPixel);
@@ -693,11 +695,12 @@ public class PixelAudioMapper {
 	/*-------------------------- PLUCK AND PLANT METHODS --------------------------*/
 
 	/**
-	 * Starting at <code>signalPos</code>, reads <code>length</code> values from
-	 * pixel array <code>img</code> in signal order using
-	 * <code>signalToImageLUT</code> to redirect indexing and then returns them as
-	 * an array of RGB pixel values in signal order. Note that
-	 * <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or
+	 * Starting at signalPos, reads length values from pixel array img
+	 * in signal path order using signalToImageLUT to redirect indexing 
+	 * and then returns them as an array of RGB pixel values in signal order. 
+	 * Note that signalPos = this.imageToSignalLUT[x + y * this.width]. 
+	 * The source image data in img must conform to the current PixelAudioMapper
+	 * instance's dimensions, otherwise we'll throw an IllegalArgumentException.
 	 *
 	 * @param img       array of RGB values, the pixels array from a bitmap image
 	 *                  with the same width and height as PixelAudioMapper
@@ -706,9 +709,13 @@ public class PixelAudioMapper {
 	 * @param length    length of the subarray to pluck from img, reading pixel
 	 *                  values while following the signal path
 	 * @return 			a new array of pixel values in signal order
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
 	 */
 	public int[] pluckPixels(int[] img, int signalPos, int length) {
 	    if (img == null) throw new IllegalArgumentException("Image array cannot be null");
+	    if (img.length != this.width * this.height) 
+		        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= img.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > img.length) throw new IllegalArgumentException("Invalid length");
 		int[] pixels = new int[length]; // new array for pixel values
@@ -772,14 +779,18 @@ public class PixelAudioMapper {
 	 * Starting at image coordinates (x, y), reads values from pixel array img using imageToSignalLUT
 	 * to redirect indexing and returns them as an array of transcoded audio values in signal order.
 	 *
-	 * @param img			source array of RGB pixel values, typically from the bitmap image you are using with PixelAudioMapper
+	 * @param img			source array of RGB pixel values, must conform to PixelAudioMapper dimensions
 	 * @param signalPos		position in the signal at which to start reading pixel values from the image, following the signal path
 	 * @param length		length of the subarray to pluck from img
 	 * @param fromChannel	the color channel from which to read pixel values
 	 * @return				a new array of audio values in signal order
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
 	 */
 	public float[] pluckPixelsAsAudio(int[] img, int signalPos, int length, ChannelNames fromChannel) {
 	    if (img == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (img.length != this.width * this.height) 
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= img.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > img.length) throw new IllegalArgumentException("Invalid length: out of bounds");
 	    float[] samples = new float[length];							// create an array of samples
@@ -794,17 +805,22 @@ public class PixelAudioMapper {
 
 	
 	/**
-     * Starting at <code>signalPos</code>, reads <code>length</code> values from float array <code>sig</code> 
+     * Starting at signalPos, reads length values from float array sig 
 	 * and returns a new array of audio values in signal order. No redirection is needed when reading from the signal.
      * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
+     * Although in this method we don't use indirect indexing with LUTs, sig.length must equal this.width * this.height.
 	 *
 	 * @param sig			source array of audio values
 	 * @param signalPos		a position in the sig array
 	 * @param length		number of values to read from sig array
 	 * @return				a new array with the audio values we read
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
 	 */
 	public float[] pluckSamples(float[] sig, int signalPos, int length) {
 	    if (sig == null) throw new IllegalArgumentException("sig array cannot be null");
+	    if (sig.length != this.width * this.height) 
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= sig.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > sig.length) throw new IllegalArgumentException("Invalid length: out of bounds");
 		float[] samples = new float[length];		
@@ -818,14 +834,19 @@ public class PixelAudioMapper {
      * Starting at <code>signalPos</code>, reads <code>length</code> values from float array <code>sig</code> 
      * and transcodes and returns them as an RGB array in signal order.
      * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
-	 *
+     * Although in this method we don't use indirect indexing with LUTs, sig.length must equal this.width * this.height.
+     *
 	 * @param sig			source array of audio values (-1.0f..1.0f)
 	 * @param signalPos		entry point in the sig array
 	 * @param length		number of values to read from the sig array
 	 * @return				an array of RGB values where r == g == b, derived from the sig values
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
 	 */
 	public int[] pluckSamplesAsRGB(float[] sig, int signalPos, int length) {
 	    if (sig == null) throw new IllegalArgumentException("sig array cannot be null");
+	    if (sig.length != this.width * this.height) 
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= sig.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > sig.length) throw new IllegalArgumentException("Invalid length: out of bounds");
 		int[] rgbPixels = new int[length];
@@ -851,10 +872,14 @@ public class PixelAudioMapper {
 	 * @param img			target array of RGB values. in image (row major) order
 	 * @param signalPos   	position in the signal at which to start writing pixel values to the image, following the signal path
 	 * @param length		number of values from sprout to insert into img array
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
 	 */
 	public void plantPixels(int[] sprout, int[] img, int signalPos, int length) {
 	    if (sprout == null || img == null) 
 	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= img.length)
 	        throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > img.length || length > sprout.length)
@@ -866,6 +891,15 @@ public class PixelAudioMapper {
 	}
 
 
+	/**
+	 * Helper method for applying a color channel to an RGB pixel. 
+	 * 
+	 * @param sproutVal    source color vlaue
+	 * @param imgVal       destination color value
+	 * @param channel      the color channel to use
+	 * @param hsbPixel     array of 3 floats to maintain HSB color data
+	 * @return
+	 */
 	private int applyChannelToPixel(int sproutVal, int imgVal, ChannelNames channel, float[] hsbPixel) {
 	    switch (channel) {
 	        case L: {
@@ -906,18 +940,22 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Writes values from sprout into img at positions mapped by the signal path, using the specified channel.
+	 * Writes values from RGB source array sprout into img at positions mapped 
+	 * by the signal path, using the specified channel.
 	 * 
 	 * @param sprout      source array of RGB values to insert
 	 * @param img         target array of RGB values (image, row-major order)
 	 * @param signalPos   signal position to start writing
 	 * @param length      number of values to write
 	 * @param toChannel   channel to write into (R, G, B, L, etc.)
-	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
 	 */
 	public void plantPixels(int[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {
 	    if (sprout == null || img == null) 
 	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= img.length)
 	        throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > img.length || length > sprout.length)
@@ -947,7 +985,7 @@ public class PixelAudioMapper {
 	}
 	
 	/**
-	 * Writes values from a float array (sprout) into the specified channel of the img array
+	 * Writes values from audio data array sprout into the specified channel of the img array
 	 * at positions mapped by the signal path, starting at signalPos for the given length.
   	 *
 	 * @param sprout	   source array audio samples ([-1.0, 1.0])
@@ -955,11 +993,14 @@ public class PixelAudioMapper {
 	 * @param signalPos    signal position to start writing 
 	 * @param length	   number of values to write
 	 * @param toChannel    color channel to write to
-	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
 	 */
 	public void plantPixels(float[] sprout, int[] img, int signalPos, int length, ChannelNames toChannel) {
 	    if (sprout == null || img == null)
 	        throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= img.length)
 	        throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > img.length || length > sprout.length)
@@ -971,17 +1012,21 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Starting at <code>signalPos</code>, insert <code>length</code> audio samples from source array <code>sprout</code> 
-	 * into target array of audio samples <code>sig</code>. No redirection by lookup tables is used.
+	 * Starting at signalPos, insert length audio samples from source array sprout 
+	 * into target array of audio samples sig. No lookup tables are used.
 	 *
 	 * @param sprout		source array of audio values (-1.0f..1.0f)
 	 * @param sig			target array of signal values, in signal order
 	 * @param signalPos		start point in sig array
 	 * @param length		number of values to copy from sprout array to sig array
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
 	 */
 	public void plantSamples(float[] sprout, float[] sig, int signalPos, int length) {
 	    if (sprout == null || sig == null) 
 	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= sig.length)
 	        throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > sig.length || length > sprout.length)
@@ -1000,10 +1045,14 @@ public class PixelAudioMapper {
 	 * @param sig
 	 * @param signalPos
 	 * @param length
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
 	 */
 	public void plantSamples(int[] sprout, float[] sig, int signalPos, int length) {
 	    if (sprout == null || sig == null) 
 	    	throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= sig.length)
 	        throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > sig.length || length > sprout.length)
@@ -1023,11 +1072,14 @@ public class PixelAudioMapper {
 	 * @param signalPos   position to start writing into sig
 	 * @param length      number of values to write
 	 * @param fromChannel channel to extract from sprout values
-	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
 	 */
 	public void plantSamples(int[] sprout, float[] sig, int signalPos, int length, ChannelNames fromChannel) {
 	    if (sprout == null || sig == null)
 	        throw new IllegalArgumentException("Input arrays cannot be null");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
 	    if (signalPos < 0 || signalPos >= sig.length)
 	        throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > sig.length || length > sprout.length)
@@ -1043,8 +1095,9 @@ public class PixelAudioMapper {
 	/*-------------------------- PEEL AND STAMP METHODS --------------------------*/
 
 	/**
-	 * Copies a rectangular area of pixels in image (row-major) order and returns it as an array of RGB values.
-	 * The array img must conform to the dimensions this.width and this.height. 
+	 * Copies a rectangular area of pixels in image (row-major) order and returns it 
+	 * as an array of RGB values (a standard operation) Note that the image 
+	 * must conform to the dimensions this.width and this.height. 
 	 * 
 	 * @param img the image pixel array (row-major, length == width * height)
 	 * @param x   left edge of rectangle
@@ -1052,15 +1105,16 @@ public class PixelAudioMapper {
 	 * @param w   width of rectangle
 	 * @param h   height of rectangle
 	 * @return    array of int (RGB values), length w*h
-	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
 	 */
 	public int[] peelPixels(int[] img, int x, int y, int w, int h) {
 	    if (img == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
 	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
 	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
 	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
-	    if (img.length != this.width * this.height)
-	        throw new IllegalArgumentException("img length does not match image dimensions");
 	    int[] rgbPixels = new int[w * h];
 	    int j = 0;
 	    for (int dy = y; dy < y + h; dy++) {
@@ -1083,15 +1137,16 @@ public class PixelAudioMapper {
 	 * @param w   width of rectangle
 	 * @param h   height of rectangle
 	 * @return    array of float (audio values), length w*h
-	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
 	 */
 	public float[] peelPixelsAsAudio(int[] img, int x, int y, int w, int h) {
 	    if (img == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
 	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
 	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
 	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
-	    if (img.length != this.width * this.height)
-	        throw new IllegalArgumentException("img length does not match image dimensions");
 		float[] samples = new float[w * h];
 		int j = 0;
 		for (int dy = y; dy < y + h; dy++) {
@@ -1105,23 +1160,27 @@ public class PixelAudioMapper {
 
 	/**
 	 * Copies a rectangular area of audio values from a signal mapped to an image 
-	 * using imageToSignalLUT to index values.
+	 * using imageToSignalLUT to index values. Note that sig.length must equal
+	 * this.width * this.height, i.e., it is a signal conformed to this instance
+	 * of a PixelAudioMapper. With the resulting array you could, 
+	 * for example, run a 2D filter over selected 1D audio data. 
 	 *
-	 * @param sig  an array of audio samples ([-1.0, 1.0]), where length == width * height
+	 * @param sig  a source array of audio samples ([-1.0, 1.0])
 	 * @param x    left edge of rectangle
 	 * @param y    top edge of rectangle
 	 * @param w    width of rectangle
 	 * @param h    height of rectangle
 	 * @return     array of float (audio values), length w*h
-	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
 	 */
 	public float[] peelSamples(float[] sig, int x, int y, int w, int h) {
 	    if (sig == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
 	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
 	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
 	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
-	    if (sig.length != this.width * this.height)
-	        throw new IllegalArgumentException("img length does not match image dimensions");
 		float[] samples = new float[w * h];
 		int j = 0;
 		for (int dy = y; dy < y + h; dy++) {
@@ -1134,24 +1193,26 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Using imageToSignalLUT to index values in a rectangular area, 
-	 * copies value from an audio signal and returns the result as RGB. 
+	 * Copies a rectangular area of audio values from a signal mapped to an image 
+	 * using imageToSignalLUT to index values. Note that sig.length must equal
+	 * this.width * this.height.
 	 *
-	 * @param sig  an array of audio values ([-1.0, 1.0])
+	 * @param sig  a source array of audio values ([-1.0, 1.0])
 	 * @param x    left edge of rectangle
 	 * @param y    top edge of rectangle
 	 * @param w    width of rectangle
 	 * @param h    height of rectangle
 	 * @return     array of float (audio values), length w*h
-	 * @throws IllegalArgumentException for null arrays or out-of-bounds requests
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
 	 */
 	public int[] peelSamplesAsRGB(float[]sig, int x, int y, int w, int h) {
 	    if (sig == null) throw new IllegalArgumentException("img array cannot be null");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
 	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
 	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
 	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
-	    if (sig.length != this.width * this.height)
-	        throw new IllegalArgumentException("img length does not match image dimensions");
 		int[] rgbPixels = new int[w * h];
 		int j = 0;
 		for (int dy = y; dy < y + h; dy++) {
@@ -1171,7 +1232,26 @@ public class PixelAudioMapper {
 */
 
 
+	/**
+	 * Pastes a source array of RGB data into a rectangular area of a destination image 
+	 * (a standard operation). Image area must equal this.width * this.height.
+	 * 
+	 * @param stamp    a source array of RGB data
+	 * @param img      a destination image
+	 * @param x        leftmost x-coordinate of a rectangular area in the destination image
+	 * @param y        topmost y-coordinate of a rectangular area in the destination image
+	 * @param w        width of rectangular area
+	 * @param h        height of rectangular area
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
+	 */
 	public void stampPixels(int[] stamp, int[] img, int x, int y, int w, int h) {
+	    if (stamp == null) throw new IllegalArgumentException("stamp array cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
 		int j = 0;
 		for (int dy = y; dy < y + h; dy++) {
 			int rowStart = dy * this.width;
@@ -1181,7 +1261,27 @@ public class PixelAudioMapper {
 		}
 	}
 
+	/**
+	 * Pastes a specified channel of a source array of RGB data into a rectangular area of 
+	 * a destination image (a standard operation). Image area must equal this.width * this.height.
+	 * 
+	 * @param stamp        a source array of RGB data
+	 * @param img          a destination image
+	 * @param x            leftmost x-coordinate of a rectangular area in the destination image
+	 * @param y            topmost y-coordinate of a rectangular area in the destination image
+	 * @param w            width of rectangular area
+	 * @param h            height of rectangular area
+	 * @param toChannel    color channel to write to
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
+	 */
 	public void stampPixels(int[] stamp, int[] img, int x, int y, int w, int h, ChannelNames toChannel) {
+	    if (stamp == null) throw new IllegalArgumentException("stamp array cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
 		int j = 0;
 		switch (toChannel) {
 		case L: {
@@ -1285,7 +1385,27 @@ public class PixelAudioMapper {
 		}
 	}
 
+	/**
+	 * Pastes a source array of audio data into a specified color channel of a rectangular
+	 * area of a destination image. Image area must equal this.width * this.height.
+	 * 
+	 * @param stamp        a source array of audio data ([-1.0, 1.0])
+	 * @param img          a destination image
+	 * @param x            leftmost x-coordinate of a rectangular area in the destination image
+	 * @param y            topmost y-coordinate of a rectangular area in the destination image
+	 * @param w            width of rectangular area
+	 * @param h            height of rectangular area
+	 * @param toChannel    color channel to write to
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if img.length != this.width * this.height
+	 */
 	public void stampPixels(float[] stamp, int[] img, int x, int y, int w, int h, ChannelNames toChannel) {
+	    if (stamp == null) throw new IllegalArgumentException("stamp array cannot be null");
+	    if (img.length != this.width * this.height)
+	        throw new IllegalArgumentException("img length does not match PixelAudioMapper dimensions");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
 		int j = 0;
 		switch (toChannel) {
 			case L: {
@@ -1363,22 +1483,62 @@ public class PixelAudioMapper {
 			}
 		}
 
+	/**
+	 * Pastes a source array of audio data into a destination array of audio data using
+	 * imagetoSignalLUT to map data from source to destination. In effect, source and 
+	 * destination are treated as 2D rectangular arrays. 
+	 * Note that sig.length must equal this.width * this.height.
+	 * 
+	 * @param stamp    a source array of audio data ([-1.0, 1.0])
+	 * @param sig      a destination array of audio data
+	 * @param x        leftmost x-coordinate of a rectangular area in the destination image
+	 * @param y        topmost y-coordinate of a rectangular area in the destination image
+	 * @param w        width of rectangular area
+	 * @param h        height of rectangular area
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
+	 */
 	public void stampSamples(float[] stamp, float[] sig, int x, int y, int w, int h) {
+	    if (stamp == null) throw new IllegalArgumentException("stamp array cannot be null");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
 		int j = 0;
 		for (int dy = y; dy < y + h; dy++) {
 			int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
-				sig[this.imageToSignalLUT[dx + dy * w]] = stamp[j++];
+				sig[this.imageToSignalLUT[rowStart + dx]] = stamp[j++];
 			}
 		}
 	}
 
+	/**
+	 * Pastes a source array of audio data into a destination array of RGB data as grayscale
+	 * luminosity values. Note that sig.length must equal this.width * this.height.
+	 * 
+	 * @param stamp
+	 * @param sig
+	 * @param x
+	 * @param y
+	 * @param w
+	 * @param h
+	 * @throws IllegalArgumentException if parameters are out of bounds or arrays are null, 
+	 *         or if sig.length != this.width * this.height
+	 */
 	public void stampSamples(int[] stamp, float[] sig, int x, int y, int w, int h) {
+	    if (stamp == null) throw new IllegalArgumentException("stamp array cannot be null");
+	    if (sig.length != this.width * this.height)
+	        throw new IllegalArgumentException("sig length does not match PixelAudioMapper dimensions");
+	    if (w <= 0 || h <= 0) throw new IllegalArgumentException("width and height must be positive");
+	    if (x < 0 || y < 0 || x + w > this.width || y + h > this.height)
+	        throw new IllegalArgumentException("Requested rectangle is out of image bounds");
 		int j = 0;
 		for (int dy = y; dy < y + h; dy++) {
 			int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
-				sig[this.imageToSignalLUT[dx + dy * w]] = rgbChanToAudio(stamp[j++]);
+				sig[this.imageToSignalLUT[rowStart + dx]] = rgbChanToAudio(stamp[j++]);
 			}
 		}
 	}
