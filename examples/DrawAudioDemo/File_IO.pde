@@ -106,7 +106,7 @@ public void loadImagePixels(PImage img) {
     mixImage.copy(mapImage, 0, 0, w, h, 0, 0, w, h);
     img.loadPixels();
     mixImage.loadPixels();
-    mixImage.pixels = PixelAudioMapper.pushAudioPixel(img.pixels, mixImage.pixels, chan);
+    mixImage.pixels = PixelAudioMapper.pushChannelToPixel(img.pixels, mixImage.pixels, chan);
     mixImage.updatePixels();
     // TODO make it work!
     mapImage.copy(mixImage,0, 0, w, h, 0, 0, w, h);
