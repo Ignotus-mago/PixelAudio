@@ -380,17 +380,20 @@ public class Argosy {
 	
 	public float[] getArgosySignal() {
 		float[] signal = new float[argosyArray.length];
-		return PixelAudioMapper.pullPixelAudio(argosyArray, signal, PixelAudioMapper.ChannelNames.L);
+		float[] hsbPixel = new float[3];
+		return PixelAudioMapper.pullPixelAsAudio(argosyArray, signal, PixelAudioMapper.ChannelNames.L, hsbPixel);
 	}
 
 	public float[] getArgosySignal(PixelAudioMapper.ChannelNames chan) {
 		float[] signal = new float[argosyArray.length];
-		return PixelAudioMapper.pullPixelAudio(argosyArray, signal, chan);
+		float[] hsbPixel = new float[3];
+		return PixelAudioMapper.pullPixelAsAudio(argosyArray, signal, chan, hsbPixel);
 	}
 
 	public float[] getArgosySignal(float scale) {
 		float[] signal = new float[argosyArray.length];
-		PixelAudioMapper.pullPixelAudio(argosyArray, signal, PixelAudioMapper.ChannelNames.L);
+		float[] hsbPixel = new float[3];
+		PixelAudioMapper.pullPixelAsAudio(argosyArray, signal, PixelAudioMapper.ChannelNames.L, hsbPixel);
 		for (int i = 0; i < signal.length; i++) {
 			signal[i] *= scale;
 		}
@@ -399,7 +402,8 @@ public class Argosy {
 
 	public float[] getArgosySignal(PixelAudioMapper.ChannelNames chan, float scale) {
 		float[] signal = new float[argosyArray.length];
-		PixelAudioMapper.pullPixelAudio(argosyArray, signal, chan);
+		float[] hsbPixel = new float[3];
+		PixelAudioMapper.pullPixelAsAudio(argosyArray, signal, chan, hsbPixel);
 		for (int i = 0; i < signal.length; i++) {
 			signal[i] *= scale;
 		}
