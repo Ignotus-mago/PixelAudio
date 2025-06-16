@@ -220,6 +220,16 @@ import java.util.Arrays;
  * @see PixelMapGen
  * @see WaveSynth
  * 
+ * Refactored 15 June 2025
+ * Refactored all pluck, plant, peel, stamp, pull and push methods: 
+ * 1. wrote loops that call a switch over color channels, a design which JIT can optimize; 
+ * 2. included error checking in all pluck, plant, peel, stamp, pull and push methods ; 
+ * 3. added helper methods. 
+ * Some of the pluck and plant methods throw an error if arrays do not conform to PixelAudioMapper dimensions. 
+ * All of the peel and stamp methods must conform. 
+ * Pull and push methods only require arrays be of the same size, 
+ * and modify the destination array if it is null or the wrong size. 
+ * 
  */
 public class PixelAudioMapper {
 	// necessary instance variables
