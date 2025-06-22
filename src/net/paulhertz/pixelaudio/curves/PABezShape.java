@@ -28,7 +28,7 @@ public class PABezShape {
   private ArrayList<PAVertex2DINF> curves;
   /** flags if shape is closed or not */
   boolean isClosed = false;
-  /** flags we shoud draw control points and vertices */
+  /** flags we should draw control points and vertices */
   boolean isMarked = false;
   /** flag for line segment type, associated with LineVertex */
   public final static int LINE_SEGMENT = 1;
@@ -487,7 +487,7 @@ public class PABezShape {
 
   /*-------------------------------------------------------------------------------------------*/
   /*                                                                                           */
-  /* METHODS TO DRAW TO DISPLAY                                                                */ 
+  /*                               METHODS TO DRAW TO DISPLAY                                  */ 
   /*                                                                                           */
   /*-------------------------------------------------------------------------------------------*/
 

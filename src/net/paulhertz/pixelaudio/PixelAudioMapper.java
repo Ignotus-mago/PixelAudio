@@ -1,6 +1,21 @@
-/**
+/*
+ *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
  *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as published
+ *   by the Free Software Foundation; either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
 package net.paulhertz.pixelaudio;
 
 
@@ -11,10 +26,8 @@ import java.util.Arrays;
 
 /**
  * <p>
- * As of pre-release version 0.9-beta PixelAudioMapper is reasonably complete. However, 
- * the "peel" and "stamp" methods have not been tested or supplied with example applications.
- * The Javadocs for these methods are also minimal or missing. They will change. You should
- * probably avoid using them for now. 
+ * As of pre-release version 0.9-beta PixelAudioMapper is reasonably complete, though there are a
+ * number of features that have not been tested or demonstrated with code examples. 
  * </p>
  * 
  * <p>
@@ -318,8 +331,6 @@ public class PixelAudioMapper {
 
 	//------------- Dimensions -------------//
 
-
-
 	/** @return the width of the image */
 	public int getWidth() {
 		return this.width;
@@ -343,7 +354,6 @@ public class PixelAudioMapper {
 
 
 	//------------- LUTs -------------//
-
 
 	/** @return the lookup table that maps an index in the signal to the corresponding pixel index in the image. */
 	public int[] getSignalToImageLUT() {
@@ -432,10 +442,11 @@ public class PixelAudioMapper {
 	
 	
 	//------------- TRANSCODING -------------//
+	
 	/*
 	 * This section contains optimized math for conversion between color and audio formats.
 	 * It assumes that RGB values are 8-bit numbers in three or four channels, RGB or RGBA. 
-	 * The int values handled here are thus in the range [0, 255]. HSB values (brightness, 
+	 * The color channel values handled here are thus in the range [0, 255]. HSB values (brightness, 
 	 * hue, saturation) are constrained to [0.0f,1.0f]. Audio values range over [-1.0f, 1.0f]. 
 	 * Note that input values are not checked or clamped to the desired interval. That puts the 
 	 * burden of normalizing values on the caller before the call. 
@@ -505,7 +516,11 @@ public class PixelAudioMapper {
 
 	// ------------- PIXEL AND SAMPLE INDEX LOOKUP ------------- //
 
-	/* Note that these methods are not returning pixel or sample values, but index values */
+	/* 
+	 * Note that these methods are not returning pixel or sample values, but index values.
+	 * Given an index or coordinate pair, they use the lookup tables imageToSignalLUT 
+	 * and signalToImageLUT to obtain the corresponding index in the signal or image array.
+	 */
 	
 	/**
 	 * Given a coordinate pair (x,y) in an image, returns its index in a signal path
@@ -557,17 +572,22 @@ public class PixelAudioMapper {
 
 
 	//------------- MAPPING -------------//
-
+	
+	/*
+	 * These methods reorder arrays of audio or color values using the LUTs. 
+	 */
 
 	/**
 	 * Creates an array of int which contains the values in <code>img</code> reordered by the lookup table <code>lut</code>.
-	 * TODO call static method that will do error checking for us.
+	 * The two arrays, img and lut, must be the same size.
 	 * 
 	 * @param img    an array of int, typically of RGB values
 	 * @param lut    a look up table of the same size as <code>img</code>
 	 * @return       a new array of int with the values in img reordered by the lookup table
+	 * @throw IllegalArgumentException if img.length != lut.length
 	 */
-	public int[] remapPixels(int[] img, int[] lut) {
+	public static int[] remapPixels(int[] img, int[] lut) {
+		if (img.length != lut.length) throw new IllegalArgumentException("img and lut arrays must be the same size");
 		int[] newPixels = new int[img.length];
 		for (int i = 0; i < img.length; i++) {
 			newPixels[i] = img[lut[i]];
@@ -575,16 +595,17 @@ public class PixelAudioMapper {
 		return newPixels;
 	}
 
-	
 	/**
 	 * Creates an array of float which contains the values in <code>sig</code> reordered by the lookup table <code>lut</code>.
-	 * TODO call static method that will do error checking for us.
+	 * The two arrays, sig and lut, must be the same size.
 	 * 
 	 * @param sig    an array of float, typically audio samples
 	 * @param lut	 a lookup table
 	 * @return       a new array with the values in sig reordered by the lookup table
+	 * @throw IllegalArgumentException if sig.length != lut.length
 	 */
-	public float[] remapSamples(float[] sig, int[] lut) {
+	public static float[] remapSamples(float[] sig, int[] lut) {
+		if (sig.length != lut.length) throw new IllegalArgumentException("sig and lut arrays must be the same size");
 		float[] newSignal = new float[sig.length];
 		for (int i = 0; i < sig.length; i++) {
 			newSignal[i] = sig[lut[i]];
@@ -597,11 +618,14 @@ public class PixelAudioMapper {
 	 * On completion, img[] contains new values. The img array and the sig array
 	 * must be the same size.
 	 *
-	 * @param sig source array of floats in the audio range  [-1.0, 1.0]
-	 * @param img target array of RGB pixel values
+	 * @param sig    source array of floats in the audio range  [-1.0, 1.0]
+	 * @param img    target array of RGB pixel values
+	 * @return array of RGB int values derived from sig, loaded to all channels (audio as grayscale)
+	 * @throw IllegalArgumentException if sig.length != img.length
 	 */
-	public void mapSigToImg(float[] sig, int[] img) {
-		PixelAudioMapper.pushAudioToChannel(sig, img, imageToSignalLUT, ChannelNames.ALL);		// calls our utility method's grayscale conversion
+	public int[] mapSigToImg(float[] sig, int[] img) {
+		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
+		return PixelAudioMapper.pushAudioToChannel(sig, img, this.signalToImageLUT, ChannelNames.ALL);    // audio to grayscale conversion
 	}
 
 	/**
@@ -612,9 +636,13 @@ public class PixelAudioMapper {
 	 * @param sig			an array of floats in the audio range  [-1.0, 1.0]
 	 * @param img			an array of RGB pixel values
 	 * @param toChannel		the channel to write transcoded values to
+	 * @return array of RGB int values derived from sig, loaded to specified channel
+	 * @throw IllegalArgumentException if sig.length != img.length
 	 */
-	public void mapSigToImg(float[] sig, int[] img, ChannelNames toChannel) {
-		PixelAudioMapper.pushAudioToChannel(sig, img, imageToSignalLUT, toChannel);				// call our utility method with toChannel
+	public int[] mapSigToImg(float[] sig, int[] img, ChannelNames toChannel) {
+		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
+		if (sig.length != this.getSize()) throw new IllegalArgumentException("sig and img array lengths must equal mapper.getSize()");
+		return PixelAudioMapper.pushAudioToChannel(sig, img, this.signalToImageLUT, toChannel);    // call our utility method with toChannel
 	}
 
 	/**
@@ -623,12 +651,16 @@ public class PixelAudioMapper {
 	 * the brightness channel in the HSB color space. On completion, sig[] contains new values.
 	 * The img array and the sig array must be the same size.
 	 *
-	 * @param sig			an array of floats in the audio range  [-1.0, 1.0]
-	 * @param img			an array of RGB pixel values
+	 * @param sig	an array of floats in the audio range  [-1.0, 1.0]
+	 * @param img	an array of RGB pixel values
+	 * @return array of audio range float values derived from Brightness channel of color values
+	 * @throw IllegalArgumentException if img.length != sig.length
 	 */
-	public void mapImgToSig(int[] img, float[] sig) {
+	public float[] mapImgToSig(int[] img, float[] sig) {
+		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
+		if (sig.length != this.getSize()) throw new IllegalArgumentException("sig and img array lengths must equal mapper.getSize()");
 		float[] hsbPixel = new float[3];
-		PixelAudioMapper.pullPixelAsAudio(img, sig, imageToSignalLUT, ChannelNames.L, hsbPixel);
+		return PixelAudioMapper.pullPixelAsAudio(img, sig, this.signalToImageLUT, ChannelNames.L, hsbPixel);
 	 }
 
 	/**
@@ -640,11 +672,16 @@ public class PixelAudioMapper {
 	 * @param img			an array of RGB pixel values
 	 * @param fromChannel	the color channel to get a value from
 	 * @param hsbPixel      a float[3] array for use with color channel extraction
+	 * @return array of audio range float values derived from specified channel of color values
+	 * @throw IllegalArgumentException if img.length != sig.length
 	 */
-	public void mapImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
+	public float[] mapImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
+		if (img.length != sig.length) throw new IllegalArgumentException("img and sig arrays must be the same size");
 		float[] hsbPixel = new float[3];
-		PixelAudioMapper.pullPixelAsAudio(img, sig, imageToSignalLUT, fromChannel, hsbPixel);
+		return PixelAudioMapper.pullPixelAsAudio(img, sig, this.signalToImageLUT, fromChannel, hsbPixel);
 	 }
+	
+	
 
 	/**
 	 * Writes transcoded pixel values directly to the signal, without using a LUT to redirect. V
@@ -653,8 +690,10 @@ public class PixelAudioMapper {
 	 * @param img		source array of RGB pixel values
 	 * @param sig		target array of audio samples in the range [-1.0, 1.0]
 	 * @param hsbPixel  a float[3] array for use with color channel extraction
+	 * @throw IllegalArgumentException if img.length != sig.length
 	 */
 	public void writeImgToSig(int[] img, float[] sig) {
+		if (img.length != sig.length) throw new IllegalArgumentException("img and sig arrays must be the same size");
 		float[] hsbPixel = new float[3];
 		PixelAudioMapper.pullPixelAsAudio(img, sig, ChannelNames.ALL, hsbPixel);
 	 }
@@ -663,17 +702,21 @@ public class PixelAudioMapper {
 	 * @param img			an array of RGB pixel values, source
 	 * @param sig			an array of audio samples in the range [-1.0, 1.0], target
 	 * @param fromChannel	channel in RGB or HSB color space, from ChannelNames enum
+	 * @throw IllegalArgumentException if img.length != sig.length
 	 */
 	public void writeImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
+		if (img.length != sig.length) throw new IllegalArgumentException("img and sig arrays must be the same size");
 		float[] hsbPixel = new float[3];
-		 PixelAudioMapper.pullPixelAsAudio(img, sig, fromChannel, hsbPixel);
+		PixelAudioMapper.pullPixelAsAudio(img, sig, fromChannel, hsbPixel);
 	 }
 
 	/**
 	 * @param sig		an array of audio samples in the range [-1.0, 1.0], source
 	 * @param img		an array of RGB pixel values, target
+	 * @throw IllegalArgumentException if sig.length != img.length
 	 */
 	public void writeSigToImg(float[] sig, int[] img) {
+		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
 		PixelAudioMapper.pushAudioToPixel(sig, img, ChannelNames.ALL);
 	 }
 
@@ -681,8 +724,10 @@ public class PixelAudioMapper {
 	 * @param sig			an array of audio samples in the range [-1.0, 1.0], source
 	 * @param img			an array of RGB pixel values, target
 	 * @param toChannel		channel in RGB or HSB color space, from ChannelNames enum
+	 * @throw IllegalArgumentException if sig.length != img.length
 	 */
 	public void writeSigToImg(float[] sig, int[] img, ChannelNames toChannel) {
+		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
 		 PixelAudioMapper.pushAudioToPixel(sig, img, toChannel);
 	 }
 
@@ -725,28 +770,28 @@ public class PixelAudioMapper {
 		if (source.length == this.mapSize) return source;
 		else // Pad or truncate to match mapSize
 			source = Arrays.copyOf(source, this.mapSize);
-	    return source;		
+	    return source;
 	}
 
 	public float[] conformArray(float[] source) {
 		if (source.length == this.mapSize) return source;
 		else // Pad or truncate to match mapSize
 			source = Arrays.copyOf(source, this.mapSize);
-	    return source;		
+	    return source;
 	}
 
 	public static int[] conformArray(int[] source, int mapSize) {
 		if (source.length == mapSize) return source;
 		else // Pad or truncate to match mapSize
 			source = Arrays.copyOf(source, mapSize);
-	    return source;		
+	    return source;
 	}
 
 	public static float[] conformArray(float[] source, int mapSize) {
 		if (source.length == mapSize) return source;
 		else // Pad or truncate to match mapSize
 			source = Arrays.copyOf(source, mapSize);
-	    return source;		
+	    return source;
 	}
 
 
@@ -1076,9 +1121,7 @@ public class PixelAudioMapper {
 	/*
 	 * All the "peel" and "stamp" methods depend on the dimensions of the PixelAudioMapper instance.
 	 * For that reason, they will throw an IllegalArgumentException if arrays do not conform to 
-	 * mapSize, i.e. this.width * this.height. There are plenty of area copying and pasting
-	 * methods in Java and Processing. The static "pull" and "push" in PixelAudioMapper also
-	 * provide facilities for transcoding arrays. 
+	 * mapSize, i.e. this.width * this.height.  
 	 * 
 	 */
 
@@ -1527,57 +1570,59 @@ public class PixelAudioMapper {
 	}
 
      
-		/**
-		 * Converts an array of pixel channel values to an array of audio sample values,
-		 * mapping sample values to the interval [-1.0, 1.0], using a supplied lookup
-		 * table to change the order of resulting array. If samples is null or
-		 * samples.length != rgbPixels.length, initializes/adjusts samples.length.
-		 *
-		 * @param rgbPixels an array of RGB pixel values
-		 * @param samples   an array of audio samples, which may be null, whose values
-		 *                  will be set from rgbPixels.
-		 * @param lut       a lookup table for redirecting rgbPixels indexing, typically
-		 *                  imageToSignalLUT
-		 * @param chan      channel to extract from the RGB pixel values Will be
-		 *                  initialized and returned if null.
-		 * @return a array of floats mapped to the audio range, identical to samples
-		 */
-		public static float[] pullPixelAsAudio(int[] rgbPixels, float[] samples, int[] lut, ChannelNames chan,
-				float[] hsbPixel) {
-			if (lut == null || lut.length != rgbPixels.length) {
-				throw new IllegalArgumentException(
-						"Input array lut cannot be null and must be the same length as rgbPixels");
-			}
-			if (samples == null || samples.length != rgbPixels.length) {
-				samples = new float[rgbPixels.length];
-			}
-			for (int i = 0; i < samples.length; i++) {
-				samples[i] = extractColorAsAudio(rgbPixels[lut[i]], chan, hsbPixel);
-			}
-			return samples;
+	/**
+	 * Converts an array of pixel channel values to an array of audio sample values,
+	 * mapping sample values to the interval [-1.0, 1.0], using a supplied lookup
+	 * table to change the order of resulting array. If samples is null or
+	 * samples.length != rgbPixels.length, initializes/adjusts samples.length.
+	 *
+	 * @param rgbPixels an array of RGB pixel values
+	 * @param samples   an array of audio samples, which may be null, whose values
+	 *                  will be set from rgbPixels.
+	 * @param lut       a lookup table for redirecting rgbPixels indexing, typically
+	 *                  imageToSignalLUT
+	 * @param chan      channel to extract from the RGB pixel values Will be
+	 *                  initialized and returned if null.
+	 * @return a array of floats mapped to the audio range, identical to samples
+	 */
+	public static float[] pullPixelAsAudio(int[] rgbPixels, float[] samples, int[] lut, ChannelNames chan,
+			float[] hsbPixel) {
+		if (lut == null || lut.length != rgbPixels.length) {
+			throw new IllegalArgumentException(
+					"Input array lut cannot be null and must be the same length as rgbPixels");
 		}
+		if (samples == null || samples.length != rgbPixels.length) {
+			samples = new float[rgbPixels.length];
+		}
+		for (int i = 0; i < samples.length; i++) {
+			samples[i] = extractColorAsAudio(rgbPixels[lut[i]], chan, hsbPixel);
+		}
+		return samples;
+	}
 		
-		public static int[] pullAudioAsColor(float[] samples, int[] rgbPixels, int signalPos, int length) {
-		    if (samples == null) throw new IllegalArgumentException("samples array cannot be null");
-	        if (rgbPixels == null || rgbPixels.length != samples.length) {
-	    		rgbPixels = new int[samples.length];
-	    	}
-		    if (signalPos < 0 || signalPos >= samples.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
-		    if (length < 0 || signalPos + length > samples.length) throw new IllegalArgumentException("Invalid length: out of bounds");
-			int j = 0;
-			for (int i = signalPos; i < signalPos + length; i++) {
-				float sample = samples[i];
-				sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;		// a precaution, keep values within limits
-				int v = audioToRGBChan(sample);                                         // map from [-1.0, 1.0] to [0, 255]
-				rgbPixels[j++] = 255 << 24 | v << 16 | v << 8 | v;						// an opaque RGB gray (r == g == b)
-			}
-			return rgbPixels;
+	public static int[] pullAudioAsColor(float[] samples, int[] rgbPixels, int signalPos, int length) {
+		if (samples == null)
+			throw new IllegalArgumentException("samples array cannot be null");
+		if (rgbPixels == null || rgbPixels.length != samples.length) {
+			rgbPixels = new int[samples.length];
 		}
-		
-		public static int[] pullAudioAsColor(float[] sig) {
-			return pullAudioAsColor(sig, null, 0, sig.length);
+		if (signalPos < 0 || signalPos >= samples.length)
+			throw new IndexOutOfBoundsException("signalPos out of bounds");
+		if (length < 0 || signalPos + length > samples.length)
+			throw new IllegalArgumentException("Invalid length: out of bounds");
+		int j = 0;
+		for (int i = signalPos; i < signalPos + length; i++) {
+			float sample = samples[i];
+			sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample; // a precaution, keep values within limits
+			int v = audioToRGBChan(sample); // map from [-1.0, 1.0] to [0, 255]
+			rgbPixels[j++] = 255 << 24 | v << 16 | v << 8 | v; // an opaque RGB gray (r == g == b)
 		}
-     
+		return rgbPixels;
+	}
+
+	public static int[] pullAudioAsColor(float[] sig) {
+		return pullAudioAsColor(sig, null, 0, sig.length);
+	}     
      
      /*
       * DELETED: public static float[] pullRawChannel(int[] rgbPixels, ChannelNames chan, float[] hsbPixel)
@@ -2096,14 +2141,29 @@ public class PixelAudioMapper {
 		return Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], PixelAudioMapper.brightness(rgbSource));
 	}
 
+	public static int applyBrightness(int rgbSource, int rgb, float[] hsbPixel) {
+		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
+		return Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], PixelAudioMapper.brightness(rgbSource));
+	}
+
 	public static int applyHue(int rgbSource, int rgb) {
 		float[] hsbPixel = new float[3];												// local var so we can make static
 		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
 		return Color.HSBtoRGB(PixelAudioMapper.hue(rgbSource), hsbPixel[1], hsbPixel[2]);
 	}
 
+	public static int applyHue(int rgbSource, int rgb, float[] hsbPixel) {
+		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
+		return Color.HSBtoRGB(PixelAudioMapper.hue(rgbSource), hsbPixel[1], hsbPixel[2]);
+	}
+
 	public static int applySaturation(int rgbSource, int rgb) {
 		float[] hsbPixel = new float[3];												// local var so we can make static
+		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
+		return Color.HSBtoRGB(hsbPixel[0], PixelAudioMapper.saturation(rgbSource), hsbPixel[2]);
+	}
+
+	public static int applySaturation(int rgbSource, int rgb, float[] hsbPixel) {
 		Color.RGBtoHSB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff, hsbPixel);	// pop over to HSB
 		return Color.HSBtoRGB(hsbPixel[0], PixelAudioMapper.saturation(rgbSource), hsbPixel[2]);
 	}
@@ -2127,7 +2187,39 @@ public class PixelAudioMapper {
 		return rgbSource;											// apply to all channels except alpha
 	}
 
+	public static int applyColor(int colorSource, int graySource) {
+		float[] hsbPixel = new float[3];
+		Color.RGBtoHSB((colorSource >> 16) & 0xff, (colorSource >> 8) & 0xff, colorSource & 0xff, hsbPixel);
+		return Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], PixelAudioMapper.brightness(graySource));
+	}
 
+	public static int applyColor(int colorSource, int graySource, float[] hsbPixel) {
+		Color.RGBtoHSB((colorSource >> 16) & 0xff, (colorSource >> 8) & 0xff, colorSource & 0xff, hsbPixel);
+		return Color.HSBtoRGB(hsbPixel[0], hsbPixel[1], PixelAudioMapper.brightness(graySource));
+	}
+
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 * 
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
+	public static int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
+		if (colorSource == null || graySource == null || lut == null) 
+			throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
+		if (colorSource.length != graySource.length || colorSource.length != lut.length) 
+			throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
+		float[] hsbPixel = new float[3];
+		for (int i = 0; i < graySource.length; i++) {
+			graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
+		}
+		return graySource;
+	}
+	
 
 }
 
