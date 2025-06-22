@@ -36,18 +36,15 @@ public void loadAudioFile(File audioFile) {
   float sampleRate = minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), audioBuffer);
   // sampleRate > 0 means we read audio from the file
   if (sampleRate > 0) {
-    // read an array of floats from the buffer
-    this.audioSignal = audioBuffer.getChannel(0);
-    this.audioLength = audioSignal.length;
-    // load rgbSignal with rgb gray values corresponding to the audio sample values
-    rgbSignal = mapper.pluckSamplesAsRGB(audioSignal, 0, mapSize);  
-    if (rgbSignal.length < mapSize) {
-      // pad rgbSignal with 0's if necessary
-      rgbSignal = Arrays.copyOf(rgbSignal, mapSize); 
-    }
+    // read buffer into audioSignal and set its length to mapSize
+    audioSignal = mapper.conformArray(audioBuffer.getChannel(0)); 
+    audioLength = audioSignal.length;
+    // resize the buffer if necessary
+    if (audioBuffer.getBufferSize() != mapper.getSize()) audioBuffer.setBufferSize(mapper.getSize());
+    // copyaudioBuffer to channel of audioBuffer
+    audioBuffer.setChannel(0, audioSignal);
     mapImage.loadPixels();
-    // write the rgbSignal pixels to mapImage, following the signal path
-    mapper.plantPixels(rgbSignal, mapImage.pixels, 0, rgbSignal.length, chan);
+    mapper.mapSigToImg(audioSignal, mapImage.pixels, chan);
     mapImage.updatePixels();
   }
 }
