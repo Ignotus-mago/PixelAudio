@@ -82,11 +82,12 @@ public class PACurveUtility {
 	  int nextIndex = findFurthest(allPoints, startIndex, endIndex, epsilon);
 	  if (nextIndex > 0) {
 	    if (startIndex != nextIndex) {
-	      rdp(startIndex, nextIndex, allPoints, rdpPoints, epsilon);
+	    	indexedRDP(startIndex, nextIndex, allPoints, rdpPoints, rdpIndices, epsilon);
 	    }
 	    rdpPoints.add(allPoints.get(nextIndex));
+	    rdpIndices.add(nextIndex);
 	    if (endIndex != nextIndex) {
-	      rdp(nextIndex, endIndex, allPoints, rdpPoints, epsilon);
+	    	indexedRDP(nextIndex, endIndex, allPoints, rdpPoints, rdpIndices, epsilon);
 	    }
 	  }
 	}

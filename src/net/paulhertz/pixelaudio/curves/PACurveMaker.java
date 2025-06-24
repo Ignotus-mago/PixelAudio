@@ -292,6 +292,7 @@ public class PACurveMaker {
 		PVector start = dragPoints.get(0);
 		PVector end = dragPoints.get(total - 1);
 		rdpPoints.add(start);
+		rdpIndices.add(0);
 		// rdp reduces allPoints and puts the result into drawPoints
 		PACurveUtility.indexedRDP(0, total - 1, dragPoints, rdpPoints, rdpIndices, epsilon);
 		// put in a midpoint when there are only two points in the reduced points
@@ -300,6 +301,7 @@ public class PACurveMaker {
 			rdpPoints.add(midPoint);
 		}
 		rdpPoints.add(end);
+		rdpIndices.add(total - 1);
 	}
 	
 	/**
