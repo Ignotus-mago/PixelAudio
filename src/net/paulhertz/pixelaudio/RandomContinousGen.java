@@ -9,7 +9,9 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Random;
 
+@Deprecated 
 public class RandomContinousGen extends PixelMapGen {
+	// an experiment, not ready for prime time
 	public final static String description = "RandomContinousGen starts at (0,0) makes random choices of the next pixels until it creates a continous path.";
 
 
