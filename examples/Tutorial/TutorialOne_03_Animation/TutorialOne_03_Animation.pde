@@ -1,16 +1,29 @@
 /*
- * This example application provides methods for generating a rainbow color array that
+ * This example application completes the first part of Tutorial One for the PixelAudio 
+ * library for Processing. It provides methods for generating a rainbow color array that
  * can reveal the structure of an audio path, a curve that maps audio signals onto an image.
  * It can open and display audio and image files, transcode image pixel data to audio samples
  * and transcode audio samples to image pixel data, and save audio and image files. It can 
  * respond to mouse clicks by playing the audio samples corresponding to the click location
  * in the display image. It is designed to be a good starting place for your own coding. 
  *
+ * >>>>>  We add animation and saving to video <<<<< in this very sketch
+ * 
+ *     import the video export library, com.hamoid.*, a Processing library
+ *     add animation and video variables
+ *     add animate() method
+ *     modify draw() loop
+ *     create mouseDragged() and mouseReleased() methods
+ *     add key commands, edit showHelp() and test
+ *     add updateAudio() method, test
+ *     add logic in chooseFile() and fileSelected() to pause animation when opening a file
+ *     add video variables and key commands
+ *     add stepAnimation() and renderFrame() methods, edit animate() method to call these new methods
+ *     add doRain method and key command to trigger rain
+ *     
  * Still to come, as the tutorial advances:
- * >>>>>  animation and saving to video <<<<< in TutorialOne_03, this very sketch
  * -- drawing to trigger audio events
  * -- UDP communication with Max and other media applications
- * 
  * 
  */
 
@@ -118,6 +131,24 @@ int fileIndex = 0;
 
 /* ---------------- end audio variables ---------------- */
 
+/* ------------------------------------------------------------------ */
+/*                   ANIMATION AND VIDEO VARIABLES                    */
+/* ------------------------------------------------------------------ */
+  
+int shift = 4;                // number of pixels to shift the animation
+boolean isAnimating = false;
+boolean oldIsAnimating;
+boolean isTrackMouse = true;
+boolean isRaining = false;
+// animation variables
+int animSteps = 720;          // how many steps in an animation loop
+boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
+int videoFrameRate = 24;      // fps
+int step;                     // number of current step in animation loop
+VideoExport videx;    // hamoid library class for video export (requires ffmpeg)
+
+// ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **  //
+
   
 public void settings() {
   size(3 * genWidth, 2 * genHeight);
@@ -171,7 +202,74 @@ public void initImages() {
 
 public void draw() {
   image(mapImage, 0, 0);
+  if (isRaining) 
+    doRain();
   runTimeArray();    // animate audio event markers
+  if (isAnimating) {
+    animate();
+    updateAudio();
+  }
+}
+  
+public void animate() {
+  stepAnimation();
+  renderFrame(step);
+}
+  
+/**
+ * Step through the animation, called by the draw() method.
+ * Will also record a frame of video, if we're recording.
+ */
+public void stepAnimation() {
+  if (step >= animSteps) {
+    step = 0;
+    if (isRecordingVideo) {
+      isRecordingVideo = false;
+      videx.endMovie();
+      println("--- Completed video at frame " + animSteps);
+      isAnimating = oldIsAnimating;
+    }
+  } 
+  else {
+    step += 1;
+    if (isRecordingVideo) {
+      if (videx == null) {
+        println("----->>> start video recording ");
+        videx = new VideoExport(this, "TutorialOneVideo.mp4");
+        videx.setFrameRate(videoFrameRate);
+        videx.startMovie();
+      }
+      videx.saveFrame();
+      println("-- video recording frame " + step + " of " + animSteps);
+    }
+  }
+}
+  
+public void renderFrame(int step) {
+  mapImage.loadPixels();
+  int[] rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
+  PixelAudioMapper.rotateLeft(rgbSignal, shift);
+  mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
+  mapImage.updatePixels();
+}
+  
+public void updateAudio() {
+  writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
+  // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
+  playBuffer.setChannel(0, audioSignal);
+  audioLength = audioSignal.length;
+}
+  
+  
+public void doRain() {
+  if (random(20) > 1) return;
+  int sampleLength = 256 * 256;
+  int samplePos = (int) random(sampleLength, mapSize - sampleLength - 1);
+  int[] coords = mapper.lookupCoordinate(samplePos);
+  sampleX = coords[0];
+  sampleY = coords[1];
+  // println("----- Rain samplePos = "+ samplePos);
+  playSample(playBuffer, samplePos, calcSampleLen(), 0.4f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
 }
 
 /**
@@ -181,6 +279,20 @@ public void mousePressed() {
   println("mousePressed:", mouseX, mouseY);
   // handle audio generation in response to a mouse click
   audioMousePressed(mouseX, mouseY);
+}
+
+public void mouseDragged() {
+    if (isTrackMouse) {
+      shift = abs(width/2 - mouseX);
+      if (mouseY < height/2) 
+        shift = -shift;
+    }
+}
+
+public void mouseReleased() {
+  if (isAnimating && isTrackMouse) {
+    println("----- animation shift = "+ shift);
+  }
 }
 
 /**
@@ -202,6 +314,14 @@ public void keyPressed() {
  */
 public void parseKey(char key, int keyCode) {
   switch(key) {
+  case ' ':
+    isAnimating = !isAnimating;
+    println("-- animation is " + isAnimating);
+    break;
+  case 'm':
+    isTrackMouse = !isTrackMouse;
+    println("-- mouse tracking is " + isTrackMouse);
+    break;
   case 'c': // apply color from image file to display image
     chooseColorImage();
     break;
@@ -213,7 +333,22 @@ public void parseKey(char key, int keyCode) {
   case 'o': case 'O': // open an audio or image file
     chooseFile();
     break;
-  case 'h': case 'H': // show help and key commands in console
+  case 'r': case 'R': // turn rain on and off
+    isRaining = !isRaining;
+    println(isRaining ? "It's raining" : "It's not raining");
+    break;
+  case 'V':
+    // records a complete video loop with following actions:
+    // Go to frame 0, turn recording on, turn animation on.
+    // This will record a complete video loop, from frame 0 to the
+    // stop frame value in the GUI control panel.
+    step = 0;
+    renderFrame(step);
+    isRecordingVideo = true;
+    oldIsAnimating = isAnimating;
+    isAnimating = true;
+    break;
+  case 'h': case 'H':
     showHelp();
     break;
   default:
@@ -222,10 +357,14 @@ public void parseKey(char key, int keyCode) {
 }
 
 public void showHelp() {
+  println(" * Press ' ' to turn animation on or off.");
+  println(" * Press 'm' to turn mouse tracking on or off (controls animation speed).");
   println(" * Press 'c' to apply color from image file to display image.");
-  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage.");
+  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
   println(" * Press 'o' or 'O' to open an audio or image file.");
-  println(" * Press 'h' or 'H' to show help and key commands in console.");
+  println(" * Press 'r' or 'R' to turn rain on and off.");
+  println(" * Press 'V' to record a video sequence.");
+  println(" * Press 'h' or 'H' to show help and key commands in the console.");
 }
   
 /**

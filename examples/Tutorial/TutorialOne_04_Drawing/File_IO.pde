@@ -85,6 +85,8 @@ public void applyImageColor(File imgFile, PImage targetImage) {
  * Wrapper method for Processing's selectInput command
  */
 public void chooseFile() {
+  oldIsAnimating = isAnimating;
+  isAnimating = false;
   selectInput("Choose an audio file or an image file: ", "fileSelected");
 }
 
@@ -127,6 +129,7 @@ public void fileSelected(File selectedFile) {
   else {
     println("----- No audio or image file was selected.");
   }
+  isAnimating = oldIsAnimating;
 }
 
 /**
