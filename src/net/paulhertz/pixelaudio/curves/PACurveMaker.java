@@ -44,7 +44,7 @@ import processing.core.PGraphics;
  * factory methods, PACurveMaker will call <code>calculateDerivedPoints()</code> to create the objects 
  * listed in the previous paragraph for you. Otherwise, when you call the <code>buildCurveMaker()</code> factory methods, 
  * you will have the opportunity to set drawing properties and other fields yourself and then call <code>calculateDerivedPoints()</code>.
- * After call to <code>calculateDerivedPoints()</code>, <code>isReady()</code> will return true. You can also
+ * After a call to <code>calculateDerivedPoints()</code>, <code>isReady()</code> will return true. You can also
  * use lazy initialization to create PACurveMaker geometry as you need it. The fields for the various point 
  * and curve data objects are private: when you call a getter method such as <code>getCurveShape()</code>, it will 
  * create the curveShape if it has not yet been initialized. The same is true of rdpPoints, brushShape, eventPoints, 
@@ -52,7 +52,7 @@ import processing.core.PGraphics;
  * </p>
  * 
  * <p>Each of the geometric data objects--dragPoints, rdpPoints, curveShape, and brushShape--has 
- * method for drawing to the screen to a PApplet or drawing offscreen to a PGraphic. DragPoints and 
+ * method for drawing to the screen in a PApplet or drawing offscreen in a PGraphic. DragPoints and 
  * rdpPoints keep their drawing parameters (fill, stroke, weight) in PACurveMaker variables. PABezShapes
  * like curveShape and brushShape can store drawing parameters internally. 
  * </p>
@@ -81,6 +81,8 @@ public class PACurveMaker {
 	public ArrayList<PVector> dragPoints;
 	/** The reduced points delivered by the RDP algorithm */
 	private ArrayList<PVector> rdpPoints;
+	/** list of indices of points in dragPoints captured for rdpPoints */
+	private ArrayList<Integer> rdpIndices;
 	/** An ArrayList of PABezShapes representing a continuous curved line */
 	private PABezShape curveShape;
 	/** A simulated brush stroke */
@@ -135,11 +137,31 @@ public class PACurveMaker {
 	 *  the remaining elements are offsets in millis from the first element  */
 	ArrayList<Integer> dragTimes;
 		
+	
+	/**
+	 * Constructor called by all factory methods, initializes dragPoints, rdpPoints and rdpIndices.
+	 * 
+	 * @param points    the array of points to be reduced, stored in dragPoints
+	 */
 	private PACurveMaker(ArrayList<PVector> points) {
 		this.dragPoints = new ArrayList<PVector>(points);
 		this.rdpPoints = new ArrayList<PVector>();
+		this.rdpIndices = new ArrayList<Integer>();
 	}
 	
+	/**
+	 * Sets various properties used for drawing PACurveMaker graphics.
+	 * 
+	 * @param dragColor
+	 * @param dragWeight
+	 * @param rdpColor
+	 * @param rdpWeight
+	 * @param curveColor
+	 * @param curveWeight
+	 * @param brushColor
+	 * @param brushWeight
+	 * @param activeBrushColor
+	 */
 	public void setDrawingProperties(int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
 			                         int curveColor, float curveWeight, int brushColor, float brushWeight, int activeBrushColor) {
 		this.dragColor = dragColor;
@@ -153,17 +175,47 @@ public class PACurveMaker {
 		this.activeBrushColor = activeBrushColor;
 	}
 	
+	/**
+	 * Creates a PACurveMaker from supplied points, caller must complete construction with 
+	 * a call to calculateDerivedPoints() to generate rdpPoints and other instance variables. 
+	 * 
+	 * @param points    a dense point set
+	 * @return a partially initialized PACurveMaker instance, requires a later call to calculateDeriverPoints()
+	 */
 	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points) {
 		PACurveMaker curveMaker = new PACurveMaker(points);
 		return curveMaker;
 	}
 	
+	/**
+	 * @param points     a dense point set
+	 * @param epsilon    controls amount of thinning of 0points to derive rdpPoints
+	 * @return a partially initialized PACurveMaker instance, requires a later call to calculateDeriverPoints()
+	 */
 	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points, float epsilon) {
 		PACurveMaker curveMaker = new PACurveMaker(points);
 		curveMaker.setEpsilon(epsilon);
 		return curveMaker;
 	}
 	
+	/**
+	 * Creates a PACurveMaker from supplied points, caller must complete construction with 
+	 * a call to calculateDerivedPoints() to generate rdpPoints and other instance variables. 
+	 * Sets various properties used for drawing PACurveMaker graphics. 
+	 * 
+	 * @param points          a dense point set
+	 * @param epsilon         controls amount of thinning of points to derive rdpPoints
+	 * @param dragColor
+	 * @param dragWeight
+	 * @param rdpColor
+	 * @param rdpWeight
+	 * @param curveColor
+	 * @param curveWeight
+	 * @param brushColor
+	 * @param brushWeight
+	 * @param activeBrushColor
+	 * @return a partially initialized PACurveMaker instance, requires a later call to calculateDeriverPoints()
+	 */
 	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points, float epsilon, int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
             								   int curveColor, float curveWeight, int brushColor, float brushWeight, int activeBrushColor) {
 		PACurveMaker curveMaker = new PACurveMaker(points);
@@ -172,12 +224,27 @@ public class PACurveMaker {
 		return curveMaker;
 	}
 	
+	/**
+	 * Creates a PACurveMaker from supplied points and calls calculatedDerivedPoints() to initialize 
+	 * rdpPoints, curveShape, eventPoints, and  brushPoly and set isReady to true.
+	 * 
+	 * @param points   a dense point set
+	 * @return a fully initialized PACurveMaker instance
+	 */
 	public static PACurveMaker buildCurveMakerComplete(ArrayList<PVector> points) {
 		PACurveMaker curveMaker = new PACurveMaker(points);
 		curveMaker.calculateDerivedPoints();
 		return curveMaker;
 	}
 
+	/**
+	 * Creates a PACurveMaker from supplied points and calls calculatedDerivedPoints() to initialize 
+	 * rdpPoints, curveShape, eventPoints, and  brushPoly and set isReady to true.
+	 * 
+	 * @param points     a dense point set
+	 * @param epsilon    controls amount of thinning of points to derive rdpPoints
+	 * @return a fully initialized PACurveMaker instance
+	 */
 	public static PACurveMaker buildCurveMakerComplete(ArrayList<PVector> points, float epsilon) {
 		PACurveMaker curveMaker = new PACurveMaker(points);
 		curveMaker.setEpsilon(epsilon);
@@ -185,6 +252,24 @@ public class PACurveMaker {
 		return curveMaker;
 	}
 	
+	/**
+	 * Creates a PACurveMaker from supplied points and calls calculatedDerivedPoints() to initialize 
+	 * rdpPoints, curveShape, eventPoints, and  brushPoly and set isReady to true.
+	 * Sets various properties used for drawing PACurveMaker graphics. 
+	 * 
+	 * @param points     a dense point set
+	 * @param epsilon    controls amount of thinning of points to derive rdpPoints
+	 * @param dragColor
+	 * @param dragWeight
+	 * @param rdpColor
+	 * @param rdpWeight
+	 * @param curveColor
+	 * @param curveWeight
+	 * @param brushColor
+	 * @param brushWeight
+	 * @param activeBrushColor
+	 * @return a fully initialized PACurveMaker instance
+	 */
 	public static PACurveMaker buildCurveMakerComplete(ArrayList<PVector> points, float epsilon, int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
             								   int curveColor, float curveWeight, int brushColor, float brushWeight, int activeBrushColor) {
 		PACurveMaker curveMaker = new PACurveMaker(points);
@@ -197,15 +282,18 @@ public class PACurveMaker {
 	
 	/**
 	 * Takes the list of points in allPoints and generates a reduced list in drawPoints.
+	 * 
+	 * @param epsilon    controls amount of thinning applied to dragPoints to derive rdpPoints
 	 */
 	public void reducePoints(float epsilon) {
 		rdpPoints.clear();
+		rdpIndices.clear();
 		int total = dragPoints.size();
 		PVector start = dragPoints.get(0);
 		PVector end = dragPoints.get(total - 1);
 		rdpPoints.add(start);
 		// rdp reduces allPoints and puts the result into drawPoints
-		PACurveUtility.rdp(0, total - 1, dragPoints, rdpPoints, epsilon);
+		PACurveUtility.indexedRDP(0, total - 1, dragPoints, rdpPoints, rdpIndices, epsilon);
 		// put in a midpoint when there are only two points in the reduced points
 		if (rdpPoints.size() == 1) {
 			PVector midPoint = start.copy().add(end).div(2.0f);
@@ -314,6 +402,26 @@ public class PACurveMaker {
 	 */
 	public void setRdpPoints(ArrayList<PVector> rdpPoints) {
 		this.rdpPoints = rdpPoints;
+	}
+	
+	public ArrayList<Integer> getRdpIndices() {
+		return rdpIndices;
+	}
+	
+	public int[] getRdpIndicesAsInts() {
+		int[] inds = rdpIndices.stream().mapToInt(Integer::intValue).toArray();
+		return inds;
+	}
+
+	/**
+	 * Sets rdpIndices, generally not something you want to do.
+	 * Call reducePoints() or calculateDerivedPoints instead
+	 * and stay out of trouble. 
+	 * 
+	 * @param rdpIndices
+	 */
+	public void setRdpIndices(ArrayList<Integer> rdpIndices) {
+		this.rdpIndices = rdpIndices;
 	}
 
 	public int getRdpColor() {
@@ -505,6 +613,11 @@ public class PACurveMaker {
 
 	public ArrayList<Integer> getDragTimes() {
 		return dragTimes;
+	}
+	
+	public int[] getDragTimesAsInts() {
+		int[] times = dragTimes.stream().mapToInt(Integer::intValue).toArray();
+		return times;
 	}
 
 	public void setDragTimes(ArrayList<Integer> dragTimes) {

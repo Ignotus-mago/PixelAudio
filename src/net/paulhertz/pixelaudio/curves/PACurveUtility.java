@@ -39,6 +39,10 @@ public class PACurveUtility {
 
 	// TODO Maybe a distance squared evaluation instead of a distance evaluation would speed things up?
 	// TODO A version that also sifts time data to generate a sequence of timed PVectors.
+	// TODO version with an int[] rdpIndices argument passed to accumulate index numbers for rdpPoints
+	// we can use this to get time stamps from dragPoints in PACurveMaker and so provide velocity for
+	// events that are triggered from RDP data -- Bezier curves could just be a representation
+	// for interface purposes, or we *could* figure out how to provide them with timing, too. 
 	
 	/**
 	 * Ramer-Douglas-Peucker point reduction algorithm (RDP), reduces points in allPoints and 
@@ -62,6 +66,31 @@ public class PACurveUtility {
 	    }
 	  }
 	}
+	
+	/**
+	 * Ramer-Douglas-Peucker point reduction algorithm (RDP), reduces points in allPoints and 
+	 * returns the result in rdpPoints.
+	 * 
+	 * @param startIndex	start index in allPoints (usually 0 to begin with)
+	 * @param endIndex		end index in allPoints (usually allPoints.size()-1 to begin with)
+	 * @param allPoints		ArrayList of dense points, for example a hand-drawn line
+	 * @param rdpPoints		an empty ArrayList for accumulating reduced points
+	 * @param epsilon       the expected distance between reduced points
+	 */
+	public static void indexedRDP(int startIndex, int endIndex, ArrayList<PVector> allPoints, 
+			ArrayList<PVector> rdpPoints, ArrayList<Integer> rdpIndices, float epsilon) {
+	  int nextIndex = findFurthest(allPoints, startIndex, endIndex, epsilon);
+	  if (nextIndex > 0) {
+	    if (startIndex != nextIndex) {
+	      rdp(startIndex, nextIndex, allPoints, rdpPoints, epsilon);
+	    }
+	    rdpPoints.add(allPoints.get(nextIndex));
+	    if (endIndex != nextIndex) {
+	      rdp(nextIndex, endIndex, allPoints, rdpPoints, epsilon);
+	    }
+	  }
+	}
+
 
 	static int findFurthest(ArrayList<PVector> points, int a, int b, float epsilon) {
 	  float recordDistance = -1;
