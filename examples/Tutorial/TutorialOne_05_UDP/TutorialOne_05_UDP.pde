@@ -1,79 +1,90 @@
 /*
  * This example application continues the Tutorial One sequence for the PixelAudio
- * library for Processing. To the previous tools for reading and writing and transcoding
- * audio and image files, triggering audio events, and animating pixels and changing
- * audio sample order, it adds the capability of drawing in the display window to 
+ * library for Processing. The previous examples included reading and writing and 
+ * transcoding audio and image files, triggering audio events, animating pixels 
+ * to change audio sample order, and drawing in the display window to 
  * create brush shapes that can be used to trigger audio events. 
  * 
- * The drawing tools and commands are a substantial addition. To implement them 
- * we call on a whole new package of code, net.paulhert.pixelaudio.curves. We make 
- * numerous edits to the previous tutorial, TutorialOneAnimation:
- *     
- *     -- We add a raft of variables to handle drawing by tracking the mouse and 
- *        converting accumulated points into a reduced point set and then 
- *        into Bezier curve data. Here's an outline of how drawing works in the UI:
- *        
- *          Load an audio or image file to the display.
- *          Drawing starts when isDrawMode is set to true ('d' key command).
- *          Press 'd' to set isDrawMode to true (the console will inform you).
- *          Press and drag the mouse to draw a line, accumulating points into allPoints.
- *          Release the mouse to create a brushstroke -- audio and animation will play.
- *              The accumulated points in allPoints are used to create a PACurveMaker instance.
- *              PACurveMaker uses the RDP algorithm to reduce the number of points. 
- *              PACurveMaker uses the reduced point set to generate a Bezier curve.
- *              The Bezier curve is used to model a brushstroke shape.
- *              All these data elements are available from the PACurveMaker instance.
- *              The PACurveMaker instance is added to a list of PACUrveMakers, brushShapesList.
- *              BrushShapeList handles drawing curves to the screen. 
- *          Draw some more brushstrokes. 
- *          Press 'd' to turn drawing off.
- *          Click on a brushstroke to activate it. 
- *                    
- *          NOTE: Apparent limits on how many audio events can be playing simultaneously suggest that 3 
- *          is the maximum number of actively playing brushstrokes. Otherwise, noise and glitching happen.
- *          I'm working on figuring out how to get around this limit. 
- *          
- *     -- We add several new methods, in the DRAWING METHODS section:
- *     
- *          public void initAllPoints()
- *          public void handleMousePressed()
- *          public void addPoint()
- *          public void playPoints()
- *          public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime)
- *          public void initCurveMaker()
- *          public int[] reconfigureTimeList(int[] timeList)
- *          public ArrayList<Integer> reconfigureTimeList(ArrayList<Integer> timeList)
- *          public void drawBrushShapes()
- *          public void curveMakerDraw()
- *          public synchronized void runCurveEvents()
- *          public synchronized void runPointEvents()
- *          public boolean mouseInPoly(ArrayList<PVector> poly)
- *          public void reset(boolean isClearCurves)
- *          
- *        See the JavaDocs information for each method for a description of what it does.
- *        Also see the initDrawing() method in the main section. 
- *        
- *        SEE the JavaDoc entries for PACurveMaker, PACurveMakerUtility, PABezShape and the
- *        other classes in the net.paulhertz.pixelaudio.curves package for more information
- *        about curve modeling. 
- *        
- *     -- We reconfigure code for handling mouse events and TimedLocation events. The mouse event
- *        tracking starts in mousePressed(), when isDrawMode == true. While the mouse is down, calls
- *        to handleDrawing() in the draw() method accumulate points to allPoints. When the mouse is 
- *        released, allPoints is used to initialize a PACurveMaker. 
- *        
- *     -- In the draw() method, a call to handleDrawing() draws brush shapes and detects user interaction
- *        with the brush shapes by calling drawBrushShapes(). If a brush shape is flagged as active, a
- *        mousePressed event can trigger its audio and animation events by calling handleMousePressed().
- *        This will generate TimedLocation objects that trigger audio and animation events. 
- *        
- *     -- There are now two lists of TimedLocation events, timeLocsArray for point events, just like in 
- *        earlier versions of this tutorial, and curveTLEvents for brush events. The handleDrawing() method
- *        takes care of both lists with calls to runCurveEvents() and runPointEvents().
- *        
+ * In the last part of this tutorial, we'll get to UDP communication with Max 
+ * and other media applications. This material should be regarded as 
+ * @Experimental, and likely to change in future releases. 
  * 
- * In the last part of this tutorial, we'll get to:
- * -- UDP communication with Max and other media applications
+ * We use the oscP5 Processing library to handle UDP communications. UDP, User Datagram
+ * Protocol, is a standard for internet communications introduced in 1980 and still going
+ * strong. OSC, Open Sound Control, is a protocol for networking synthesizers, computers, 
+ * etc, that can be used over UDP, but it is not necessary for our implementation.
+ * 
+ * The sample files that come with oscP5 provide you with the basics for communicating over 
+ * a network. You'll see from them that there are two import statement to add to your code:
+ * 
+ *     import oscP5.*;
+ *     import netP5.*;
+ * 
+ * Because our tasks go beyond the basics and we also don't wnat to clutter our sketch 
+ * with more code, we're going to use a simple Design Pattern called Delegation. In delegation, 
+ * an object handles a task by passing it on to another object, a Delegate. The delegate 
+ * maintains a reference to the calling object, and--depending on the implementation--can 
+ * access the original, calling object. In this way, the heavy duty code for a task can be 
+ * isolated in the delegate. When the delegate needs to communicate with the caller, it 
+ * should have a defined way to do this, typically an Interface, that indicates which 
+ * methods the caller must implement to receive communications from the delegate. Any 
+ * caller that implements the interface can be a client of the delegate, with full access
+ * to its functionality.
+ * 
+ * The interface tells us what methods the client of the delegate needs to implement.
+ * Our interface is called PANetworkClientINF.java and our delegate is NetworkDelegate.java.
+ * In the Processing IDE, we add these files as tabs in our sketch. In Java, we would add a 
+ * some text to our main class declaration: 
+ * 
+ *     public class TutorialOneUDP extends PApplet implements PANetworkClientINF
+ * 
+ * In Processing, NetworkDelegate is an internal class of our main class, TutorialOne_05_UDP,
+ * in the main tab, and we can call it without having to declare the interface. 
+ * 
+ * Also in out main class we will declare two variables:
+ * 
+ *     // network communications
+ *     NetworkDelegate nd;
+ *     boolean isUseNetworkDelegate = false;
+ * 
+ * The in the last lines of setup, we add:
+ * 
+ *     isUseNetworkDelegate = true;
+ *     if (isUseNetworkDelegate) {
+ *       String remoteAddress = "127.0.0.1";
+ *       nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
+ *       nd.oscSendClear();
+ *     }
+ * 
+ * The variable "nd" is our NetworkDelegate instance. We instantiated with this constructor:
+ * 
+ *   NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)
+ * 
+ * >>>>> However, if you are using Processing, you'll need to edit the constructors for NetworkDelegate. <<<<<
+ * 
+ * Wherever NetworkDelegate refers to "PANetworkClientINF" argument, you need to put the name of your sketch. For example:
+ * 
+ *   NetworkDelegate(TutorialOne_05_UDP app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)
+ * 
+ * This is because behind the scenes, Processing makes the type of your sketch whatever the main tab is called,
+ * creating it as a subclass of PApplet. Through this modified constructor, the delegate will have access to 
+ * the host class ("this"). It expects to receive messages over remotedFromAddr and send messages with 
+ * remoteToAddr, using inPort and outPort. 
+ * 
+ * Once we have all those steps done, it should be possible to launch the app. Before we do that, it 
+ * would be good to have a Max patcher or some other UDP-enabled media app that we can use. "UDP_Handler" 
+ * is the (catchy) name for the one that accompanies this sketch. Go ahead and launch it, and place it 
+ * somewhere on the screen where you can see both it and your Processing sketch. Then launch the sketch. 
+ * 
+ * Open a sound file to have something to play, and click on "most recent curve" in the Max subpatcher
+ * "network_receiver". You should get sound in Processing. 
+ * 
+ * There's more to do, of course. We want to set up some messaging from Processing, for example, for
+ * mouse clicks. Whenever we use the delegate nd, we'll wrap the command in a conditional:
+ * 
+ *   if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
+ * 
+ * The very command we want! Where do we put it?
  * 
  * 
  * Here are the key commands for this sketch:
@@ -81,13 +92,14 @@
  * Press ' ' to start or stop animation.
  * Press 'd' to turn drawing on or off.
  * Press 'm' to turn mouse tracking on or off.
- * Press 'c' to apply color from an image file to the display image.
- * Press 'k' to apply the hue and saturation in the colors array to mapImage.
+ * Press 'c' to apply color from image file to display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage .
  * Press 'o' or 'O' to open an audio or image file.
  * Press 'h' or 'H' to show help and key commands.
  * Press 'V' to record a video.
  * 
  */
+
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -240,6 +252,12 @@ int readyBrushColor = color(34, 89, 55, 233);       // color for a brushstroke w
 
 /* end drawing variables */
 
+  /* ------------- end drawing variables ------------- */
+  
+  // network communications
+  NetworkDelegate nd;
+  boolean isUseNetworkDelegate = false;
+
 // ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **  //
 
   
@@ -264,6 +282,12 @@ public void setup() {
   initImages();
   initAudio();
   initDrawing();
+  isUseNetworkDelegate = true;
+  if (isUseNetworkDelegate) {
+    String remoteAddress = "127.0.0.1";
+    nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
+    nd.oscSendClear();
+  }
   showHelp();
 }
 
@@ -526,4 +550,45 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
     graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
   }
   return graySource;
+}
+
+/*----------------------------------------------------------------*/
+/*                                                                */
+/*                        NETWORKING                              */
+/*                                                                */
+/*----------------------------------------------------------------*/
+
+// required by the PANetworkCLientINF interface
+public PApplet getPApplet() {
+  return this;
+}
+
+// required by the PANetworkCLientINF interface
+public PixelAudioMapper getMapper() {
+  return this.mapper;
+}
+
+// required by the PANetworkCLientINF interface
+public void controlMsg(String control, float val) {
+  if (control.equals("detune")) {
+    println("--->> controlMsg is \"detune\" = "+ val);
+  }
+}
+
+// required by the PANetworkCLientINF interface
+public int playSample(int samplePos) {
+  int[] coords = mapper.lookupCoordinate(samplePos);
+  sampleX = coords[0];
+  sampleY = coords[1];
+  if (audioSignal == null || isBufferStale) {
+    renderSignals();
+    isBufferStale = false;
+  }
+  return playSample(playBuffer, samplePos, calcSampleLen(), 0.6f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));    
+}
+
+// required by the PANetworkCLientINF interface
+public void playPoints(ArrayList<PVector> pts) {
+  eventPoints = pts;
+  playPoints();
 }

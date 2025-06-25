@@ -29,8 +29,12 @@ public void handleMousePressed() {
     activeBrush = null;
   } 
   else {
+    sampleX = mouseX;
+    sampleY = mouseY;
+    samplePos = mapper.lookupSample(sampleX, sampleY);
     // handle audio generation in response to a mouse click
-    audioMousePressed(mouseX, mouseY);
+    audioMousePressed(sampleX, sampleY);
+    // if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
   }
 }
 
@@ -207,6 +211,8 @@ public void reset(boolean isClearCurves) {
   if (isClearCurves) {
     if (this.brushShapesList != null) this.brushShapesList.clear();
     if (this.curveTLEvents != null) this.curveTLEvents.clear();
+    if (nd != null) nd.oscSendClear();
+    if (nd != null) nd.setDrawCount(0);
     println("----->>> RESET audio + curves <<<------");
   }
   else {
