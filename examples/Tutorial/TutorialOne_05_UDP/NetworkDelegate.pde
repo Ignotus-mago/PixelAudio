@@ -185,6 +185,14 @@ public class NetworkDelegate {
     osc.send(msg, this.remoteTo);
   }
       
+  public void oscSendFileInfo(String path, String name, String tag) {
+    OscMessage msg = new OscMessage("/file");
+    msg.add(path);
+    msg.add(name);
+    msg.add(tag);
+    osc.send(msg, this.remoteTo);
+  }
+      
   // OscP5 plug-in methods, call methods on the client.
   // If you want to extend the available calls, modify the PANetworkClientINF interface
   

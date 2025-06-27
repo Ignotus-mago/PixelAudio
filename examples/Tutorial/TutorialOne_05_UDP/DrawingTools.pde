@@ -15,7 +15,8 @@ public void initAllPoints() {
   addPoint();
   sampleX = mouseX;
   sampleY = mouseY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);      
+  samplePos = mapper.lookupSample(sampleX, sampleY);
+  // if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
 }
 
 /**
@@ -26,6 +27,7 @@ public void handleMousePressed() {
     // a brushShape was triggered
     eventPoints = activeBrush.getEventPoints();
     playPoints();
+    // if (nd != null) nd.oscSendTrig(activeIndex + 1);
     activeBrush = null;
   } 
   else {
@@ -51,6 +53,7 @@ public void addPoint() {
     sampleX = mouseX;
     sampleY = mouseY;
     samplePos = mapper.lookupSample(sampleX, sampleY);      
+    // if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
   }
 }
 
@@ -106,6 +109,11 @@ public void initCurveMaker() {
   sampleX = mouseX;
   sampleY = mouseY;
   samplePos = mapper.lookupSample(sampleX, sampleY);
+  //if (nd != null) {
+  //  nd.oscSendMousePressed(sampleX, sampleY, samplePos);
+  //  nd.oscSendDrawPoints(curveMaker.getRdpPoints());
+  //  nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
+  //}
 }
 
 public int[] reconfigureTimeList(int[] timeList) {
@@ -211,8 +219,8 @@ public void reset(boolean isClearCurves) {
   if (isClearCurves) {
     if (this.brushShapesList != null) this.brushShapesList.clear();
     if (this.curveTLEvents != null) this.curveTLEvents.clear();
-    if (nd != null) nd.oscSendClear();
-    if (nd != null) nd.setDrawCount(0);
+    // if (nd != null) nd.oscSendClear();
+    // if (nd != null) nd.setDrawCount(0);
     println("----->>> RESET audio + curves <<<------");
   }
   else {

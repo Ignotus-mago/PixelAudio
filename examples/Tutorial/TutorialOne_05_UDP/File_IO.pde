@@ -111,6 +111,7 @@ public void fileSelected(File selectedFile) {
       audioFileTag = fileTag;
       println("----- Selected file " + fileName + "." + fileTag + " at "
           + filePath.substring(0, filePath.length() - fileName.length()));
+      // if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
       loadAudioFile(audioFile);
     } 
     else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
