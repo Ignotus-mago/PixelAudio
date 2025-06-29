@@ -3,9 +3,8 @@
  * The live input in the Processing IDE seems to be limited to the built-in microphone. Live input 
  * is not available in the Eclipse IDE. 
  * 
- * Press the 'p' key to toggle between live streaming from the built-in microphone and
- * streaming from a file. 
- * Press the spacebar to record audio from the current stream. 
+ * Press the 'p' key to toggle between live streaming from the built-in microphone and streaming from a file. 
+ * Press the spacebar to record audio from the current stream into the audio buffer and write it to the screen.
  * Click on the image to play a sample. Clicking turns off recording. 
  */
 
@@ -80,7 +79,8 @@ public void setup() {
   initMapper();
   mapSize = mapper.getSize();
   minim = new Minim(this);
-  initAudio();    
+  initAudio();
+  showHelp();
 }
 
 public int[] getColors() {
@@ -156,6 +156,12 @@ public void keyPressed() {
   default:
     break;
   }
+}
+
+public void showHelp() {
+  println(" * Press the 'p' key to toggle between live streaming from the built-in microphone and streaming from a file.");
+  println(" * Press the spacebar to record audio from the current stream into the audio buffer and write it to the screen.");
+  println(" * Click on the image to play a sample. Clicking turns off recording.");
 }
 
 public void toggleListening() {

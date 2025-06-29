@@ -121,7 +121,11 @@ public class NetworkDelegate {
   }
 
   
-  //------------- OUTGOING MESSAGES -------------//
+  /*----------------------------------------------------------------*/
+  /*                                                                */
+  /*                   OUTGOING MESSAGE METHODS                     */
+  /*                                                                */
+  /*----------------------------------------------------------------*/
   
   public void oscSendMousePressed(int sampleX, int sampleY, int sample) {
     OscMessage msg = new OscMessage("/press");
@@ -132,33 +136,37 @@ public class NetworkDelegate {
     // PApplet.println("---> msg: "+ msg);
   }
 
-  public void oscSendDrawPoints(ArrayList<PVector> drawPoints) {
-    OscMessage msg = new OscMessage("/draw");
+  public void oscSendMultiSlider(ArrayList<PVector> drawPoints) {
     int y0 = (int) drawPoints.get(0).y;
     int sliders = 12;
     int[] multi = new int[sliders];
     int i = 0;
-    msg.add(++this.drawCount);
     for (PVector vec : drawPoints) {
-    msg.add(i + 1);
-    int x = (int) vec.x;
-    int y = (int) vec.y;
-      msg.add(this.app.getMapper().lookupSample(x, y));
-      msg.add(x);
-      msg.add(y);
-      //msg.add("\n");
       if (i < sliders) {
         multi[i++] = ((int) PApplet.abs(y0 - vec.y)) % 128;
       }
     }
-    osc.send(msg, this.remoteTo);
-    // multislider message, a test
-    msg = new OscMessage("/multislider");
+    OscMessage msg = new OscMessage("/multislider");
     for (i = 0; i < multi.length; i++) {
       msg.add(multi[i]);
     }
     osc.send(msg, this.remoteTo);
   }  
+  
+  public void oscSendDrawPoints(ArrayList<PVector> drawPoints) {
+    OscMessage msg = new OscMessage("/draw");
+    int i = 0;
+    msg.add(++this.drawCount);
+    for (PVector vec : drawPoints) {
+      msg.add(i++);
+      int x = (int) vec.x;
+      int y = (int) vec.y;
+      msg.add(this.app.getMapper().lookupSample(x, y));
+      msg.add(x);
+      msg.add(y);
+    }
+    osc.send(msg, this.remoteTo);
+  }
   
   public void oscSendTimeStamp(int timeStamp, int timeOffset) {
     OscMessage msg = new OscMessage("/time");
@@ -184,7 +192,7 @@ public class NetworkDelegate {
     OscMessage msg = new OscMessage("/clear");
     osc.send(msg, this.remoteTo);
   }
-      
+  
   public void oscSendFileInfo(String path, String name, String tag) {
     OscMessage msg = new OscMessage("/file");
     msg.add(path);
@@ -192,9 +200,21 @@ public class NetworkDelegate {
     msg.add(tag);
     osc.send(msg, this.remoteTo);
   }
-      
-  // OscP5 plug-in methods, call methods on the client.
-  // If you want to extend the available calls, modify the PANetworkClientINF interface
+  
+  /*----------------------------------------------------------------*/
+  /*                                                                */
+  /*                      OscP5 PLUG METHODS                        */
+  /*                                                                */
+  /*----------------------------------------------------------------*/
+  
+  /* 
+   * OscP5 plug-in methods, which call methods on the client,
+   * are implemented in this section. They take calls from 
+   * the service (UDP, here) and pass them on to the client.
+   * If you want to extend the available calls, modify the 
+   * PANetworkClientINF interface to make the contracts
+   * between client and delegate explicit. 
+   */
   
   public void sampleHit(int sam) {
     int[] xy = app.getMapper().lookupCoordinate(sam);
@@ -204,10 +224,11 @@ public class NetworkDelegate {
 
   public void drawHit(int... args) {
     ArrayList<PVector> pts = new ArrayList<PVector>();
-    PApplet.println("---> drawHit ");
+    PApplet.println("---> drawHit "+ args.length);
     for (int pos : args) {
       int[] xy = app.getMapper().lookupCoordinate(pos);
       pts.add(new PVector(xy[0], xy[1]));
+      // PApplet.println("  "+ xy[0] +", "+ xy[1]);
     }
     app.playPoints(pts);
   }

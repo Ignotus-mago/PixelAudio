@@ -70,7 +70,7 @@ float sampleScale = 2;
 int sampleBase = 10250;
 int sampleLength = (int) (sampleScale * sampleBase);
 Sampler audioSampler;
-SamplerInstrument instrument;
+WFInstrument instrument;
 
 // ADSR and params
 ADSR adsr;
@@ -185,6 +185,11 @@ public void keyPressed() {
     chan = PixelAudioMapper.ChannelNames.H;
     chooseFile();
     break;
+  case 'k': case 'K':
+    mapImage.loadPixels();
+    applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+    mapImage.updatePixels();
+    break;
   case 'm':
     mapImage.loadPixels();
     int[] bounds = getHistoBounds(mapImage.pixels);
@@ -279,7 +284,7 @@ public int playSample(int samplePos) {
     : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
-  this.instrument = new SamplerInstrument(audioOut, audioSampler, adsr);
+  this.instrument = new WFInstrument(audioOut, audioSampler, adsr);
   // play command takes a duration in seconds
   instrument.play(sampleLength / (float) (sampleRate));
   // return the length of the sample
@@ -299,11 +304,25 @@ public void hightlightSample(int pos, int length) {
   mapImage.updatePixels();
 }
 
-public void writeImageToAudio() {
-  println("----- writing image to signal ");
-  mapImage.loadPixels();
-  // fetch pixels from mapImage in signal order, put them in rgbSignal
-  rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, rgbSignal.length);
-  // write the Brightness channel of rgbPixels, transcoded to audio range, to audioBuffer
-  mapper.plantSamples(rgbSignal, audioBuffer.getChannel(0), 0, mapSize, PixelAudioMapper.ChannelNames.L);
+/**
+ * Utility method for applying hue and saturation values from a source array of RGB values
+ * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+ * 
+ * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+ * @param graySource     an target array of RGB data from which to obtain brightness values
+ * @param lut            a lookup table, must be the same size as colorSource and graySource
+ * @return the graySource array of RGB values, with hue and saturation values changed
+ * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+ */
+public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
+  if (colorSource == null || graySource == null || lut == null) 
+    throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
+  if (colorSource.length != graySource.length || colorSource.length != lut.length) 
+    throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
+  // initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
+  float[] hsbPixel = new float[3];
+  for (int i = 0; i < graySource.length; i++) {
+    graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
+  }
+  return graySource;
 }

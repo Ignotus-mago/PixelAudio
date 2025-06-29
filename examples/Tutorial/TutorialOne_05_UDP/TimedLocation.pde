@@ -1,6 +1,5 @@
 /**
- * Used to schedule or track events that take place at specific coordinate locations.
- * See WorkFlowApp3 and subsequent versions. 
+ * Used to schedule or track events that take place at specific times and coordinate locations.
  */
 public class TimedLocation implements Comparable<TimedLocation> {
   private int x;

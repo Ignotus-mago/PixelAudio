@@ -86,6 +86,10 @@
  * Press 'o' or 'O' to open an audio or image file.
  * Press 'h' or 'H' to show help and key commands.
  * Press 'V' to record a video.
+ *
+ *
+ * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
+ * images and audio to different color channels. 
  * 
  */
 

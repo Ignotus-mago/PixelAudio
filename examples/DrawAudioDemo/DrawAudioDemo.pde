@@ -13,10 +13,16 @@ import ddf.minim.*;
 import ddf.minim.ugens.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.curves.*;
+import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 /**
  *
  * PRESS 'd' TO START OR STOP DRAWING.
+ * PRESS 'p' TO TRIGGER AUDIO FROM THE DRAWING. 
+ * 
+ * See TutorialOne_04_Drawing for a more recent version of code for drawing.
+ * This version only permits a single brushstroke, TutorialOne_04_Drawing 
+ * lets you create multiple interactive brushstrokes. 
  *
  * DrawAudioDemo shows how to load an audio file and an image separately and then use
  * the image as a control surface for the audio. Press 'o' to load either an audio or
@@ -63,38 +69,37 @@ import net.paulhertz.pixelaudio.curves.*;
  */
 
 // PixelAudio vars and objects
-// PixelAudio vars and objects
 PixelAudio pixelaudio;     // our shiny new library
 HilbertGen hGen;           // a PixelMapGen to draw Hilbert curves
 MultiGen multigen;         // a PixelMapGen that handles multiple gens strung together
 int rows = 3;
 int columns = 2;
-int genWidth = 512;        // width of PixelMapGen objects: for hGen must be a power of 2
-int genHeight = 512;       // height of PixelMapGen objects: for hGen must be equal to width
-PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
-int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
-PImage mapImage;           // image for display
-PixelAudioMapper.ChannelNames chan = PixelAudioMapper.ChannelNames.ALL;
-int[] colors;              // array of spectral colors
+int genWidth = 512;       // width of PixelMapGen objects: for hGen must be a power of 2
+int genHeight = 512;      // height of PixelMapGen objects: for hGen must be equal to width
+PixelAudioMapper mapper;  // object for reading, writing, and transcoding audio and image data
+int mapSize;              // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
+PImage mapImage;          // image for display
+PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
+int[] colors;             // array of spectral colors
 boolean isBlending = false;
 
 /** Minim audio library */
-Minim minim;               // library that handles audio
-AudioOutput audioOut;      // line out to sound hardware
+Minim minim;              // library that handles audio
+AudioOutput audioOut;     // line out to sound hardware
 MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
 boolean isBufferStale = false;     // do we need to reset the audio buffer?
-int sampleRate = 41500;    // ----->> a critical value, see the setup method <<-----
-float[] audioSignal;       // the audio signal as an array
-int[] rgbSignal;           // the colors in the display image, in the order the signal path visits them
-int audioLength;           // length of audio buffer, audio signal, usually 32.768 seconds
+int sampleRate = 41500;   // ----->> a critical value, see the setup method <<-----
+float[] audioSignal;      // the audio signal as an array
+int[] rgbSignal;          // the colors in the display image, in the order the signal path visits them
+int audioLength;      // length of audio buffer, audio signal, usually 32.768 seconds
 
 // SampleInstrument setup
 float sampleScale = 4;
 int sampleBase;
 int samplelen;
 Sampler audioSampler;     // minim class for sampled sound
-ArrayList<SamplerInstrument> octet;
-SamplerInstrument instrument;      // local class to wrap audioSampler
+ArrayList<WFInstrument> octet;
+WFInstrument instrument;      // local class to wrap audioSampler
 int nowPlaying = 0;
 int maxPlayers = 8;
 // ADSR and params
@@ -144,7 +149,7 @@ int[] gammaTable;
 
 // curve drawing and interaction
 public boolean isDrawMode = false;
-public float epsilon = 24.0f;
+public float epsilon = 12.0f;
 public ArrayList<PVector> allPoints;
 public int allPointsColor = color(220, 199, 212, 192);
 public float allPointsWeight = 4;
@@ -156,12 +161,16 @@ public ListIterator<PVector> eventPointsIter;
 int eventStep = 67;   // milliseconds between events
 public ArrayList<TimedLocation> pointEventsArray;
 
-String daPath;
-String audioStartFile = "workflow_03_mixdown_01.mp3";     
-String imageStartFile = "workFlowPanel_03.png";
+String dataPath = "/Users/paulhz/Code/Workspace/TestProcessing/src/net/paulhertz/testpixelaudio/data/";
+String audioStartFile = dataPath + "workflow_t01_mix.wav";       // or workflow_t01_mix_01.mp3, smaller file
+String imageStartFile = dataPath + "workFlowPanel_03.png";
 
 boolean isWriteToScreen = true;
 
+
+public static void main(String[] args) {
+  PApplet.main(new String[] { DrawAudioDemo.class.getName() });
+}
 
 public void settings() {
   size(rows * genWidth, columns * genHeight);
@@ -183,18 +192,16 @@ public void setup() {
   mapImage = createImage(width, height, ARGB); // an image to use with mapper
      currentPoint = new PVector(-1, -1);
   timeLocsArray = new ArrayList<TimedLocation>();
-  octet = new ArrayList<SamplerInstrument>();
-  // path to the folder where PixelAudio examples keep their data files 
-  // such as image, audio, .json, etc.
-  daPath = sketchPath("") + "../examples_data/";
+  octet = new ArrayList<WFInstrument>();
   loadFiles();
+  showHelp();
 }
 
 public void loadFiles() {
   boolean oldIsLoadBoth = isLoadBoth;
   isLoadBoth = false;
-  loadAudioFile(new File(daPath + audioStartFile));
-  loadImageFile(new File(daPath + imageStartFile));
+  loadAudioFile(new File(audioStartFile));
+  loadImageFile(new File(imageStartFile));
   isLoadBoth = oldIsLoadBoth;
 }
 
@@ -337,11 +344,9 @@ public void freshDraw() {
     PABezShape brush = curveMaker.getBrushShape();
     brush.setFillColor(color(144, 34, 42, 233));
     brush.setWeight(2);
-    brush.setStrokeColor(color(144, 34, 42, 178));
+    brush.setStrokeColor(color(144, 34, 42, 233));
     brush.draw(this);
-    curveMaker.dragPointsDraw(this);
-    curveMaker.reducedPointsDraw(this);
-   // curveMaker.brushDraw(this, color(144, 34, 42, 233));
+    // curveMaker.brushDraw(this, color(144, 34, 42, 233));
     curveMaker.eventPointsDraw(this, polySteps, color(233, 199, 144, 192), 6);
   }
   else {
@@ -358,17 +363,17 @@ public void stepAnimation() {
   mapImage.updatePixels();
 }
 
-  // the modern way to loop (as of Java 8)
-  public void runTimeArrayBack() {
-    int currentTime = millis();
-    timeLocsArray.forEach(tl -> {
-      tl.setStale(tl.stopTime() < currentTime);
-      if (!tl.isStale()) {
-        drawCircle(tl.getX(), tl.getY());
-      }
-    });
-    timeLocsArray.removeIf(TimedLocation::isStale);
-  }
+// the modern way to loop (as of Java 8)
+public void runTimeArrayBack() {
+  int currentTime = millis();
+  timeLocsArray.forEach(tl -> {
+    tl.setStale(tl.stopTime() < currentTime);
+    if (!tl.isStale()) {
+      drawCircle(tl.getX(), tl.getY());
+    }
+  });
+  timeLocsArray.removeIf(TimedLocation::isStale);
+}
 
 // a more thread safe way to loop (but for now this application is single-threaded)
 public void runTimeArray() {
@@ -388,8 +393,8 @@ public void runPointEventsArray() {
   pointEventsArray.forEach(tl -> {
     if (tl.stopTime() < currentTime) {
       // the curves may exceed display bounds, so we have to constrain values
-      sampleX = PixelAudio.constrain(Math.round(tl.x), 0, width-1);
-      sampleY = PixelAudio.constrain(Math.round(tl.y), 0, height-1);
+      sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width-1);
+      sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height-1);
       int pos = mapper.lookupSample(sampleX, sampleY);
       playSample(pos);
       tl.setStale(true);
@@ -593,13 +598,7 @@ public void mouseReleased() {
 }
 
 public void initCurveMaker() {
-  // method with calculateDerivedPoints
-  curveMaker = PACurveMaker.buildCurveMaker(allPoints, 2.0);
-  curveMaker.setDrawWeighted(true);
-  curveMaker.setBezierBias(PABezShape.LAMBDA);
-  curveMaker.calculateDerivedPoints();
-  // method with a single call
-  //  curveMaker = PACurveMaker.buildCurveMakerComplete(allPoints, epsilon);
+  curveMaker = PACurveMaker.buildCurveMakerComplete(allPoints, epsilon);
 }
 
 public void playPoints() {
@@ -647,7 +646,7 @@ public int playSample(int samplePos) {
   // println("--->> nowPlaying instrument "+ nowPlaying);
   instrument.setSampler(audioSampler);
   instrument.setADSR(adsr);
-  instrument.sampler.patch(adsr);
+  instrument.getSampler().patch(adsr);
   nowPlaying = (nowPlaying + 1) % maxPlayers;
   // play command takes a duration in seconds
   float duration = samplelen / (float) (sampleRate);
@@ -659,12 +658,12 @@ public int playSample(int samplePos) {
 
 public void loadOctet(Sampler sampler, ADSR adsr) {
   for (int i = 0; i < maxPlayers; i++) {
-    octet.add(new SamplerInstrument(audioOut, sampler, adsr));
+    octet.add(new WFInstrument(audioOut, sampler, adsr));
   }
   nowPlaying = 0;
 }
 
-  
+
 // ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- // 
   
 public int[] getHistoBounds(int[] source) {
@@ -723,6 +722,4 @@ public int[] adjustGamma(int[] source) {
   }
   return out;
 }  
-
-
   

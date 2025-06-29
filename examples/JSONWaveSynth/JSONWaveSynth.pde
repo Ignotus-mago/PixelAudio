@@ -1,6 +1,9 @@
 /**
  * Demo of how to set and save WaveSynth parameters from JSON files.
  * JSON files are stored in this sketches "data" folder.
+ * 
+ * See WaveSynthEditor for complete information about the WaveSynth class,
+ * with a complete GUI and video export code. 
  */
 
 import java.io.File;

@@ -8,7 +8,7 @@
 public void saveToAudio() {
   renderSignal();
   try {
-    saveAudioToFile(audioSignal, sampleRate, sketchPath() +"wavesynth_"+ audIndex +".wav");
+    saveAudioToFile(audioSignal, sampleRate, sketchPath() +"/wavesynth_"+ audIndex +".wav");
   }
   catch (IOException e) {
     println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());

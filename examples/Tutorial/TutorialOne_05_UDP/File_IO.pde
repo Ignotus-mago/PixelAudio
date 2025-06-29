@@ -161,9 +161,9 @@ public void loadAudioFile(File audFile) {
  * which will throw an IllegalArgumentException if sig.length != img.pixels.length
  * or sig.length != mapper.getSize(). 
  * 
- * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
+ * @param sig         an source array of float, should be audio data in the range [-1.0, 1.0]
  * @param mapper      a PixelAudioMapper
- * @param img    a PImage
+ * @param img         a target PImage, modified by audio data in sig
  * @param chan        a color channel
  */
 public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
@@ -212,14 +212,14 @@ public void loadImageFile(File imgFile) {
 }
 
 /**
- * This method writes a color channel from the an image to playBuffer, fulfilling a 
+ * This method writes a color channel from the an image to an audio signal, fulfilling a 
  * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
  * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
  * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
  * 
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format 
+ * @param sig       an target array of float in audio format, rewritten by this method
  * @param chan      a color channel
  */
 public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {

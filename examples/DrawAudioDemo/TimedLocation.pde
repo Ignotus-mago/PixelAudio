@@ -1,8 +1,7 @@
-// ------------------------------------------- //
-//              TIMED LOCATION CLASS           //
-// ------------------------------------------- //
-
-public class TimedLocation {
+/**
+ * Used to schedule or track events that take place at specific times and coordinate locations.
+ */
+public class TimedLocation implements Comparable<TimedLocation> {
   private int x;
   private int y;
   private int stopTime;
@@ -34,4 +33,13 @@ public class TimedLocation {
   public void setStale(boolean stale) {
     this.isStale = stale;
   }
+    
+  public int compareTo(TimedLocation tl) {
+    if (stopTime() < tl.stopTime()) return 1;
+    else {
+      if (stopTime() == tl.stopTime) return 0;
+      else return -1;
+    }
+  }
+  
 }

@@ -12,6 +12,8 @@
  * -- drawing to trigger audio events
  * -- UDP communication with Max and other media applications
  * 
+ * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
+ * images and audio to different color channels. 
  * 
  */
 

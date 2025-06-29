@@ -122,7 +122,7 @@ import g4p_controls.*;
  * press 'o' to open a new JSON file.
  * press 'O' to reload the current JSON file, if there is one, reverting all edits.
 // ------------- MISCELLANEOUS COMMANDS ------------- //
- * press 'r' to toggles display window to fit screen or display at size.
+ * press 'r' to toggle display window to fit screen or display at size.
  * press 's' to save the current image to a .png file.
  * press 'v' to toggle video recording.
  * press 'V' to record a complete video loop from frame 0 to stop frame.

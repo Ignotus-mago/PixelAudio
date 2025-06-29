@@ -50,6 +50,7 @@ public void settings() {
 
 public void setup() {
   pixelaudio = new PixelAudio(this);
+  // multigen = new MultiGen(width, height);
   multigen = hilbertLoop3x2(genWidth, genHeight);
   mapper = new PixelAudioMapper(multigen);
   mapImage = createImage(width, height, RGB);

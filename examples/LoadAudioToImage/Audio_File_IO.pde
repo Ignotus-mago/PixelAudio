@@ -22,6 +22,7 @@ public void fileSelected(File selectedFile) {
       audioFileTag = fileTag;
       println("----- Selected file " + fileName + "." + fileTag + " at "
         + filePath.substring(0, filePath.length() - fileName.length()));
+      // good to go, let's load the audio file
       loadAudioFile(audioFile);
     } else {
       println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
@@ -31,22 +32,67 @@ public void fileSelected(File selectedFile) {
   }
 }
 
+/**
+ * Attempts to load audio data from a selected file into playBuffer, then calls
+ * writeAudioToImage() to transcode audio data and write it to mapImage
+ * 
+ * @param audioFile    an audio file
+ */
 public void loadAudioFile(File audioFile) {
   // read audio file into our MultiChannelBuffer
   float sampleRate = minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), audioBuffer);
   // sampleRate > 0 means we read audio from the file
   if (sampleRate > 0) {
-    // read buffer into audioSignal and set its length to mapSize
-    audioSignal = mapper.conformArray(audioBuffer.getChannel(0)); 
-    audioLength = audioSignal.length;
-    // resize the buffer if necessary
+    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
     if (audioBuffer.getBufferSize() != mapper.getSize()) audioBuffer.setBufferSize(mapper.getSize());
-    // copyaudioBuffer to channel of audioBuffer
-    audioBuffer.setChannel(0, audioSignal);
-    mapImage.loadPixels();
-    mapper.mapSigToImg(audioSignal, mapImage.pixels, chan);
-    mapImage.updatePixels();
+    // read a copy of channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
+    audioSignal = Arrays.copyOf(audioBuffer.getChannel(0), mapSize);
+    audioLength = audioSignal.length;
+    writeAudioToImage(audioSignal, mapper, mapImage, chan);
   }
+}
+
+/**
+ * Transcodes audio data in sig[] and writes it to color channel chan of mapImage 
+ * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(), 
+ * which will throw an IllegalArgumentException if sig.length != img.pixels.length
+ * or sig.length != mapper.getSize(). 
+ * 
+ * @param sig         an source array of float, should be audio data in the range [-1.0, 1.0]
+ * @param mapper      a PixelAudioMapper
+ * @param img         a target PImage, modified by audio data in sig
+ * @param chan        a color channel
+ */
+public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
+  // If sig.length == mapper.getSize() == mapImage.width * mapImage.height, we can call safely mapper.mapSigToImg()  
+  img.loadPixels();
+  mapper.mapSigToImg(sig, img.pixels, chan);
+  img.updatePixels();
+}
+
+public void writeImageToAudio() {
+  println("----- writing image to signal ");
+  mapImage.loadPixels();
+  audioSignal = new float[mapSize];
+  mapper.mapImgToSig(mapImage.pixels, audioSignal);
+  audioBuffer.setBufferSize(mapSize);
+  audioBuffer.setChannel(0, audioSignal);
+  if (audioBuffer != null) println("--->> audioBuffer length channel 0 = "+ audioBuffer.getChannel(0).length);
+}
+
+/**
+ * This method writes a color channel from the an image to playBuffer, fulfilling a 
+ * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
+ * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
+ * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
+ * 
+ * @param img       a PImage, a source of data
+ * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
+ * @param sig       an target array of float in audio format 
+ * @param chan      a color channel
+ */
+public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
+  sig = mapper.mapImgToSig(img.pixels, sig, chan);
 }
 
 

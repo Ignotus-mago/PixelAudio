@@ -2,13 +2,13 @@
 //          SAMPLER INSTRUMENT CLASS           //
 // ------------------------------------------- //
 
-//using minim's Instrument interface
-public class SamplerInstrument implements Instrument {
+// using minim's Instrument interface
+public class WFInstrument implements Instrument {
   AudioOutput audioOut;
   Sampler sampler;
   ADSR adsr;
 
-  SamplerInstrument(AudioOutput audioOut, Sampler sampler, ADSR adsr) {
+  public WFInstrument(AudioOutput audioOut, Sampler sampler, ADSR adsr) {
     this.audioOut = audioOut;
     this.sampler = sampler;
     this.adsr = adsr;
@@ -74,4 +74,5 @@ public class SamplerInstrument implements Instrument {
   public void setADSR(ADSR adsr) {
     this.adsr = adsr;
   }
+
 }

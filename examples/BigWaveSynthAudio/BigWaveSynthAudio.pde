@@ -50,13 +50,15 @@ import net.paulhertz.pixelaudio.*;
  * Press 'O' to reload the most recent JSON file.
  * Press 'j' 0r 'J' to save WaveSynth data to a JSON file
  * Press 'f' to show the frame rate in the console
- * Press '1' to call wavesynth.setSampleRate(genWidth * genHeight)
- * Press '2' to call wavesynth.setSampleRate(genWidth * genHeight / 2)
- * Press '3' to call wavesynth.setSampleRate(genWidth * genHeight / 3)
- * Press '4' to call wavesynth.setSampleRate(genWidth * genHeight / 4)
- * Press '5' to call wavesynth.setSampleRate(genWidth * genHeight / 5)
- * Press '6' to call wavesynth.setSampleRate(genWidth * genHeight / 6)
- * Press '7' to call wavesynth.setSampleRate(this.sampleRate)
+ * Press '1' to call wavesynth.setSampleRate(genWidth * genHeight) 
+ * Press '2' to call wavesynth.setSampleRate(genWidth * genHeight / 2) 
+ * Press '3' to call wavesynth.setSampleRate(genWidth * genHeight / 3) 
+ * Press '4' to call wavesynth.setSampleRate(genWidth * genHeight / 4) 
+ * Press '5' to call wavesynth.setSampleRate(genWidth * genHeight / 5) 
+ * Press '6' to call wavesynth.setSampleRate(genWidth * genHeight / 6) 
+ * Press '7' to call wavesynth.setSampleRate(this.sampleRate) 
+ * Press 's' to save display to a PNG file
+ * Press 'S' to save audio to a WAV file
  * Press 'h' to show this help message in the console
  * 
  * See also: BigWaveSynth, WaveSynthSequencer
@@ -100,7 +102,7 @@ float sampleScale = 4;         // == number of divisions of one second, used to 
 int sampleBase = (int) (sampleRate/(float) sampleScale);  
 int samplelen = sampleRate;    // one second
 Sampler audioSampler;          // minim class for sampled sound
-SamplerInstrument instrument;  // local class to wrap audioSampler
+WFInstrument instrument;       // local class to wrap audioSampler
 
 // ADSR and params
 ADSR adsr;            // good old attack, decay, sustain, release
@@ -139,15 +141,15 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
   initAudio();
-  initAudio();                  // set up audio output and an audio buffer
-  multigen = loadLoopGen(genWidth, genHeight);  // See the MultiGenDemo example for details on how MultiGen works
-  mapper = new PixelAudioMapper(multigen);    // initialize a PixelAudioMapper
+  initAudio();                           // set up audio output and an audio buffer
+  multigen = hilbertLoop3x2(genWidth, genHeight);  // See the MultiGenDemo example for details on how MultiGen works
+  mapper = new PixelAudioMapper(multigen);         // initialize a PixelAudioMapper
   mapSize = mapper.getSize();            // set mapSize
-  wdList = initWaveDataList();          // generate a list of WaveData objects
-  wavesynth = new WaveSynth(mapper, wdList);    // create a WaveSynth object
-  initWaveSynth(wavesynth);            // set wavesynth fields
-  synthImage = wavesynth.mapImage;        // set the image to display
-  timeLocsArray = new ArrayList<TimedLocation>(); // initialize mouse event tracking array
+  wdList = initWaveDataList();           // generate a list of WaveData objects
+  wavesynth = new WaveSynth(mapper, wdList);       // create a WaveSynth object
+  initWaveSynth(wavesynth);              // set wavesynth fields
+  synthImage = wavesynth.mapImage;       // set the image to display
+  timeLocsArray = new ArrayList<TimedLocation>();  // initialize mouse event tracking array
   // path to the folder where PixelAudio examples keep their data files 
   // such as image, audio, .json, etc.
   daPath = sketchPath("") + "../examples_data/";
@@ -158,36 +160,46 @@ public void setup() {
 public void initAudio() {
   // use the getLineOut method of the Minim object to get an AudioOutput object
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
+  // create an audioBuffer for our audio data
   this.audioBuffer = new MultiChannelBuffer(1024, 1);
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
 }
 
 /**
- * Adds PixelMapGen objects to the local variable genList, puts the coords
- * of their upper left corner in offsetList. The two lists are used to  
- * initialize a MultiGen, which can be used to map audio and pixel data.
- * This method provides a big looping fractal consisting of 6 Hilbert curves.
+ * Generates a looping fractal signal path consisting of 6 HilbertGens,
+ * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
+ * This particular MultiGen configuration is used so extensively in my 
+ * sample code that I've given it a factory method in the HilbertGen class.
+ * It's written out here so you can see how it works. 
+ * 
+ * Note that genH must equal genW and both must be powers of 2. For the 
+ * image size we're using in this example, genW = image width / 3 and 
+ * genH = image height / 2.
+ * 
+ * @param genW    width of each HilbertGen 
+ * @param genH    height of each HilbertGen
+ * @return a 3 x 2 array of Hilbert curves, connected in 
+ *         a loop (3 * genWidth by 2 * genHeight pixels)
  */
-public MultiGen loadLoopGen(int loopGenW, int loopGenH) {
+public MultiGen hilbertLoop3x2(int genW, int genH) {
   // list of PixelMapGens that create an image using mapper
-  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
   // list of x,y coordinates for placing gens from genList
-  ArrayList<int[]> offsetList = new ArrayList<int[]>();     
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX270));
+  ArrayList<int[]> offsetList = new ArrayList<int[]>();
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
   offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.NADA));
-  offsetList.add(new int[] { loopGenW, 0 });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX90));
-  offsetList.add(new int[] { 2 * loopGenW, 0 });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX90));
-  offsetList.add(new int[] { 2 * loopGenW, loopGenH });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.R180));
-  offsetList.add(new int[] { loopGenW, loopGenH });
-  genList.add(new HilbertGen(loopGenW, loopGenH, AffineTransformType.FX270));
-  offsetList.add(new int[] { 0, loopGenH });
-  MultiGen gen = new MultiGen(width, height, offsetList, genList);
-  return gen;
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
+  offsetList.add(new int[] { genW, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+  offsetList.add(new int[] { 2 * genW, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+  offsetList.add(new int[] { 2 * genW, genH });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
+  offsetList.add(new int[] { genW, genH });
+  genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
+  offsetList.add(new int[] { 0, genH });
+  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 public ArrayList<WaveData> initWaveDataList() {
@@ -280,11 +292,12 @@ public void raindrops() {
     renderSignal();
     isBufferStale = false;
   }
-  playSample(signalPos, samplelen, 0.15f,
-         new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+  playSample(audioBuffer, signalPos, samplelen, 0.15f, 
+             new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
 }
 
 public void keyPressed() {
+  int newSampleRate;
   switch (key) {
   case ' ':
     isAnimating = !isAnimating;
@@ -319,39 +332,55 @@ public void keyPressed() {
   case 'f':
     println("--->> frame rate: " + frameRate);
   case '1':
-    wavesynth.setSampleRate(genWidth * genWidth);
+    newSampleRate = genWidth * genWidth;
+    println("--->> new sample rate for WaveSynth = genWidth * genWidth = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
     isBufferStale = true;
     break;
   case '2':
-    wavesynth.setSampleRate(genWidth * genWidth / 2);
+    newSampleRate = genWidth * genWidth / 2;
+    println("--->> new sample reate for WaveSynth = genWidth * genWidth / 2 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
     isBufferStale = true;
     break;
   case '3':
-    wavesynth.setSampleRate(genWidth * genWidth / 3);
+    newSampleRate = genWidth * genWidth / 3;
+    println("--->> new sample reate for WaveSynth = genWidth * genWidth / 3 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
     isBufferStale = true;
     break;
   case '4':
-    wavesynth.setSampleRate(genWidth * genWidth / 4);
+    newSampleRate = genWidth * genWidth / 4;
+    println("--->> new sample reate for WaveSynth = genWidth * genWidth / 4 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
     isBufferStale = true;
     break;
   case '5':
-    wavesynth.setSampleRate(genWidth * genWidth / 5);
+    newSampleRate = genWidth * genWidth / 5;
+    println("--->> new sample reate for WaveSynth = genWidth * genWidth / 5 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
     isBufferStale = true;
     break;
   case '6':
-    wavesynth.setSampleRate(genWidth * genWidth / 6);
+    newSampleRate = genWidth * genWidth / 6;
+    println("--->> new sample reate for WaveSynth = genWidth * genWidth / 6 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
     isBufferStale = true;
     break;
   case '7':
-    wavesynth.setSampleRate(this.sampleRate);
+    newSampleRate = this.sampleRate;
+    println("--->> new sample reate for WaveSynth = this.sampleRate = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
     isBufferStale = true;
     break;
   case 's': 
-    synthImage.save("wavesynth_"+ imgIndex +".png");
+    synthImage.save(sketchPath() + "/wavesynth_"+ imgIndex +".png");
+    println("-- saved to image file");
     imgIndex++;
     break;
   case 'S': 
     saveToAudio();
+    println("-- saved to audio file");
     audIndex++;
     break;
   case 'h':
@@ -376,6 +405,8 @@ public void showHelp() {
   println(" * Press '5' to call wavesynth.setSampleRate(genWidth * genHeight / 5) ");
   println(" * Press '6' to call wavesynth.setSampleRate(genWidth * genHeight / 6) ");
   println(" * Press '7' to call wavesynth.setSampleRate(this.sampleRate) ");
+  println(" * Press 's' to save display to a PNG file");
+  println(" * Press 'S' to save audio to a WAV file");
   println(" * Press 'h' to show this help message in the console");
 }
 
@@ -405,31 +436,28 @@ public void mousePressed() {
     renderSignal();
     isBufferStale = false;
   }
-  playSample(samplePos, calcSampleLen(), 0.3f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+  playSample(audioBuffer, samplePos, calcSampleLen(), 0.3f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
 }
   
 /**
+ * Plays an audio sample.
+ * 
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
  * @param amplitude    amplitude of the sample on playback
- * @param adsr      an ADSR envelope for the sample
- * @return        the calculated sample length in samples
+ * @param adsr         an ADSR envelope for the sample
+ * @return the calculated sample length in samples
  */
-public int playSample(int samplePos, int samplelen, float amplitude, ADSR adsr) {
+public int playSample(MultiChannelBuffer buffer, int samplePos, int samplelen, float amplitude, ADSR adsr) {
   // println("--- play "+ twoPlaces.format(amplitude));
-  // create a Minim Sampler from the buffer, with sampleRate sampling rate, 
-  // for up to 8 simultaneous outputs
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8);
-  // set amplitude for the Sampler
-  audioSampler.amplitude.setLastValue(amplitude);
-  // set the Sampler to begin playback at samplePos, which corresponds to the
-  // place the mouse was clicked
-  audioSampler.begin.setLastValue(samplePos);
-  // do some calculation to include the release time.
-  int releaseDuration = (int) (releaseTime * sampleRate);
+  audioSampler = new Sampler(buffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling
+                             // rate, for up to 8 simultaneous outputs 
+  audioSampler.amplitude.setLastValue(amplitude);    // set amplitude for the Sampler
+  audioSampler.begin.setLastValue(samplePos);        // set the Sampler to begin playback at samplePos, which 
+                               // corresponds to the place the mouse was clicked
+  int releaseDuration = (int) (releaseTime * sampleRate); // calculate the release time.
   if (samplePos + samplelen >= mapSize) {
-    // make sure we don't exceed the mapSize
-    samplelen = mapSize - samplePos;
+    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
     println("----->>> sample length = " + samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
@@ -437,7 +465,7 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSR adsr) 
       : samplePos + durationPlusRelease;
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
-  this.instrument = new SamplerInstrument(audioSampler, adsr);
+  this.instrument = new WFInstrument(audioOut, audioSampler, adsr);
   // play command takes a duration in seconds
   float duration = samplelen / (float) (sampleRate);
   instrument.play(duration);
@@ -446,10 +474,9 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSR adsr) 
   return samplelen;
 }
 
-// TODO simplify the calculation of variable durations. 
 public int calcSampleLen() {
   float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal 
+  // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
   this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
-  println("----->>> vary = "+ vary +", sample length = "+ samplelen);
   return samplelen;
 }

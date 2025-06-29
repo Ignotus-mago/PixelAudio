@@ -20,7 +20,7 @@
  *     import oscP5.*;
  *     import netP5.*;
  * 
- * Because our tasks go beyond the basics and we also don't wnat to clutter our sketch 
+ * Because our tasks go beyond the basics and we also don't want to clutter our sketch 
  * with more code, we're going to use a simple Design Pattern called Delegation. In delegation, 
  * an object handles a task by passing it on to another object, a Delegate. The delegate 
  * maintains a reference to the calling object, and--depending on the implementation--can 
@@ -76,15 +76,56 @@
  * is the (catchy) name for the one that accompanies this sketch. Go ahead and launch it, and place it 
  * somewhere on the screen where you can see both it and your Processing sketch. Then launch the sketch. 
  * 
- * Open a sound file to have something to play, and click on "most recent curve" in the Max subpatcher
- * "network_receiver". You should get sound in Processing. 
+ * Open a sound file to have something to play, and click on "most recent curve" message in the Max 
+ * "network_receiver" subpatcher. You should get sound and animation in Processing. This happens because  
+ * Max sends a "/draw" token followed by the numbers in the message box to the NetworkDelegate. The 
+ * delegate has a method, drawHit(), for handling "/draw" messages: it was set up in initOscPlugs(),
+ * when the NetworkDelegate was initialized. 
+ * 
  * 
  * There's more to do, of course. We want to set up some messaging from Processing, for example, for
- * mouse clicks. Whenever we use the delegate nd, we'll wrap the command in a conditional:
+ * mouse clicks and drawing. Whenever we use the delegate nd, we'll wrap the command in a conditional:
  * 
  *   if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
  * 
- * The very command we want! Where do we put it?
+ * The very command for clicks -- but where do we put it? In this case, since we are passing mousePressed
+ * events on to other handlers, we can put it in the drawing section, handleMousePressed(); It's already 
+ * there, we just need to uncomment it. 
+ * 
+ * We can proceed to provide more communication between Max and Processing in a similar way. You can 
+ * activate additional communications by uncommented lines with "if (nd != null)". We proceed in this 
+ * way, with a conditional, so that the sketch can run with or without Processing. 
+ * 
+ * >>>>> SOUND THE DANGER MUSIC <<<<< 
+ * 
+ * As was apparent in an earlier stage of this sketch, TutorialOne_03_Animation, when we introduce
+ * another thread, such as an "Open File" command, we have to take care that it doesn't cause 
+ * cause problems by, for example, changing resources that are the sketch also wants to change. 
+ * In TutorialOne_03_Animation, the animation was changing the audio buffer and the Open File
+ * command did so, too. Our solution there was to pause animation while opening a file. It was not
+ * the only solution, but it's simple, and it only applied for as long as it took to choose a file
+ * 
+ * In TutorialOne_05_UDP, we have two independent threads running simultaneously. Both of them can 
+ * give commands to play sounds to Processing. The sounds are to be played are queued in two lists:
+ * TimeLocsArray, for events trigger by a mouse click, and curveTLEvents, for series of events 
+ * associated with a brushstroke. If the Processing thread and the Max thread both try to alter
+ * one of the lists are the same time, the Java Runtime Environment may throw a 
+ * ConcurrentModificationException. Or worse yet, the event lists may be altered and events
+ * deleted before they can be played. To prevent these sort of things from happening, the
+ * methods that run the event lists have been declared with the keyword "synchronized":
+ * 
+ *     public synchronized void runCurveEvents()
+ *     public synchronized void runPointEvents()
+ * 
+ * This means that the method must complete before it can be called from another thread. 
+ * Since the methods execute very quickly, this is a viable solution. Multithreading is
+ * a complex issue, with a ample suite of tools in Java, but it's far beyond the modest
+ * aims of this tutorial. Suffice it to say, if two or more threads use the same resources,
+ * you will need to handle multithreading. In this tutorial, we've exposed all the key
+ * commands in parseKey() to potential messaging from external threads, such as our
+ * Max patcher. Remote control of a PixelAudio application can provide interesting
+ * results, but it comes with risks that you'll have to deal with, particularly in
+ * a live performance situation. 
  * 
  * 
  * Here are the key commands for this sketch:
@@ -143,6 +184,8 @@ int[] colors;              // array of spectral colors
 /*                        FILE I/O VARIABLES                          */
 /* ------------------------------------------------------------------ */
 
+String daPath;
+
 // audio file
 File audioFile;
 String audioFilePath;
@@ -179,12 +222,14 @@ int samplePos;                  // an index into the audio signal, selected by a
 float[] leftSamples;            // audio data for the left channel of a stereo file
 float[] rightSamples;           // audio data for the right channel of a stereo file
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
+
 // SampleInstrument setup
 float sampleScale = 4;          // factor in determining audio event duration
 int sampleBase = (int) (sampleRate/sampleScale);
 int samplelen = (int) (sampleScale * sampleBase);
 Sampler audioSampler;           // minim class for sampled sound
 WFInstrument instrument;        // local class to wrap audioSampler
+
 // ADSR and its parameters
 ADSR adsr;                      // good old attack, decay, sustain, release
 float maxAmplitude = 0.7f;
@@ -230,7 +275,7 @@ VideoExport videx;   // hamoid library class for video export (requires ffmpeg)
 // curve drawing and interaction
 public boolean isDrawMode = false;                  // is drawing on or not?
 public float epsilon = 4.0f;                        // controls how much reduction is applied to points
-public ArrayList<PVector> allPoints;                // all the points the user drew, thinnned
+public ArrayList<PVector> allPoints;                // all the non-repeated points the user drew
 public int dragColor = color(233, 199, 89, 128);    // color for initial drawing 
 public float dragWeight = 8.0f;                     // weight (brush diameter) of initial line drawing
 public int startTime;                               // start time for user drawing event
@@ -250,13 +295,11 @@ int polyPointsColor = color(233, 199, 144, 192);    // color for polygon represe
 int activeBrushColor = color(144, 89, 55, 233);     // color for the active brush
 int readyBrushColor = color(34, 89, 55, 233);       // color for a brushstroke when ready to be clicked
 
-/* end drawing variables */
-
-  /* ------------- end drawing variables ------------- */
+/* ------------- end drawing variables ------------- */
   
-  // network communications
-  NetworkDelegate nd;
-  boolean isUseNetworkDelegate = false;
+// network communications
+NetworkDelegate nd;
+boolean isUseNetworkDelegate = false;
 
 // ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **  //
 
@@ -288,9 +331,19 @@ public void setup() {
     nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
     nd.oscSendClear();
   }
+  // in Processing (but not so easily in Eclipse) we can load an audio or image file
+  // from the path to the folder where PixelAudio examples keep their data files
+  daPath = sketchPath("") + "../../examples_data/";
+  // the audio file we want to open on startup
+  File audioSource = new File(daPath +"Saucer_mixdown.wav");
+  // load the file into audio buffer and Brightness channel of display image (mapImage)
+  fileSelected(audioSource);
+  // overlay colors on mapImage
+  mapImage.loadPixels();
+  applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+  mapImage.updatePixels();  
   showHelp();
 }
-
 
 /**
  * Generates an array of rainbow colors using the HSB color space.
@@ -307,7 +360,7 @@ public int[] getColors(int size) {
   popStyle(); // restore styles, including the default RGB color space
   return colorWheel;
 }
-  
+
 /**
  * Initializes mapImage with the colors array. MapImage will handle the color data for mapper
  * and also serve as our display image.
@@ -318,32 +371,32 @@ public void initImages() {
   mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
   mapImage.updatePixels();
 }
-  
+
 /**
  * Initializes the line, curve, and brushstroke drawing variables. 
  * Note that timeLocsArray has been initialized by initAudio(), though it
  * will be used for point events in the drawing code, too. 
  */
 public void initDrawing() {
-     currentPoint = new PVector(-1, -1);
+  currentPoint = new PVector(-1, -1);
   brushShapesList = new ArrayList<PACurveMaker>();
 }
-  
+
 public void draw() {
   image(mapImage, 0, 0);
-  // runTimeArray();    // animate audio event markers
+  // handleDrawing() handles circle and brushstroke drawing and audio events
   handleDrawing();
   if (isAnimating) {
     animate();
     updateAudio();
   }
 }
-  
- public void animate() {
-   stepAnimation();
-   renderFrame(step);
- }
-  
+
+public void animate() {
+  stepAnimation();
+  renderFrame(step);
+}
+
 /**
  * Step through the animation, called by the draw() method.
  * Will also record a frame of video, if we're recording.
@@ -385,7 +438,7 @@ public void renderFrame(int step) {
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
   mapImage.updatePixels();
 }
-  
+
 /**
  * Transcodes color channel data from mapImage to audio format and writes it to the audio signal and buffer.
  */
@@ -395,7 +448,7 @@ public void updateAudio() {
   playBuffer.setChannel(0, audioSignal);
   audioLength = audioSignal.length;
 }
-  
+
 /**
  * Handles user's drawing actions, draws previously recorded brushstrokes, 
  * tracks and generates animation and audio events. 
@@ -417,7 +470,8 @@ public void handleDrawing() {
 }
 
 /**
- * The built-in mousePressed handler for Processing, but note that it forwards mouse coords to audiMousePressed().
+ * Here's the built-in mousePressed handler for Processing, but note that it forwards  
+ * mouse coords to handleMousePressed(), in the DrawingTools tab.
  */
 public void mousePressed() {
   // println("mousePressed:", mouseX, mouseY);
@@ -430,11 +484,11 @@ public void mousePressed() {
 }
 
 public void mouseDragged() {
-    if (isTrackMouse) {
-      shift = abs(width/2 - mouseX);
-      if (mouseY < height/2) 
-        shift = -shift;
-    }
+  if (isTrackMouse) {
+    shift = abs(width/2 - mouseX);
+    if (mouseY < height/2) 
+      shift = -shift;
+  }
 }
 
 public void mouseReleased() {
@@ -451,13 +505,17 @@ public void mouseReleased() {
     allPoints.clear();
   }
 }
+
 /**
  * built-in keyPressed handler, forwards events to parseKey
  */
 public void keyPressed() {
   parseKey(key, keyCode);    
 }
+
 /**
+ * Required by the PANetworkClientINF interface.
+ * 
  * Handles key press events passed on by the built-in keyPressed method. 
  * By moving key event handling outside the built-in keyPressed method, 
  * we make it possible to post key commands without an actual key event.
@@ -513,6 +571,7 @@ public void parseKey(char key, int keyCode) {
     break;
   }
 }
+
 /**
  * to generate help output, run RegEx search/replace on parseKey case lines with:
  * // case ('.'): // (.+)
@@ -525,8 +584,8 @@ public void showHelp() {
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
   println(" * Press 'o' or 'O' to open an audio or image file.");
-  println(" * Press 'h' or 'H' to show help and key commands.");
   println(" * Press 'V' to record a video.");
+  println(" * Press 'h' or 'H' to show help and key commands.");
 }
 
 /**
@@ -552,11 +611,13 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   return graySource;
 }
 
+
 /*----------------------------------------------------------------*/
 /*                                                                */
 /*                        NETWORKING                              */
 /*                                                                */
 /*----------------------------------------------------------------*/
+
 
 // required by the PANetworkCLientINF interface
 public PApplet getPApplet() {
