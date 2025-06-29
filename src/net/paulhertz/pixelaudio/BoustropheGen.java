@@ -157,7 +157,7 @@ public class BoustropheGen extends PixelMapGen {
 	    ArrayList<int[]> offsetList = new ArrayList<int[]>();
 	    for (int y = 0; y < rows; y++) {
 	        for (int x = 0; x < cols; x++) {
-	            genList.add(new BoustropheGen(genW, genH, randomTransform(PixelAudio.rando())));
+	            genList.add(new BoustropheGen(genW, genH, PixelMapGen.randomTransform(PixelAudio.rando())));
 	            offsetList.add(new int[] {x * genW, y * genH});
 	        }
 	    }

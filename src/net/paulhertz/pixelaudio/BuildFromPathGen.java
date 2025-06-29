@@ -23,6 +23,9 @@ import java.util.ArrayList;
 /**
  * A PixelMapGen that loads data from an external pixelMap, such as might be saved in a JSON file.
  * When you instantiate a BuildFromPathGen, set the pixelMap field before you call generate().  
+ * PixelMap corresponds to signalToImageLUT in a PixelAudioMapper. See the example sketch 
+ * BuildFromPathGenDemo, which shows how to save and load JSON-format data to instantiate 
+ * a BuildFromPathGen object. 
  * 
  * <pre>
  *	BuildFromPathGen myGen = new BuildFromPathGen(w, h);
@@ -40,7 +43,8 @@ import java.util.ArrayList;
  * 
  */
 public class BuildFromPathGen extends PixelMapGen {
-	public final static String description = "A PixelMapGen that loads data from an external pixelMap, such as might be saved in a JSON file.";
+	public final static String description = "A PixelMapGen that loads data from an external pixelMap, such as might be saved in a JSON file."
+			                                 +"\nWhen you instantiate a BuildFromPathGen, set the pixelMap field before you call generate().";
 
 	public BuildFromPathGen(int width, int height, AffineTransformType type) {
 		super(width, height, type);

@@ -111,6 +111,10 @@ public class WaveSynth {
 		this.setWaveData(wdList);
 	}
 	
+	public WaveSynth(PixelAudioMapper mapper) {
+		this(mapper, quickWaveDataList());
+	}
+	
 	public void setMapper(PixelAudioMapper mapper) {
 		this.mapper = mapper;
 		this.w = mapper.getWidth();
@@ -142,6 +146,32 @@ public class WaveSynth {
 			waveColors[j] = waveDataList.get(j).waveColor;
 		}
 	}
+	
+	/**
+	 * Initializes a list of WaveData for use by a WaveSynth.
+	 * 
+	 * @return an ArrayList of WaveData objects
+	 */
+	public static ArrayList<WaveData> quickWaveDataList() {
+		ArrayList<WaveData> list = new ArrayList<WaveData>();
+		float frequency = 768.0f;
+		float amplitude = 0.8f;
+		float phase = 0.0f;
+		float dc = 0.0f;
+		float cycles = 1.0f;
+		int waveColor = PixelAudioMapper.composeColor(159, 190, 251);
+		int steps = 240;
+		WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+		list.add(wd);
+		frequency = 192.0f;
+		phase = 0.0f;
+		cycles = 2.0f;
+		waveColor = PixelAudioMapper.composeColor(209, 178, 117);
+		wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+		list.add(wd);
+		return list;
+	}
+
 	
 	
 	// ------------- GETTERS AND SETTERS ------------- //
