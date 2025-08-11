@@ -17,8 +17,6 @@ import net.paulhertz.pixelaudio.*;
 PixelAudio pixelaudio;
 HilbertGen hGen;
 MultiGen multigen;
-ArrayList<PixelMapGen> genList;  // list of "gens" (PixelMapGen child classes)
-ArrayList<int[]> offsetList;     // list of pixel offsets for each gen in the final image
 int genWidth = 256;              // width of each gen (must be a power of 2 for HilbertGen
 int genHeight = 256;             // height of each gen (must equal width of genO
 int rows = 3;                    // number of rows of gens
@@ -41,9 +39,6 @@ public void settings() {
 public void setup() {
   windowResizable(true);
   pixelaudio = new PixelAudio(this);
-  genList = new ArrayList<PixelMapGen>();
-  offsetList = new ArrayList<int[]>();
-  loadGenLists();
   /* try the other versions of MultiGen */
   // multigen = new MultiGen(width, height);
   /* 
@@ -55,9 +50,9 @@ public void setup() {
    * The second custom constructor is the more flexible of the two. With some planning of the
    * spatial location and the AffineTransformType applied to each gen in the genlist,
    * you can often create a continuous signal path through the final image. This application
-   * demonstrates how to do that with HilbertGens.
+   * demonstrates how to do that with HilbertGens in the hilbertLoop3x2 method.
    */
-  multigen = new MultiGen(width, height, offsetList, genList);
+  multigen = hilbertLoop3x2(genWidth, genHeight);
   currentGen = multigen;
   mapper = new PixelAudioMapper(currentGen);
   mapImage = createImage(width, height, RGB);
@@ -67,24 +62,39 @@ public void setup() {
   mapImage.updatePixels();
 }
 
-// generate HilbertGens and pixel offsets where they will be placed
-// AfineTransformType arguments determine the rotation and reflection of the gens
-// in such a was as to make the pixels look continuous along the signal path.f
-public void loadGenLists() {
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX270));
+/**
+ * Generates a looping fractal signal path consisting of 6 HilbertGens,
+ * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
+ * This particular MultiGen configuration was used so extensively in
+ * my sample code that I've given it its own static method in HilbertGen.
+ * 
+ * Note that genW must be a power of 2 and genH == genW. For the 
+ * image size we're using in this example, image width = 3 * genW
+ * and image height = 2 * genH.
+ * 
+ * @param genW    width of each HilbertGen 
+ * @param genH    height of each HilbertGen
+ * @return
+ */
+public MultiGen hilbertLoop3x2(int genW, int genH) {
+    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+  // list of x,y coordinates for placing gens from genList
+  ArrayList<int[]> offsetList = new ArrayList<int[]>();     
+  genList.add(new HilbertGen(genW, genH, AffineTransformType.FX270));
   offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.NADA));
-  offsetList.add(new int[] { genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX90));
-  offsetList.add(new int[] { 2 * genWidth, 0 });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX90));
-  offsetList.add(new int[] { 2 * genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.R180));
-  offsetList.add(new int[] { genWidth, genHeight });
-  genList.add(new HilbertGen(genWidth, genHeight, AffineTransformType.FX270));
-  offsetList.add(new int[] { 0, genHeight });
+  genList.add(new HilbertGen(genW, genH, AffineTransformType.NADA));
+  offsetList.add(new int[] { genW, 0 });
+  genList.add(new HilbertGen(genW, genH, AffineTransformType.FX90));
+  offsetList.add(new int[] { 2 * genW, 0 });
+  genList.add(new HilbertGen(genW, genH, AffineTransformType.FX90));
+  offsetList.add(new int[] { 2 * genW, genH });
+  genList.add(new HilbertGen(genW, genH, AffineTransformType.R180));
+  offsetList.add(new int[] { genW, genH });
+  genList.add(new HilbertGen(genW, genH,AffineTransformType.FX270));
+  offsetList.add(new int[] { 0, genH });
+  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
-
 
 public int[] getColors() {
   int[] colorWheel = new int[mapper.getSize()];
