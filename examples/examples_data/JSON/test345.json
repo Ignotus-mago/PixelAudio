@@ -117,10 +117,15 @@
   "comments": "--- An 8-operator color wave synth ---",
   "filename": "test345.mp4",
   "stop": 432,
-  "scanner": 2,
+  "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": true,
   "histoHigh": 246,
   "histoLow": 5,
   "steps": 432,
-  "gamma": 1.4
+  "gamma": 1.399999976158142
 }

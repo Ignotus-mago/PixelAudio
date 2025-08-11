@@ -62,9 +62,10 @@
   "filename": "test276c.mp4",
   "stop": 384,
   "dataFormat": 2,
+  "header": {"PXAU": "WSYN"},
   "scaleHisto": false,
-  "histoHigh": 254,
-  "histoLow": 1,
+  "histoHigh": 246,
+  "histoLow": 5,
   "steps": 192,
   "gamma": 0.4000000059604645
 }

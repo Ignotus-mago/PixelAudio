@@ -118,7 +118,11 @@
   "filename": "test346.mp4",
   "stop": 480,
   "dataFormat": 2,
-  "scanner": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
   "histoHigh": 233,
   "histoLow": 8,

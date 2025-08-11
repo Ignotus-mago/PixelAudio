@@ -118,6 +118,7 @@
   "filename": "test139zed.mp4",
   "stop": 720,
   "dataFormat": 2,
+  "header": {"PXAU": "WSYN"},
   "scaleHisto": true,
   "histoHigh": 246,
   "histoLow": 5,

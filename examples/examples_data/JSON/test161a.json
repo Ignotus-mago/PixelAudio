@@ -118,9 +118,13 @@
   "filename": "test161c.mp4",
   "stop": 576,
   "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz."
+  },
   "scaleHisto": false,
-  "histoHigh": 246,
-  "histoLow": 5,
+  "histoHigh": 254,
+  "histoLow": 1,
   "steps": 576,
   "gamma": 1.2000000476837158
 }

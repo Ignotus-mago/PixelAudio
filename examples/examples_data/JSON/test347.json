@@ -57,15 +57,19 @@
       "dc": 0
     }
   ],
-  "blendFactor": 0.60,
+  "blendFactor": 0.6000000238418579,
   "comments": "--- Four operators, color phasing and pattern shifting. ",
   "filename": "test347.mp4",
   "stop": 288,
   "dataFormat": 2,
-  "scanner": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": true,
   "histoHigh": 233,
   "histoLow": 8,
   "steps": 288,
-  "gamma": 1.4
+  "gamma": 1.399999976158142
 }
