@@ -1,7 +1,10 @@
+import processing.sound.*;
+
 /**
  * AudioCapture shows how you can capture streaming audio from live input or from a file.
- * The live input in the Processing IDE seems to be limited to the built-in microphone. Live input 
- * is not available in the Eclipse IDE. 
+ * The live input in the Processing IDE seems to be limited to the built-in microphone. 
+ * Live input is not available for Processing running in the Eclipse IDE. 
+ * I'm sure there are some Java workarounds for both situations. 
  * 
  * Press the 'p' key to toggle between live streaming from the built-in microphone and streaming from a file. 
  * Press the spacebar to record audio from the current stream into the audio buffer and write it to the screen.
@@ -40,8 +43,10 @@ AudioOutput audioOut;
 MultiChannelBuffer audioBuffer;
 /** A Minim audio sampler to construct a sampling instrument */
 Sampler audioSampler;
+/** An audio recorder for capturing input from the microphone */
+AudioRecorder recorder;
 /** Our homemade audio sampling instrument */
-SamplerInstrument instrument;
+WFInstrument instrument;
 /** A source for streaming audio from a file */
 AudioPlayer anthem;
 /** The class that captures audio for us */
@@ -53,7 +58,7 @@ int[] rgbSignal;
 int audioLength;
 /** audio sampling rate */
 int sampleRate = 44100;
-/** duration of a sample played by the SamplerInstrument, in seconds */
+/** duration of a sample played by the WFInstrument, in seconds */
 float sampleLength = 1.0f;
 /** ADSR and parameters */
 ADSR adsr;
@@ -78,6 +83,9 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   initMapper();
   mapSize = mapper.getSize();
+  Sound.list();
+  Sound.inputDevice(6);
+  Sound.outputDevice(6);
   minim = new Minim(this);
   initAudio();
   showHelp();
@@ -121,17 +129,26 @@ public void initAudio() {
   String daPath = sketchPath("") + "../examples_data/";
   println("daPath: ", daPath);
   anthem = minim.loadFile(daPath + "youthorchestra.wav");
-  anthem.loop();
-  anthem.pause();
 }  
 
 public void draw() {
   image(mapImage, 0, 0);
-  textSize(18);
-  text("Listening is currently " + listening + ".", 6, 18);
-  if (listening)
+  showAudioStatus();
+  if (listening) {
     drawSignal();
+  }
   drawInput();
+}
+
+public void rewindAudioPlayer(AudioPlayer player, boolean playAgain) {
+  player.cue(0);
+  if (playAgain) player.play();
+}
+
+public void showAudioStatus() {
+  textSize(18);
+  text("Listening is " + listening + "; playing is " + anthem.isPlaying() +" at "+ anthem.position() 
+        +" of "+ anthem.length(), 6, 18);    
 }
 
 public void keyPressed() {
@@ -148,8 +165,17 @@ public void keyPressed() {
       if (listenLive)
         anthem.pause();
       else
-        anthem.play();
+        anthem.loop();
     }
+    break;
+  case 'm':
+    if (anthem.isMuted()) {
+      anthem.unmute();
+    }
+    else {
+      anthem.mute();
+    }
+    println("==== v ===");
     break;
   case 'h':
     break;
@@ -183,9 +209,9 @@ public void toggleListening() {
 
 public void mousePressed() {
   if (listening) {
-    toggleListening();
-    if (anthem.isPlaying())
-      anthem.pause();
+    //toggleListening();
+    //if (anthem.isPlaying())
+    //  anthem.pause();
   }
   // get the position in the audio buffer that corresponds to the pixel location in the image
   int samplePos = mapper.lookupSample(mouseX, mouseY);
@@ -213,7 +239,7 @@ public int playSample(int samplePos) {
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
   // println("----->>> audioBuffer size = "+ audioBuffer.getBufferSize());
-  this.instrument = new SamplerInstrument(audioOut, audioSampler, adsr);
+  this.instrument = new WFInstrument(audioOut, audioSampler, adsr);
   // play command takes a duration in seconds
   float dur = duration / (float) (sampleRate);
   instrument.play(dur);

@@ -1,14 +1,14 @@
 // ------------------------------------------- //
-//          SAMPLER INSTRUMENT CLASS           //
+//         SAMPLER INSTRUMENT CLASS            //
 // ------------------------------------------- //
 
 //using minim's Instrument interface
-public class SamplerInstrument implements Instrument {
+public class WFInstrument implements Instrument {
   AudioOutput audioOut;
   Sampler sampler;
   ADSR adsr;
 
-  SamplerInstrument(AudioOutput audioOut, Sampler sampler, ADSR adsr) {
+  public WFInstrument(AudioOutput audioOut, Sampler sampler, ADSR adsr) {
     this.audioOut = audioOut;
     this.sampler = sampler;
     this.adsr = adsr;
@@ -26,7 +26,7 @@ public class SamplerInstrument implements Instrument {
     // Trigger the ADSR envelope by calling noteOn()
     // Duration of 0.0 means the note is sustained indefinitely
     // Duration should be in seconds
-    // println("----->>> SamplerInstrument.play("+ duration +")");
+    // println("----->>> WFInstrument.play("+ duration +")");
     noteOn(duration);
   }
 
@@ -74,4 +74,5 @@ public class SamplerInstrument implements Instrument {
   public void setADSR(ADSR adsr) {
     this.adsr = adsr;
   }
+
 }

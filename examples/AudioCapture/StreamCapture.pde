@@ -1,3 +1,7 @@
+// ------------------------------------------- //
+//           STREAM CAPTURE CLASS              //
+// ------------------------------------------- //
+
 /**
  * A simple class for obtaining samples from an audio source that is 
  * either a live stream or a stream from a file. In Processing, the 
