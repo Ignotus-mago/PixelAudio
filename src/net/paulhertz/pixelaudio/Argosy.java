@@ -41,7 +41,7 @@ import java.util.Arrays;
  * do not have to be the same size. 
  * </p><p>
  * TODO implement pixel offset
- * TODO interpolating version of Argosy patterns
+ * TODO interpolating version of Argosy patterns, with floating point pattern values
  * TODO dynamic functional version of patterns and other parameters
  * TODO perhaps filling should permit one less gap than repetitions of pattern -- the first and last pattern will abut
  *      more precisely, we should provide conditions for partial filling (but not in version 1).

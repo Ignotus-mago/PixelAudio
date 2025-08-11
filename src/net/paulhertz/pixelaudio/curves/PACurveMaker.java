@@ -27,6 +27,9 @@ import processing.core.PGraphics;
 //TODO provide multiple ways that eventPoints and brushPoly can work in PACurveMaker and in apps that use PACurveMaker instances:
 //sometimes we'll want dense eventPoints, but leave brushPoly low-res. We'll consider how to vary events over playback.
 //we can also consider how the time interval of a PACurveMaker instance could affect its playback.
+//TODO JSON I/O: essential variables are dragPoints, epsilon, dragTimes. It's useful to save bezierBias and eventSteps. 
+//One might also save curve data, but that is proper to PABezShape. When planting audio, the data used for the plant is critical. 
+//That would seem to include the curve, reconstructed, and the curve points. Finally, one might consider the drawing properties. 
 
 
 /**
