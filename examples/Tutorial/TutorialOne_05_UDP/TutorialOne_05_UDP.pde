@@ -241,6 +241,7 @@ float releaseTime = 0.5f;
 // interaction variables for audio
 int sampleX;                    // keep track of coordinates associated with audio samples
 int sampleY;
+boolean isIgnoreOutsideBounds = true;      // set to true to ignore points outside bounds when drawing
 ArrayList<TimedLocation> timeLocsArray;    // a list of timed events 
 
 

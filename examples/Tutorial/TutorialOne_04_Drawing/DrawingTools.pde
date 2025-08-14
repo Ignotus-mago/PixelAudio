@@ -13,9 +13,6 @@ public void initAllPoints() {
   startTime = millis();
   allTimes.add(startTime);
   addPoint();
-  sampleX = mouseX;
-  sampleY = mouseY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);      
 }
 
 /**
@@ -30,23 +27,27 @@ public void handleMousePressed() {
   } 
   else {
     // handle audio generation in response to a mouse click
-    audioMousePressed(mouseX, mouseY);
+      audioMousePressed(PApplet.constrain(mouseX, 0, width-1), PApplet.constrain(mouseY, 0, height-1));
   }
 }
 
 /**
- * While user is dragging the mouses and isDrawMode == true, accumulates new points
- * to allPoints and event times to allTimes.
+ * While user is dragging the mouse and isDrawMode == true, accumulates new points
+ * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
+ * We constrain points outside the bounds of the display window. An alternative approach 
+ * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural" 
+ * appearance for fast drawing. 
  */
 public void addPoint() {
   // we do some very basic point thinning to eliminate successive duplicate points
   if (mouseX != currentPoint.x || mouseY != currentPoint.y) {
-    currentPoint = new PVector(mouseX, mouseY);
+    if (isIgnoreOutsideBounds && (mouseX < 0 || mouseX >= width || mouseY < 0 || mouseY >= height)) return;
+    sampleX = PApplet.constrain(mouseX, 0, width-1);
+    sampleY = PApplet.constrain(mouseY, 0, height-1);
+    currentPoint = new PVector(sampleX, sampleY);
     allPoints.add(currentPoint);
     allTimes.add(millis());
-    sampleX = mouseX;
-    sampleY = mouseY;
-    samplePos = mapper.lookupSample(sampleX, sampleY);      
+    samplePos = mapper.lookupSample(sampleX, sampleY);
   }
 }
 
@@ -85,6 +86,7 @@ public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime)
  * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
  * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from 
  * variables in the calling class (TutorialOneDrawing, here). 
+ * Sets sampleX, sampleY and samplePos.
  */
 public void initCurveMaker() {
   curveMaker = PACurveMaker.buildCurveMaker(allPoints);
@@ -99,8 +101,8 @@ public void initCurveMaker() {
   playPoints();
   curveMaker.setDragTimes(reconfigureTimeList(allTimes));
   this.brushShapesList.add(curveMaker);
-  sampleX = mouseX;
-  sampleY = mouseY;
+  sampleX = PApplet.constrain(mouseX, 0, width-1);
+  sampleY = PApplet.constrain(mouseY, 0, height-1);
   samplePos = mapper.lookupSample(sampleX, sampleY);
 }
 

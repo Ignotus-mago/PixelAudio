@@ -33,6 +33,7 @@ public void renderSignals() {
 }
 /**
  * Typically called from mousePressed with mouseX and mouseY, generates audio events.
+ * Sets sampleX, sampleY and samplePos.
  * 
  * @param x    x-coordinate within a PixelAudioMapper's width
  * @param y    y-coordinate within a PixelAudioMapper's height

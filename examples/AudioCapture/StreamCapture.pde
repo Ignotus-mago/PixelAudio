@@ -4,10 +4,24 @@
 
 /**
  * A simple class for obtaining samples from an audio source that is 
- * either a live stream or a stream from a file. In Processing, the 
- * live stream is pretty much confined to the built-in mic in MacOS, 
- * and works only in the Processing IDE--not in Eclipse. Implements the 
+ * either a live stream or a stream from a file. Implements the 
  * AudioListener interface from the Minim audio library for Processing. 
+ * StreamCapture is designed as a subclass of a parent class that declares:
+ * 
+ *   float[] audioSignal;
+ *   MultiChannelBuffer audioBuffer;
+ * 
+ * As samples come in, they are written to audioSignal and to 
+ * channel 0 in audioBuffer. 
+ * 
+ * Where you can obtain an audio stream depends on your OS and hardware. 
+ * With the Sound library for Processing installed you can get
+ * a list of available inputs and outputs. In MacOS, you can use the BlackHole 
+ * virtual patch bay to route audio to or from Max and other applications. 
+ * In MacOS, use the System Settings Sound tab to control signal routing. 
+ * You can do something similar in Windows, but the setup and commands 
+ * will be different. 
+ * 
  */
 public class StreamCapture implements AudioListener {
   private float[] left;
