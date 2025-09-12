@@ -51,17 +51,32 @@ public void audioMousePressed(int x, int y) {
 }
   
 /**
- * Plays an audio sample.
+ * Plays an audio sample using a minim Sampler object wrapped in a WFInstrument. 
+ * Setting the isCopyBuffer flag to true will provide WFInstrument with a copy
+ * of MultiChannelBuffer buffer, avoiding noise and artifacts caused by changing 
+ * the signal during animation and other events. If you want the artifacts, set
+ * global variable isCopyBuffer to false.
  * 
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
  * @param amplitude    amplitude of the sample on playback
  * @param adsr         an ADSR envelope for the sample
- * @return the calculated sample length in samples
+ * @return             the calculated sample length in samples
  */
 public int playSample(MultiChannelBuffer buffer, int samplePos, int samplelen, float amplitude, ADSR adsr) {
   // println("--- play "+ twoPlaces.format(amplitude));
-  audioSampler = new Sampler(buffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling
+  MultiChannelBuffer localBuffer;
+  if (this.isCopyBuffer) {
+     localBuffer = new MultiChannelBuffer(buffer.getBufferSize(), 1);
+     float[] signal = new float[buffer.getBufferSize()];
+     System.arraycopy(buffer.getChannel(0), 0, signal, 0, buffer.getBufferSize());
+     // localBuffer.set(buffer);  // apparently just points to other buffer, not a deep copy
+     localBuffer.setChannel(0, signal);
+  }
+  else {
+    localBuffer = buffer;
+  }
+  audioSampler = new Sampler(localBuffer, sampleRate, 8); // create a Minim Sampler from the localBuffer sampleRate sampling
                              // rate, for up to 8 simultaneous outputs 
   audioSampler.amplitude.setLastValue(amplitude);    // set amplitude for the Sampler
   audioSampler.begin.setLastValue(samplePos);        // set the Sampler to begin playback at samplePos, which 

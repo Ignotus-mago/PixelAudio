@@ -47,21 +47,37 @@ public void audioMousePressed(int x, int y) {
     renderSignals();
     isBufferStale = false;
   }
-  playSample(playBuffer, samplePos, calcSampleLen(), 0.6f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+  ADSR envelope = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  playSample(playBuffer, samplePos, calcSampleLen(), 0.6f, envelope);          
 }
   
 /**
- * Plays an audio sample.
+ * Plays an audio sample using a minim Sampler object wrapped in a WFInstrument. 
+ * Setting the isCopyBuffer flag to true will provide WFInstrument with a copy
+ * of MultiChannelBuffer buffer, avoiding noise and artifacts caused by changing 
+ * the signal during animation and other events. If you want the artifacts, set
+ * isCopyBuffer to false. 
  * 
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
  * @param amplitude    amplitude of the sample on playback
- * @param adsr         an ADSR envelope for the sample
- * @return the calculated sample length in samples
+ * @param adsr      an ADSR envelope for the sample
+ * @return        the calculated sample length in samples
  */
 public int playSample(MultiChannelBuffer buffer, int samplePos, int samplelen, float amplitude, ADSR adsr) {
   // println("--- play "+ twoPlaces.format(amplitude));
-  audioSampler = new Sampler(buffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling
+  MultiChannelBuffer localBuffer;
+  if (this.isCopyBuffer) {
+     localBuffer = new MultiChannelBuffer(buffer.getBufferSize(), 1);
+     float[] signal = new float[buffer.getBufferSize()];
+     System.arraycopy(buffer.getChannel(0), 0, signal, 0, buffer.getBufferSize());
+     // localBuffer.set(buffer);  // apparently just points to other buffer, not a deep copy
+     localBuffer.setChannel(0, signal);
+  }
+  else {
+    localBuffer = buffer;
+  }
+  audioSampler = new Sampler(localBuffer, sampleRate, 8); // create a Minim Sampler from the localBuffer sampleRate sampling
                              // rate, for up to 8 simultaneous outputs 
   audioSampler.amplitude.setLastValue(amplitude);    // set amplitude for the Sampler
   audioSampler.begin.setLastValue(samplePos);        // set the Sampler to begin playback at samplePos, which 
@@ -69,7 +85,7 @@ public int playSample(MultiChannelBuffer buffer, int samplePos, int samplelen, f
   int releaseDuration = (int) (releaseTime * sampleRate); // calculate the release time.
   if (samplePos + samplelen >= mapSize) {
     samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
-    println("----->>> sample length = " + samplelen);
+    // println("----->>> sample length = " + samplelen);
   }
   int durationPlusRelease = this.samplelen + releaseDuration;
   int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1

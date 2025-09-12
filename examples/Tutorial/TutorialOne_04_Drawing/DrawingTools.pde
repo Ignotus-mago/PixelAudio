@@ -172,7 +172,8 @@ public synchronized void runCurveEvents() {
         sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
         sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
         int pos = mapper.lookupSample(sampleX, sampleY);
-        playSample(playBuffer, pos, calcSampleLen(), 0.6f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+        ADSR envelope = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+        playSample(playBuffer, samplePos, calcSampleLen(), 0.6f, envelope);          
         tl.setStale(true);
         // println("----- ");
       } 

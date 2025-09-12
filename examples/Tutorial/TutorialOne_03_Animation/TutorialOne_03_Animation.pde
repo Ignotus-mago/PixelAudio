@@ -22,6 +22,15 @@
  *     add doRain method and key command to trigger rain
  *     
  * Still to come, as the tutorial advances:
+ * -- improved audio when image is animating
+ *    You may have noticed that audio events that happen when the image is animating 
+ *    have more noise than when they are holding still. That's because we are updating
+ *    the audio buffer and the image while animation is ongoing. Audio runs in a separate 
+ *    thread, and happens in between display frames. Our updates happen on every frame, slower
+ *    than the audio, but they introduce discontinuities into the source of the audio. If 
+ *    you like glitch, you may like the effect; however, it would be useful to have a way 
+ *    to get clean audio. In the next tutorial, TutorialOne_04_Drawing, we provide
+ *    a solution. 
  * -- drawing to trigger audio events
  * -- UDP communication with Max and other media applications
  * 
@@ -99,7 +108,7 @@ int imageFileHeight;
 Minim minim;                    // library that handles audio 
 AudioOutput audioOut;           // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-int sampleRate = 48000;         // a critical value for display and audio, see the setup method
+float sampleRate = 48000;       // a critical value for display and audio, see the setup method
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image

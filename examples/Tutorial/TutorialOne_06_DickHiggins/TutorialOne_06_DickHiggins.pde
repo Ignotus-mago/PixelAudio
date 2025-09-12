@@ -137,7 +137,7 @@ int imageFileHeight;
 Minim minim;                    // library that handles audio 
 AudioOutput audioOut;           // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-int sampleRate = 48000;         // a critical value for display and audio, see the setup method
+float sampleRate = 48000;       // sample rate for audio playback, set when you load an audio file
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
@@ -179,6 +179,7 @@ boolean isRecordingVideo = false;    // are we recording? (only if we are animat
 int videoFrameRate = 24;        // fps, frames per second
 int step;                       // number of current step in animation loop
 VideoExport videx;   // hamoid library class for video export (requires ffmpeg)
+boolean isCopyBuffer = true;      // flag for noise reduction during animation 
   
 /* ------------------------------------------------------------------ */
 /*                         DRAWING VARIABLES                          */

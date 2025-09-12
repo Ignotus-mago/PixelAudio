@@ -1,7 +1,7 @@
 /*
  * This example application continues the Tutorial One sequence for the PixelAudio
  * library for Processing. To the previous tools for reading and writing and transcoding
- * audio and image files, triggering audio events, and animating pixels and changing
+ * audio and image files, triggering audio events, and animating pixels to change
  * audio sample order, it adds the capability of drawing in the display window to 
  * create brush shapes that can be used to trigger audio events. 
  * 
@@ -28,10 +28,15 @@
  *          Draw some more brushstrokes. 
  *          Press 'd' to turn drawing off.
  *          Click on a brushstroke to activate it. 
- *                    
- *          NOTE: Apparent limits on how many audio events can be playing simultaneously suggest that 3 
- *          is the maximum number of actively playing brushstrokes. Otherwise, noise and glitching happen.
- *          I'm working on figuring out how to get around this limit. 
+ *          
+ *     -- We resolve a problem with noisy audio that happens when we are running animation. This
+ *        happens because animation changes the audio buffer and the image while the audio plays
+ *        in a separate thread. In effect, we're changing the audio while it's playing. In this
+ *        instance, we solve the problem in the playSample() method by providing a stable copy
+ *        of the audio buffer, one that will not be changed, to the WFInstrument instance that
+ *        generates audio events. This somewhat of a brute force method, which we will solve in
+ *        a better way in a later example, MusicBoxBuffer. You can turn noise reduction off and
+ *        on with the 'n' key command. The noise is only noticeable when animation is running.                   
  *          
  *     -- We add several new methods, in the DRAWING METHODS section:
  *     
@@ -81,17 +86,15 @@
  * Press ' ' to start or stop animation.
  * Press 'd' to turn drawing on or off.
  * Press 'm' to turn mouse tracking on or off.
- * Press 'c' to apply color from an image file to the display image.
- * Press 'k' to apply the hue and saturation in the colors array to mapImage.
+ * Press 'c' to apply color from image file to display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage .
  * Press 'o' or 'O' to open an audio or image file.
+ * Press 'n' or 'N' to reduce audio noise during animation by setting isCopyBuffer to true (default) or false.
  * Press 'h' or 'H' to show help and key commands.
  * Press 'V' to record a video.
- *
- *
- * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
- * images and audio to different color channels. 
  * 
  */
+
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -164,7 +167,7 @@ int imageFileHeight;
 Minim minim;                    // library that handles audio 
 AudioOutput audioOut;           // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-int sampleRate = 48000;         // a critical value for display and audio, see the setup method
+float sampleRate = 48000;       // sample rate for audio playback, set when an audio file is loaded
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
@@ -196,7 +199,7 @@ ArrayList<TimedLocation> timeLocsArray;    // a list of timed events
 /*                   ANIMATION AND VIDEO VARIABLES                    */
 /* ------------------------------------------------------------------ */
 
-int shift = 4;                  // number of pixels to shift the animation
+int shift = 64;                  // number of pixels to shift the animation
 boolean isAnimating = false;
 boolean oldIsAnimating;
 boolean isTrackMouse = true;
@@ -206,6 +209,8 @@ boolean isRecordingVideo = false;    // are we recording? (only if we are animat
 int videoFrameRate = 24;        // fps, frames per second
 int step;                       // number of current step in animation loop
 VideoExport videx;   // hamoid library class for video export (requires ffmpeg)
+boolean isCopyBuffer = true;      // flag for noise reduction during animation 
+
   
 /* ------------------------------------------------------------------ */
 /*                         DRAWING VARIABLES                          */
@@ -477,6 +482,10 @@ public void parseKey(char key, int keyCode) {
   case 'o': case 'O': // open an audio or image file
     chooseFile();
     break;
+  case 'n': case 'N': // reduce noise when animating, or not
+    isCopyBuffer = !isCopyBuffer;
+    println("---- isCopyBuffer is "+ isCopyBuffer);
+    break;
   case 'h': case 'H':
     showHelp();
     break;
@@ -494,11 +503,7 @@ public void parseKey(char key, int keyCode) {
     break;
   }
 }
-/**
- * to generate help output, run RegEx search/replace on parseKey case lines with:
- * // case ('.'): // (.+)
- * // println(" * Press $1 to $2.");
- */
+
 public void showHelp() {
   println(" * Press ' ' to start or stop animation.");
   println(" * Press 'd' to turn drawing on or off.");
@@ -506,6 +511,7 @@ public void showHelp() {
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
   println(" * Press 'o' or 'O' to open an audio or image file.");
+  println(" * Press 'n' or 'N' to reduce audio noise during animation by setting isCopyBuffer to true (default) or false.");
   println(" * Press 'h' or 'H' to show help and key commands.");
   println(" * Press 'V' to record a video.");
 }

@@ -144,6 +144,8 @@ public void loadAudioFile(File audFile) {
   float sampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), playBuffer);
   // sampleRate > 0 means we read audio from the file
   if (sampleRate > 0) {
+    this.sampleRate = sampleRate;
+    println("---- sample rate is "+ this.sampleRate);
     // save the length of the buffer as read from the file, for future use
     this.audioFileLength = playBuffer.getBufferSize();
     // resize the buffer to mapSize, if necessary -- signal will not be overwritten

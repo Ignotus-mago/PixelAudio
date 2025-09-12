@@ -136,6 +136,7 @@
  * Press 'c' to apply color from image file to display image.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage .
  * Press 'o' or 'O' to open an audio or image file.
+ * Press 'n' or 'N' to reduce audio noise during animation by setting isCopyBuffer to true (default) or false.
  * Press 'h' or 'H' to show help and key commands.
  * Press 'V' to record a video.
  * 
@@ -215,7 +216,7 @@ int imageFileHeight;
 Minim minim;                    // library that handles audio 
 AudioOutput audioOut;           // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-int sampleRate = 48000;         // a critical value for display and audio, see the setup method
+float sampleRate = 48000;       // sample rate for audio files
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
@@ -259,6 +260,7 @@ boolean isRecordingVideo = false;    // are we recording? (only if we are animat
 int videoFrameRate = 24;        // fps, frames per second
 int step;                       // number of current step in animation loop
 VideoExport videx;   // hamoid library class for video export (requires ffmpeg)
+boolean isCopyBuffer = true;      // flag for noise reduction during animation 
   
 /* ------------------------------------------------------------------ */
 /*                         DRAWING VARIABLES                          */
@@ -555,6 +557,10 @@ public void parseKey(char key, int keyCode) {
   case 'o': case 'O': // open an audio or image file
     chooseFile();
     break;
+  case 'n': case 'N': // reduce noise when animating, or not
+    isCopyBuffer = !isCopyBuffer;
+    println("---- isCopyBuffer is "+ isCopyBuffer);
+    break;
   case 'h': case 'H':
     showHelp();
     break;
@@ -585,6 +591,7 @@ public void showHelp() {
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
   println(" * Press 'o' or 'O' to open an audio or image file.");
+  println(" * Press 'n' or 'N' to reduce audio noise during animation by setting isCopyBuffer to true (default) or false.");
   println(" * Press 'V' to record a video.");
   println(" * Press 'h' or 'H' to show help and key commands.");
 }

@@ -14,6 +14,30 @@
  * 
  * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
  * images and audio to different color channels. 
+ /*
+ * This example application completes the first part of Tutorial One for the PixelAudio 
+ * library for Processing. It provides methods for generating a rainbow color array that
+ * can reveal the structure of an audio path, a curve that maps audio signals onto an image.
+ * It can open and display audio and image files, transcode image pixel data to audio samples
+ * and transcode audio samples to image pixel data, and save audio and image files. It can 
+ * respond to mouse clicks by playing the audio samples corresponding to the click location
+ * in the display image. It is designed to be a good starting place for your own coding. 
+ *
+ * Still to come, as the tutorial advances:
+ * -- animation and saving to video
+ * -- drawing to trigger audio events
+ * -- UDP communication with Max and other media applications
+ * 
+ * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
+ * images and audio to different color channels. 
+ * 
+ * KEY COMMANDS 
+ * 
+ * Press 'c' to apply color from image file to display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage.
+ * Press 'o' or 'O' to open an audio or image file.
+ * Press 'h' or 'H' to show help and key commands in console.
+ * 
  * 
  */
 
