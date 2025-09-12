@@ -19,10 +19,12 @@
 package net.paulhertz.pixelaudio;
 
 import java.awt.Color;
+import java.io.File;
 import java.util.ArrayList;
 
 import processing.core.PApplet;
-
+import processing.data.JSONArray;
+import processing.data.JSONObject;
 import net.paulhertz.pixelaudio.WaveData.WaveState;
 
 /**
@@ -30,6 +32,7 @@ import net.paulhertz.pixelaudio.WaveData.WaveState;
  */
 public class WaveSynthBuilder {
 	public static final double semitoneFac = Math.pow(2, 1 / 12.0);
+	public static int animSteps = 720;
 
 	/**
 	 * Generates an ArrayList of WaveData objects to be used by a WaveSynth to
@@ -453,6 +456,236 @@ public class WaveSynthBuilder {
 		}
 		System.out.println(sb.toString());
 	}
+	
+	
+	// static methods for JSON IO
+
+	//-----------------------------------------------------------//
+	/* ----->>>           BEGIN JSON FILE I/O           <<<----- */
+	//-----------------------------------------------------------//
+	
+/*
+	// select a file of WaveData objects in JSON format to open
+	public void loadWaveData() {
+		File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
+		selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
+	}
+*/
+	
+	/**
+	 * @param selection    a file containing JSON data
+	 * @param json         a JSONObject that will be initialized with data from the file
+	 * @param synth        a WaveSynth object whose fields will be filled out from the JSON data
+	 * @param isStrict     if true, return false if no WaveSynth header is found in the JSON file
+	 * @return             true if the File 
+	 */
+	public static boolean getJSONFromFile(File selection, JSONObject json, WaveSynth synth, boolean isStrict) {
+		if (selection == null) {
+			System.out.println("Window was closed or the user hit cancel.");
+			return false;
+		}
+		// println("User selected " + selection.getAbsolutePath());
+		json = PApplet.loadJSONObject(selection);
+		boolean goodHeader = checkJSONHeader(json, "PXAU", "WSYN");
+		if (goodHeader) {
+			System.out.println("--->> JSON file contains WaveSynthEditor data. It should load correctly.");
+		}
+		else {
+			if (isStrict) {
+				System.out.println("--->> JSON file may not contain WaveSynthEditor data. WaveSynth was not initialized.");
+				return false;
+			}
+			else {
+				System.out.println("--->> JSON file may not contain WaveSynthEditor data. Will try to initialize WaveSynth,anyhow.");
+			}
+		}
+		setWaveSynthFromJSON(json, synth);
+		return true;
+	}
+	
+	public static boolean getJSONFromFile(File selection, JSONObject json, WaveSynth synth) {
+		return getJSONFromFile(selection, json, synth, false);
+	}
+
+	
+	public static boolean checkJSONHeader(JSONObject json, String key, String val) {
+		JSONObject header = (json.isNull("header") ? null : json.getJSONObject("header"));
+		String pxau;
+		if (header != null) {
+			pxau = (header.isNull(key)) ? "" : header.getString(key);	
+		}
+		else {
+			pxau = (json.isNull(key)) ? "" : json.getString(key);
+		}
+		if (pxau.equals(val)) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	/**
+	 * Sets the fields of a WaveSynth using values stored in a JSON object. 
+	 * @param json		a JSON object, typically read in from a file
+	 * @param synth		a WaveSynth
+	 */
+	public static void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
+		// set WaveSynth properties
+		int animSteps = (json.isNull("steps")) ? 240 : json.getInt("steps");
+		synth.setAnimSteps(animSteps);
+		int animStop = (json.isNull("stop")) ? WaveSynthBuilder.animSteps : json.getInt("stop");
+		synth.setStop(animStop);
+		float myGamma = (json.isNull("gamma")) ? 1.0f : json.getFloat("gamma");
+		synth.setGamma(myGamma);
+		String comments = (json.isNull("comments")) ? "" : json.getString("comments");
+		synth.setComments(comments);
+		synth.setGain(json.isNull("blendFactor") ? 0.5f : json.getFloat("blendFactor"));
+		synth.setVideoFilename((json.isNull("filename")) ? "wavesynth.mp4" : json.getString("filename"));
+		synth.setScaleHisto((json.isNull("scaleHisto")) ? false : json.getBoolean("scaleHisto"));
+		if (synth.isScaleHisto()) {
+			synth.setHistoHigh((json.isNull("histoHigh")) ? 255 : json.getInt("histoHigh"));
+			synth.setHistoLow((json.isNull("histoLow")) ? 0 : json.getInt("histoLow"));
+		}
+		// now load the JSON wavedata into ArrayList<WaveData> waveDataList
+		JSONArray waveDataArray = json.getJSONArray("waves");
+		int datalen = waveDataArray.size();
+		ArrayList<WaveData> waveDataList = new ArrayList<WaveData>(datalen);
+		for (int i = 0; i < datalen; i++) {
+			// load fields common to both old and new format
+			JSONObject waveElement = waveDataArray.getJSONObject(i);
+			float f = waveElement.getFloat("freq");
+			float a = waveElement.getFloat("amp");
+			float p = waveElement.getFloat("phase");
+			// float pInc = waveElement.getFloat("phaseInc");
+			float dc = 0.0f;
+			if (!waveElement.isNull("dc")) {
+				dc = waveElement.getFloat("dc");
+			}
+			JSONObject rgbColor = waveElement.getJSONObject("color");
+			int c = PixelAudioMapper.composeColor(rgbColor.getInt("r"), rgbColor.getInt("g"), rgbColor.getInt("b"));
+			float cycles;
+			cycles = waveElement.getFloat("cycles");
+			// frequency, amplitude, phase, dc, cycles, color, steps
+			WaveData wd = new WaveData(f, a, p, dc, cycles, c, animSteps);
+			waveDataList.add(wd);
+		}
+		synth.setWaveDataList(waveDataList);
+		synth.prepareAnimation();
+		synth.renderFrame(0);
+	}
+
+	/**
+	 * Returns supplied WaveSynth settings and WaveData list as a formated String.
+	 */
+	public static String waveSynthAsString(WaveSynth synth) {
+		java.nio.file.Path path = java.nio.file.Paths.get(synth.getVideoFilename());
+		StringBuffer sb = new StringBuffer();
+		String fname = path.getFileName().toString();
+		sb.append("\n--------=====>>> Current WaveSynth instance for file " + fname + " <<<=====--------\n");
+		sb.append("Animation steps: " + synth.getAnimSteps());
+		// println("Stop frame: "+ waveAnimal.getAnimSteps());
+		sb.append("gain: " + synth.getGain());
+		sb.append("gamma: " + synth.getGamma());
+		if (synth.isScaleHisto()) {
+			sb.append("scaleHisto: " + synth.isScaleHisto());
+			sb.append("histoLow: " + synth.getHistoLow());
+			sb.append("histoHigh: " + synth.getHistoHigh());
+		}
+		sb.append(fname);
+		sb.append("video filename: " + synth.getVideoFilename());
+		// println("WaveData list for: "+ videoFilename);
+		for (int i = 0; i < synth.waveDataList.size(); i++) {
+			WaveData wd = synth.waveDataList.get(i);
+			sb.append("  " + (i + 1) + ":: " + wd.toString());
+		}
+		sb.append("comments: " + synth.getComments() +"\n");
+		return sb.toString();
+	}
+	
+	public static void saveWaveSynthJSON(PApplet app, File selection, WaveSynth synth) {
+		if (selection == null) {
+			System.out.println("Window was closed or the user hit cancel.");
+			return;
+		}
+		System.out.println("User selected " + selection.getAbsolutePath());
+		String currentFileName;
+		// Do we have a .json at the end?
+		if (selection.getName().length() < 5
+				|| selection.getName().indexOf(".json") != selection.getName().length() - 5) {
+			// problem missing ".json"
+			currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
+		} else {
+			currentFileName = selection.getAbsolutePath();
+		}
+		// put WaveData objects into an array
+		JSONArray waveDataArray = new JSONArray();
+		JSONObject waveElement;
+		WaveData wd;
+		for (int i = 0; i < synth.waveDataList.size(); i++) {
+			wd = synth.waveDataList.get(i);
+			waveElement = new JSONObject();
+			waveElement.setInt("index", i);
+			waveElement.setFloat("freq", wd.freq);
+			waveElement.setFloat("amp", wd.amp);
+			waveElement.setFloat("phase", wd.phase);
+			waveElement.setFloat("phaseInc", wd.phaseInc);
+			waveElement.setFloat("cycles", wd.phaseCycles);
+			waveElement.setFloat("dc", wd.dc);
+			// BADSR settings
+			int[] rgb = PixelAudioMapper.rgbComponents(wd.waveColor);
+			JSONObject rgbColor = new JSONObject();
+			rgbColor.setInt("r", rgb[0]);
+			rgbColor.setInt("g", rgb[1]);
+			rgbColor.setInt("b", rgb[2]);
+			waveElement.setJSONObject("color", rgbColor);
+			// append wave data to array
+			waveDataArray.append(waveElement);
+		}
+		// put the array into an object that tracks other state variables
+		JSONObject stateData = new JSONObject();
+		stateData.setJSONObject("header", getWaveSynthJSONHeader());
+		// stateData.setString("PXAU", "WSYN");
+		stateData.setInt("steps", synth.animSteps);
+		stateData.setInt("stop", synth.getStop());
+		stateData.setFloat("blendFactor", synth.gain);
+		stateData.setInt("dataFormat", 2);
+		stateData.setString("comments", synth.comments);
+		// String videoName = selection.getName(); 
+		String videoName = synth.videoFilename;
+		if (videoName == null || videoName.equals("")) {
+			videoName = selection.getName();
+			if (videoName.indexOf(".json") != -1) {
+				videoName = videoName.substring(0, videoName.indexOf(".json")) + ".mp4";
+			} else {
+				videoName += ".mp4";
+			}
+		}
+		System.out.println("----->>> video name is " + videoName);
+		synth.videoFilename = videoName; // ???
+		stateData.setString("filename", videoName);
+		stateData.setFloat("gamma", synth.gamma);
+		stateData.setBoolean("scaleHisto", synth.isScaleHisto);
+		stateData.setFloat("histoHigh", synth.histoHigh);
+		stateData.setFloat("histoLow", synth.histoLow);
+		stateData.setJSONArray("waves", waveDataArray);
+		app.saveJSONObject(stateData, currentFileName);
+	}
+	
+	public static JSONObject getWaveSynthJSONHeader() {
+		// flag this JSON file as WaveSynthEditor data using a "PXAU" key with value "WSYN"
+		// add some other pertinent information
+		JSONObject header = new JSONObject();
+		header.setString("PXAU", "WSYN");
+		header.setString("description", "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.");
+		header.setString("PixelAudioURL", "https://github.com/Ignotus-mago/PixelAudio");
+		return header;
+	}
+
+	//-------------------------------------------//
+	//             END JSON FILE I/O             //
+	//-------------------------------------------//
+
 		
 
 }
