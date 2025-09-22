@@ -1,7 +1,7 @@
 /*
  * This example application completes the first part of Tutorial One for the PixelAudio 
  * library for Processing. It provides methods for generating a rainbow color array that
- * can reveal the structure of an audio path, a curve that maps audio signals onto an image.
+ * can reveal the structure of an signal path, a curve that maps audio signals onto an image.
  * It can open and display audio and image files, transcode image pixel data to audio samples
  * and transcode audio samples to image pixel data, and save audio and image files. It can 
  * respond to mouse clicks by playing the audio samples corresponding to the click location
@@ -103,7 +103,7 @@ int imageFileHeight;
  * 
  * Audio playback support is added with the audio variables and audio methods 
  * (below, in Eclipse, in a tab, in Processing). You will also need the 
- * WFInstrument and TimedLocation classes. In setup(), call initAudio(), then
+ * WFSamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
  * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
  * and call runTimeArray() in your draw method. 
  * 
@@ -111,28 +111,27 @@ int imageFileHeight;
  
 /** Minim audio library */
 Minim minim;                    // library that handles audio 
-AudioOutput audioOut;           // line out to sound hardware
+AudioOutput audioOut;           // output to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-int sampleRate = 48000;         // a critical value for display and audio, see the setup method
+float sampleRate = 48000;       // sample rate of audioOut, sample rate of most recently opened audio file
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
-float[] leftSamples;            // audio data for the left channel of a stereo file
-float[] rightSamples;           // audio data for the right channel of a stereo file
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
 // SampleInstrument setup
-float sampleScale = 4;      // 
-int sampleBase = (int) (sampleRate/sampleScale);
-int samplelen = (int) (sampleScale * sampleBase);
+int noteDuration = 1500;        // average sample synth note duration, milliseconds
+int samplelen;                  // calculated sample synth note length, samples
 Sampler audioSampler;           // minim class for sampled sound
-WFInstrument instrument;        // local class to wrap audioSampler
+WFSamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
 // ADSR and its parameters
-ADSR adsr;            // good old attack, decay, sustain, release
-float maxAmplitude = 0.7f;
-float attackTime = 0.8f;
-float decayTime = 0.5f;
-float sustainLevel = 0.125f;
-float releaseTime = 0.5f;
+ADSRParams adsrParams;          // wrapper for ADSR that keeps its values visible
+float maxAmplitude = 0.7f;      // 0..1
+float attackTime = 0.1f;        // seconds
+float decayTime = 0.3f;         // seconds
+float sustainLevel = 0.25f;     // 0..1
+float releaseTime = 0.1f;       // seconds
+ArrayList<ADSRParams> adsrList; // list of ADSR values
+boolean isRandomADSR = false;   // choose a random envelope from adsrList, or not
 
 // interaction variables for audio
 int sampleX;
@@ -167,6 +166,14 @@ public void setup() {
   initImages();
   initAudio();
   showHelp();
+}
+
+// turn off audio processing when we exit
+@Override
+public void stop() {
+  if (synth != null) synth.close();
+  if (minim != null) minim.stop();
+  super.stop();
 }
 
 /**
@@ -222,7 +229,7 @@ public void keyPressed() {
  * By moving key event handling outside the built-in keyPressed method, 
  * we make it possible to post key commands without an actual key event.
  * Methods and interfaces and even other threads can call parseKey(). 
- * This opens up many possibilities and a some dangers, too.  
+ * This opens up many possibilities and a some risks, too.  
  * 
  * @param key
  * @param keyCode
@@ -240,6 +247,11 @@ public void parseKey(char key, int keyCode) {
   case 'o': case 'O': // open an audio or image file
     chooseFile();
     break;
+  case 'r': case'R': // set isRandomADSR, to use default envelope or a random choice
+    isRandomADSR = !isRandomADSR;
+    String msg = isRandomADSR ? " synth uses a random ADSR" : " synth uses default ADSR";
+    println("---- isRandomADSR = "+ isRandomADSR +","+ msg);
+    break;
   case 'h': case 'H': // show help and key commands in console
     showHelp();
     break;
@@ -252,6 +264,7 @@ public void showHelp() {
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage.");
   println(" * Press 'o' or 'O' to open an audio or image file.");
+  println(" * Press 'r' or 'R' to tell synth to use default envelope or a random choice.");
   println(" * Press 'h' or 'H' to show help and key commands in console.");
 }
   

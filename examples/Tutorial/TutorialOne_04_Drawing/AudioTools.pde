@@ -56,7 +56,7 @@ public void audioMousePressed(int x, int y) {
  * Setting the isCopyBuffer flag to true will provide WFInstrument with a copy
  * of MultiChannelBuffer buffer, avoiding noise and artifacts caused by changing 
  * the signal during animation and other events. If you want the artifacts, set
- * isCopyBuffer to false. 
+ * isCopyBuffer to false. The 'n' key command turns noise reduction on or off. 
  * 
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)

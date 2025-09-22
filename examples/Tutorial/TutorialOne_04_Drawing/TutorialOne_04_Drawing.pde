@@ -144,6 +144,7 @@ String audioFilePath;
 String audioFileName;
 String audioFileTag;
 int audioFileLength;
+
 // image file
 File imageFile;
 String imageFilePath;
@@ -152,46 +153,48 @@ String imageFileTag;
 int imageFileWidth;
 int imageFileHeight;
 
+
 /* ------------------------------------------------------------------ */
 /*                          AUDIO VARIABLES                           */
 /* ------------------------------------------------------------------ */
 
 /*
+ * 
  * Audio playback support is added with the audio variables and audio methods 
  * (below, in Eclipse, in a tab, in Processing). You will also need the 
  * WFInstrument and TimedLocation classes. In setup(), call initAudio(), then
  * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
  * and call runTimeArray() in your draw method. 
+ * 
  */
+
 /** Minim audio library */
 Minim minim;                    // library that handles audio 
 AudioOutput audioOut;           // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-float sampleRate = 48000;       // sample rate for audio playback, set when an audio file is loaded
+float sampleRate = 48000;       // a critical value for display and audio, see the setup method
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
-float[] leftSamples;            // audio data for the left channel of a stereo file
-float[] rightSamples;           // audio data for the right channel of a stereo file
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
+
 // SampleInstrument setup
-float sampleScale = 4;          // factor in determining audio event duration
-int sampleBase = (int) (sampleRate/sampleScale);
-int samplelen = (int) (sampleScale * sampleBase);
+int noteDuration = 800;         // average sample synth note duration, milliseconds
+int samplelen;                  // calculated sample synth note length, samples
 Sampler audioSampler;           // minim class for sampled sound
-WFInstrument instrument;        // local class to wrap audioSampler
+WFSamplerInstrument synth;      // local class to wrap audioSampler
+
 // ADSR and its parameters
-ADSR adsr;                      // good old attack, decay, sustain, release
-float maxAmplitude = 0.7f;
-float attackTime = 0.8f;
-float decayTime = 0.5f;
-float sustainLevel = 0.125f;
-float releaseTime = 0.5f;
+ADSRParams adsr;                // good old attack, decay, sustain, release
+float maxAmplitude = 0.7f;      // 0..1
+float attackTime = 0.4f;        // seconds
+float decayTime = 0.0f;         // seconds, no decay
+float sustainLevel = 0.7f;      // 0..1, same as maxAmplitude
+float releaseTime = 0.4f;       // seconds, same as attack
 
 // interaction variables for audio
 int sampleX;                    // keep track of coordinates associated with audio samples
 int sampleY;
-boolean isIgnoreOutsideBounds = true;      // set to true to ignore points outside bounds when drawing
 ArrayList<TimedLocation> timeLocsArray;    // a list of timed events 
 
 
@@ -199,18 +202,17 @@ ArrayList<TimedLocation> timeLocsArray;    // a list of timed events
 /*                   ANIMATION AND VIDEO VARIABLES                    */
 /* ------------------------------------------------------------------ */
 
-int shift = 64;                  // number of pixels to shift the animation
+int shift = 64;        // number of pixels to shift the animation
 boolean isAnimating = false;
 boolean oldIsAnimating;
 boolean isTrackMouse = true;
 // animation variables
-int animSteps = 720;            // how many steps in an animation loop
+int animSteps = 720;          // how many steps in an animation loop
 boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
 int videoFrameRate = 24;        // fps, frames per second
-int step;                       // number of current step in animation loop
-VideoExport videx;   // hamoid library class for video export (requires ffmpeg)
+int step;                // number of current step in animation loop
+VideoExport videx;    // hamoid library class for video export (requires ffmpeg)
 boolean isCopyBuffer = true;      // flag for noise reduction during animation 
-
   
 /* ------------------------------------------------------------------ */
 /*                         DRAWING VARIABLES                          */
@@ -221,20 +223,20 @@ boolean isCopyBuffer = true;      // flag for noise reduction during animation
  * and draw Bezier curves and lines. It also provides very basic brushstroke modeling code. 
  * Unlike most of the code in PixelAudio, which avoids dependencies on Processing, the 
  * curves.* classes interface with Processing to draw to PApplets and PGraphics instances. 
- * See the PACurveMaker class for details of how drawing works. 
+ * See the CurveMaker class for details of how drawing works. 
  * 
  */
 
 // curve drawing and interaction
 public boolean isDrawMode = false;                  // is drawing on or not?
-public float epsilon = 4.0f;                        // controls how much reduction is applied to points
+public float epsilon = 2.0f;                        // controls how much reduction is applied to points
 public ArrayList<PVector> allPoints;                // all the points the user drew, thinnned
 public int dragColor = color(233, 199, 89, 128);    // color for initial drawing 
 public float dragWeight = 8.0f;                     // weight (brush diameter) of initial line drawing
 public int startTime;                               // start time for user drawing event
 public ArrayList<Integer> allTimes;                 // list for tracking user drawing times, for future use
 public PVector currentPoint;                        // most recent point in user drawing
-public int polySteps = 8;                           // number of steps in polygon representation of a Bezier curve
+public int polySteps = 5;              // number of steps in polygon representation of a Bezier curve
 public PACurveMaker curveMaker;                     // class for tracking and storing drawing data
 public ArrayList<PVector> eventPoints;              // list of points stored in or loaded from a PACurveMaker
 public ListIterator<PVector> eventPointsIter;       // iterator for eventPoints
@@ -248,7 +250,6 @@ int polyPointsColor = color(233, 199, 144, 192);    // color for polygon represe
 int activeBrushColor = color(144, 89, 55, 233);     // color for the active brush
 int readyBrushColor = color(34, 89, 55, 233);       // color for a brushstroke when ready to be clicked
 
-/* end drawing variables */
 
 // ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **  //
 

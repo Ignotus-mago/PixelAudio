@@ -1,6 +1,6 @@
 /*----------------------------------------------------------------*/
 /*                                                                */
-/*                     BEGIN AUDIO METHODS                        */
+/*                        AUDIO METHODS                           */
 /*                                                                */
 /*----------------------------------------------------------------*/
 
@@ -17,9 +17,41 @@ public void initAudio() {
   this.audioSignal = playBuffer.getChannel(0);
   this.audioLength = audioSignal.length;
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-  adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  adsrParams = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  initADSRList();
+  // create a WFSamplerInstrument, though playBuffer is all 0s at the moment
+  // adsrParams will be the default ADSR for the synth
+  synth = new WFSamplerInstrument(playBuffer, audioOut.sampleRate(), 16, audioOut, adsrParams);
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
+}
+
+public void initADSRList() {
+  adsrList = new ArrayList<ADSRParams>();
+  ADSRParams env0 = new ADSRParams(
+    0.7f,   // maxAmp
+    0.05f,  // fast attack (s)
+    0.1f,   // fast decay (s)
+    0.35f,  // sustain level
+    0.5f    // slow release (s)
+  );
+  ADSRParams env1 = new ADSRParams(
+    0.7f,   // maxAmp
+    0.4f,   // slow attack (s)
+    0.0f,   // no decay (s)
+    0.7f,   // sustain level
+    0.4f    // slow release (s)
+  );
+  ADSRParams env2 = new ADSRParams(
+    0.7f,   // maxAmp
+    0.75f,  // slow attack (s)
+    0.1f,   // decay (s)
+    0.6f,  // sustain level
+    0.05f    // release (s)
+  );
+  adsrList.add(env0);
+  adsrList.add(env1);
+  adsrList.add(env2);
 }
 
 /**
@@ -31,6 +63,7 @@ public void renderSignals() {
   playBuffer.setChannel(0, audioSignal);
   audioLength = audioSignal.length;
 }
+
 /**
  * Typically called from mousePressed with mouseX and mouseY, generates audio events.
  * 
@@ -47,11 +80,18 @@ public void audioMousePressed(int x, int y) {
     renderSignals();
     isBufferStale = false;
   }
-  playSample(playBuffer, samplePos, calcSampleLen(), 0.6f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+  if (isRandomADSR) {
+    adsrParams = adsrList.get((int)random(3));
+    println("-- "+ adsrParams.toString());
+    playSample(samplePos, calcSampleLen(), 0.6f, adsrParams);
+  }
+  else {
+    playSample(samplePos, calcSampleLen(), 0.6f);
+  }
 }
   
 /**
- * Plays an audio sample.
+ * Plays an audio sample with WFSamplerInstrument and custom ADSR.
  * 
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
@@ -59,36 +99,38 @@ public void audioMousePressed(int x, int y) {
  * @param adsr         an ADSR envelope for the sample
  * @return the calculated sample length in samples
  */
-public int playSample(MultiChannelBuffer buffer, int samplePos, int samplelen, float amplitude, ADSR adsr) {
-  // println("--- play "+ twoPlaces.format(amplitude));
-  audioSampler = new Sampler(buffer, sampleRate, 8); // create a Minim Sampler from the buffer sampleRate sampling
-                             // rate, for up to 8 simultaneous outputs 
-  audioSampler.amplitude.setLastValue(amplitude);    // set amplitude for the Sampler
-  audioSampler.begin.setLastValue(samplePos);        // set the Sampler to begin playback at samplePos, which 
-                               // corresponds to the place the mouse was clicked
-  int releaseDuration = (int) (releaseTime * sampleRate); // calculate the release time.
-  if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
-    println("----->>> sample length = " + samplelen);
-  }
-  int durationPlusRelease = this.samplelen + releaseDuration;
-  int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1
-      : samplePos + durationPlusRelease;
-  // println("----->>> end = " + end);
-  audioSampler.end.setLastValue(end);
-  this.instrument = new WFInstrument(audioOut, audioSampler, adsr);
-  // play command takes a duration in seconds
-  float duration = samplelen / (float) (sampleRate);
-  instrument.play(duration);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, (int) (duration * 1000) + millis()));
+public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
+  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
+  int durationMS = (int)(samplelen/sampleRate * 1000);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
+  // return the length of the sample
+  return samplelen;
+}
+
+/**
+ * Plays an audio sample with WFSamplerInstrument and default ADSR.
+ * 
+ * @param samplePos    position of the sample in the audio buffer
+ * @param samplelen    length of the sample (will be adjusted)
+ * @param amplitude    amplitude of the sample on playback
+ * @return the calculated sample length in samples
+ */
+public int playSample(int samplePos, int samplelen, float amplitude) {
+  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
+  int durationMS = (int)(samplelen/sampleRate * 1000);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
   return samplelen;
 }
 
 public int calcSampleLen() {
-  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal 
-  // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
+  float vary = 0; 
+  // skip the fairly rare negative numbers
+  while (vary <= 0) {
+    vary = (float) PixelAudio.gauss(1.0, 0.0625);
+  }
+  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
+  println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 
@@ -105,6 +147,7 @@ public void runTimeArray() {
   });
   timeLocsArray.removeIf(TimedLocation::isStale);
 }
+
 /**
  * Draws a circle at the location of an audio trigger (mouseDown event).
  * @param x    x coordinate of circle

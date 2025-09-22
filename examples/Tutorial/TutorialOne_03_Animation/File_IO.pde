@@ -1,6 +1,6 @@
 /*----------------------------------------------------------------*/
 /*                                                                */
-/*                   BEGIN FILE I/O METHODS                       */
+/*                      FILE I/O METHODS                          */
 /*                                                                */
 /*----------------------------------------------------------------*/
 
@@ -149,6 +149,8 @@ public void loadAudioFile(File audFile) {
     this.audioFileLength = playBuffer.getBufferSize();
     // resize the buffer to mapSize, if necessary -- signal will not be overwritten
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
+    // >>>>> load the buffer of our WFSamplerInstrument <<<<< //
+    synth.setBuffer(playBuffer);
     // read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
     audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
     audioLength = audioSignal.length;

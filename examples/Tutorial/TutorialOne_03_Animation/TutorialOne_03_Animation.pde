@@ -98,7 +98,7 @@ int imageFileHeight;
  * 
  * Audio playback support is added with the audio variables and audio methods 
  * (below, in Eclipse, in a tab, in Processing). You will also need the 
- * WFInstrument and TimedLocation classes. In setup(), call initAudio(), then
+ * WFSamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
  * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
  * and call runTimeArray() in your draw method. 
  * 
@@ -112,22 +112,21 @@ float sampleRate = 48000;       // a critical value for display and audio, see t
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
-float[] leftSamples;            // audio data for the left channel of a stereo file
-float[] rightSamples;           // audio data for the right channel of a stereo file
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
 // SampleInstrument setup
-float sampleScale = 4;      // 
-int sampleBase = (int) (sampleRate/sampleScale);
-int samplelen = (int) (sampleScale * sampleBase);
+// SampleInstrument setup
+int noteDuration = 1500;        // average sample synth note duration, milliseconds
+int samplelen;                  // calculated sample synth note length, samples
 Sampler audioSampler;           // minim class for sampled sound
-WFInstrument instrument;        // local class to wrap audioSampler
+WFSamplerInstrument synth;      // instance of a local class to wrap audioSampler
 // ADSR and its parameters
-ADSR adsr;            // good old attack, decay, sustain, release
-float maxAmplitude = 0.7f;
-float attackTime = 0.8f;
-float decayTime = 0.5f;
-float sustainLevel = 0.125f;
-float releaseTime = 0.5f;
+ADSRParams adsrParams;          // good old attack, decay, sustain, release
+float maxAmplitude = 0.7f;      // 0..1
+float attackTime = 0.1f;        // seconds
+float decayTime = 0.3f;         // seconds
+float sustainLevel = 0.25f;     // 0..1
+float releaseTime = 0.1f;       // seconds
+ArrayList<ADSRParams> adsrList; // list of ADSR values
 
 // interaction variables for audio
 int sampleX;
@@ -144,10 +143,11 @@ int fileIndex = 0;
 /*                   ANIMATION AND VIDEO VARIABLES                    */
 /* ------------------------------------------------------------------ */
   
-int shift = 4;                // number of pixels to shift the animation
+int shift = 64;                // number of pixels to shift the animation
+int totalShift = 0;
 boolean isAnimating = false;
 boolean oldIsAnimating;
-boolean isTrackMouse = true;
+boolean isTrackMouse = false;
 boolean isRaining = false;
 // animation variables
 int animSteps = 720;          // how many steps in an animation loop
@@ -180,6 +180,13 @@ public void setup() {
   initImages();
   initAudio();
   showHelp();
+}
+
+// turn off audio processing when we exit
+public void stop() {
+  if (synth != null) synth.close();
+  if (minim != null) minim.stop();
+  super.stop();
 }
 
 /**
@@ -218,10 +225,13 @@ public void draw() {
     animate();
     updateAudio();
   }
+  if (isTrackMouse && mousePressed) {
+    writeToScreen("shift = "+ shift, 16, 24, 24, false);
+  }
 }
   
 public void animate() {
-  stepAnimation();
+  stepAnimation();      // handle animation step count and video recording
   renderFrame(step);
 }
   
@@ -254,19 +264,26 @@ public void stepAnimation() {
   }
 }
   
+/**
+ * Renders a frame of animation: moving along the signal path, copies mapImage pixels into rgbSignal, 
+ * rotates them shift elements left, writes them back to mapImage.
+ * 
+ * @param step   current animation step
+ */
 public void renderFrame(int step) {
   mapImage.loadPixels();
   int[] rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
   PixelAudioMapper.rotateLeft(rgbSignal, shift);
+  totalShift += shift;
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
   mapImage.updatePixels();
 }
-  
+
+/**
+ * Updates audioSignal by rotating it the same amount as mapImage.pixels.
+ */
 public void updateAudio() {
-  writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-  // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-  playBuffer.setChannel(0, audioSignal);
-  audioLength = audioSignal.length;
+  PixelAudioMapper.rotateLeft(audioSignal, shift);
 }
   
   
@@ -277,8 +294,39 @@ public void doRain() {
   int[] coords = mapper.lookupCoordinate(samplePos);
   sampleX = coords[0];
   sampleY = coords[1];
+  samplePos = getSamplePos(sampleX, sampleY);
   // println("----- Rain samplePos = "+ samplePos);
-  playSample(playBuffer, samplePos, calcSampleLen(), 0.4f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+  adsrParams = adsrList.get((int)random(3));
+  playSample(samplePos, calcSampleLen(), 0.4f, adsrParams);
+}
+
+public int getSamplePos(int x, int y) {
+  int pos = mapper.lookupSample(x, y);
+  // calculate how much animation has shifted the indices into the buffer
+  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
+  return (pos + totalShift) % mapSize;
+}
+
+/**
+ * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
+ * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
+ * 
+ * @param msg    message to write
+ * @param x      x coordinate
+ * @param y      y coordinate
+ * @param weight  font weight
+ * @param isWhite  if true, white text with black drop shadow, otherwise, black text with white drop shadow
+ */
+public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
+  int fill1 = isWhite? 0 : 255;
+  int fill2 = isWhite? 255 : 0;
+  pushStyle();
+  fill(fill1);
+  textSize(weight);
+  //text(msg, x, y);
+  fill(fill2);
+  text(msg, x + 2, y + 1);
+  popStyle();
 }
 
 /**
@@ -293,8 +341,10 @@ public void mousePressed() {
 public void mouseDragged() {
     if (isTrackMouse) {
       shift = abs(width/2 - mouseX);
-      if (mouseY < height/2) 
+      if (mouseY < height/2) {
         shift = -shift;
+      }
+      writeToScreen("shift = "+ shift, 16, 24, 24, false);
     }
 }
 
@@ -375,7 +425,7 @@ public void showHelp() {
   println(" * Press 'V' to record a video sequence.");
   println(" * Press 'h' or 'H' to show help and key commands in the console.");
 }
-  
+
 /**
  * Utility method for applying hue and saturation values from a source array of RGB values
  * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
