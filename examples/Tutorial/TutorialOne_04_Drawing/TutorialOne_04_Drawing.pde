@@ -9,32 +9,46 @@
  * we call on a whole new package of code, net.paulhert.pixelaudio.curves. We make 
  * numerous edits to the previous tutorial, TutorialOneAnimation:
  *     
- *     -- We add a raft of variables to handle drawing by tracking the mouse and 
- *        converting accumulated points into a reduced point set and then 
- *        into Bezier curve data. Here's an outline of how drawing works in the UI:
+ *     -- We add a raft of variables to handle drawing.
+ *        Here's an outline of how drawing works in the user interface:
  *        
- *          Load an audio or image file to the display.
- *          Drawing starts when isDrawMode is set to true ('d' key command).
- *          Press 'd' to set isDrawMode to true (the console will inform you).
- *          Press and drag the mouse to draw a line, accumulating points into allPoints.
- *          Release the mouse to create a brushstroke -- audio and animation will play.
- *              The accumulated points in allPoints are used to create a PACurveMaker instance.
- *              PACurveMaker uses the RDP algorithm to reduce the number of points. 
- *              PACurveMaker uses the reduced point set to generate a Bezier curve.
- *              The Bezier curve is used to model a brushstroke shape.
- *              All these data elements are available from the PACurveMaker instance.
- *              The PACurveMaker instance is added to a list of PACUrveMakers, brushShapesList.
- *              BrushShapeList handles drawing curves to the screen. 
- *          Draw some more brushstrokes. 
- *          Press 'd' to turn drawing off.
- *          Click on a brushstroke to activate it. 
+ *     1. Open an audio file. The image replaces the color pattern that shows the signal path.
+ *        By default it will load to the audio buffer and to the display. Similarly, 
+ *        if you open an image file, it will open in the display and be transcoded into
+ *        the audio buffer. You can turn this behavior off with the 'L' key and use the
+ *        'w' and 'W' keys to write the display to audio or audio to the display.
+ *     2. Press the 'k' key. The color pattern reappears, overlaid on the signal image. 
+ *        The overlay works by copying the Hue and Saturation channels of the color image
+ *        and combining them with the Brightness channel of the display. 
+ *        See the applyColor() and chooseColorImage() methods for the code.
+ *     3. Click on the display to trigger audio events. They should be fairly quiet: the 
+ *        gain for audio output is set to -18.0 dB. The sound will get loud when you draw. 
+ *     4. Press 'd' to set isDrawMode to true. Press and drag the mouse to draw a line.
+ *        Release the mouse to create a brushstroke -- audio and animation will play.
+ *        When you draw the mouse, the sketch accumulates non-repeating points into an 
+ *        ArrayList of PVector, allPoints. WHen you release the mouse, PACurverMaker and 
+ *        PACurveMakerUtility process the points.         
+ *          - The accumulated points in allPoints are used to create a PACurveMaker instance.
+ *          - PACurveMaker uses the Ramer-Douglas-Peucker algorithm to reduce the number of points. 
+ *          - PACurveMaker uses the reduced point set to generate a Bezier curve.
+ *          - The Bezier curve is used to model a brushstroke shape.
+ *        All these data elements are available from the PACurveMaker instance. PACurveMaker
+ *        also store time data for drawing, but we don't use it in this sketch. 
+ *        The PACurveMaker instance is added to a list of PACUrveMakers, brushShapesList.
+ *        BrushShapeList handles drawing curves to the screen. 
+ *     5. Draw some more brushstrokes. Press 'd' to turn drawing off.
+ *     6. Click on a brushstroke to activate it. 
+ *     7. Press the 'x' key while hovering over a brushstroke to delete it. 
+ *        Pressing 'x' when you aren't hovering over a brushstroke will delete the oldest 
+ *        brushstroke. Pressing 'X' will delete the most recent brushstroke. 
  *          
- *     -- We add several new methods, in the DRAWING METHODS section:
+ *          
+ *     -- We added several new methods, in the DRAWING METHODS section:
  *     
  *          public void initAllPoints()
  *          public void handleMousePressed()
  *          public void addPoint()
- *          public void playPoints()
+ *          public void loadEventPoints()
  *          public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime)
  *          public void initCurveMaker()
  *          public int[] reconfigureTimeList(int[] timeList)
@@ -67,22 +81,24 @@
  *        earlier versions of this tutorial, and curveTLEvents for brush events. The handleDrawing() method
  *        takes care of both lists with calls to runCurveEvents() and runPointEvents().
  *        
- * 
- * In the last part of this tutorial, we'll get to:
- * -- UDP communication with Max and other media applications
- * 
+ *     -- Mouse clicks that don't involve drawing are forward to audioMousePressed(), used in previous tutorials. 
+ *        
  * 
  * Here are the key commands for this sketch:
  * 
- * Press ' ' to start or stop animation.
+ * Press ' ' to  start or stop animation.
  * Press 'd' to turn drawing on or off.
  * Press 'm' to turn mouse tracking on or off.
  * Press 'c' to apply color from image file to display image.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage .
+ * Press 'l' or 'L' to set files to load as both image and audio or load separately.
  * Press 'o' or 'O' to open an audio or image file.
- * Press 'n' or 'N' to reduce audio noise during animation by setting isCopyBuffer to true (default) or false.
- * Press 'h' or 'H' to show help and key commands.
+ * Press 'w' to write the image colors to the audio buffer as transcoded values.
+ * Press 'W' to write the audio buffer samples to the image as color values.
+ * Press 'x' to delete the current active brush shape or the oldest brush shape.
+ * Press 'X' to delete the most recent brush shape.
  * Press 'V' to record a video.
+ * Press 'h' or 'H' to show help message in the console.
  * 
  */
 
@@ -580,14 +596,14 @@ public void showHelp() {
   println(" * Press 'm' to turn mouse tracking on or off.");
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
+  println(" * Press 'l' or 'L' to set files to load as both image and audio or load separately.");
   println(" * Press 'o' or 'O' to open an audio or image file.");
-  println(" * Press 'n' or 'N' to reduce noise when animating, or not.");
   println(" * Press 'w' to write the image colors to the audio buffer as transcoded values.");
   println(" * Press 'W' to write the audio buffer samples to the image as color values.");
   println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
   println(" * Press 'X' to delete the most recent brush shape.");
-  println(" * Press 'h' or 'H' to show this help message in the console");
   println(" * Press 'V' to record a video.");
+  println(" * Press 'h' or 'H' to show help message in the console.");
 }
 
 /**

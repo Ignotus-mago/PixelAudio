@@ -9,6 +9,10 @@
  * and other media applications. This material should be regarded as 
  * @Experimental, and likely to change in future releases. 
  * 
+ * This particular example builds on TutorialOne_04_Drawing. For notes on the 
+ * drawing tools and everything else not concerned with UDP communications, see
+ * that tutorial. 
+ * 
  * We use the oscP5 Processing library to handle UDP communications. UDP, User Datagram
  * Protocol, is a standard for internet communications introduced in 1980 and still going
  * strong. OSC, Open Sound Control, is a protocol for networking synthesizers, computers, 
@@ -38,8 +42,8 @@
  * 
  *     public class TutorialOneUDP extends PApplet implements PANetworkClientINF
  * 
- * In Processing, NetworkDelegate is an internal class of our main class, TutorialOne_05_UDP,
- * in the main tab, and we can call it without having to declare the interface. 
+ * >>>>> In Processing, NetworkDelegate is an internal class of our main class, TutorialOne_05_UDP, <<<<<
+ * >>>>> in the main tab, and we can call it without having to declare the interface.               <<<<<
  * 
  * Also in out main class we will declare two variables:
  * 
@@ -88,7 +92,7 @@
  * 
  *   if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
  * 
- * The very command for clicks -- but where do we put it? In this case, since we are passing mousePressed
+ * This is the command for clicks -- but where do we put it? In this case, since we are passing mousePressed
  * events on to other handlers, we can put it in the drawing section, handleMousePressed(); It's already 
  * there, we just need to uncomment it. 
  * 
@@ -100,7 +104,7 @@
  * 
  * As was apparent in an earlier stage of this sketch, TutorialOne_03_Animation, when we introduce
  * another thread, such as an "Open File" command, we have to take care that it doesn't cause 
- * cause problems by, for example, changing resources that are the sketch also wants to change. 
+ * cause problems by, for example, changing resources that the sketch thread also wants to change. 
  * In TutorialOne_03_Animation, the animation was changing the audio buffer and the Open File
  * command did so, too. Our solution there was to pause animation while opening a file. It was not
  * the only solution, but it's simple, and it only applied for as long as it took to choose a file
@@ -118,9 +122,9 @@
  *     public synchronized void runPointEvents()
  * 
  * This means that the method must complete before it can be called from another thread. 
- * Since the methods execute very quickly, this is a viable solution. Multithreading is
- * a complex issue, with a ample suite of tools in Java, but it's far beyond the modest
- * aims of this tutorial. Suffice it to say, if two or more threads use the same resources,
+ * Since the methods execute very quickly, this is a viable solution. Running multiple 
+ * threads is a complex issue, with a ample suite of tools in Java, but it's far beyond 
+ * the aims of this tutorial. Suffice it to say, if two or more threads use the same resources,
  * you will need to handle multithreading. In this tutorial, we've exposed all the key
  * commands in parseKey() to potential messaging from external threads, such as our
  * Max patcher. Remote control of a PixelAudio application can provide interesting
@@ -130,18 +134,21 @@
  * 
  * Here are the key commands for this sketch:
  * 
- * Press ' ' to start or stop animation.
+ * Press ' ' to  start or stop animation.
  * Press 'd' to turn drawing on or off.
  * Press 'm' to turn mouse tracking on or off.
  * Press 'c' to apply color from image file to display image.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage .
+ * Press 'l' or 'L' to set files to load as both image and audio or load separately.
  * Press 'o' or 'O' to open an audio or image file.
- * Press 'n' or 'N' to reduce audio noise during animation by setting isCopyBuffer to true (default) or false.
- * Press 'h' or 'H' to show help and key commands.
+ * Press 'w' to write the image colors to the audio buffer as transcoded values.
+ * Press 'W' to write the audio buffer samples to the image as color values.
+ * Press 'x' to delete the current active brush shape or the oldest brush shape.
+ * Press 'X' to delete the most recent brush shape.
  * Press 'V' to record a video.
+ * Press 'h' or 'H' to show help message in the console.
  * 
  */
-
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -170,6 +177,7 @@ import ddf.minim.ugens.*;
 //video export library
 import com.hamoid.*;
 
+
 // PixelAudio vars and objects
 PixelAudio pixelaudio;     // our shiny new library
 MultiGen multigen;         // a PixelMapGen that links together multiple PixelMapGens
@@ -185,8 +193,6 @@ int[] colors;              // array of spectral colors
 /*                        FILE I/O VARIABLES                          */
 /* ------------------------------------------------------------------ */
 
-String daPath;
-
 // audio file
 File audioFile;
 String audioFilePath;
@@ -201,6 +207,8 @@ String imageFileTag;
 int imageFileWidth;
 int imageFileHeight;
 
+String daPath;
+
 /* ------------------------------------------------------------------ */
 /*                          AUDIO VARIABLES                           */
 /* ------------------------------------------------------------------ */
@@ -212,56 +220,54 @@ int imageFileHeight;
  * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
  * and call runTimeArray() in your draw method. 
  */
+ 
 /** Minim audio library */
-Minim minim;                    // library that handles audio 
-AudioOutput audioOut;           // line out to sound hardware
+Minim minim;               // library that handles audio 
+AudioOutput audioOut;      // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-float sampleRate = 48000;       // sample rate for audio files
-float[] audioSignal;            // the audio signal as an array of floats
+float sampleRate = 48000;  // sample rate for audio output and audio files
+float[] audioSignal;       // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
-int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
-float[] leftSamples;            // audio data for the left channel of a stereo file
-float[] rightSamples;           // audio data for the right channel of a stereo file
-int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
+int samplePos;             // an index into the audio signal, selected by a mouse click on the display image
+int audioLength;           // length of the audioSignal, same as the number of pixels in the display image
 
 // SampleInstrument setup
-float sampleScale = 4;          // factor in determining audio event duration
-int sampleBase = (int) (sampleRate/sampleScale);
-int samplelen = (int) (sampleScale * sampleBase);
-Sampler audioSampler;           // minim class for sampled sound
-WFInstrument instrument;        // local class to wrap audioSampler
+int noteDuration = 1000;   // average sample synth note duration, milliseconds
+int samplelen;             // calculated sample synth note length, samples
+Sampler audioSampler;      // minim class for sampled sound
+WFSamplerInstrument synth; // local class to wrap audioSampler
 
 // ADSR and its parameters
-ADSR adsr;                      // good old attack, decay, sustain, release
-float maxAmplitude = 0.7f;
-float attackTime = 0.8f;
-float decayTime = 0.5f;
-float sustainLevel = 0.125f;
-float releaseTime = 0.5f;
+ADSRParams adsr;          // good old attack, decay, sustain, release
+float maxAmplitude = 0.7f;      // 0..1
+float attackTime = 0.4f;        // seconds
+float decayTime = 0.0f;         // seconds, no decay
+float sustainLevel = 0.7f;      // 0..1, same as maxAmplitude
+float releaseTime = 0.4f;       // seconds, same as attack
 
 // interaction variables for audio
 int sampleX;                    // keep track of coordinates associated with audio samples
 int sampleY;
-boolean isIgnoreOutsideBounds = true;      // set to true to ignore points outside bounds when drawing
 ArrayList<TimedLocation> timeLocsArray;    // a list of timed events 
+boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video
 
 
 /* ------------------------------------------------------------------ */
 /*                   ANIMATION AND VIDEO VARIABLES                    */
 /* ------------------------------------------------------------------ */
 
-int shift = 4;                  // number of pixels to shift the animation
-boolean isAnimating = false;
-boolean oldIsAnimating;
-boolean isTrackMouse = true;
+int shift = 64;                         // number of pixels to shift the animation
+int totalShift = 0;                     // cumulative shift
+boolean isAnimating = false;            // do we run animation or not?
+boolean oldIsAnimating;                 // keep track of animation state when opening a file
+boolean isTrackMouse = false;           // if true, drag the mouse to change shift value
 // animation variables
-int animSteps = 720;            // how many steps in an animation loop
+int animSteps = 720;          // how many steps in an animation loop
 boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
 int videoFrameRate = 24;        // fps, frames per second
-int step;                       // number of current step in animation loop
-VideoExport videx;   // hamoid library class for video export (requires ffmpeg)
-boolean isCopyBuffer = true;      // flag for noise reduction during animation 
-  
+int step;                // number of current step in animation loop
+VideoExport videx;                      // hamoid library class for video export (requires ffmpeg)
+    
 /* ------------------------------------------------------------------ */
 /*                         DRAWING VARIABLES                          */
 /* ------------------------------------------------------------------ */
@@ -278,13 +284,13 @@ boolean isCopyBuffer = true;      // flag for noise reduction during animation
 // curve drawing and interaction
 public boolean isDrawMode = false;                  // is drawing on or not?
 public float epsilon = 4.0f;                        // controls how much reduction is applied to points
-public ArrayList<PVector> allPoints;                // all the non-repeated points the user drew
+public ArrayList<PVector> allPoints;                // all the points the user drew, thinnned
 public int dragColor = color(233, 199, 89, 128);    // color for initial drawing 
 public float dragWeight = 8.0f;                     // weight (brush diameter) of initial line drawing
 public int startTime;                               // start time for user drawing event
 public ArrayList<Integer> allTimes;                 // list for tracking user drawing times, for future use
 public PVector currentPoint;                        // most recent point in user drawing
-public int polySteps = 8;                           // number of steps in polygon representation of a Bezier curve
+public int polySteps = 5;                           // number of steps in polygon representation of a Bezier curve
 public PACurveMaker curveMaker;                     // class for tracking and storing drawing data
 public ArrayList<PVector> eventPoints;              // list of points stored in or loaded from a PACurveMaker
 public ListIterator<PVector> eventPointsIter;       // iterator for eventPoints
@@ -297,6 +303,7 @@ int newBrushColor = color(144, 34, 42, 233);        // color of the new brushstr
 int polyPointsColor = color(233, 199, 144, 192);    // color for polygon representation of Bezier curve associated with a brushstroke
 int activeBrushColor = color(144, 89, 55, 233);     // color for the active brush
 int readyBrushColor = color(34, 89, 55, 233);       // color for a brushstroke when ready to be clicked
+boolean isIgnoreOutsideBounds = true;               // when drawing, clip or ignore points outside display bounds
 
 /* ------------- end drawing variables ------------- */
   
@@ -346,6 +353,15 @@ public void setup() {
   applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
   mapImage.updatePixels();  
   showHelp();
+}
+
+/**
+ * turn off audio processing when we exit
+ */
+public void stop() {
+  if (synth != null) synth.close();
+  if (minim != null) minim.stop();
+  super.stop();
 }
 
 /**
@@ -430,26 +446,29 @@ public void stepAnimation() {
 }
 
 /**
- * Renders a frame of animation.
+ * Renders a frame of animation: moving along the signal path, copies mapImage pixels into rgbSignal, 
+ * rotates them shift elements left, writes them back to mapImage.
  * 
  * @param step   current animation step
  */
 public void renderFrame(int step) {
   mapImage.loadPixels();
+  // get the pixels in the order that the signal path visits them
   int[] rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
+  // rotate the pixel array
   PixelAudioMapper.rotateLeft(rgbSignal, shift);
+  // keep track of how much the pixel array (and the audio array) are shifted
+  totalShift += shift;
+  // write the pixels in rgbSignal to mapImage, following the signal path
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
   mapImage.updatePixels();
 }
 
 /**
- * Transcodes color channel data from mapImage to audio format and writes it to the audio signal and buffer.
+ * When animating, updates audioSignal by rotating it the same amount as mapImage.pixels.
  */
 public void updateAudio() {
-  writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-  // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-  playBuffer.setChannel(0, audioSignal);
-  audioLength = audioSignal.length;
+  PixelAudioMapper.rotateLeft(audioSignal, shift);
 }
 
 /**
@@ -461,7 +480,7 @@ public void handleDrawing() {
   drawBrushShapes();
   if (isDrawMode) {
     if (mousePressed) {
-      addPoint();
+      addPoint(mouseX, mouseY);
     }
     if (allPoints != null && allPoints.size() > 2) {
       PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
@@ -473,16 +492,40 @@ public void handleDrawing() {
 }
 
 /**
- * Here's the built-in mousePressed handler for Processing, but note that it forwards  
- * mouse coords to handleMousePressed(), in the DrawingTools tab.
+ * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
+ * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
+ * 
+ * @param msg     message to write
+ * @param x       x coordinate
+ * @param y       y coordinate
+ * @param weight  font weight
+ * @param isWhite if true, white text, otherwise, black text
+ */
+public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
+  int fill1 = isWhite? 0 : 255;
+  int fill2 = isWhite? 255 : 0;
+  pushStyle();
+  textSize(weight);
+  float tw = textWidth(msg);
+  int pad = 4;
+  fill(fill1);
+  rect(x - pad, y - pad - weight, x + tw + pad, y + weight/2 + pad);
+  fill(fill2);
+  text(msg, x, y);
+  popStyle();
+}
+
+/**
+ * The built-in mousePressed handler for Processing, but note that it forwards 
+ * mouse coords to handleMousePressed().
  */
 public void mousePressed() {
-  // println("mousePressed:", mouseX, mouseY);
+  setSampleVars(mouseX, mouseY);      
   if (this.isDrawMode) {
     initAllPoints();
   } 
   else {
-    handleMousePressed();
+    handleMousePressed(mouseX, mouseY);
   }
 }
 
@@ -491,19 +534,21 @@ public void mouseDragged() {
     shift = abs(width/2 - mouseX);
     if (mouseY < height/2) 
       shift = -shift;
+    writeToScreen("shift = "+ shift, 16, 24, 24, false);
   }
 }
 
 public void mouseReleased() {
+  setSampleVars(mouseX, mouseY);      
   if (isAnimating && isTrackMouse) {
-    println("----- animation shift = "+ shift);
+    // println("----- animation shift = "+ shift);
   }
   if (isDrawMode && allPoints != null) {
     if (allPoints.size() > 2) {    // add curve data to the brush list
       initCurveMaker();
     }
     else {              // handle the event as a click
-      handleMousePressed();
+      handleMousePressed(mouseX, mouseY);
     }
     allPoints.clear();
   }
@@ -518,7 +563,7 @@ public void keyPressed() {
 
 /**
  * Required by the PANetworkClientINF interface.
- * 
+ *
  * Handles key press events passed on by the built-in keyPressed method. 
  * By moving key event handling outside the built-in keyPressed method, 
  * we make it possible to post key commands without an actual key event.
@@ -554,14 +599,41 @@ public void parseKey(char key, int keyCode) {
     applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
     mapImage.updatePixels();
     break;
+  case 'L': case 'l': // determine whether to load a new file to both image and audio or not
+    isLoadToBoth = !isLoadToBoth;
+    String msg = isLoadToBoth ? "loads to both audio and image. " : "loads only to selected format. ";
+    println("---- isLoadToBoth is "+ isLoadToBoth +", opening a file "+ msg);
+    break;
   case 'o': case 'O': // open an audio or image file
     chooseFile();
     break;
-  case 'n': case 'N': // reduce noise when animating, or not
-    isCopyBuffer = !isCopyBuffer;
-    println("---- isCopyBuffer is "+ isCopyBuffer);
+  case 'w': // write the image colors to the audio buffer as transcoded values
+    // prepare to copy image data to audio variables
+    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
+    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
+    audioSignal = playBuffer.getChannel(0);
+    writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
+    // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
+    playBuffer.setChannel(0, audioSignal);
+    audioLength = audioSignal.length;
+    println("--->> Wrote image to audio as audio data.");
     break;
-  case 'h': case 'H':
+  case 'W': // write the audio buffer samples to the image as color values
+    writeAudioToImage(audioSignal, mapper, mapImage, chan);
+    println("--->> Wrote audio to image as pixel data.");
+    break;
+  case 'x': // delete the current active brush shape or the oldest brush shape
+    if (activeBrush != null) {
+      removeActiveBrush();
+    }
+    else {
+      removeOldestBrush();
+    }
+    break;
+  case 'X': // delete the most recent brush shape
+    removeNewestBrush();
+    break;
+  case 'h': case 'H': // show help message in the console
     showHelp();
     break;
   case 'V': // record a video
@@ -585,15 +657,19 @@ public void parseKey(char key, int keyCode) {
  * // println(" * Press $1 to $2.");
  */
 public void showHelp() {
-  println(" * Press ' ' to start or stop animation.");
+  println(" * Press ' ' to  start or stop animation.");
   println(" * Press 'd' to turn drawing on or off.");
   println(" * Press 'm' to turn mouse tracking on or off.");
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
+  println(" * Press 'l' or 'L' to set files to load as both image and audio or load separately.");
   println(" * Press 'o' or 'O' to open an audio or image file.");
-  println(" * Press 'n' or 'N' to reduce audio noise during animation by setting isCopyBuffer to true (default) or false.");
+  println(" * Press 'w' to write the image colors to the audio buffer as transcoded values.");
+  println(" * Press 'W' to write the audio buffer samples to the image as color values.");
+  println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
+  println(" * Press 'X' to delete the most recent brush shape.");
   println(" * Press 'V' to record a video.");
-  println(" * Press 'h' or 'H' to show help and key commands.");
+  println(" * Press 'h' or 'H' to show help message in the console.");
 }
 
 /**
@@ -653,7 +729,7 @@ public int playSample(int samplePos) {
     renderSignals();
     isBufferStale = false;
   }
-  return playSample(playBuffer, samplePos, calcSampleLen(), 0.6f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));    
+  return playSample(samplePos, calcSampleLen(), 0.6f, new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));    
 }
 
 // required by the PANetworkCLientINF interface

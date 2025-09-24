@@ -39,46 +39,44 @@ public void colorFileSelected(File selectedFile) {
       println("--- Selected color file "+ fileName +"."+ fileTag);
       // apply the color data (hue, saturation) in the selected image to our display image, mapImage
       applyImageColor(imageFile, mapImage);
-    } 
-    else {
+    } else {
       println("----- File is not a recognized image format ending with \"png\", \"jpg\", or \"jpeg\".");
     }
-  } 
-  else {
+  } else {
     println("----- No file was selected.");
   }
 }
 
-/**
- * Apply the hue and saturation of a chosen image file to the brightness channel of the display image.
- * @param imgFile        selected image file, source of hue and saturation values
- * @param targetImage    target image where brightness will remain unchanged
- */
-public void applyImageColor(File imgFile, PImage targetImage) {
+  /**
+   * Apply the hue and saturation of a chosen image file to the brightness channel of the display image.
+   * @param imgFile        selected image file, source of hue and saturation values
+   * @param targetImage    target image where brightness will remain unchanged
+   */
+  public void applyImageColor(File imgFile, PImage targetImage) {
   PImage colorImage = loadImage(imgFile.getAbsolutePath());
   int w = colorImage.width > mapImage.width ? targetImage.width : colorImage.width;
   int h = colorImage.height > targetImage.height ? targetImage.height : colorImage.height;
-  float[] hsbPixel = new float[3];
-  colorImage.loadPixels();
-  int[] colorSource = colorImage.pixels;
-  targetImage.loadPixels();
-  int[] graySource = targetImage.pixels;
-  for (int y = 0; y < h; y++) {
-    int rowStart = y * w;
-    for (int x = 0; x < w; x++) {
-      int cPos = rowStart + x;
-      int gPos = y * targetImage.width + x;
-      graySource[gPos] = PixelAudioMapper.applyColor(colorSource[cPos], graySource[gPos], hsbPixel);
-    }
-  }
-  targetImage.updatePixels();
+      float[] hsbPixel = new float[3];
+      colorImage.loadPixels();
+      int[] colorSource = colorImage.pixels;
+      targetImage.loadPixels();
+      int[] graySource = targetImage.pixels;
+      for (int y = 0; y < h; y++) {
+        int rowStart = y * w;
+        for (int x = 0; x < w; x++) {
+          int cPos = rowStart + x;
+          int gPos = y * targetImage.width + x;
+          graySource[gPos] = PixelAudioMapper.applyColor(colorSource[cPos], graySource[gPos], hsbPixel);
+        }
+      }
+      targetImage.updatePixels();
 }
 
 // -------- END FILE I/O FOR APPLYING COLOR --------- //
   
-/*
- * Here is a section of "regular" file i/o methods for audio and image files.
- */
+  /*
+   * Here is a section of "regular" file i/o methods for audio and image files.
+   */
 
 
 /**
@@ -111,8 +109,8 @@ public void fileSelected(File selectedFile) {
       audioFileTag = fileTag;
       println("----- Selected file " + fileName + "." + fileTag + " at "
           + filePath.substring(0, filePath.length() - fileName.length()));
-      // if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
       loadAudioFile(audioFile);
+      if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
     } 
     else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
         || fileTag.equalsIgnoreCase("jpeg")) {
@@ -135,7 +133,8 @@ public void fileSelected(File selectedFile) {
 
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
- * writeAudioToImage() to transcode audio data and write it to mapImage
+ * writeAudioToImage() to transcode audio data and write it to mapImage.
+ * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
  * 
  * @param audFile    an audio file
  */
@@ -144,16 +143,18 @@ public void loadAudioFile(File audFile) {
   float sampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), playBuffer);
   // sampleRate > 0 means we read audio from the file
   if (sampleRate > 0) {
-    this.sampleRate = sampleRate;
+    this.sampleRate = sampleRate; 
     println("---- sample rate is "+ this.sampleRate);
     // save the length of the buffer as read from the file, for future use
     this.audioFileLength = playBuffer.getBufferSize();
     // resize the buffer to mapSize, if necessary -- signal will not be overwritten
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
+      // load the buffer of our WFSamplerInstrument
+      synth.setBuffer(playBuffer);
     // read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
     audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
     audioLength = audioSignal.length;
-    writeAudioToImage(audioSignal, mapper, mapImage, chan);
+    if (isLoadToBoth) writeAudioToImage(audioSignal, mapper, mapImage, chan);
   }
 }
 
@@ -163,10 +164,10 @@ public void loadAudioFile(File audFile) {
  * which will throw an IllegalArgumentException if sig.length != img.pixels.length
  * or sig.length != mapper.getSize(). 
  * 
- * @param sig         an source array of float, should be audio data in the range [-1.0, 1.0]
- * @param mapper      a PixelAudioMapper
- * @param img         a target PImage, modified by audio data in sig
- * @param chan        a color channel
+ * @param sig    an array of float, should be audio data in the range [-1.0, 1.0]
+ * @param mapper a PixelAudioMapper
+ * @param img    a PImage
+ * @param chan   a color channel
  */
 public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
   // If sig.length == mapper.getSize() == mapImage.width * mapImage.height, we can call safely mapper.mapSigToImg()  
@@ -177,7 +178,8 @@ public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, 
 
 /**
  * Attempts to load image data from a selected file into mapImage, then calls writeImageToAudio() 
- * to transcode HSB brightness color data from the image to audio and writes it to playBuffer and audioSignal.
+ * to transcode HSB brightness channel to audio and writes it to playBuffer and audioSignal.
+ * If you want to load the image file and audio file separately, comment out writeImageToAudio(). 
  * 
  * @param imgFile    an image file
  */
@@ -203,25 +205,27 @@ public void loadImageFile(File imgFile) {
     mixImage.updatePixels();
     mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
   }
-  // prepare to copy image data to audio variables
-  // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-  if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-  audioSignal = playBuffer.getChannel(0);
-  writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-  // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-  playBuffer.setChannel(0, audioSignal);
-  audioLength = audioSignal.length;
+  if (isLoadToBoth) {
+    // prepare to copy image data to audio variables
+    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
+    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
+    audioSignal = playBuffer.getChannel(0);
+    writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
+    // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
+    playBuffer.setChannel(0, audioSignal);
+    audioLength = audioSignal.length;
+  }
 }
 
 /**
- * This method writes a color channel from the an image to an audio signal, fulfilling a 
+ * This method writes a color channel from an image to playBuffer, fulfilling a 
  * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
  * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
  * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
  * 
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format, rewritten by this method
+ * @param sig       an target array of float in audio format 
  * @param chan      a color channel
  */
 public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
@@ -257,31 +261,31 @@ public void audioFileSelectedWrite(File selection) {
  * Saves audio data to 16-bit integer PCM format, which Processing can also open.
  * This same method can be called as a static method in PixelAudio.
  * 
- * @param samples       an array of floats in the audio range (-1.0f, 1.0f)
- * @param sampleRate    audio sample rate for the file
- * @param fileName      name of the file to save to
- * @throws IOException  an Exception you'll need to handle to call this method (see keyPressed entry for 's')
+ * @param samples         an array of floats in the audio range (-1.0f, 1.0f)
+ * @param sampleRate      audio sample rate for the file
+ * @param fileName        name of the file to save to
+ * @throws IOException    an Exception you'll need to handle to call this method (see keyPressed entry for 's')
  * @throws UnsupportedAudioFileException    another Exception (see keyPressed entry for 's')
  */
 public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
         throws IOException, UnsupportedAudioFileException {
-  // Convert samples from float to 16-bit PCM
-  byte[] audioBytes = new byte[samples.length * 2];
-  int index = 0;
-  for (float sample : samples) {
-    // Scale sample to 16-bit signed integer
-    int intSample = (int) (sample * 32767);
-    // Convert to bytes
-    audioBytes[index++] = (byte) (intSample & 0xFF);
-    audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
-  }
-  // Create an AudioInputStream
-  ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
-  AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
-  AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
-  // Save the AudioInputStream to a WAV file
-  File outFile = new File(fileName);
-  AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
+    // Convert samples from float to 16-bit PCM
+    byte[] audioBytes = new byte[samples.length * 2];
+    int index = 0;
+    for (float sample : samples) {
+        // Scale sample to 16-bit signed integer
+        int intSample = (int) (sample * 32767);
+        // Convert to bytes
+        audioBytes[index++] = (byte) (intSample & 0xFF);
+        audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
+    }
+    // Create an AudioInputStream
+    ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+    AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+    AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
+    // Save the AudioInputStream to a WAV file
+    File outFile = new File(fileName);
+    AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
 }
 
 public void saveToImage() {
