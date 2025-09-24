@@ -134,7 +134,8 @@ public void fileSelected(File selectedFile) {
 
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
- * writeAudioToImage() to transcode audio data and write it to mapImage
+ * writeAudioToImage() to transcode audio data and write it to mapImage.
+ * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
  * 
  * @param audFile    an audio file
  */
@@ -178,7 +179,8 @@ public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, 
 
 /**
  * Attempts to load image data from a selected file into mapImage, then calls writeImageToAudio() 
- * to transcode HSB brightness color data from the image to audio and writes it to playBuffer and audioSignal.
+ * to transcode HSB brightness channel to audio and writes it to playBuffer and audioSignal.
+ * If you want to load the image file and audio file separately, comment out writeImageToAudio(). 
  * 
  * @param imgFile    an image file
  */

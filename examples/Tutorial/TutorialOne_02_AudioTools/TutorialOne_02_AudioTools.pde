@@ -116,7 +116,7 @@ boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 float sampleRate = 48000;       // sample rate of audioOut, sample rate of most recently opened audio file
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
-int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
+int samplePos;                  // index into the audio signal, set when an audio event is triggered
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
 // SampleInstrument setup
 int noteDuration = 1500;        // average sample synth note duration, milliseconds
@@ -134,8 +134,8 @@ ArrayList<ADSRParams> adsrList; // list of ADSR values
 boolean isRandomADSR = false;   // choose a random envelope from adsrList, or not
 
 // interaction variables for audio
-int sampleX;
-int sampleY;
+int sampleX;                    // x-coordinate of audio event, set when an audio event is triggered
+int sampleY;                    // y-coordinate of audio event, set when an audio event is triggered
 ArrayList<TimedLocation> timeLocsArray;
 int count = 0;  
 int fileIndex = 0;

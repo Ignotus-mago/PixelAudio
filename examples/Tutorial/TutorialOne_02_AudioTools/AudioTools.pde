@@ -71,9 +71,7 @@ public void renderSignals() {
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
 public void audioMousePressed(int x, int y) {
-  this.sampleX = x;
-  this.sampleY = y;
-  samplePos = mapper.lookupSample(x, y);
+  setSampleVars(x, y);    // set sampleX, sampleY, samplePos
   // update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
   // playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
   if (audioSignal == null || isBufferStale) {
@@ -89,6 +87,26 @@ public void audioMousePressed(int x, int y) {
     playSample(samplePos, calcSampleLen(), 0.6f);
   }
 }
+
+/**
+ * Sets variables sampleX, sampleY and samplePos.
+ */
+public void setSampleVars(int x, int y) {
+  sampleX = x;
+  sampleY = y;
+  samplePos = getSamplePos(sampleX, sampleY);
+}
+
+/**
+ * Calculate position of the image pixel within the signal path.
+ * When we add animation in TutorialOne_03_Animation and windowed buffering
+ * in MusicBoxBuffer, this gets more complicated.
+ */
+public int getSamplePos(int x, int y) {
+  return mapper.lookupSample(x, y);
+}
+
+
   
 /**
  * Plays an audio sample with WFSamplerInstrument and custom ADSR.

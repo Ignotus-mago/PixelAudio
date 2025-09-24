@@ -19,7 +19,7 @@ public void initAudio() {
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsrParams = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   initADSRList();
-  // create a WFSamplerInstrument, though playBuffer is all 0s at the moment
+  // create a WFSamplerInstrument with 16 voices. There's no audio for it until you open a file. 
   // adsrParams will be the default ADSR for the synth
   synth = new WFSamplerInstrument(playBuffer, audioOut.sampleRate(), 16, audioOut, adsrParams);
   // initialize mouse event tracking array
@@ -71,9 +71,7 @@ public void renderSignals() {
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
 public void audioMousePressed(int x, int y) {
-  this.sampleX = x;
-  this.sampleY = y;
-  samplePos = getSamplePos(x, y);
+  setSampleVars(x, y);
   // update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
   // playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
   if (audioSignal == null || isBufferStale) {
@@ -83,7 +81,28 @@ public void audioMousePressed(int x, int y) {
   // use the default ADSRParams associated with the WFSamplerInstrument synth
   playSample(samplePos, calcSampleLen(), 0.6f);
 }
-  
+
+/**
+ * Sets variables sampleX, sampleY and samplePos.
+ */
+public void setSampleVars(int x, int y) {
+  sampleX = x;
+  sampleY = y;
+  samplePos = getSamplePos(sampleX, sampleY);
+}
+
+/**
+ * Calculate position of the image pixel within the signal path,
+ * taking the shifting of pixels and audioSignal into account.
+ * See MusicBoxBuffer for use of a windowed buffer in this calculation. 
+ */
+public int getSamplePos(int x, int y) {
+  int pos = mapper.lookupSample(x, y);
+  // calculate how much animation has shifted the indices into the buffer
+  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
+  return (pos + totalShift) % mapSize;
+}
+
 /**
  * Plays an audio sample with WFSamplerInstrument and custom ADSR.
  * 
@@ -124,7 +143,7 @@ public int calcSampleLen() {
     vary = (float) PixelAudio.gauss(1.0, 0.0625);
   }
   samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-  println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 

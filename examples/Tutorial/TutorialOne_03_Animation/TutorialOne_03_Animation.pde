@@ -111,7 +111,7 @@ boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 float sampleRate = 48000;       // a critical value for display and audio, see the setup method
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
-int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
+int samplePos;                  // an index into the audio signal, set when audio events are triggered
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
 // SampleInstrument setup
 // SampleInstrument setup
@@ -129,8 +129,8 @@ float releaseTime = 0.1f;       // seconds
 ArrayList<ADSRParams> adsrList; // list of ADSR values
 
 // interaction variables for audio
-int sampleX;
-int sampleY;
+int sampleX;                    // x-coordinate of audio event, set when an audio event is triggered
+int sampleY;                    // y-coordinate of audio event, set when an audio event is triggered
 ArrayList<TimedLocation> timeLocsArray;
 int count = 0;  
 int fileIndex = 0;
@@ -143,18 +143,18 @@ int fileIndex = 0;
 /*                   ANIMATION AND VIDEO VARIABLES                    */
 /* ------------------------------------------------------------------ */
   
-int shift = 64;                // number of pixels to shift the animation
-int totalShift = 0;
-boolean isAnimating = false;
-boolean oldIsAnimating;
-boolean isTrackMouse = false;
-boolean isRaining = false;
+int shift = 64;                      // number of pixels to shift the animation
+int totalShift = 0;                  // cumulative shift
+boolean isAnimating = false;         // do we run animation or not?
+boolean oldIsAnimating;              // keep track of animation state when opening a file
+boolean isTrackMouse = false;        // if true, drag the mouse to change shift value
+boolean isRaining = false;           // set to true ('r' key) to automate audio events
 // animation variables
-int animSteps = 720;          // how many steps in an animation loop
+int animSteps = 720;                 // how many steps in an animation loop
 boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
-int videoFrameRate = 24;      // fps
-int step;                     // number of current step in animation loop
-VideoExport videx;    // hamoid library class for video export (requires ffmpeg)
+int videoFrameRate = 24;             // fps
+int step;                            // number of current step in animation loop, used when recording video
+VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
 
 // ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **  //
 
@@ -272,9 +272,13 @@ public void stepAnimation() {
  */
 public void renderFrame(int step) {
   mapImage.loadPixels();
+  // get the pixels in the order that the signal path visits them
   int[] rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
+  // rotate the pixel array
   PixelAudioMapper.rotateLeft(rgbSignal, shift);
+  // keep track of how much the pixel array (and the audio array) are shifted
   totalShift += shift;
+  // write the pixels in rgbSignal to mapImage, following the signal path
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
   mapImage.updatePixels();
 }
@@ -286,46 +290,41 @@ public void updateAudio() {
   PixelAudioMapper.rotateLeft(audioSignal, shift);
 }
   
-  
+/**
+ * drop some random audio events, like unto the gentle rain
+ */
 public void doRain() {
   if (random(20) > 1) return;
   int sampleLength = 256 * 256;
   int samplePos = (int) random(sampleLength, mapSize - sampleLength - 1);
   int[] coords = mapper.lookupCoordinate(samplePos);
-  sampleX = coords[0];
-  sampleY = coords[1];
-  samplePos = getSamplePos(sampleX, sampleY);
+  setSampleVars(coords[0], coords[1]);    // set sampleX, sampleY and samplePos
   // println("----- Rain samplePos = "+ samplePos);
   adsrParams = adsrList.get((int)random(3));
   playSample(samplePos, calcSampleLen(), 0.4f, adsrParams);
-}
-
-public int getSamplePos(int x, int y) {
-  int pos = mapper.lookupSample(x, y);
-  // calculate how much animation has shifted the indices into the buffer
-  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
-  return (pos + totalShift) % mapSize;
 }
 
 /**
  * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
  * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
  * 
- * @param msg    message to write
- * @param x      x coordinate
- * @param y      y coordinate
+ * @param msg     message to write
+ * @param x       x coordinate
+ * @param y       y coordinate
  * @param weight  font weight
- * @param isWhite  if true, white text with black drop shadow, otherwise, black text with white drop shadow
+ * @param isWhite if true, white text, otherwise, black text
  */
 public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
   int fill1 = isWhite? 0 : 255;
   int fill2 = isWhite? 255 : 0;
   pushStyle();
-  fill(fill1);
   textSize(weight);
-  //text(msg, x, y);
+  float tw = textWidth(msg);
+  int pad = 4;
+  fill(fill1);
+  rect(x - pad, y - pad - weight, x + tw + pad, y + weight/2 + pad);
   fill(fill2);
-  text(msg, x + 2, y + 1);
+  text(msg, x, y);
   popStyle();
 }
 
