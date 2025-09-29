@@ -10,64 +10,60 @@
  * numerous edits to the previous tutorial, TutorialOneAnimation:
  *     
  *     -- We add a raft of variables to handle drawing.
- *        Here's an outline of how drawing works in the user interface:
+ *        Here's an outline of how to begin drawing:
  *        
- *     1. Open an audio file. The image replaces the color pattern that shows the signal path.
- *        By default it will load to the audio buffer and to the display. Similarly, 
- *        if you open an image file, it will open in the display and be transcoded into
- *        the audio buffer. You can turn this behavior off with the 'L' key and use the
+ *     1. Open an audio file with the 'o' key command. The audio file is read into
+ *        the audio buffer, playBuffer, It is transcoded as pixel data to the display.
+ *        The transcoded data replaces the color pattern that shows the signal path.
+ *        Similarly, if you open an image file, it will open in the display and be 
+ *        transcoded into the audio buffer, possibly with very noisy results. 
+ *        You can turn this simultaneous loading off with the 'L' key and use the
  *        'w' and 'W' keys to write the display to audio or audio to the display.
+ *        
  *     2. Press the 'k' key. The color pattern reappears, overlaid on the signal image. 
  *        The overlay works by copying the Hue and Saturation channels of the color image
- *        and combining them with the Brightness channel of the display. 
- *        See the applyColor() and chooseColorImage() methods for the code.
+ *        and combining them with the Brightness channel of the display. See the 
+ *        applyColor() and chooseColorImage() methods for the code. You can also load
+ *        color data from an image with the 'c' key command.
+ *        
  *     3. Click on the display to trigger audio events. They should be fairly quiet: the 
- *        gain for audio output is set to -18.0 dB. The sound will get loud when you draw. 
+ *        gain for audio output is set to -18.0 dB. The sound will get loud when you draw.
+ *        
  *     4. Press 'd' to set isDrawMode to true. Press and drag the mouse to draw a line.
  *        Release the mouse to create a brushstroke -- audio and animation will play.
- *        When you draw the mouse, the sketch accumulates non-repeating points into an 
- *        ArrayList of PVector, allPoints. WHen you release the mouse, PACurverMaker and 
- *        PACurveMakerUtility process the points.         
- *          - The accumulated points in allPoints are used to create a PACurveMaker instance.
+ *        When you drag the mouse, the sketch accumulates non-repeating points into an 
+ *        ArrayList of PVector, allPoints. When you release the mouse, PACurverMaker and 
+ *        PACurveMakerUtility process the points:         
+ *          - The accumulated points in allPoints are used to create a PACurveMaker object.
  *          - PACurveMaker uses the Ramer-Douglas-Peucker algorithm to reduce the number of points. 
  *          - PACurveMaker uses the reduced point set to generate a Bezier curve.
  *          - The Bezier curve is used to model a brushstroke shape.
  *        All these data elements are available from the PACurveMaker instance. PACurveMaker
- *        also store time data for drawing, but we don't use it in this sketch. 
+ *        also stores time data for drawing, but we don't use it in this sketch. 
  *        The PACurveMaker instance is added to a list of PACUrveMakers, brushShapesList.
  *        BrushShapeList handles drawing curves to the screen. 
+ *        
  *     5. Draw some more brushstrokes. Press 'd' to turn drawing off.
+ *     
  *     6. Click on a brushstroke to activate it. 
+ *     
  *     7. Press the 'x' key while hovering over a brushstroke to delete it. 
  *        Pressing 'x' when you aren't hovering over a brushstroke will delete the oldest 
  *        brushstroke. Pressing 'X' will delete the most recent brushstroke. 
- *          
- *          
- *     -- We added several new methods, in the DRAWING METHODS section:
  *     
- *          public void initAllPoints()
- *          public void handleMousePressed()
- *          public void addPoint()
- *          public void loadEventPoints()
- *          public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime)
- *          public void initCurveMaker()
- *          public int[] reconfigureTimeList(int[] timeList)
- *          public ArrayList<Integer> reconfigureTimeList(ArrayList<Integer> timeList)
- *          public void drawBrushShapes()
- *          public void curveMakerDraw()
- *          public synchronized void runCurveEvents()
- *          public synchronized void runPointEvents()
- *          public boolean mouseInPoly(ArrayList<PVector> poly)
- *          public void reset(boolean isClearCurves)
+ *     8. Press'p' to play the brushstrokes one after another, in the order you drew them.
  *          
+ *          
+ *     -- We added several new methods, in the DRAWING METHODS section.
  *        See the JavaDocs information for each method for a description of what it does.
- *        Also see the initDrawing() method in the main section. 
+ *        The initDrawing(), handleDrawing() and handleMousePressed() are new methods that 
+ *        are central to interaction and drawing. 
  *        
  *        SEE the JavaDoc entries for PACurveMaker, PACurveMakerUtility, PABezShape and the
  *        other classes in the net.paulhertz.pixelaudio.curves package for more information
  *        about curve modeling. 
  *        
- *     -- We reconfigure code for handling mouse events and TimedLocation events. The mouse event
+ *     -- We reconfigured code for handling mouse events and TimedLocation events. The mouse event
  *        tracking starts in mousePressed(), when isDrawMode == true. While the mouse is down, calls
  *        to handleDrawing() in the draw() method accumulate points to allPoints. When the mouse is 
  *        released, allPoints is used to initialize a PACurveMaker. 
@@ -81,7 +77,25 @@
  *        earlier versions of this tutorial, and curveTLEvents for brush events. The handleDrawing() method
  *        takes care of both lists with calls to runCurveEvents() and runPointEvents().
  *        
- *     -- Mouse clicks that don't involve drawing are forwarded to audioMousePressed(), used in previous tutorials. 
+ *     -- Mouse clicks that don't involve drawing are passed to audioMousePressed(), used in previous tutorials. 
+ *     
+ * AUDIO EVENTS
+ *     
+ * In this tutorial we introduce a new class for triggering audio events, WFSamplerInstrumentPool.
+ * In previous tutorials, we just used WFSamplerInstrument, which can support multiple voices and 
+ * works well with events triggered by clicking the mouse. Events triggered by drawing add a new
+ * level of complication -- we can automatically trigger dozens of event at once. WFSamplerInstrument
+ * and Minim's AudioSampler, which it wraps, appeared to have practical limits to the number of 
+ * voices they could support without distortion. WFSamplerInstrumentPool allocates a WFSamplerInstrument
+ * from a previously created list or "pool" of instruments to handle each request for an audio event. 
+ * So far, this is the best solution I have for playing many voices together.
+ * 
+ * If you would like to hear the difference between multi-voice WFSamplerIntrument and WFSamplerInstrumentPool,
+ * just press the '!' key while one or more brushstrokes are playing.
+ * 
+ * Remaining in the tutorial are TutorialOne_05_UDP, which implements networked communication with Max 
+ * and other media applications, and MusicWindowBox, a bonus sketch that implements a windowed buffer for 
+ * traversing an audio file plus various features useful in performance.
  *        
  * 
  * Here are the key commands for this sketch:
@@ -191,9 +205,11 @@ int noteDuration = 1000;        // average sample synth note duration, milliseco
 int samplelen;                  // calculated sample synth note length, samples
 Sampler audioSampler;           // minim class for sampled sound
 WFSamplerInstrument synth;      // local class to wrap audioSampler
+WFSamplerInstrumentPool pool;   // an allocation pool of WFSamplerInstruments
+boolean isUseSynth = false;     // switch between pool and synth
 
 // ADSR and its parameters
-ADSRParams adsr;                // good old attack, decay, sustain, release
+ADSRParams adsr;          // good old attack, decay, sustain, release
 float maxAmplitude = 0.7f;      // 0..1
 float attackTime = 0.4f;        // seconds
 float decayTime = 0.0f;         // seconds, no decay
@@ -201,7 +217,7 @@ float sustainLevel = 0.7f;      // 0..1, same as maxAmplitude
 float releaseTime = 0.4f;       // seconds, same as attack
 
 // interaction variables for audio
-int sampleX;                    // keep track of coordinates associated with audio samples
+int sampleX;                   // keep track of coordinates associated with audio samples
 int sampleY;
 ArrayList<TimedLocation> timeLocsArray;    // a list of timed events 
 boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video
@@ -570,19 +586,23 @@ public void parseKey(char key, int keyCode) {
   case 'X': // delete the most recent brush shape
     removeNewestBrush();
     break;
-  case 'h': case 'H':
-    showHelp();
+  case '!':
+    isUseSynth = !isUseSynth;
+    msg = isUseSynth ? ", sound will play using synth." : ", sound will play using pool.";
+    println("---- isUseSynth = "+ isUseSynth + msg);
     break;
   case 'V': // record a video
     // records a complete video loop with following actions:
-    // Go to frame 0, turn recording on, turn animation on.
-    // This will record a complete video loop, from frame 0 to the
-    // stop frame value in the GUI control panel.
+    // Go to frame 0, turn recording on, turn animation on,
+    // record animSteps number of frames. 
     step = 0;
     renderFrame(step);
     isRecordingVideo = true;
     oldIsAnimating = isAnimating;
     isAnimating = true;
+    break;
+  case 'h': case 'H':
+    showHelp();
     break;
   default:
     break;

@@ -89,7 +89,12 @@ public int getSamplePos(int x, int y) {
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
+  if (isUseSynth) {
+    samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
+  }
+  else {
+    samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
+  }
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
@@ -105,7 +110,12 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
+  if (isUseSynth) {
+    samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
+  }
+  else {
+    samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
+  }
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample

@@ -8,27 +8,25 @@
  * CALL THIS METHOD IN SETUP()
  * Initializes Minim audio library and audio variables.
  */
-public void initAudio() {
+public void initAudio() { 
   minim = new Minim(this);
   // use the getLineOut method of the Minim object to get an AudioOutput object
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
-  // set the gain lower to avoid clipping from multiple voices
-  audioOut.setGain(-18.0f);
+  audioOut.setGain(defaultGain);
   println("---- audio out gain is "+ audioOut.getGain());
   // create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
-  // the buffer will not have any audio data -- you'll need to open a file for that
   this.playBuffer = new MultiChannelBuffer(mapSize, 1);
+  this.anthemBuffer = new MultiChannelBuffer(mapSize, 1);
   this.audioSignal = playBuffer.getChannel(0);
   this.audioLength = audioSignal.length;
-  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-  adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-  // create a WFSamplerInstrument, though playBuffer is all 0s at the moment
-  // adsrParams will be the default ADSR for the synth
-  // allocate plenty of voices, the drawing interface generates a lot of audio events
-  synth = new WFSamplerInstrument(playBuffer, audioOut.sampleRate(), 48, audioOut, adsr);
+  this.anthemSignal = new float[audioLength];
+  System.arraycopy(audioSignal, 0, anthemSignal, 0, audioLength);
+  windowBuff = new WindowedBuffer(anthemSignal, mapSize, 1024);
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
+  // TODO initialize animation buffer    
 }
+
 
 /**
  * Prepares audioSignal before it is used as an instrument source.
@@ -40,6 +38,7 @@ public void renderSignals() {
   audioLength = audioSignal.length;
 }
 
+
 /**
  * Typically called from mousePressed with mouseX and mouseY, generates audio events.
  * 
@@ -47,37 +46,29 @@ public void renderSignals() {
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
 public void audioMousePressed(int x, int y) {
-  setSampleVars(x, y);
+  this.sampleX = x;
+  this.sampleY = y;
+  samplePos = getSamplePos(x, y);
   // update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
   // playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
   if (audioSignal == null || isBufferStale) {
     renderSignals();
     isBufferStale = false;
   }
-  // use the default envelope
-  playSample(samplePos, calcSampleLen(), 0.6f);
-}
-  
-/**
- * Sets variables sampleX, sampleY and samplePos.
- */
-public void setSampleVars(int x, int y) {
-  sampleX = x;
-  sampleY = y;
-  samplePos = getSamplePos(sampleX, sampleY);
+  this.samplelen = calcSampleLen(this.sampleBase, this.sampleScale, this.sampleScale * 0.125f);
+  // println("---- playBuffer index is "+ samplePos);
+  playSample(samplePos, samplelen, 0.5f, adsr);
 }
 
-/**
- * Calculate position of the image pixel within the signal path,
- * taking the shifting of pixels and audioSignal into account.
- * See MusicBoxBuffer for use of a windowed buffer in this calculation. 
- */
 public int getSamplePos(int x, int y) {
-  int pos = mapper.lookupSample(x, y);
+  samplePos = mapper.lookupSample(x, y);
   // calculate how much animation has shifted the indices into the buffer
-  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
-  return (pos + totalShift) % mapSize;
+  animShift = (animShift + shift % mapSize + mapSize) % mapSize;
+  samplePos = (samplePos + animShift) % mapSize;
+  samplePos += this.windowBuff.getIndex();
+  return samplePos % this.windowBuff.getBufferSize();
 }
+
 
 /**
  * Plays an audio sample with WFSamplerInstrument and custom ADSR.
@@ -89,7 +80,11 @@ public int getSamplePos(int x, int y) {
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
+  if (pool == null) {
+   println("-->>> You must load a file ('o' key command) before you can play audio samples. <<<--");
+   return 0;
+  }
+  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
@@ -105,23 +100,29 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
+  if (pool == null) {
+   println("-->>> You must load a file ('o' key command) before you can play audio samples. <<<--");
+   return 0;
+  }
+  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
   return samplelen;
 }
 
-public int calcSampleLen() {
-  float vary = 0; 
-  // skip the fairly rare negative numbers
-  while (vary <= 0) {
-    vary = (float) PixelAudio.gauss(1.0, 0.0625);
-  }
-  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
-  return samplelen;
+/**
+ * Utility method that applies a Gaussian distribution to vary it around its given value.
+ * @param base
+ * @return
+ */
+public int calcSampleLen(int base, float mean, float variance) {
+  float vary = (float) (PixelAudio.gauss(mean, variance)); // vary the duration of the signal 
+  // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
+  int len = (int) (vary * base); // calculate the duration of the sample
+  return len;
 }
+
 
 /**
  * Draws a circle at the location of an audio trigger (mouseDown event).
@@ -132,5 +133,47 @@ public void drawCircle(int x, int y) {
   //float size = isRaining? random(10, 30) : 60;
   fill(color(233, 220, 199));
   noStroke();
-  circle(x, y, 60);
+  circle(x, y, 24);
 }  
+/**
+ * Draws a circle at the location of an audio trigger (mouseDown event).
+ * @param x    x coordinate of circle
+ * @param y    y coordinate of circle
+ * @param d      diameter of circle
+ */
+public void drawCircle(int x, int y, float d, int c) {
+  //float size = isRaining? random(10, 30) : 60;
+  fill(c);
+  noStroke();
+  circle(x, y, d);
+}  
+
+public void raindrops() {
+  float x = random(width/4, 3 * width/4);
+  float y = random(16, height/5);
+//    int signalPos = mapper.lookupSample(x, y);
+//    int[] coords = mapper.lookupCoordinate(signalPos);
+  audioMousePressed((int) x, (int) y);
+}  
+
+/**
+ * TODO update for buffer animation
+ * @param isStartListening    true if audio stream capture should be initiated, false if it should be ended
+ * @return    current value of isStartListening
+ */
+public boolean listenToAnthem(boolean isStartListening) {
+  if (isStartListening) {
+    if (isFixedLength) {
+
+    }
+    else {
+
+    }
+  }
+  else {
+    if (isFixedLength) {
+
+    }
+  }
+  return isStartListening;
+}

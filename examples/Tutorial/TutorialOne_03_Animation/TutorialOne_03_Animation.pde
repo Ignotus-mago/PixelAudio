@@ -20,19 +20,24 @@
  *     add video variables and key commands
  *     add stepAnimation() and renderFrame() methods, edit animate() method to call these new methods
  *     add doRain method and key command to trigger rain
- *     
+ *
+ *   1. Launch the sketch and press the 'o' key to open an audio or image file.
+ *   2. As in the previous tutorial, the file loads to both audio buffer and display image. 
+ *   3. Click on the image to trigger audio events. 
+ *   4. Press the space bar to start or stop animation. Animation consists of rotating the image
+ *      pixels along the signal path in the renderFrame() methdo. The audio buffer is also rotated, 
+ *      in the updateAudio() method. By rotating both the image and the audio buffer, we keep
+ *      pixels and audio samples aligned. 
+ *   5. Press the 'r' key to turn random audio events ("it's raining") on and off. 
+ *   6. If you press 'o' to open a file while animation is running, animation will stop. 
+ *      This is a precaution, followed in later example sketches. The sketch, audio events, and
+ *      file input all run in separate threads. We want to avoid having two different threads
+ *      attempt to write to the audio buffer at the same time.  
+ *
  * Still to come, as the tutorial advances:
- * -- improved audio when image is animating
- *    You may have noticed that audio events that happen when the image is animating 
- *    have more noise than when they are holding still. That's because we are updating
- *    the audio buffer and the image while animation is ongoing. Audio runs in a separate 
- *    thread, and happens in between display frames. Our updates happen on every frame, slower
- *    than the audio, but they introduce discontinuities into the source of the audio. If 
- *    you like glitch, you may like the effect; however, it would be useful to have a way 
- *    to get clean audio. In the next tutorial, TutorialOne_04_Drawing, we provide
- *    a solution. 
  * -- drawing to trigger audio events
  * -- UDP communication with Max and other media applications
+ * -- loading a file to memory and traversing it with a windowed buffer
  * 
  */
 

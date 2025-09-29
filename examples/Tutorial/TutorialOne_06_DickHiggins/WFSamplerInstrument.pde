@@ -36,14 +36,14 @@ public class WFSamplerInstrument {
     });
 
   /**
- * Construct the instrument from the MultiChannelBuffer (copies happen inside Sampler).
- *
- * @param buffer          the loaded MultiChannelBuffer (the underlying audio source)
- * @param sampleRate      sample rate used to create the Sampler
- * @param maxVoices       polyphony for the Sampler
- * @param audioOut        Minim AudioOutput to patch into
- * @param defaultParams   default ADSR parameters
- */
+   * Construct the instrument from the MultiChannelBuffer (copies happen inside Sampler).
+   *
+   * @param buffer          the loaded MultiChannelBuffer (the underlying audio source)
+   * @param sampleRate      sample rate used to create the Sampler
+   * @param maxVoices       polyphony for the Sampler
+   * @param audioOut        Minim AudioOutput to patch into
+   * @param defaultParams   default ADSR parameters
+   */
   public WFSamplerInstrument(MultiChannelBuffer buffer,
     float sampleRate,
     int maxVoices,
@@ -57,8 +57,8 @@ public class WFSamplerInstrument {
   }
 
   /**
- * Replace the backing buffer (creates a new Sampler). Avoid calling this frequently.
- */
+   * Replace the backing buffer (creates a new Sampler). Avoid calling this frequently.
+   */
   public synchronized void setBuffer(MultiChannelBuffer buffer) {
     // creating a new Sampler will copy the buffer internally (costly for large files)
     this.sampler = new Sampler(buffer, sampleRate, maxVoices);
@@ -78,30 +78,30 @@ public class WFSamplerInstrument {
   }
 
   /**
- * Convenience: play using the stored default ADSRParams.
- *
- * @param samplePos start position (samples)
- * @param sampleLen length (samples)
- * @param amplitude amplitude
- * @return actual length used (samples)
- */
+   * Convenience: play using the stored default ADSRParams.
+   *
+   * @param samplePos start position (samples)
+   * @param sampleLen length (samples)
+   * @param amplitude amplitude
+   * @return actual length used (samples)
+   */
   public int playSample(int samplePos, int sampleLen, float amplitude) {
     return playSample(samplePos, sampleLen, amplitude, defaultADSRParams);
   }
 
   /**
- * Main play method: constructs a fresh Minim ADSR from env,
- * patches Sampler -> ADSR -> AudioOutput, triggers the Sampler,
- * schedules noteOff and then schedules unpatch of the Sampler from the ADSR
- * after the release has completed (to avoid accumulating ADSR references).
- * You can use different ADSRParams each time you call this method, for maximum variety. 
- *
- * @param samplePos   start position (samples)
- * @param sampleLen   length (samples)
- * @param amplitude   amplitude
- * @param env         ADSR parameters for this note (must be non-null)
- * @return actual length used (samples)
- */
+   * Main play method: constructs a fresh Minim ADSR from env,
+   * patches Sampler -> ADSR -> AudioOutput, triggers the Sampler,
+   * schedules noteOff and then schedules unpatch of the Sampler from the ADSR
+   * after the release has completed (to avoid accumulating ADSR references).
+   * You can use different ADSRParams each time you call this method, for maximum variety. 
+   *
+   * @param samplePos   start position (samples)
+   * @param sampleLen   length (samples)
+   * @param amplitude   amplitude
+   * @param env         ADSR parameters for this note (must be non-null)
+   * @return actual length used (samples)
+   */
   public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
     if (env == null) throw new IllegalArgumentException("ADSRParams env must not be null");
     if (sampler == null) throw new IllegalStateException("Sampler not initialized (call setBuffer first)");
@@ -136,10 +136,10 @@ public class WFSamplerInstrument {
         try {
           noteAdsr.noteOff();
           /*
- * Let the ADSR unpatch audioOut after its release completes.
- * Minim provides unpatchAfterRelease on ADSR; calling it ensures
- * audioOut is disconnected after the release phase finishes.
- */
+           * Let the ADSR unpatch audioOut after its release completes.
+           * Minim provides unpatchAfterRelease on ADSR; calling it ensures
+           * audioOut is disconnected after the release phase finishes.
+           */
           noteAdsr.unpatchAfterRelease(audioOut);
         }
         catch (Throwable t) {
@@ -169,8 +169,8 @@ public class WFSamplerInstrument {
   }
 
   /**
- * Call when shutting down the app to stop the internal scheduler.
- */
+   * Call when shutting down the app to stop the internal scheduler.
+   */
   public void close() {
     scheduler.shutdown();
   }

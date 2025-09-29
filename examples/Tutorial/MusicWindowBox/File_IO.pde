@@ -7,12 +7,11 @@
 // -------- BEGIN FILE I/O FOR APPLYING COLOR --------- //
 
 /* 
-  * Here is a special section of code for TutorialOne and other applications that
-  * color a grayscale image with color data from a file. The color and saturation
-  * come from the selected file, the brightness (gray values, more or less) come
-  * from an image you supply, such as display image. 
-  */
-
+ * Here is a special section of code for TutorialOne and other applications that
+ * color a grayscale image with color data from a file. The color and saturation
+ * come from the selected file, the brightness (gray values, more or less) come
+ * from an image you supply. 
+ */
 
 /**
  * Call to initiate process of opening an image file to get its color data.
@@ -38,7 +37,7 @@ public void colorFileSelected(File selectedFile) {
       imageFileTag = fileTag;
       println("--- Selected color file "+ fileName +"."+ fileTag);
       // apply the color data (hue, saturation) in the selected image to our display image, mapImage
-      applyImageColor(imageFile, mapImage);
+      applyImageColorToMapImage(imageFile);
     } else {
       println("----- File is not a recognized image format ending with \"png\", \"jpg\", or \"jpeg\".");
     }
@@ -48,12 +47,12 @@ public void colorFileSelected(File selectedFile) {
 }
 
 /**
- * Apply the hue and saturation of a chosen image file to the brightness channel of the display image.
- * @param imgFile        selected image file, source of hue and saturation values
+ * Apply the hue and saturation channels of one image to another image, 
+ * leaving its brightness channel unchanged.
+ * @param colorImage     image that is the source of hue and saturation values
  * @param targetImage    target image where brightness will remain unchanged
  */
-public void applyImageColor(File imgFile, PImage targetImage) {
-  PImage colorImage = loadImage(imgFile.getAbsolutePath());
+public void applyImageColor(PImage colorImage, PImage targetImage) {
   int w = colorImage.width > mapImage.width ? targetImage.width : colorImage.width;
   int h = colorImage.height > targetImage.height ? targetImage.height : colorImage.height;
   float[] hsbPixel = new float[3];
@@ -72,12 +71,16 @@ public void applyImageColor(File imgFile, PImage targetImage) {
   targetImage.updatePixels();
 }
 
+public void applyImageColorToMapImage(File imgFile) {
+  PImage colorImage = loadImage(imgFile.getAbsolutePath());
+  applyImageColor(colorImage, mapImage);
+}
+
 // -------- END FILE I/O FOR APPLYING COLOR --------- //
 
 /*
-  * Here is a section of "regular" file i/o methods for audio and image files.
-  */
-
+ * Here is a section of "regular" file i/o methods for audio and image files.
+ */
 
 /**
  * Wrapper method for Processing's selectInput command
@@ -85,6 +88,8 @@ public void applyImageColor(File imgFile, PImage targetImage) {
 public void chooseFile() {
   oldIsAnimating = isAnimating;
   isAnimating = false;
+  oldIsListening = isListening;
+  isListening = listenToAnthem(false);
   selectInput("Choose an audio file or an image file: ", "fileSelected");
 }
 
@@ -107,8 +112,8 @@ public void fileSelected(File selectedFile) {
       audioFilePath = filePath;
       audioFileName = fileName;
       audioFileTag = fileTag;
-      println("----- Selected file " + fileName + "." + fileTag + " at "
-            + filePath.substring(0, filePath.length() - fileName.length()));
+      println("---- Selected file " + fileName + "." + fileTag + " at "
+               + filePath.substring(0, filePath.length() - fileName.length()));
       loadAudioFile(audioFile);
     } 
     else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
@@ -121,51 +126,76 @@ public void fileSelected(File selectedFile) {
       loadImageFile(imageFile);
     } 
     else {
-      println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
+      println("---- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
     }
   } 
   else {
-    println("----- No audio or image file was selected.");
+    println("---- No audio or image file was selected.");
   }
   isAnimating = oldIsAnimating;
+  isListening = listenToAnthem(oldIsListening);
 }
 
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
- * writeAudioToImage() to transcode audio data and write it to mapImage.
- * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
+ * writeAudioToImage() to transcode audio data and write it to mapImage
  * 
  * @param audFile    an audio file
  */
-public void loadAudioFile(File audFile) {
+public boolean loadAudioFile(File audFile) {
   // read audio file into our MultiChannelBuffer, buffer size will be adjusted to match the file
   float sampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), playBuffer);
   // sampleRate > 0 means we read audio from the file
   if (sampleRate > 0) {
-    this.sampleRate = sampleRate; 
-    println("---- sample rate is "+ this.sampleRate);
-    // save the length of the buffer as read from the file, for future use
-    this.audioFileLength = playBuffer.getBufferSize();
-    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
+    this.sampleRate = sampleRate;
+    println("---- sampleRate is set to "+ nf(this.sampleRate, 0, 1));
+    // resize playBuffer to mapSize, if necessary -- signal will not be overwritten
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-    // load the buffer of our WFSamplerInstrument
-    synth.setBuffer(playBuffer);
     // read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
     audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
     audioLength = audioSignal.length;
-    if (isLoadToBoth) writeAudioToImage(audioSignal, mapper, mapImage, chan);
+    // now load the same file to anthemBuffer
+    this.sampleRate = loadAnthem(audFile);
+    drawSignal();
+    // comment out next line to load file only to the audio buffer
+    // writeAudioToImage(audioSignal, mapper, mapImage, chan);
+    return true;
+  }
+  return false;
+}
+
+public float loadAnthem(File audFile) {
+  anthemBuffer = new MultiChannelBuffer(1, 1); // dummyt buffer
+  float fileSampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), anthemBuffer);
+  if (fileSampleRate == 0) {
+    return -1;
+  }
+  else {
+    // save the length of the buffer as read from the file, for future use
+    this.audioFileLength = playBuffer.getBufferSize();
+    this.windowHopSize = (int) (fileSampleRate/this.frameRate);
+    anthemSignal = anthemBuffer.getChannel(0);
+    windowBuff = new WindowedBuffer(anthemSignal, mapSize, windowHopSize);
+    // this.instrument = new WFSamplerInstrument(anthemBuffer, audioOut.sampleRate(), 32, audioOut, env); 
+    this.pool = new WFSamplerInstrumentPool(anthemBuffer, fileSampleRate, 
+                    poolSize, perInstrumentVoices, audioOut, adsr);
+    println("---- initialized WindowBuffer windowBuff with signal length "+ windowBuff.buffer.length 
+        +", window size "+ windowBuff.getWindowSize() +", hop size "+ windowBuff.getHopSize());
+    println("---- file sample rate = "+ fileSampleRate +", file duration = "+ windowBuff.buffer.length / fileSampleRate 
+        +", window time span = "+ windowBuff.getWindowSize() / fileSampleRate);
+    return fileSampleRate;
   }
 }
 
 /**
  * Transcodes audio data in sig[] and writes it to color channel chan of mapImage 
- * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(), 
- * which will throw an IllegalArgumentException if sig.length != img.pixels.length
- * or sig.length != mapper.getSize(). 
+ * using the lookup tables in mapper to redirect indexing. Calls PixelAudioMapper 
+ * method mapSigToImg(), which will throw an IllegalArgumentException if 
+ * sig.length != img.pixels.length or sig.length != mapper.getSize(). 
  * 
  * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
  * @param mapper      a PixelAudioMapper
- * @param img    a PImage
+ * @param img         a PImage
  * @param chan        a color channel
  */
 public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
@@ -177,8 +207,7 @@ public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, 
 
 /**
  * Attempts to load image data from a selected file into mapImage, then calls writeImageToAudio() 
- * to transcode HSB brightness channel to audio and writes it to playBuffer and audioSignal.
- * If you want to load the image file and audio file separately, comment out writeImageToAudio(). 
+ * to transcode HSB brightness color data from the image to audio and writes it to playBuffer and audioSignal.
  * 
  * @param imgFile    an image file
  */
@@ -204,20 +233,19 @@ public void loadImageFile(File imgFile) {
     mixImage.updatePixels();
     mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
   }
-  if (isLoadToBoth) {
-    // prepare to copy image data to audio variables
-    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-    audioSignal = playBuffer.getChannel(0);
-    writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-    // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-    playBuffer.setChannel(0, audioSignal);
-    audioLength = audioSignal.length;
-  }
+  // prepare to copy image data to audio variables
+  // resize the buffer to mapSize, if necessary -- signal will not be overwritten
+  if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
+  audioSignal = playBuffer.getChannel(0);
+  // comment out the three lines to load file only to mapImage and the display
+  // writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
+  // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
+  // playBuffer.setChannel(0, audioSignal);
+  audioLength = audioSignal.length;
 }
 
 /**
- * This method writes a color channel from an image to playBuffer, fulfilling a 
+ * This method writes a color channel from the an image to playBuffer, fulfilling a 
  * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
  * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
  * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
@@ -231,7 +259,10 @@ public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, 
   sig = mapper.mapImgToSig(img.pixels, sig, chan);
 }    
 
-
+/**
+ * Calls Processing's selectOutput method to start the process of saving 
+ * the current audio signal to a .wav file. 
+ */
 public void saveToAudio() {
   // File folderToStartFrom = new File(dataPath("") + "/");
   // selectOutput("Select an audio file to write to:", "audioFileSelectedWrite", folderToStartFrom);
@@ -287,6 +318,10 @@ public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
   AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
 }
 
+/**
+ * Calls Processing's selectOutput method to start the process of saving 
+ * the mapImage (the offscreen copy of the display image) to a .png file. 
+ */
 public void saveToImage() {
   // File folderToStartFrom = new File(dataPath(""));
   selectOutput("Select an image file to write to:", "imageFileSelectedWrite");

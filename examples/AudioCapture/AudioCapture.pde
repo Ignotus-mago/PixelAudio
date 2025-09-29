@@ -73,7 +73,7 @@ Sampler audioSampler;
 /** An audio recorder for capturing input from the microphone */
 AudioRecorder recorder;
 /** Our homemade audio sampling instrument */
-WFInstrument instrument;
+WFSamplerInstrument instrument;
 /** A source for streaming audio from a file */
 AudioPlayer anthem;
 /** The class that captures audio for us */
@@ -317,7 +317,7 @@ public int playSample(int samplePos) {
   // println("----->>> end = " + end);
   audioSampler.end.setLastValue(end);
   // println("----->>> audioBuffer size = "+ audioBuffer.getBufferSize());
-  this.instrument = new WFInstrument(audioOut, audioSampler, adsr);
+  this.instrument = new WFSamplerInstrument(audioOut, audioSampler, adsr);
   // play command takes a duration in seconds
   float dur = duration / (float) (sampleRate);
   instrument.play(dur);

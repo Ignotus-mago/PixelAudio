@@ -25,7 +25,7 @@ public class WFSamplerInstrumentPool {
   private final ArrayDeque<WFSamplerInstrument> available = new ArrayDeque<>();
   private final Set<WFSamplerInstrument> inUse = new HashSet<>();
 
-  // Single-threaded scheduler for delayed cleanup tasks (noteOff/unpatch).
+  // Single-threaded scheduler for delayed cleanup tasks (inUse/remove).
   // The lambda here is a ThreadFactory: it takes the scheduled task (Runnable r),
   // wraps it in a new Thread named "WFSamplerInstrument-scheduler", and marks it
   // as a daemon thread so it won't block JVM shutdown.

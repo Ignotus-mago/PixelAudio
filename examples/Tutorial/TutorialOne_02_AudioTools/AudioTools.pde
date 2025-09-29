@@ -12,6 +12,8 @@ public void initAudio() {
   minim = new Minim(this);
   // use the getLineOut method of the Minim object to get an AudioOutput object
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
+  // reduce gain to avoid clipping from multiple voices
+  audioOut.setGain(-6.0f);
   // create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
   this.playBuffer = new MultiChannelBuffer(mapSize, 1);
   this.audioSignal = playBuffer.getChannel(0);
@@ -19,13 +21,14 @@ public void initAudio() {
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsrParams = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   initADSRList();
-  // create a WFSamplerInstrument, though playBuffer is all 0s at the moment
+  // create a WFSamplerInstrument with 16 voices
   // adsrParams will be the default ADSR for the synth
   synth = new WFSamplerInstrument(playBuffer, audioOut.sampleRate(), 16, audioOut, adsrParams);
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
 }
 
+// a list of ADSR envelopes. Feel free to edit and add more.
 public void initADSRList() {
   adsrList = new ArrayList<ADSRParams>();
   ADSRParams env0 = new ADSRParams(
@@ -148,7 +151,7 @@ public int calcSampleLen() {
     vary = (float) PixelAudio.gauss(1.0, 0.0625);
   }
   samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-  println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 

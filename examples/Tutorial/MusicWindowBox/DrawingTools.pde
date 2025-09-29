@@ -5,20 +5,23 @@
 /*----------------------------------------------------------------*/
 
 /**
- * Initializes allPoints and adds the current mouse location to it. 
- */
+  * Initializes allPoints and adds the current mouse location to it. 
+  * Called when this.isDrawMode == true and mouse is pressed, to start
+  * accumulating points and event times into allPoints and allTimes lists. 
+  */
 public void initAllPoints() {
   allPoints = new ArrayList<PVector>();
   allTimes = new ArrayList<Integer>();
   startTime = millis();
   allTimes.add(startTime);
-  addPoint(mouseX, mouseY);
+  addPoint();
 }
 
+
 /**
- * Responds to mousePressed events associated with drawing.
- */
-public void handleMousePressed(int x, int y) {
+  * Responds to mousePressed events associated with drawing.
+  */
+public void handleMousePressed() {
   if (activeBrush != null) {
     // a brushShape was triggered
     eventPoints = activeBrush.getEventPoints();
@@ -27,23 +30,31 @@ public void handleMousePressed(int x, int y) {
   } 
   else {
     // handle audio generation in response to a mouse click
-    audioMousePressed(PApplet.constrain(x, 0, width-1), PApplet.constrain(y, 0, height-1));
+    audioMousePressed(PApplet.constrain(mouseX, 0, width - 1), PApplet.constrain(mouseY, 0, height));
   }
 }
 
+
 /**
- * While user is dragging the mouses and isDrawMode == true, accumulates new points
- * to allPoints and event times to allTimes.
- */
-public void addPoint(int x, int y) {
+  * While user is dragging the mouses and isDrawMode == true, accumulates new points
+  * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
+  * We constrain points outside the bounds of the display window. An alternative approach 
+  * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural" 
+  * appearance for fast drawing. 
+  */
+public void addPoint() {
   // we do some very basic point thinning to eliminate successive duplicate points
-  if (x != currentPoint.x || y != currentPoint.y) {
-    currentPoint = new PVector(x, y);
+  if (mouseX != currentPoint.x || mouseY != currentPoint.y) {
+    if (isIgnoreOutsideBounds && (mouseX < 0 || mouseX >= width || mouseY < 0 || mouseY >= height)) return;
+    sampleX = PApplet.constrain(mouseX, 0, width-1);
+    sampleY = PApplet.constrain(mouseY, 0, height-1);
+    currentPoint = new PVector(sampleX, sampleY);
     allPoints.add(currentPoint);
     allTimes.add(millis());
-    setSampleVars(mouseX, mouseY);
+    samplePos = mapper.lookupSample(sampleX, sampleY);
   }
 }
+
 
 /**
  * Processes the eventPoints list to create TimedLocation events 
@@ -80,10 +91,11 @@ public void loadEventPoints(int startTime) {
   }
 }
 
+
 /**
- * @param iter         a ListIterator over eventPoints
- * @param startTime    a time in millis
- */
+  * @param iter         a ListIterator over eventPoints
+  * @param startTime    a time in millis
+  */
 public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime) {
   startTime += 50;
   int i = 0;
@@ -94,10 +106,11 @@ public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime)
   Collections.sort(curveTLEvents);
 }  
 
+
 /**
  * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
  * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from 
- * variables in the calling class (TutorialOneDrawing, here). 
+ * global variables in the host class. 
  */
 public void initCurveMaker() {
   curveMaker = PACurveMaker.buildCurveMaker(allPoints);
@@ -112,10 +125,19 @@ public void initCurveMaker() {
   loadEventPoints();
   curveMaker.setDragTimes(reconfigureTimeList(allTimes));
   this.brushShapesList.add(curveMaker);
-  sampleX = mouseX;
-  sampleY = mouseY;
+  sampleX = PApplet.constrain(mouseX, 0, width-1);
+  sampleY = PApplet.constrain(mouseY, 0, height-1);
   samplePos = mapper.lookupSample(sampleX, sampleY);
+  // testing
+  /*
+  println("----- RDP Indices: ");
+  int[] ndx = curveMaker.getRdpIndicesAsInts();
+  for (int n : ndx) {
+    println(n);
+  }
+  */
 }
+
 
 /**
  * @param timeList    an array of ints representing absolute times in millis
@@ -145,27 +167,28 @@ public ArrayList<Integer> reconfigureTimeList(ArrayList<Integer> timeList) {
   return timeOffsetsList;
 }
 
-
 /**
  * Iterates over brushShapesList and draws the brushstrokes stored in 
- * each PACurveMaker in the list. 
+ * each PACurveMaker in the list. Detects if mouse is over a brush 
+ * and points activeBrush to it if that is the case.
  */
 public void drawBrushShapes() {
   if (this.brushShapesList.size() > 0) {
     int idx = 0;
     activeBrush = null;
-    for (PACurveMaker brush : brushShapesList) {
+    for (PACurveMaker bd : brushShapesList) {
       int brushFill = readyBrushColor;
-      if (mouseInPoly(brush.getBrushPoly())) {
+      if (mouseInPoly(bd.getBrushPoly())) {
         brushFill = activeBrushColor;
-        activeBrush = brush;
+        activeBrush = bd;
         activeIndex = idx;
       }
-      PACurveUtility.shapeDraw(this, brush.getBrushShape(), brushFill, brushFill, 2);
+      PACurveUtility.shapeDraw(this, bd.getBrushShape(), brushFill, brushFill, 2);
       idx++;
     }
   }
 }
+
 
 /**
  * Draws shapes stored in curveMaker, a PACurveMaker instance that stores the most recent drawing data. 
@@ -191,10 +214,10 @@ public synchronized void runCurveEvents() {
         // the curves may exceed display bounds, so we have to constrain values
         sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
         sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
-        int pos = getSamplePos(sampleX, sampleY);
-        playSample(pos, calcSampleLen(), 0.6f);          
+        samplePos = getSamplePos(sampleX, sampleY);
+        this.samplelen = calcSampleLen(this.sampleBase, this.sampleScale, this.sampleScale * 0.125f);
+        playSample(samplePos, samplelen, 0.5f, adsr);  
         tl.setStale(true);
-        // println("----- ");
       } 
       else {
         // pointEventsArray is sorted by time, so ignore events still in the future
@@ -206,8 +229,8 @@ public synchronized void runCurveEvents() {
 }
 
 /**
- * Tracks and runs TimedLocation events in the timeLocsArray list, which is 
- * associated with mouse clicks that trigger audio a the click point.
+ * Tracks and runs TimedLocation events in the timeLocsArray list.
+ * This method is synchronized with a view to future development where it may be called from different threads.
  */
 public synchronized void runPointEvents() {
   int currentTime = millis();
@@ -215,15 +238,16 @@ public synchronized void runPointEvents() {
     TimedLocation tl = iter.next();
     tl.setStale(tl.stopTime() < currentTime);
     if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
+      drawCircle(tl.getX(), tl.getY(), 20, color(233, 89, 110, 199));
     }
   }
   timeLocsArray.removeIf(TimedLocation::isStale);    
 }
 
 /**
- * @param poly    a polygon described by an ArrayList of PVector
- * @return        true if the mouse is within the bounds of the polygon, false otherwise
+ * Detects if the mouse is within a selected polygon. 
+ * @param poly    a polygon as an ArrayList of PVectors
+ * @return        true if mouse is within poly, false otherwise
  */
 public boolean mouseInPoly(ArrayList<PVector> poly) {
   return PABezShape.pointInPoly(poly, mouseX, mouseY);
@@ -231,7 +255,7 @@ public boolean mouseInPoly(ArrayList<PVector> poly) {
 
 /**
  * Reinitializes audio and clears event lists. If isClearCurves is true, clears brushShapesList
- * and curveTLEvents.
+ * and curveTLEvents. 
  * @param isClearCurves
  */
 public void reset(boolean isClearCurves) {
@@ -284,6 +308,7 @@ public void removeActiveBrush() {
   }
 }
 
+
 /**
  * Removes the newest PACurveMaker instance, shown as a brush stroke
  * in the display, from brushShapesList.
@@ -300,6 +325,7 @@ public void removeNewestBrush() {
   }
 }
 
+
 /**
  * Removes the oldest brush in brushShapesList.
  */
@@ -310,6 +336,6 @@ public void removeOldestBrush() {
       brushShapesList.remove(0);    // brushShapes array starts at 0
       if (brushShapesList.isEmpty())
         curveMaker = null;
-      }
+    }
   }
 }

@@ -150,6 +150,7 @@ public void loadAudioFile(File audFile) {
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
     // load the buffer of our WFSamplerInstrument
     synth.setBuffer(playBuffer);
+    pool = new WFSamplerInstrumentPool(playBuffer, sampleRate, 48, 1, audioOut, adsr);
     // read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
     audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
     audioLength = audioSignal.length;

@@ -7,26 +7,37 @@
  * respond to mouse clicks by playing the audio samples corresponding to the click location
  * in the display image. It is designed to be a good starting place for your own coding. 
  *
- * Still to come, as the tutorial advances:
- * -- animation and saving to video
- * -- drawing to trigger audio events
- * -- UDP communication with Max and other media applications
+ *   1. Launch the sketch and press the 'o' key to open a file.
+ *   2. An audio file will load to the audio buffer, playBuffer, and be transcoded into
+ *      RGB pixel data and written to the display image, mapImage, following the signal path.
+ *      An image file will load to mapImage and the display and then be transcoded into
+ *      audio data. The process in automated in this tutorial, but we'll provide separate
+ *      loading of audio and image in later tutorials. 
+ *   3. Click on the image to trigger audio events. 
+ *   4. Experiment with different image and audio files. Press 'r' turn selection of a  
+ *      random ADSR envelope from adsrList on and off. Press 'c' to load only color 
+ *      data (hue and saturation) from an image file. 
+ *
+ * Audio events are generated through WFSamplerInstrument, which is essentially a wrapper
+ * for Minim's AudioSampler class. WFSamplerInstrument lets us add an ADSR (attack, decay,
+ * sustain, release) envelope to an AudioSampler instance. AudioSampler maintains an audio
+ * buffer, a copy of playBuffer. It can support multiple voices -- in the initAudio() 
+ * method we set the number to 16. This is a reasonable number of voices for tracking 
+ * rapid mouse clicks, but you can change it. 
+ *
+ * Audio events are triggered with either one of two methods:
  * 
- * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
- * images and audio to different color channels. 
- /*
- * This example application completes the first part of Tutorial One for the PixelAudio 
- * library for Processing. It provides methods for generating a rainbow color array that
- * can reveal the structure of an audio path, a curve that maps audio signals onto an image.
- * It can open and display audio and image files, transcode image pixel data to audio samples
- * and transcode audio samples to image pixel data, and save audio and image files. It can 
- * respond to mouse clicks by playing the audio samples corresponding to the click location
- * in the display image. It is designed to be a good starting place for your own coding. 
+ *  playSample(int samplePos, int samplelen, float amplitude)
+ *  playSample(int samplePos, int samplelen, float amplitude, ADSRParams env)
+ *
+ * The first method uses the built-in ADSR supplied on initializing WFSamplerInstrument.
+ * The second method allows you to supply you own ADSR. 
  *
  * Still to come, as the tutorial advances:
  * -- animation and saving to video
  * -- drawing to trigger audio events
  * -- UDP communication with Max and other media applications
+ * -- loading a file to memory and traversing it with a windowed buffer
  * 
  * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
  * images and audio to different color channels. 
@@ -212,7 +223,7 @@ public void draw() {
  * The built-in mousePressed handler for Processing, but note that it forwards mouse coords to audiMousePressed().
  */
 public void mousePressed() {
-  println("mousePressed:", mouseX, mouseY);
+  // println("mousePressed:", mouseX, mouseY);
   // handle audio generation in response to a mouse click
   audioMousePressed(mouseX, mouseY);
 }
