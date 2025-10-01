@@ -47,6 +47,7 @@ public class ADSRParams {
   }
   
   public String toString() {
-    return ("maxAmp, ADSR: "+ maxAmp +", "+ attack +", "+ decay +", "+ sustain +", "+ release);
+    return ("maxAmp: "+ nf(maxAmp, 0, 3) +", ADSR: "+ nf(attack, 0, 3) 
+            +", "+ nf(decay, 0, 3) +", "+ nf(sustain, 0, 3) +", "+ nf(release, 0, 3));
   }
 }

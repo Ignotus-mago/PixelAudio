@@ -1,7 +1,33 @@
 import processing.sound.*;
 
 /**
- * AudioCapture shows how you can capture streaming audio from live input or from a file.
+ * AudioCapture captures streaming audio from live input or from a file and processes it with PixelAudio.
+ * 
+ *   1. Launch the sketch. A display window appears with rainbow colors marking the signal path.
+ *      The information at the top of the display indicates that "listening is false, source is file,
+ *      the source is paused at 0/25000, and muting is false." 
+ *      
+ *   2. Press 'p' to turn the audio on and off. 
+ *   
+ *   3. While audio is playing, press the spacebar to start "listening", i.e., streaming audio 
+ *      to audioBuffer and mapImage.
+ *   
+ *   4. Press 'm' to mute and unmute the audio. 
+ *   
+ *   5. While audio is muted, click in the display window. This triggers audio events. 
+ *      You can trigger events while the audio is streaming, or just trigger them from 
+ *      the captured buffer when audio is not streaming. You can "play" a muted stream 
+ *      from a file by clicking at the right interval in one place. 
+ *   
+ *   6. Press 't' to change the audio source to "device", which by default is the built-in
+ *      mic for your computer. If listening is off, you can still see the audio signal in
+ *      the display. Press the spacebar to start capturing the audio source. 
+ *      
+ *   7. While the audio is streaming in from the computer mic, you can trigger audio events
+ *      by clicking in the display window. The mic will pick up audio from your speakers, 
+ *      a situation which can produce feedback. 
+ *      
+ * 
  * Using the Sound library in Processing, the control panel for Sound in MacOS, and the
  * BlackHole audio routing tool (https://existential.audio/blackhole/), you can obtain
  * a wide range of inputs and outputs, depending on your system software and hardware. 
@@ -32,9 +58,24 @@ import processing.sound.*;
  * Run the AudioCapture application and start listening (spacebar turns listening on and off). 
  * Play a sound in Max. It should appear as pixel patterns in the AudioCapture window. 
  * 
+ * If you are using the computer's mic and speakers, when the audio is streaming in and showing up
+ * as animated pixels, you can click on it to hear the audio. Keep clicking and you can get feedback,
+ * as the mic picks up the audio. For this reason, outboard audio is a good idea in most situations. 
  * 
  * In the Eclipse IDE in MacOS, inputs do not seem to function. Streaming from a file
  * works as expected, using Minim. Outputs should be set with the System Sound control panel. 
+ *
+ *
+ * Press the 'p' key to toggle between live streaming from the built-in microphone and streaming from a file.
+ * Press 't' to change the audio source from live audio to file or vice versa.
+ * Press the spacebar to record audio from the current stream into the audio buffer and write it to the screen.
+ * Click on the image to play a sample. Clicking turns off recording.
+ * 
+ * Information about current source and streaming status is displayed in the application window. 
+ *
+ * See the MusicBoxBuffer sketch for a more advanced technique of moving through audio files, with more
+ * efficient handling of audio and a complete user interface for drawing. You may find it useful to go
+ * through the TutorialOne files first: MusicBoxBuffer is the culmination of the tutorial. 
  * 
  */
 
@@ -44,7 +85,6 @@ import net.paulhertz.pixelaudio.*;
 import processing.core.*;
 import ddf.minim.*;
 import ddf.minim.ugens.*;
-
 
 /** PixelAudio library */
 public PixelAudio pixelaudio;
@@ -86,17 +126,21 @@ int audioLength;
 /** audio sampling rate */
 int sampleRate = 44100;
 /** duration of a sample played by the WFInstrument, in seconds */
-float sampleLength = 1.0f;
+float noteDuration = 0.5f;
+/** actual length of a sample played by instrument */
+int samplelen;
 /** ADSR and parameters */
-ADSR adsr;
-float maxAmplitude = 0.9f;
-float attackTime = 0.2f;
-float decayTime = 0.125f;
-float sustainLevel = 0.5f;
-float releaseTime = 0.2f;
+ADSRParams adsr;
+float[] amplitudeRange = {0.4f, 0.9f};
+float[] attackRange = {0.01f, 0.2f};
+float[] decayRange = {0.05f, 0.3f};
+float[] sustainRange = {0.4f, 0.8f};
+float[] releaseRange = {0.1f, 0.4f};
 /** audio variables */
 boolean listening = false;
-boolean listenLive = true;
+boolean listenLive = false;
+
+boolean isVerbose = false;    // set true to get feedback in console
 
 
 /**
@@ -117,8 +161,8 @@ public void setup() {
   // works with Processing Sound library, but we're using Minim. 
   // In MacOS with Minim, use the System Settings control panel and AudioMIDI Setup.
   // You should be able to do something similar in Windows. 
-  //Sound.inputDevice(6);
-  //Sound.outputDevice(6);
+  // Sound.inputDevice(6);
+  // Sound.outputDevice(6);
   showHelp();
 }
 
@@ -146,23 +190,6 @@ public void initMapper() {
   mapImage.updatePixels();
 }
 
-public void initAudio() {
-  this.audioIn = minim.getLineIn(Minim.MONO);
-  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
-  this.audioBuffer = new MultiChannelBuffer(mapSize, 1);
-  this.audioSignal = new float[mapSize];
-  this.rgbSignal = new int[mapSize];
-  Arrays.fill(audioSignal, 0.0f);
-  this.audioLength = audioSignal.length;
-  this.audioBuffer.setChannel(0, audioSignal);
-  streamCap = new StreamCapture();
-  // path to the folder where PixelAudio examples keep their data files 
-  // such as image, audio, .json, etc.
-  String daPath = sketchPath("") + "../examples_data/";
-  println("daPath: ", daPath);
-  anthem = minim.loadFile(daPath + "youthorchestra.wav");
-}  
-
 public void draw() {
   image(mapImage, 0, 0);
   showAudioStatus();
@@ -170,31 +197,6 @@ public void draw() {
     drawSignal();
   }
   drawInput();
-}
-
-public void rewindAudioPlayer(AudioPlayer player, boolean playAgain) {
-  player.cue(0);
-  if (playAgain) player.play();
-}
-
-public void showAudioStatus() {
-  textSize(18);
-  StringBuffer sb = new StringBuffer();
-  sb.append("Listening is "+ listening +"; ");
-  if (!listenLive) {
-    if (anthem.isPlaying()) {
-      sb.append("source is file, playing at "+ anthem.position() +"/"+ anthem.length() +"; ");
-      sb.append("muting is "+ anthem.isMuted());
-    }
-    else {
-      sb.append("source is file, paused at "+ anthem.position() +"/"+ anthem.length() +"; ");
-      sb.append("muting is "+ anthem.isMuted());
-    }
-  }
-  else {
-    sb.append("source is current device "); 
-  }
-  text(sb.toString(), 6, 18);
 }
 
 public void keyPressed() {
@@ -227,6 +229,10 @@ public void keyPressed() {
     applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
     mapImage.updatePixels();
     break;
+  case 'v': // turn verbose output to console on and off
+    isVerbose = !isVerbose;
+    if (isVerbose) println("---- isVerbose is now true, if it's false I won't say anything");
+    break;
   case 'h':
     break;
   default:
@@ -236,95 +242,18 @@ public void keyPressed() {
 
 public void showHelp() {
   println(" * Press the 'p' key to toggle between live streaming from the built-in microphone and streaming from a file.");
-  println(" * Press the spacebar to record audio from the current stream into the audio buffer and write it to the screen.");
-  println(" * Click on the image to play a sample. Clicking turns off recording.");
-}
-
-public void toggleListening() {
-  if (listening) {
-    if (listenLive) {
-      audioIn.removeListener(streamCap);
-    }
-    else {
-      anthem.removeListener(streamCap);
-    }
-    listening = false;
-  }
-  else {
-    if (listenLive) {
-      audioIn.addListener(streamCap);
-    }
-    else {
-      anthem.addListener(streamCap);
-    }
-    listening = true;
-  }
-}
-
-public void toggleAudioSource() {
-  listenLive = !listenLive;
-  if (listening) {
-    if (listenLive) listenToDevice();
-    else listenToFile();
-  }
-}
-
-public void listenToDevice() {
-  listening = true;
-  anthem.removeListener(streamCap);
-  anthem.pause();
-  audioIn.addListener(streamCap);
-  listenLive = true;
-}
-
-public void listenToFile() {
-  listening = true;
-  audioIn.removeListener(streamCap);
-  anthem.addListener(streamCap);
-  anthem.loop();
-  listenLive = false;
+  println(" * Press 't' to change the audio source from live audio to file or vice versa.");
+  println(" * Press the spacebar to capture audio from the current stream into the audio buffer and write it to the screen.");
+  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage");
+  println(" * Click on the image to play a sample.");
 }
 
 public void mousePressed() {
-  if (listening) {
-    //toggleListening();
-    //if (anthem.isPlaying())
-    //  anthem.pause();
-  }
   // get the position in the audio buffer that corresponds to the pixel location in the image
   int samplePos = mapper.lookupSample(mouseX, mouseY);
   playSample(samplePos);
 }
 
-public int playSample(int samplePos) {
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8);
-  // ADSR
-  adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-  // set amplitude for the Sampler
-  audioSampler.amplitude.setLastValue(0.9f);
-  // set the Sampler to begin playback at samplePos, which corresponds to the
-  // place the mouse was clicked
-  audioSampler.begin.setLastValue(samplePos);
-  int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
-  int duration = (int) (sampleLength * sampleRate);
-  if (samplePos + sampleLength >= mapSize) {
-    duration = mapSize - samplePos; // make sure we don't exceed the mapSize
-    // println("----->>> duraton = " + duration);
-  }
-  int durationPlusRelease = duration + releaseDuration;
-  int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1
-      : samplePos + durationPlusRelease;
-  // println("----->>> end = " + end);
-  audioSampler.end.setLastValue(end);
-  // println("----->>> audioBuffer size = "+ audioBuffer.getBufferSize());
-  this.instrument = new WFSamplerInstrument(audioOut, audioSampler, adsr);
-  // play command takes a duration in seconds
-  float dur = duration / (float) (sampleRate);
-  instrument.play(dur);
-  // println("----->>> duration = "+ dur);
-  // return the length of the sample
-  return duration;
-}
 
 public void drawInput() {
   if (listenLive) {
