@@ -165,7 +165,7 @@ boolean isUseBlend = true;
 /* end drawing variables */
 
 /* ------------------------------------------------------------------ */
-/*                     WINDOWED BUFFER VARIABLES */
+/*                     WINDOWED BUFFER VARIABLES                      */
 /* ------------------------------------------------------------------ */
 
 /** keep track of the frame we should be rendering */

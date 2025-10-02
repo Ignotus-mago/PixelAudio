@@ -2,17 +2,17 @@
 /*                                                                */
 /*                 BEGIN PATTERN MAKING METHODS                   */
 /*                                                                */
-/*      General versions of some of these methods are available   */
+/*      Generalized version of these methods are available        */
 /*      in the PixelAudio library. Use these as examples          */
 /*      of how to roll your own MultiGens.                        */
 /*                                                                */
 /*----------------------------------------------------------------*/
   
 /**
- * hilbertLoop3x2() returns a looping fractal signal path consisting of 
- * 6 Hilbert gens, 3 wide by 2 tall, to fit a 3 * genW by 2 * genH image. 
  * 
- * Like all the methods that follow, this one creates a MultiGen instance
+ * NAMING CONVENTIONS
+ * 
+ * Like all the methods that follow, hilbertLoop3x2() creates a MultiGen instance
  * from a list of PixelMapGen objects (genList) and coordinate points (offsetList)
  * where they will be displayed. MultiGen creates a single signal path over all
  * the PixelMapGen objects. The path may be *continuous*, which is to say that
@@ -39,6 +39,11 @@
  * Moore gens are loops to begin with, and have no connections, but are
  * good for very symmetrical pattern-making.  
  * 
+ */
+
+/** 
+ * hilbertLoop3x2() returns a looping fractal signal path consisting of 
+ * 6 Hilbert gens, 3 wide by 2 tall, to fit a 3 * genW by 2 * genH image. 
  * 
  * Note that genH must equal genW and both must be powers of 2. For the 
  * image size we're using in this example, genW = image width / 3 and 
@@ -66,6 +71,11 @@ public MultiGen hilbertLoop3x2(int genW, int genH) {
   genList.add(new HilbertGen(genW, genH,fx270));
   offsetList.add(new int[] { 0, genH });
   return new MultiGen(width, height, offsetList, genList);
+}
+
+public MultiGen hilbertLoop6x4(int genW) {
+  // get a HIlbert curve generator
+  return HilbertGen.hilbertMultigenLoop(6, 4, genW);
 }
 
 /**
@@ -382,7 +392,6 @@ public MultiGen zigzagColumnOrtho(int cols, int rows, int genW, int genH) {
   }
   return new MultiGen(width, height, offsetList, genList);
 }
-
 /**
  * Creates a MultiGen with rows * cols DiagonalZigzagGens. 
  * Note that you should set values for such that:
@@ -454,7 +463,6 @@ public MultiGen zigzagRowRandomFlip(int cols, int rows, int genW, int genH) {
     }
     return new MultiGen(width, height, offsetList, genList);
 }
-
 /**
  * Creates a MultiGen with rows * cols BoustropheGens. 
  * Note that you should set values for such that:
@@ -479,7 +487,6 @@ public MultiGen boustrophRowRandom(int cols, int rows, int genW, int genH) {
     }
     return new MultiGen(width, height, offsetList, genList);
 }
-
 /**
  * Creates a MultiGen with rows * cols HilbertGens.
  * Note that you should set values for such that:
@@ -529,49 +536,55 @@ public PixelAudioMapper selectMapper(int selector, PixelMapGen gen) {
         gen = hilbertLoop3x2(width/3, height/2);
         break;
     case(1):
-        gen = hilbertZigzagLoop6x4(width/6, height/4);
+        gen = hilbertLoop6x4(width/6);
         break;
     case(2):
-        gen = hilbertStackOrtho(3, 8, 4, imageWidth/12, imageHeight/8);
+        gen = hilbertZigzagLoop6x4(width/6, height/4);
         break;
     case(3):
-        gen = hilbertStackBou(3, 8, 4, imageWidth/12, imageHeight/8);
+        gen = hilbertStackOrtho(3, 8, 4, imageWidth/12, imageHeight/8);
         break;
     case(4):
-        gen = hilbertRowOrtho(6, 4, height/4, width/6);
+        gen = hilbertStackBou(3, 8, 4, imageWidth/12, imageHeight/8);
         break;
     case(5):
-        gen = hilbertColumnOrtho(6, 4, height/4, width/6);
+        gen = hilbertRowOrtho(6, 4, height/4, width/6);
         break;
     case(6):
-        gen = zigzagLoop6x4(width/6, height/4);
+        gen = hilbertColumnOrtho(6, 4, height/4, width/6);
         break;
     case(7):
-        gen = zigzagRowOrtho(6, 4, width/6, height/4);
+        gen = zigzagLoop6x4(width/6, height/4);
         break;
     case(8):
+        gen = zigzagRowOrtho(6, 4, width/6, height/4);
+        break;
+    case(9):
         gen = zigzagRowAltOrtho(6, 4, width/6, height/4);
         break;
-    case(9): 
+    case(10): 
         gen = zigzagColumnOrtho(6, 4, width/6, height/4);
         break;
-    case(10): 
+    case(11): 
         gen = zigzagColumnAltOrtho(6, 4, width/6, height/4);
         break;
-    case(11): 
+    case(12): 
         gen = zigzagRowRandomFlip(6, 4, width/6, height/4);
         break;
-    case(12): 
+    case(13): 
         gen = zigzagRowRandomFlip(12, 8, width/12, height/8);
         break;
-    case(13): 
+    case(14): 
         gen = boustrophRowRandom(6, 4, width/6, height/4);
         break;
-    case(14): 
+    case(15): 
         gen = hilbertRowRandomFlip(6, 4, width/6, height/4);
         break;
-    case(15): 
+    case(16): 
         gen = hilbertRowRandomFlip(12, 8, width/12, height/8);
+        break;
+    case(17): 
+        gen = hilbertRowRandomFlip(24, 16, width/24, height/16);
         break;
     default: 
         gen = hilbertLoop3x2(width/3, height/2);
