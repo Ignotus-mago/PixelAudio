@@ -184,7 +184,7 @@ MultiGen multigen;         // a PixelMapGen that links together multiple PixelMa
 int genWidth = 512;        // width of multigen PixelMapGens
 int genHeight = 512;       // height of  multigen PixelMapGens
 PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
-int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
+int mapSize;               // size of the display bitmap, audio signal, mapper LUTs, etc.
 PImage mapImage;           // image for display
 PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
 int[] colors;              // array of spectral colors
@@ -234,8 +234,9 @@ int audioLength;           // length of the audioSignal, same as the number of p
 // SampleInstrument setup
 int noteDuration = 1000;   // average sample synth note duration, milliseconds
 int samplelen;             // calculated sample synth note length, samples
-Sampler audioSampler;      // minim class for sampled sound
-WFSamplerInstrument synth; // local class to wrap audioSampler
+WFSamplerInstrument synth;      // local class to wrap audioSampler
+WFSamplerInstrumentPool pool;   // an allocation pool of WFSamplerInstruments
+boolean isUseSynth = false;     // switch between pool and synth
 
 // ADSR and its parameters
 ADSRParams adsr;          // good old attack, decay, sustain, release
@@ -343,15 +344,8 @@ public void setup() {
   }
   // in Processing (but not so easily in Eclipse) we can load an audio or image file
   // from the path to the folder where PixelAudio examples keep their data files
-  daPath = sketchPath("") + "../../examples_data/";
-  // the audio file we want to open on startup
-  File audioSource = new File(daPath +"Saucer_mixdown.wav");
-  // load the file into audio buffer and Brightness channel of display image (mapImage)
-  fileSelected(audioSource);
-  // overlay colors on mapImage
-  mapImage.loadPixels();
-  applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
-  mapImage.updatePixels();  
+  // If you modify this sketch, you may need to change the path.
+  preloadFiles(sketchPath("") + "../../examples_data/");
   showHelp();
 }
 
@@ -401,6 +395,18 @@ public void initDrawing() {
   brushShapesList = new ArrayList<PACurveMaker>();
 }
 
+public void preloadFiles(String path) {
+  daPath = path;
+  // the audio file we want to open on startup
+  File audioSource = new File(daPath +"Saucer_mixdown.wav");
+  // load the file into audio buffer and Brightness channel of display image (mapImage)
+  fileSelected(audioSource);
+  // overlay colors on mapImage
+  mapImage.loadPixels();
+  applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+  mapImage.updatePixels();  
+}
+  
 public void draw() {
   image(mapImage, 0, 0);
   // handleDrawing() handles circle and brushstroke drawing and audio events
@@ -408,6 +414,9 @@ public void draw() {
   if (isAnimating) {
     animate();
     updateAudio();
+  }
+  if (isTrackMouse && mousePressed) {
+    writeToScreen("shift = "+ shift, 16, 24, 24, false);
   }
 }
 
@@ -517,7 +526,9 @@ public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite)
 
 /**
  * The built-in mousePressed handler for Processing, but note that it forwards 
- * mouse coords to handleMousePressed().
+ * mouse coords to handleMousePressed(). If isDrawMode is true, we start accumulating
+ * points to allPoints: initAllPoints() adds the current mouseX and mouseY. After that, 
+ * the draw loop calls handleDrawing() to add points. Drawing ends on mouseReleased(). 
  */
 public void mousePressed() {
   setSampleVars(mouseX, mouseY);      
@@ -599,15 +610,19 @@ public void parseKey(char key, int keyCode) {
     applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
     mapImage.updatePixels();
     break;
-  case 'L': case 'l': // determine whether to load a new file to both image and audio or not
+  case 'L': case 'l':
     isLoadToBoth = !isLoadToBoth;
     String msg = isLoadToBoth ? "loads to both audio and image. " : "loads only to selected format. ";
     println("---- isLoadToBoth is "+ isLoadToBoth +", opening a file "+ msg);
+    break;
+  case 'p': // play brushstrokes with a time lapse between each
+    playBrushstrokes(2000);
     break;
   case 'o': case 'O': // open an audio or image file
     chooseFile();
     break;
   case 'w': // write the image colors to the audio buffer as transcoded values
+    // TODO refactor with loadImageFile() and loadAudioFile() code
     // prepare to copy image data to audio variables
     // resize the buffer to mapSize, if necessary -- signal will not be overwritten
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
@@ -633,29 +648,25 @@ public void parseKey(char key, int keyCode) {
   case 'X': // delete the most recent brush shape
     removeNewestBrush();
     break;
-  case 'h': case 'H': // show help message in the console
-    showHelp();
-    break;
   case 'V': // record a video
     // records a complete video loop with following actions:
-    // Go to frame 0, turn recording on, turn animation on.
-    // This will record a complete video loop, from frame 0 to the
-    // stop frame value in the GUI control panel.
+    // Go to frame 0, turn recording on, turn animation on,
+    // record animSteps number of frames. 
+    // not of much use in this sketch, but here to keep code complete
     step = 0;
     renderFrame(step);
     isRecordingVideo = true;
     oldIsAnimating = isAnimating;
     isAnimating = true;
+    break;
+  case 'h': case 'H':
+    showHelp();
+    break;
   default:
     break;
   }
 }
 
-/**
- * to generate help output, run RegEx search/replace on parseKey case lines with:
- * // case ('.'): // (.+)
- * // println(" * Press $1 to $2.");
- */
 public void showHelp() {
   println(" * Press ' ' to  start or stop animation.");
   println(" * Press 'd' to turn drawing on or off.");
@@ -663,6 +674,7 @@ public void showHelp() {
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
   println(" * Press 'l' or 'L' to set files to load as both image and audio or load separately.");
+  println(" * Press 'p' to play brushstrokes with a time lapse between each.");
   println(" * Press 'o' or 'O' to open an audio or image file.");
   println(" * Press 'w' to write the image colors to the audio buffer as transcoded values.");
   println(" * Press 'W' to write the audio buffer samples to the image as color values.");
@@ -671,6 +683,7 @@ public void showHelp() {
   println(" * Press 'V' to record a video.");
   println(" * Press 'h' or 'H' to show help message in the console.");
 }
+
 
 /**
  * Utility method for applying hue and saturation values from a source array of RGB values
@@ -693,47 +706,4 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
     graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
   }
   return graySource;
-}
-
-
-/*----------------------------------------------------------------*/
-/*                                                                */
-/*                        NETWORKING                              */
-/*                                                                */
-/*----------------------------------------------------------------*/
-
-
-// required by the PANetworkCLientINF interface
-public PApplet getPApplet() {
-  return this;
-}
-
-// required by the PANetworkCLientINF interface
-public PixelAudioMapper getMapper() {
-  return this.mapper;
-}
-
-// required by the PANetworkCLientINF interface
-public void controlMsg(String control, float val) {
-  if (control.equals("detune")) {
-    println("--->> controlMsg is \"detune\" = "+ val);
-  }
-}
-
-// required by the PANetworkCLientINF interface
-public int playSample(int samplePos) {
-  int[] coords = mapper.lookupCoordinate(samplePos);
-  sampleX = coords[0];
-  sampleY = coords[1];
-  if (audioSignal == null || isBufferStale) {
-    renderSignals();
-    isBufferStale = false;
-  }
-  return playSample(samplePos, calcSampleLen(), 0.6f, new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));    
-}
-
-// required by the PANetworkCLientINF interface
-public void playPoints(ArrayList<PVector> pts) {
-  eventPoints = pts;
-  playPoints();
 }

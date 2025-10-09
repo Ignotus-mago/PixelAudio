@@ -24,6 +24,7 @@ public void initAudio() {
   adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   // create a WFSamplerInstrument, though playBuffer is all 0s at the moment
   // adsrParams will be the default ADSR for the synth
+  // allocate plenty of voices, the drawing interface generates a lot of audio events
   synth = new WFSamplerInstrument(playBuffer, audioOut.sampleRate(), 48, audioOut, adsr);
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
@@ -49,27 +50,44 @@ public void audioMousePressed(int x, int y) {
   setSampleVars(x, y);
   // update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
   // playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
+  // TODO logic not used in current version, should be deleted?
   if (audioSignal == null || isBufferStale) {
     renderSignals();
     isBufferStale = false;
   }
-  // use the default envelope
+  if (pool == null || synth == null) {
+    println("---- You need to load a audio file before you can trigger audio events.");
+  }
+  else {
+    // use the default envelope
     playSample(samplePos, calcSampleLen(), 0.6f);
+  }
 }
   
 /**
- * Sets variables sampleX, sampleY and samplePos.
+ * Sets variables sampleX, sampleY and samplePos. Arguments x and y may be outside
+ * the window bounds, sampleX and sampleY will be constrained to window bounds. As
+ * a result, samplePos will be within the bounds of audioSignal.
+ * 
+ * @param x    x coordinate, typically from a mouse event
+ * @param y    y coordinate, typically from a mouse event
+ * @return     samplePos, the index of of (x, y) along the signal path
  */
-public void setSampleVars(int x, int y) {
-  sampleX = x;
-  sampleY = y;
+public int setSampleVars(int x, int y) {
+  sampleX = min(max(0, x), width - 1);
+  sampleY = min(max(0, y), height - 1);
   samplePos = getSamplePos(sampleX, sampleY);
+  return samplePos;
 }
 
 /**
- * Calculate position of the image pixel within the signal path,
+ * Calculates the index of the image pixel within the signal path,
  * taking the shifting of pixels and audioSignal into account.
- * See MusicBoxBuffer for use of a windowed buffer in this calculation. 
+ * See the MusicWindowBox sketch for use of a windowed buffer in this calculation. 
+ * 
+ * @param x    an x coordinate within mapImage and display bounds
+ * @param y    a y coordinate within mapImage and display bounds
+ * @return     the index of the sample corresponding to (x,y) on the signal path
  */
 public int getSamplePos(int x, int y) {
   int pos = mapper.lookupSample(x, y);
@@ -88,7 +106,12 @@ public int getSamplePos(int x, int y) {
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
+  if (isUseSynth) {
+    samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
+  }
+  else {
+    samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
+  }
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
@@ -104,7 +127,12 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
+  if (isUseSynth) {
+    samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
+  }
+  else {
+    samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
+  }
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample

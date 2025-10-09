@@ -16,7 +16,7 @@
  * to corner of an image, or a fractal labyrinth like a Hilbert curve, or even a random
  * walk that bumps into every pixel once only. 
  * 
- * PixelAudio provide an abstract class that maps pixels and samples back and forth: 
+ * PixelAudio provides an abstract class that maps pixels and samples back and forth: 
  * PixelMapGen. With a PixelMapGen (or "gen", for short) you can find the pixel that 
  * corresponds to any sample and the sample that corresponds to any pixel. PixelMapGens
  * can be combined into larger structures, MultiGens. It's all done with arrays, and 
@@ -28,9 +28,10 @@
  * initialized with a PixelMapGen. It can copy values back and forth between audio
  * signals and images. Because samples and pixels are very different numeric formats,
  * PixelAudioMapper also provides a big toolkit for transcoding audio samples, which are
- * floating point numbers between -1.0 and 1.0, and RGB or HSB color values. These
- * features are covered in the TutorialOne sequence and in many of the sample sketches
- * that come with PixelAudio. 
+ * floating point numbers between -1.0 and 1.0, and RGB or HSB color values. RGB data is
+ * encoded in 24-bit integers, where each channel has 8 bits of data. Another 8 bits are
+ * used as an alpha channel, which can be through of as opacity. These features are covered
+ * in the TutorialOne sequence and in many of the sample sketches that come with PixelAudio. 
  * 
  */
 

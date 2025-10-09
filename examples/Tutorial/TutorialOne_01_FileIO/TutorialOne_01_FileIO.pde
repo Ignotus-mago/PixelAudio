@@ -10,7 +10,7 @@
  *   2. Press 'o' to get an Open File dialog. Open an audio file or an image file.
  *      If you choose an audio file, a representation of its sample data is written 
  *      to mapImage and appears in the display window. 
- *      Press the 'k' key to show the spectrum colors again. 
+ *********>>>      Press the 'k' key to show the spectrum colors again. 
  *      If you choose an image file, a representation of its pixel data is written
  *      to audioSignal, though we won't have tools to play the sound until
  *      the next tutorial. 

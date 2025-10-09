@@ -92,12 +92,19 @@ public void audioMousePressed(int x, int y) {
 }
 
 /**
- * Sets variables sampleX, sampleY and samplePos.
+ * Sets variables sampleX, sampleY and samplePos. Arguments x and y may be outside
+ * the window bounds, sampleX and sampleY will be constrained to window bounds. As
+ * a result, samplePos will be within the bounds of audioSignal.
+ * 
+ * @param x    x coordinate, typically from a mouse event
+ * @param y    y coordinate, typically from a mouse event
+ * @return     samplePos, the index of of (x, y) along the signal path
  */
-public void setSampleVars(int x, int y) {
-  sampleX = x;
-  sampleY = y;
+public int setSampleVars(int x, int y) {
+  sampleX = min(max(0, x), width - 1);
+  sampleY = min(max(0, y), height - 1);
   samplePos = getSamplePos(sampleX, sampleY);
+  return samplePos;
 }
 
 /**

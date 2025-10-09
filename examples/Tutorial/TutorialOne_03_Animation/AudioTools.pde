@@ -83,18 +83,29 @@ public void audioMousePressed(int x, int y) {
 }
 
 /**
- * Sets variables sampleX, sampleY and samplePos.
+ * Sets variables sampleX, sampleY and samplePos. Arguments x and y may be outside
+ * the window bounds, sampleX and sampleY will be constrained to window bounds. As
+ * a result, samplePos will be within the bounds of audioSignal.
+ * 
+ * @param x    x coordinate, typically from a mouse event
+ * @param y    y coordinate, typically from a mouse event
+ * @return     samplePos, the index of of (x, y) along the signal path
  */
-public void setSampleVars(int x, int y) {
-  sampleX = x;
-  sampleY = y;
+public int setSampleVars(int x, int y) {
+  sampleX = min(max(0, x), width - 1);
+  sampleY = min(max(0, y), height - 1);
   samplePos = getSamplePos(sampleX, sampleY);
+  return samplePos;
 }
 
 /**
- * Calculate position of the image pixel within the signal path,
+ * Calculates the index of the image pixel within the signal path,
  * taking the shifting of pixels and audioSignal into account.
- * See MusicBoxBuffer for use of a windowed buffer in this calculation. 
+ * See the MusicWindowBox sketch for use of a windowed buffer in this calculation. 
+ * 
+ * @param x    an x coordinate within mapImage and display bounds
+ * @param y    a y coordinate within mapImage and display bounds
+ * @return     the index of the sample corresponding to (x,y) on the signal path
  */
 public int getSamplePos(int x, int y) {
   int pos = mapper.lookupSample(x, y);

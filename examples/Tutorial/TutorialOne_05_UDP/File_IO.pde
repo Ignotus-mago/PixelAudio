@@ -110,6 +110,7 @@ public void fileSelected(File selectedFile) {
       println("----- Selected file " + fileName + "." + fileTag + " at "
           + filePath.substring(0, filePath.length() - fileName.length()));
       loadAudioFile(audioFile);
+      // *****>>> NETWORKING <<<***** //
       if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
     } 
     else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
@@ -149,9 +150,13 @@ public void loadAudioFile(File audFile) {
     this.audioFileLength = playBuffer.getBufferSize();
     // resize the buffer to mapSize, if necessary -- signal will not be overwritten
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-      // load the buffer of our WFSamplerInstrument
-      synth.setBuffer(playBuffer);
-    // read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
+    // load the buffer of our instruments (created in initAudio(), on starting the sketch)
+    synth.setBuffer(playBuffer);
+    if (pool != null) pool.setBuffer(playBuffer);
+    else pool = new WFSamplerInstrumentPool(playBuffer, sampleRate, 48, 1, audioOut, adsr);
+    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
+    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
+    // so we copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
     audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
     audioLength = audioSignal.length;
     if (isLoadToBoth) writeAudioToImage(audioSignal, mapper, mapImage, chan);
@@ -213,6 +218,15 @@ public void loadImageFile(File imgFile) {
     writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
     // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
     playBuffer.setChannel(0, audioSignal);
+    audioLength = audioSignal.length;
+    // load the buffer of our WFSamplerInstrument (created in initAudio() on starting the sketch)
+    synth.setBuffer(playBuffer);
+    if (pool != null) pool.setBuffer(playBuffer);
+    else pool = new WFSamplerInstrumentPool(playBuffer, sampleRate, 48, 1, audioOut, adsr);
+    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
+    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
+    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
+    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
     audioLength = audioSignal.length;
   }
 }

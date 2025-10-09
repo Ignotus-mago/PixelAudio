@@ -112,9 +112,7 @@ public void initCurveMaker() {
   loadEventPoints();
   curveMaker.setDragTimes(reconfigureTimeList(allTimes));
   this.brushShapesList.add(curveMaker);
-  sampleX = mouseX;
-  sampleY = mouseY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);
+  setSampleVars(mouseX, mouseY);
 }
 
 /**

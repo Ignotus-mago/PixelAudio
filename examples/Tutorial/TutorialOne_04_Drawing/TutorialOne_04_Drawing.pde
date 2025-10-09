@@ -94,8 +94,8 @@
  * just press the '!' key while one or more brushstrokes are playing.
  * 
  * Remaining in the tutorial are TutorialOne_05_UDP, which implements networked communication with Max 
- * and other media applications, and MusicWindowBox, the final tutorial sketch, which implements a windowed 
- * buffer for traversing an audio file plus various features useful in performance.
+ * and other media applications, and MusicWindowBox, a bonus sketch that implements a windowed buffer for 
+ * traversing an audio file plus various features useful in performance.
  *        
  * 
  * Here are the key commands for this sketch:
@@ -115,6 +115,7 @@
  * Press 'h' or 'H' to show help message in the console.
  * 
  */
+
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -151,8 +152,8 @@ int genHeight = 512;       // height of  multigen PixelMapGens
 PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
 int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
 PImage mapImage;           // image for display
-PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
-int[] colors;              // array of spectral colors
+PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // or ChannelNames.L (HSB brightness channel)
+int[] colors;              // array of rainbow colors
 
 
 /* ------------------------------------------------------------------ */
@@ -179,15 +180,14 @@ int imageFileHeight;
 /*                          AUDIO VARIABLES                           */
 /* ------------------------------------------------------------------ */
 
-/*
- * 
- * Audio playback support is added with the audio variables and audio methods 
- * (below, in Eclipse, in a tab, in Processing). You will also need the 
- * WFInstrument and TimedLocation classes. In setup(), call initAudio(), then
- * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
- * and call runTimeArray() in your draw method. 
- * 
- */
+  /*
+   * Audio playback support is added with the audio variables and audio methods. 
+   * You will also need the ADSRParams, WFSamplerInstrument, WFSamplerInstrumentPool
+   * and TimedLocation classes. In setup(), call initAudio(), then add
+   * a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
+   * and call runTimeArray() in your draw method. 
+   * 
+   */
 
 /** Minim audio library */
 Minim minim;                    // library that handles audio 
@@ -196,17 +196,18 @@ boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 float sampleRate = 48000;       // sample rate for audio output and audio files
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
-int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
+int samplePos;                  // an index into the audio signal, typically selected by a mouse click
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
 
 // SampleInstrument setup
 int noteDuration = 1000;        // average sample synth note duration, milliseconds
 int samplelen;                  // calculated sample synth note length, samples
-Sampler audioSampler;           // minim class for sampled sound
 WFSamplerInstrument synth;      // local class to wrap audioSampler
+WFSamplerInstrumentPool pool;   // an allocation pool of WFSamplerInstruments
+boolean isUseSynth = false;     // switch between pool and synth
 
 // ADSR and its parameters
-ADSRParams adsr;                // good old attack, decay, sustain, release
+ADSRParams adsr;          // good old attack, decay, sustain, release
 float maxAmplitude = 0.7f;      // 0..1
 float attackTime = 0.4f;        // seconds
 float decayTime = 0.0f;         // seconds, no decay
@@ -284,7 +285,7 @@ public void setup() {
   frameRate(24);
   // initialize our library
   pixelaudio = new PixelAudio(this);
-  // create a PixelMapGen subclass such as MultiGen, with dimensions equal to out display window
+  // create a PixelMapGen subclass such as MultiGen, with dimensions equal to the display window
   // the call to hilbertLoop3x2 produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
   // genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
   multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
@@ -396,7 +397,7 @@ public void stepAnimation() {
 
 /**
  * Renders a frame of animation: moving along the signal path, copies mapImage pixels into rgbSignal, 
- * rotates them shift elements left, writes them back to mapImage.
+ * rotates them shift elements left, writes them back to mapImage along the signal path.
  * 
  * @param step   current animation step
  */
@@ -466,7 +467,9 @@ public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite)
 
 /**
  * The built-in mousePressed handler for Processing, but note that it forwards 
- * mouse coords to handleMousePressed().
+ * mouse coords to handleMousePressed(). If isDrawMode is true, we start accumulating
+ * points to allPoints: initAllPoints() adds the current mouseX and mouseY. After that, 
+ * the draw loop calls handleDrawing() to add points. Drawing ends on mouseReleased(). 
  */
 public void mousePressed() {
   setSampleVars(mouseX, mouseY);      
@@ -558,6 +561,7 @@ public void parseKey(char key, int keyCode) {
     chooseFile();
     break;
   case 'w': // write the image colors to the audio buffer as transcoded values
+    // TODO refactor with loadImageFile() and loadAudioFile() code
     // prepare to copy image data to audio variables
     // resize the buffer to mapSize, if necessary -- signal will not be overwritten
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
@@ -583,19 +587,24 @@ public void parseKey(char key, int keyCode) {
   case 'X': // delete the most recent brush shape
     removeNewestBrush();
     break;
-  case 'h': case 'H':
-    showHelp();
+  case '!':
+    isUseSynth = !isUseSynth;
+    msg = isUseSynth ? ", sound will play using synth." : ", sound will play using pool.";
+    println("---- isUseSynth = "+ isUseSynth + msg);
     break;
   case 'V': // record a video
     // records a complete video loop with following actions:
-    // Go to frame 0, turn recording on, turn animation on.
-    // This will record a complete video loop, from frame 0 to the
-    // stop frame value in the GUI control panel.
+    // Go to frame 0, turn recording on, turn animation on,
+    // record animSteps number of frames. 
+    // not of much use in this sketch, but here to keep code complete
     step = 0;
     renderFrame(step);
     isRecordingVideo = true;
     oldIsAnimating = isAnimating;
     isAnimating = true;
+    break;
+  case 'h': case 'H':
+    showHelp();
     break;
   default:
     break;

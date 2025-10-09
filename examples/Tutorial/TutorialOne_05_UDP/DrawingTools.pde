@@ -13,6 +13,7 @@ public void initAllPoints() {
   startTime = millis();
   allTimes.add(startTime);
   addPoint(mouseX, mouseY);
+  // *****>>> NETWORKING <<<***** //
   if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
 }
 
@@ -25,11 +26,13 @@ public void handleMousePressed(int x, int y) {
     eventPoints = activeBrush.getEventPoints();
     loadEventPoints();
     activeBrush = null;
+    // *****>>> NETWORKING <<<***** //
     if (nd != null) nd.oscSendTrig(activeIndex + 1);
   } 
   else {
     // handle audio generation in response to a mouse click
     audioMousePressed(PApplet.constrain(x, 0, width-1), PApplet.constrain(y, 0, height-1));
+    // *****>>> NETWORKING <<<***** //
     if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
   }
 }
@@ -97,9 +100,8 @@ public void initCurveMaker() {
   loadEventPoints();
   curveMaker.setDragTimes(reconfigureTimeList(allTimes));
   this.brushShapesList.add(curveMaker);
-  sampleX = mouseX;
-  sampleY = mouseY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);
+  setSampleVars(mouseX, mouseY);
+  // *****>>> NETWORKING <<<***** //
   if (nd != null) {
     nd.oscSendMousePressed(sampleX, sampleY, samplePos);
     nd.oscSendDrawPoints(curveMaker.getRdpPoints());
@@ -251,6 +253,7 @@ public void reset(boolean isClearCurves) {
   if (isClearCurves) {
     if (this.brushShapesList != null) this.brushShapesList.clear();
     if (this.curveTLEvents != null) this.curveTLEvents.clear();
+    // *****>>> NETWORKING <<<***** //
     if (nd != null) nd.oscSendClear();
     if (nd != null) nd.setDrawCount(0);
     println("----->>> RESET audio, event points and curves <<<------");
