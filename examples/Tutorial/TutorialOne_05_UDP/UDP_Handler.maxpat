@@ -2,43 +2,31 @@
 	"patcher" : 	{
 		"fileversion" : 1,
 		"appversion" : 		{
-			"major" : 8,
-			"minor" : 6,
-			"revision" : 5,
+			"major" : 9,
+			"minor" : 0,
+			"revision" : 7,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
 		"classnamespace" : "box",
 		"rect" : [ -335.0, -1319.0, 700.0, 601.0 ],
-		"bglocked" : 0,
-		"openinpresentation" : 0,
-		"default_fontsize" : 12.0,
-		"default_fontface" : 0,
-		"default_fontname" : "Arial",
-		"gridonopen" : 1,
 		"gridsize" : [ 15.0, 15.0 ],
-		"gridsnaponopen" : 1,
-		"objectsnaponopen" : 1,
-		"statusbarvisible" : 2,
-		"toolbarvisible" : 1,
-		"lefttoolbarpinned" : 0,
-		"toptoolbarpinned" : 0,
-		"righttoolbarpinned" : 0,
-		"bottomtoolbarpinned" : 0,
-		"toolbars_unpinned_last_save" : 0,
 		"tallnewobj" : 1,
-		"boxanimatetime" : 200,
-		"enablehscroll" : 1,
-		"enablevscroll" : 1,
-		"devicewidth" : 0.0,
-		"description" : "",
-		"digest" : "",
-		"tags" : "",
-		"style" : "",
-		"subpatcher_template" : "",
-		"assistshowspatchername" : 0,
 		"boxes" : [ 			{
+				"box" : 				{
+					"bubble" : 1,
+					"id" : "obj-12",
+					"linecount" : 3,
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 505.0, 349.5, 118.0, 51.0 ],
+					"text" : "Click to send a message to Processing."
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-7",
 					"maxclass" : "message",
@@ -72,42 +60,16 @@
 					"patcher" : 					{
 						"fileversion" : 1,
 						"appversion" : 						{
-							"major" : 8,
-							"minor" : 6,
-							"revision" : 5,
+							"major" : 9,
+							"minor" : 0,
+							"revision" : 7,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
 						"classnamespace" : "box",
 						"rect" : [ 790.0, -743.0, 948.0, 642.0 ],
-						"bglocked" : 0,
-						"openinpresentation" : 0,
-						"default_fontsize" : 12.0,
-						"default_fontface" : 0,
-						"default_fontname" : "Arial",
-						"gridonopen" : 1,
 						"gridsize" : [ 15.0, 15.0 ],
-						"gridsnaponopen" : 1,
-						"objectsnaponopen" : 1,
-						"statusbarvisible" : 2,
-						"toolbarvisible" : 1,
-						"lefttoolbarpinned" : 0,
-						"toptoolbarpinned" : 0,
-						"righttoolbarpinned" : 0,
-						"bottomtoolbarpinned" : 0,
-						"toolbars_unpinned_last_save" : 0,
-						"tallnewobj" : 0,
-						"boxanimatetime" : 200,
-						"enablehscroll" : 1,
-						"enablevscroll" : 1,
-						"devicewidth" : 0.0,
-						"description" : "",
-						"digest" : "",
-						"tags" : "",
-						"style" : "",
-						"subpatcher_template" : "",
-						"assistshowspatchername" : 0,
 						"boxes" : [ 							{
 								"box" : 								{
 									"id" : "obj-16",
@@ -414,13 +376,6 @@
 					}
 ,
 					"patching_rect" : [ 336.0, 37.0, 68.0, 26.0 ],
-					"saved_object_attributes" : 					{
-						"description" : "",
-						"digest" : "",
-						"globalpatchername" : "",
-						"tags" : ""
-					}
-,
 					"text" : "p controller"
 				}
 
@@ -512,7 +467,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 147.0, 290.0, 163.0, 22.0 ],
-					"text" : "1570147 452 573"
+					"text" : "652465 334 432"
 				}
 
 			}
@@ -596,7 +551,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 373.0, 364.0, 126.0, 22.0 ],
-					"text" : "/sampleHit 1570147"
+					"text" : "/sampleHit 652465"
 				}
 
 			}
@@ -665,42 +620,17 @@
 					"patcher" : 					{
 						"fileversion" : 1,
 						"appversion" : 						{
-							"major" : 8,
-							"minor" : 6,
-							"revision" : 5,
+							"major" : 9,
+							"minor" : 0,
+							"revision" : 7,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
 						"classnamespace" : "box",
 						"rect" : [ 439.0, -1320.0, 1136.0, 924.0 ],
-						"bglocked" : 0,
-						"openinpresentation" : 0,
-						"default_fontsize" : 12.0,
-						"default_fontface" : 0,
-						"default_fontname" : "Arial",
-						"gridonopen" : 1,
 						"gridsize" : [ 15.0, 15.0 ],
-						"gridsnaponopen" : 1,
-						"objectsnaponopen" : 1,
-						"statusbarvisible" : 2,
-						"toolbarvisible" : 1,
-						"lefttoolbarpinned" : 0,
-						"toptoolbarpinned" : 0,
-						"righttoolbarpinned" : 0,
-						"bottomtoolbarpinned" : 0,
-						"toolbars_unpinned_last_save" : 0,
 						"tallnewobj" : 1,
-						"boxanimatetime" : 200,
-						"enablehscroll" : 1,
-						"enablevscroll" : 1,
-						"devicewidth" : 0.0,
-						"description" : "",
-						"digest" : "",
-						"tags" : "",
-						"style" : "",
-						"subpatcher_template" : "",
-						"assistshowspatchername" : 0,
 						"visible" : 1,
 						"boxes" : [ 							{
 								"box" : 								{
@@ -827,7 +757,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 885.0, 330.400004923343658, 215.0, 167.0 ],
+									"patching_rect" : [ 885.0, 330.400004923343658, 219.0, 167.0 ],
 									"text" : "When you draw in Processing ('d' key toggles drawing), the reduced line data is reported to Max, along with a timestamp and duration to two coll objects. \n\nUse the select curve number box to select a curve. The data gets loaded to a message box. Click the box to send the data. \n\nCoordinates are stored in a third coll. "
 								}
 
@@ -846,23 +776,25 @@
 							}
 , 							{
 								"box" : 								{
+									"fontsize" : 18.0,
 									"id" : "obj-84",
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 426.400006353855133, 309.600004613399506, 342.0, 20.0 ],
+									"patching_rect" : [ 426.0, 305.0, 427.0, 27.0 ],
 									"text" : "Stored curve. Click to trigger remote samples"
 								}
 
 							}
 , 							{
 								"box" : 								{
+									"fontsize" : 18.0,
 									"id" : "obj-82",
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 28.000000417232513, 309.600004613399506, 150.0, 20.0 ],
-									"text" : "most recent curve"
+									"patching_rect" : [ 29.0, 305.0, 358.0, 27.0 ],
+									"text" : "Most recent curve. Click to send. "
 								}
 
 							}
@@ -875,8 +807,9 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 271.0, 147.0, 90.0, 24.0 ],
+									"patching_rect" : [ 279.0, 146.0, 90.0, 24.0 ],
 									"text" : "select curve",
+									"textcolor" : [ 0.0, 0.0, 0.0, 1.0 ],
 									"underline" : 1
 								}
 
@@ -1129,7 +1062,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 370.0, 245.0, 215.0, 22.0 ],
-									"text" : "40537 1583"
+									"text" : "870166 1000"
 								}
 
 							}
@@ -1177,13 +1110,13 @@
 , 							{
 								"box" : 								{
 									"id" : "obj-15",
-									"linecount" : 2,
+									"linecount" : 4,
 									"maxclass" : "message",
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 421.0, 330.400004923343658, 450.0, 35.0 ],
-									"text" : "0 871894 1449 535 1 870453 1444 547 2 869736 1414 574 3 864220 1402 580 4 835960 1254 634 5 820029 1177 654"
+									"patching_rect" : [ 421.0, 330.400004923343658, 450.0, 62.0 ],
+									"text" : "0 127851 238 311 1 219857 315 246 2 223711 363 244 3 22535 477 286 4 336569 604 345 5 375601 722 391 6 410094 779 401 7 425506 885 405 8 426271 900 403 9 426881 918 391 10 450290 957 337 11 456036 964 318 12 454481 947 270 13 473986 934 246 14 474391 921 238"
 								}
 
 							}
@@ -1257,13 +1190,13 @@
 									"fontname" : "Arial",
 									"fontsize" : 11.595186999999999,
 									"id" : "obj-13",
-									"linecount" : 3,
+									"linecount" : 2,
 									"maxclass" : "message",
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 28.000000417232513, 330.400004923343658, 379.0, 47.0 ],
-									"text" : "0 1499997 205 594 1 1503539 252 553 2 61718 302 504 3 62458 319 483 4 1525022 306 644 5 1519593 321 632 6 1563139 398 591 7 1570147 452 573"
+									"patching_rect" : [ 28.000000417232513, 330.400004923343658, 379.0, 34.0 ],
+									"text" : "0 308012 693 231 1 388349 673 270 2 340853 564 363 3 14966 500 442 4 3820 464 506 5 1569581 458 537 6 1570233 460 569"
 								}
 
 							}
@@ -1685,13 +1618,6 @@
 					}
 ,
 					"patching_rect" : [ 173.0, 37.0, 111.0, 26.0 ],
-					"saved_object_attributes" : 					{
-						"description" : "",
-						"digest" : "",
-						"globalpatchername" : "",
-						"tags" : ""
-					}
-,
 					"text" : "p network_receiver"
 				}
 

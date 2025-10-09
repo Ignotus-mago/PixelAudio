@@ -1,11 +1,11 @@
 /*
- * This example application continues the Tutorial One sequence for the PixelAudio
+ * This example sketch continues the Tutorial One sequence for the PixelAudio
  * library for Processing. The previous examples included reading and writing and 
  * transcoding audio and image files, triggering audio events, animating pixels 
  * to change audio sample order, and drawing in the display window to 
  * create brush shapes that can be used to trigger audio events. 
  * 
- * In the last part of this tutorial, we'll get to UDP communication with Max 
+ * In this part of the tutorials, we'll get to UDP communication with Max 
  * and other media applications. This material should be regarded as 
  * @Experimental, and likely to change in future releases. 
  * 
@@ -97,8 +97,34 @@
  * there, we just need to uncomment it. 
  * 
  * We can proceed to provide more communication between Max and Processing in a similar way. You can 
- * activate additional communications by uncommented lines with "if (nd != null)". We proceed in this 
+ * activate additional communications by uncommenting lines with "if (nd != null)". We proceed in this 
  * way, with a conditional, so that the sketch can run with or without Processing. 
+ * 
+ * NOTES ON NEW RELEASE 0.9.2-beta AND LATER
+ * 
+ * I have not commented out the lines that call the NetworkDelegate. If nd is instantiated, they will
+ * execute and the communicate with UDPHandler.maxpat, if it's available. By default, isUseNetworkDelegate = false, 
+ * in the setup() method. Set it to true to enable UDP communications. 
+ * 
+ * Also note that the points and time stamps sent to UDPHandler by initCurveMaker(), in the Drawing Tools 
+ * tab in Processing, are not the same as the Bezier curve points used to draw and trigger events
+ * in Processing. I'm sending the reduced point set from which the Bezier curves are derived.
+ * This was a choice based on Max's apparent issues with sending large data bundles to Processing.
+ * It would receive the plentiful Bezier points, but not send them all back beyond about 512 points. 
+ * I've been looking into this issue. If you draw a really long curve, you'll encounter it when you
+ * try to send the curve data back to Processing, even though it was all captured.  
+ * 
+ * Meanwhile, here are the calls in intCurveMaker():
+ * 
+ *   if (nd != null) {
+ *     nd.oscSendMousePressed(sampleX, sampleY, samplePos);
+ *     nd.oscSendDrawPoints(curveMaker.getRdpPoints());
+ *     nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
+ *   }
+ *   
+ * Their behavior can be changed by editing the methods in NetworkDelegate, particularly 
+ * oscSentDrawPoints(). See PACurveMaker for information on the various data arrays it 
+ * has available. 
  * 
  * >>>>> SOUND THE DANGER MUSIC <<<<< 
  * 
@@ -110,8 +136,8 @@
  * the only solution, but it's simple, and it only applied for as long as it took to choose a file
  * 
  * In TutorialOne_05_UDP, we have two independent threads running simultaneously. Both of them can 
- * give commands to play sounds to Processing. The sounds are to be played are queued in two lists:
- * TimeLocsArray, for events trigger by a mouse click, and curveTLEvents, for series of events 
+ * give commands to play sounds to Processing. The sounds to be play are queued in two lists:
+ * TimeLocsArray, for events triggered by a mouse click, and curveTLEvents, for series of events 
  * associated with a brushstroke. If the Processing thread and the Max thread both try to alter
  * one of the lists are the same time, the Java Runtime Environment may throw a 
  * ConcurrentModificationException. Or worse yet, the event lists may be altered and events
