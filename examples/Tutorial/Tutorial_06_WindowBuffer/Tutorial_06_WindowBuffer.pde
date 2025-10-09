@@ -97,8 +97,9 @@ ADSRParams adsr = new ADSRParams(
     0.125f,   // sustain level
     0.125f    // release (s)
 );
+// gain and muting of audioOut
 final float defaultGain = -18.0f;
-float gain = -18.0f;             // gain for audioOut, decibels
+float gain = defaultGain;        // gain for audioOut, decibels
 boolean isMuted = false;         // flag for muting audioOut
 
 // interaction variables for audio
@@ -159,8 +160,8 @@ int polyPointsColor = color(233, 199, 144, 192);    // color for polygon represe
 int activeBrushColor = color(144, 89, 55, 128);     // color for the active brush
 int readyBrushColor = color(34, 89, 55, 96);        // color for a brushstroke when ready to be clicked
 
-float blend = 0.5f;
-boolean isUseBlend = true;
+float blend = 0.5f;                                 // TODO implement blending of images
+boolean isUseBlend = true;                          // for future use
 
 /* end drawing variables */
 
@@ -450,18 +451,19 @@ public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite)
 }
 
 /**
-  * PApplet mousePressed handler for Processing, but note that it calls handleMousePressed()
-  * when isDrawMode == false. When isDrawMode == true, it initializes the allPoints and
-  * allTimes ArrayLists.
-  */
+ * The built-in mousePressed handler for Processing, but note that it forwards 
+ * mouse coords to handleMousePressed(). If isDrawMode is true, we start accumulating
+ * points to allPoints: initAllPoints() adds the current mouseX and mouseY. After that, 
+ * the draw loop calls handleDrawing() to add points. Drawing ends on mouseReleased(). 
+ */
 @Override
 public void mousePressed() {
   // println("mousePressed:", mouseX, mouseY);
   if (this.isDrawMode) {
-  initAllPoints();
+    initAllPoints();
   } 
   else {
-  handleMousePressed();
+    handleMousePressed();
   }
 }
 
@@ -484,7 +486,7 @@ public void mouseDragged() {
 @Override
 public void mouseReleased() {
   if (isAnimating && isTrackMouse) {
-  println("----- animation shift = "+ shift);
+    println("----- animation shift = "+ shift);
   }
   if (isDrawMode && allPoints != null) {
   if (allPoints.size() > 2) {    // add curve data to the brush list

@@ -12,7 +12,7 @@ public void initAudio() {
   minim = new Minim(this);
   // use the getLineOut method of the Minim object to get an AudioOutput object
   this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
-  audioOut.setGain(defaultGain);
+  setAudioGain(defaultGain);
   println("---- audio out gain is "+ audioOut.getGain());
   // create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
   this.playBuffer = new MultiChannelBuffer(mapSize, 1);

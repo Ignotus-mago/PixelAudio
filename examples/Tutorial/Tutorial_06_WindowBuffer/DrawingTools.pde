@@ -128,7 +128,8 @@ public void initCurveMaker() {
   sampleX = PApplet.constrain(mouseX, 0, width-1);
   sampleY = PApplet.constrain(mouseY, 0, height-1);
   samplePos = mapper.lookupSample(sampleX, sampleY);
-  // testing
+  // Get the indices into allPoints of the points in RDP points
+  // the same indices point into the time stamps
   /*
   println("----- RDP Indices: ");
   int[] ndx = curveMaker.getRdpIndicesAsInts();
