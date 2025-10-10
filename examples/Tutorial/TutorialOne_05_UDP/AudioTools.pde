@@ -106,6 +106,7 @@ public int getSamplePos(int x, int y) {
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
+  if (pool == null || synth == null) return 0;
   if (isUseSynth) {
     samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
   }
@@ -127,6 +128,7 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
+  if (pool == null || synth == null) return 0;
   if (isUseSynth) {
     samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
   }

@@ -681,7 +681,7 @@ public void parseKey(char key, int keyCode) {
   switch(key) {
     case ' ': //  start or stop animation
       if (isListening) {
-        println("-- animation is not run when you are capturing an audio stream");      
+        println("-- animation is not run when you moving through the windowed buffer");       
       }    
     else {
       isAnimating = !isAnimating;

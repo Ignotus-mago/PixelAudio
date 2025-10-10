@@ -12,7 +12,7 @@ public void initAllPoints() {
   allTimes = new ArrayList<Integer>();
   startTime = millis();
   allTimes.add(startTime);
-  addPoint(mouseX, mouseY);
+  addPoint(constrain(mouseX, 0, width-1), constrain(mouseY, 0, height-1));
 }
 
 /**

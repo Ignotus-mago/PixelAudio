@@ -12,7 +12,7 @@ public void initAllPoints() {
   allTimes = new ArrayList<Integer>();
   startTime = millis();
   allTimes.add(startTime);
-  addPoint(mouseX, mouseY);
+  addPoint(constrain(mouseX, 0, width-1), constrain(mouseY, 0, height-1));
   // *****>>> NETWORKING <<<***** //
   if (nd != null) nd.oscSendMousePressed(sampleX, sampleY, samplePos);
 }
@@ -47,7 +47,7 @@ public void addPoint(int x, int y) {
     currentPoint = new PVector(x, y);
     allPoints.add(currentPoint);
     allTimes.add(millis());
-    setSampleVars(mouseX, mouseY);
+    setSampleVars(x, y);
   }
 }
 
