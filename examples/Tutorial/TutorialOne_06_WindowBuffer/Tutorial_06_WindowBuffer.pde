@@ -1,3 +1,144 @@
+/*
+ * This example application modifies the TutorialOne_04_Drawing code for the PixelAudio
+ * library for Processing. Some of the changes:
+ * 
+ *   -- We use a custom MultiGen, hilbertRowOrtho(). This gen uses rows of Hilbert gens
+ *      in row major order (left to right, top to bottom). Its signal path is revealed
+ *      by using hues from the "colors" RGB array to color the display image.
+ *   -- We load audio and image separately and use key commands 'w' (image to audio) 
+ *      and 'W' (audio to image) to exchange data between image and audio.
+ *   -- We add a raindrops() method to provide random audio events when the windowed 
+ *      buffer is advancing automatically ('t' command). The raindrops cluster along the
+ *      top edge and are useful for playing files with a recognizable time structure, like
+ *      youthOrchestra.wav, the Spanish national anthem. 
+ * 
+ * Finally, we add commands to open a selected audio file and load all of it to a buffer. 
+ * We use the buffer as a source for "audioSignal", an array of floats that is mapped to the 
+ * display using the signal path. You could think of audioSignal as a window that moves 
+ * through the buffer, transcoding audio data to brightness in the HSB color space and
+ * then writing its values to the PImage "mapImage", which shows in the display window. 
+ * The audioSignal array is the same size as mapImage, the display image. AudioSignal 
+ * and mapImage use PixelAudioMapper "mapper" to map samples onto pixels. Mapper was
+ * initialized with the MultiGen created by hiilbertRowOrtho(). 
+ * 
+ * In contrast to the AudioCapture example sketch, where we streamed a file from disk,
+ * we don't play audio as we advance through the buffer, but we do control how fast we
+ * advance. We play audio by drawing on the display image. We step through audio with  
+ * WindowedBuffer. It provides better control over animation than the built-in
+ * array rotation methods in PixelAudioMapper do, and it's a complete implementation 
+ * of a circular buffer. 
+ * 
+ * The audio loaded to WindowedBuffer windowBuff does not change once it is loaded, 
+ * until you load a new audio file. Data from windowBuff gets written to audioSignal
+ * and transcoded to mapImage. When you click on the display window, the getSamplePos()
+ * method calculates the precise location of a sample in the backing buffer of windowBuff
+ * and passes it to the WFSamplerInstrumentPool instance "pool", which plays the audio
+ * at the sample position. GetSamplePos() takes animation into account, too, if you are
+ * using PixelAudioMapper's shift methods. 
+ * 
+ * Here are some of the ways I am using WindowedBuffer: 
+ *   -- In the loadAudioFile() method, we open a file and load all of it into playBuffer.
+ *   -- The audio data is copied to anthemBuffer.
+ *   -- anthemBuffer is used to initialize a WindowedBuffer, windowBuff, with a mapSize window.
+ *   -- playBuffer is trimmed to mapSize, the size of PixelAudioMapper mapper and the display image.
+ *   -- Animation and transcoding image to audio use mapImage.pixels, audioSignal, and playBuffer.
+ *   -- Audio events make use of anthemBuffer.
+ *   -- You can step through the buffer either with the 't' command or the 'j' and 'J' commands. 
+ *      The 't' command automates the window, shifting it on every frame
+ *      The 'j' and 'J' commands step forward a half window or a whole window
+ *   -- Generally, you can't run animation and windowing at the same time. 
+ *   -- Audio events use anthemBuffer as a stable source of audio data, thus avoiding noise
+ *      from threaded updates to audio data. See audioMousePressed() for the code. 
+ *      The key bit of math is:
+ *        position in anthemBuffer = position in playBuffer + this.windowBuff.getIndex();
+ *   -- Animation and window shifting are turned off when you open a file, and returned 
+ *      to previous settings after the file is loaded. This avoids thread conflicts and 
+ *      crashes. Loading files automatically from code, without a dialog, can work around
+ *      this restriction, but it's left as an exercise for the diligent coder. 
+ *      
+ * 
+ * Comments on the individual methods indicate where some of the changes were made.
+ * 
+ *     1. Add hilbertRowOrtho().
+ *     2. Modify loadAudioFile() and loadImageFile(), removing the writeAudioToImage()
+ *        and writeImageToAudio() calls.
+ *     3. Add key commands in parseKey() for writeAudioToImage() ('W')and writeImageToAudio() ('w').
+ *     4. Add key commands in parseKey() to save to audio ('S') and save to image ('s'). 
+ *     5. Create methods playPoints(int startTime) and playBrushStrokes(int offset) 
+ *        to automate playback of brushstrokes. See DrawingTools tab.
+ *     6. Add a key command ('p') to parseKey() to call playBrushStrokes(). 
+ *     7. Modify the updateAudio() method: comment out the writeAudioToImage() call,
+ *        because we will handle audio at full resolution whenever possible. 
+ *        Rotate the audioSignal array when isAnimating == true.
+ *     8. Add a section of WindowedBuffer variables.
+ *     9. Add methods to play, mute and pause audio from WindowedBuffer. 
+ *        
+ *     
+ * To play with the code:
+ *     
+ *     1. Launch the sketch. 
+ *        Rainbow stripes appear in display window.
+ *     2. Press 'o' and load an audio file to the audio buffer (saucer_mixdown.wav, in the 
+ *        PixelAudio/examples/examples_data/ folder is a good choice).
+ *        Display does not change, Click on the display image to test the audio. 
+ *     3. Press 't' to step through audio from the selected file and write to the display. WindowBuff
+ *        steps through anthemBuffer by windowHopSize samples and returns an array of floats for 
+ *        every call to its nextWindow() method. WindowBuff passes the array of floats to audioSignal,  
+ *        which gets transcoded to mapImage and the display as animated gray values.
+*         See the WindowedBuffer class for more information.  
+ *     4. Unlike the AudioCapture example, which can play a file automatically, MusicBoxBuffer
+ *        requires mouseClicks or interactive drawing to produce sound.  
+ *     5. Click on the image to play samples. Try it while the window is stepping through 
+ *        the buffer ('t' key command) and while it is animating (spacebar key command). To avoid
+ *        problems, it is generally not possible to animate and step the window at the same time.  
+ *     6. Press 'd' to start drawing -- draw a few brushstrokes. Hover on brushstrokes to activate 
+ *        them--this will work even when drawing is off. Click on brushstrokes to play audio. 
+ *        Audio samples will play, activated by the brushstrokes. 
+ *     7. Press 'x' to delete the current active brush shape or the oldest brush shape.
+ *        Press 'X' to delete the most recent brush shape.
+ *     7. Press 'b' to play the brushstrokes.
+ *        Audio corresponding to brushstrokes is played.
+ *     8. Press the spacebar to run animation.
+ *        The image pixel array and the audio signal array are both rotated and written along
+ *        the signal path. 
+ *        The audio played by the brushstrokes changes as the animation progresses.
+ *     9. Press 't' to start windowed buffer traversal again. Experiment with different audio sources, 
+ *        directions of drawing, etc. 
+ * 
+ * You can change the hilbertRowOrtho() MultiGen method arguments to fit other other audio and image files. 
+ * It might be nice to change those circles that show when sound is played to something smaller and transparent...
+ * 
+ * 
+ * Here are the key commands for this sketch:
+ * 
+ * Press ' ' to  start or stop animation.
+ * Press 'd' to turn drawing on or off.
+ * Press 'm' to turn mouse tracking on or off.
+ * Press 'c' to apply color from image file to display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage .
+ * Press 'p' to play brushstrokes with a time lapse between each.
+ * Press 'o' or 'O' to open an audio or image file.
+ * Press 's' to save image to a PNG file.
+ * Press 'S' to save audio to a WAV file.
+ * Press ']' to jump half window ahead in the buffer.
+ * Press '[' to jump half window back in the buffer.
+ * Press '}' to jump whole window ahead in the buffer.
+ * Press '{' to jump whole window back in the buffer.
+ * Press 'r' to rewind the windowed audio buffer.
+ * Press UP arrow to increase gain by 3.0 dB.
+ * Press DOWN arrow to decrease gain by -3.0 dB.
+ * Press 'u' to mute or unmute audio.
+ * Press 't' to turn audio stream on or off.
+ * Press 'w' to write the image colors to the audio buffer as transcoded values.
+ * Press 'W' to write the audio buffer samples to the image as color values.
+ * Press 'x' to delete the current active brush shape or the oldest brush shape.
+ * Press 'X' to delete the most recent brush shape.
+ * Press 'y' to turn rain (random audio events) on and off.
+ * Press 'z' to reset brushstrokes and audio buffer (you may need to reload audio).
+ * Press 'V' to record a video.
+ * Press 'h' or 'H' to show help and key commands. * 
+ */
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -84,7 +225,7 @@ float sampleScale = 4;          // factor in determining audio event duration
 int sampleBase = (int) (sampleRate/sampleScale);     // 1/4 of a second
 int samplelen = (int) (sampleScale * sampleBase);    // one second
 Sampler audioSampler;           // minim class for sampled sound
-WFSamplerInstrument synth;      // class for audio playback, not use at the moment
+WFSamplerInstrument synth;      // class for audio playback, but we use pool in this sketch
 // instrument pool, for up to 48 simultaneous voices
 WFSamplerInstrumentPool pool;   // a pool of WFSamplerInstruments
 int poolSize = 48;              // number of WFSamplerInstruments in the pool
@@ -114,6 +255,8 @@ ArrayList<TimedLocation> timeLocsArray;    // a list of timed events
 /* ------------------------------------------------------------------ */
 
 int shift = -4;                  // number of pixels to shift the animation
+/** track the shift in index location when we animate pixels with PixelAudioMapper.rotateLeft() */
+int totalShift = 0;              // cumulative shift from array rotation animation
 boolean isAnimating = false;     // are we animating or not?
 boolean oldIsAnimating;          // keep track of state when we suspend animation
 boolean isTrackMouse = false;    // if true, dragging the mouse sets animation speed
@@ -185,9 +328,7 @@ boolean isListening = false;
 boolean oldIsListening = isListening;
 /** boolean to flag fixed length capture */
 boolean isFixedLength = false;
-/** track the shift in index location when we animate pixels with PixelAudioMapper.rotateLeft() */
-int animShift = 0;
-/** */
+/** turn random audio events on or off, see raindrops() method in AudioTools tab */
 boolean isRaining = false;
 
 // ** YOUR VARIABLES ** //
@@ -206,15 +347,11 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   // we create a PixelMapGen implemented as a MultiGen, with dimensions equal to our display window
   // hilbertRowOrtho() is a very flexible way to create a multigen. 
-  // hilbertLoop3x2() produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
-  // genWidth == genHeight, genWidth is a power of 2 (a restriction on Hilbert curves)
-  //
-  // multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);  // for example
-  // 
+  // in other sketches we've used hilbertLoop3x2()
   multigen = hilbertRowOrtho(cols, rows, genWidth, genHeight);
   // create a PixelAudioMapper to handle the mapping of pixel colors to audio samples
   mapper = new PixelAudioMapper(multigen);
-  // keep track of the area of the PixelAudioMapper
+  // mapSize is the length of mapImage.pixels and audioSignal
   mapSize = mapper.getSize();
   println("---- mapSize == "+ mapSize);
   // create an array of rainbow colors with mapSize elements
@@ -223,9 +360,10 @@ public void setup() {
   initAudio();
   initDrawing();
   showHelp();
-  println("--- dimensions: ", width, height);
+  println("--- display window dimensions: ", width, height);
 }
 
+// terminate audio threads when the sketch exits
 @Override
 public void stop() {
   if (synth != null) synth.close();
@@ -235,10 +373,10 @@ public void stop() {
 
 
 /**
-  * Generates an array of rainbow colors using the HSB color space.
-  * @param size    the number of entries in the colors array
-  * @return an array of RGB colors ordered by hue
-  */
+ * Generates an array of rainbow colors using the HSB color space.
+ * @param size    the number of entries in the colors array
+ * @return an array of RGB colors ordered by hue
+ */
 public int[] getColors(int size) {
   int[] colorWheel = new int[size]; // an array for our colors
   pushStyle(); // save styles
@@ -252,42 +390,42 @@ public int[] getColors(int size) {
 
 
 /**
-  * This method creates rows of HilbertGens, starting each row from the left
-  * and adding gens. The odd rows are flipped vertically and the even rows are
-  * unchanged. The unchanged HilbertGen starts at upper left corner and ends at 
-  * upper right corner, so this provides some possibilities of symmetry between rows.
-  * The path is not continuous. 
-  * 
-  * @param cols    number of columns of gens wide
-  * @param rows    number of rows of gens high
-  * @param genW    width of each gen (same as genH and a power of 2)
-  * @param genH    height of each gen 
-  * @return        a MultiGen composed of cols * rows PixelMapGens
-  */
+ * This method creates rows of HilbertGens, starting each row from the left
+ * and adding gens. The odd rows are flipped vertically and the even rows are
+ * unchanged. The unchanged HilbertGen starts at upper left corner and ends at 
+ * upper right corner, so this provides some possibilities of symmetry between rows.
+ * The path is not continuous. 
+ * 
+ * @param cols    number of columns of gens wide
+ * @param rows    number of rows of gens high
+ * @param genW    width of each gen (same as genH and a power of 2)
+ * @param genH    height of each gen 
+ * @return        a MultiGen composed of cols * rows PixelMapGens
+ */
 public MultiGen hilbertRowOrtho(int cols, int rows, int genW, int genH) {
   // list of PixelMapGens
   ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
   // list of x,y coordinates for placing gens from genList
   ArrayList<int[]> offsetList = new ArrayList<int[]>();
   for (int y = 0; y < rows; y++) {
-  for (int x = 0; x < cols; x++) {
-    if (y % 2 == 0) {
-    genList.add(new HilbertGen(genW, genH, AffineTransformType.NADA));
+    for (int x = 0; x < cols; x++) {
+      if (y % 2 == 0) {
+        genList.add(new HilbertGen(genW, genH, AffineTransformType.NADA));
+      }
+      else {
+        genList.add(new HilbertGen(genW, genH,  AffineTransformType.NADA));
+      }
+      offsetList.add(new int[] {x * genW, y * genH});
     }
-    else {
-    genList.add(new HilbertGen(genW, genH,  AffineTransformType.NADA));
-    }
-    offsetList.add(new int[] {x * genW, y * genH});
-  }
   }
   return new MultiGen(width, height, offsetList, genList);
 }
 
 
 /**
-  * Initializes mapImage with the colors array. MapImage will handle the color data for mapper
-  * and also serve as our display image.
-  */
+ * Initializes mapImage with the colors array. MapImage will handle the color data for mapper
+ * and also serve as our display image.
+ */
 public void initImages() {
   mapImage = createImage(width, height, ARGB);
   mapImage.loadPixels();
@@ -297,42 +435,41 @@ public void initImages() {
   
 
 /**
-  * Initializes the line, curve, and brushstroke drawing variables. 
-  * Note that timeLocsArray has been initialized by initAudio(), though it
-  * will be used for point events in the drawing code, too. 
-  */
+ * Initializes the line, curve, and brushstroke drawing variables. 
+ * Note that timeLocsArray has been initialized by initAudio(), though it
+ * will be used for point events in the drawing code, too. 
+ */
 public void initDrawing() {
   currentPoint = new PVector(-1, -1);
   brushShapesList = new ArrayList<PACurveMaker>();
 }
 
-  
-@Override
+
 public void draw() {
   image(mapImage, 0, 0);    // draw mapImage to the display window
   handleDrawing();          // handle interactive drawing and audio events created by drawing
   if (isAnimating) {        // animation is different from windowed buffer
-  animate();              // rotate mapImage.pixels by shift number of pixels
-  updateAudio();          // rotate audioSignal (we could just shift the index...)
+    animate();              // rotate mapImage.pixels by shift number of pixels
+    updateAudio();          // rotate audioSignal (we could just shift the index...)
   }
-  if (isListening) {        // windowed buffer, never at the same time as isAnimating
-    updateAudio();        // update audioSignal with WindowedBuffer.nextWindow()
-    drawSignal();         // transcode audioSignal and write it to mapImage.pixels
+  if (isListening) {        // windowed buffer is advancing, but not at the same time animation
+    updateAudio();          // update audioSignal with WindowedBuffer.nextWindow()
+    drawSignal();           // transcode audioSignal and write it to mapImage.pixels
     if (isRaining && random(10) > 9) raindrops();    // a little rain never hurt anyone
   }
 }
 
-  
-  public void animate() {
+
+public void animate() {
   stepAnimation();
   renderFrame(step);
-  }
+}
   
   
 /**
-  * Step through the animation, called by the draw() method.
-  * Will also record a frame of video, if we're recording.
-  */
+ * Step through the animation, called by the draw() method.
+ * Will also record a frame of video, if we're recording.
+ */
 public void stepAnimation() {
   if (step >= animSteps) {
   if (isRecordingVideo) {
@@ -344,31 +481,36 @@ public void stepAnimation() {
   step = 0;
   } 
   else {
-  step += 1;
-  if (isRecordingVideo) {
-    if (videx == null) {
-    println("----->>> start video recording ");
-    videx = new VideoExport(this, "TutorialOneVideo.mp4");
-    videx.setFrameRate(videoFrameRate);
-    videx.startMovie();
+    step += 1;
+    if (isRecordingVideo) {
+      if (videx == null) {
+        println("----->>> start video recording ");
+        videx = new VideoExport(this, "TutorialOneVideo.mp4");
+        videx.setFrameRate(videoFrameRate);
+        videx.startMovie();
+      }
+      videx.saveFrame();
+      println("-- video recording frame " + step + " of " + animSteps);
     }
-    videx.saveFrame();
-    println("-- video recording frame " + step + " of " + animSteps);
-  }
   }
 }
 
 
 /**
-  * Renders a frame of animation: copies mapImage pixels along the signal path into rgbSignal, 
-  * rotates them shift elements left, writes them back to mapImage.
-  * 
-  * @param step   current animation step
-  */
+ * Renders a frame of animation: moving along the signal path, copies mapImage pixels into rgbSignal, 
+ * rotates them shift elements left, writes them back to mapImage along the signal path.
+ * 
+ * @param step   current animation step
+ */
 public void renderFrame(int step) {
   mapImage.loadPixels();
+  // get the pixels in the order that the signal path visits them
   int[] rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
+  // rotate the pixel array
   PixelAudioMapper.rotateLeft(rgbSignal, shift);
+  // keep track of how much the pixel array (and the audio array) are shifted
+  totalShift += shift;
+  // write the pixels in rgbSignal to mapImage, following the signal path
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
   mapImage.updatePixels();
 }
@@ -390,52 +532,49 @@ public void drawSignal() {
 
   
 /**
-  * Updates global variable audioSignal, either by rotating array or getting 
-  * a new window of values from the audio buffer.
-  */
+ * Updates global variable audioSignal, either by rotating array or getting 
+ * a new window of values from the audio buffer.
+ */
 public void updateAudio() {
-  if (isAnimating) {
-  PixelAudioMapper.rotateLeft(audioSignal, shift);
-  // playBuffer.setChannel(0, audioSignal);
-  // audioLength = audioSignal.length;
-  }
   if (isListening) {
     audioSignal = windowBuff.nextWindow(); 
-    // playBuffer.setChannel(0, audioSignal); // just for animation, not needed when using WindowedBuffer
+    return;   // don't animate if we're moving through the windowed buffer
+  }
+  if (isAnimating) {
+    PixelAudioMapper.rotateLeft(audioSignal, shift);
   }
 }
   
-
 /**
-  * Handles user's drawing actions, draws previously recorded brushstrokes, 
-  * tracks and generates animation and audio events. 
-  */
+ * Handles user's drawing actions, draws previously recorded brushstrokes, 
+ * tracks and generates animation and audio events. 
+ */
 public void handleDrawing() {  
   // draw current brushShapes 
   drawBrushShapes();
   if (isDrawMode) {
-  if (mousePressed) {
-    addPoint();
-  }
-  if (allPoints != null && allPoints.size() > 2) {
-    PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
-  }
-  if (curveMaker != null) curveMakerDraw();
+    if (mousePressed) {
+      addPoint(mouseX, mouseY);
+    }
+    if (allPoints != null && allPoints.size() > 2) {
+      PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
+    }
+    if (curveMaker != null) curveMakerDraw();
   } 
   runCurveEvents();
   runPointEvents();
 }
 
 /**
-  * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
-  * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
-  * 
-  * @param msg     message to write
-  * @param x       x coordinate
-  * @param y       y coordinate
-  * @param weight  font weight
-  * @param isWhite if true, white text, otherwise, black text
-  */
+ * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
+ * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
+ * 
+ * @param msg     message to write
+ * @param x       x coordinate
+ * @param y       y coordinate
+ * @param weight  font weight
+ * @param isWhite if true, white text, otherwise, black text
+ */
 public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
   int fill1 = isWhite? 0 : 255;
   int fill2 = isWhite? 255 : 0;
@@ -456,46 +595,44 @@ public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite)
  * points to allPoints: initAllPoints() adds the current mouseX and mouseY. After that, 
  * the draw loop calls handleDrawing() to add points. Drawing ends on mouseReleased(). 
  */
-@Override
 public void mousePressed() {
-  // println("mousePressed:", mouseX, mouseY);
+  setSampleVars(mouseX, mouseY);      
   if (this.isDrawMode) {
     initAllPoints();
   } 
   else {
-    handleMousePressed();
+    handleMousePressed(mouseX, mouseY);
   }
 }
 
 
 /**
-  * Used for interactively setting the amount of pixel array shift when animating.
-  * TODO, since this app is a demo for WindowedBuffer, we can probably do without 
-  * setting shift interactively. 
-  */
-@Override
+ * Used for interactively setting the amount of pixel array shift when animating.
+ * TODO, since this app is a demo for WindowedBuffer, we can probably do without 
+ * setting shift interactively. 
+ */
 public void mouseDragged() {
   if (isTrackMouse) {
     shift = abs(width/2 - mouseX);
     if (mouseY < height/2) 
-    shift = -shift;
+      shift = -shift;
+    writeToScreen("shift = "+ shift, 16, 24, 24, false);
   }
 }
 
-
-@Override
 public void mouseReleased() {
+  setSampleVars(mouseX, mouseY);      
   if (isAnimating && isTrackMouse) {
-    println("----- animation shift = "+ shift);
+    // println("----- animation shift = "+ shift);
   }
   if (isDrawMode && allPoints != null) {
-  if (allPoints.size() > 2) {    // add curve data to the brush list
-    initCurveMaker();
-  }
-  else {              // handle the event as a click
-    handleMousePressed();
-  }
-  allPoints.clear();
+    if (allPoints.size() > 2) {    // add curve data to the brush list
+      initCurveMaker();
+    }
+    else {              // handle the event as a click
+      handleMousePressed(mouseX, mouseY);
+    }
+    allPoints.clear();
   }
 }
 
@@ -561,7 +698,7 @@ public void parseKey(char key, int keyCode) {
     if (!isDrawMode)
       this.curveMaker = null;
     break;
-//    case 'm': // turn mouse tracking on or off, a distraction better omitted
+//    case 'm': // turn mouse tracking on or off, a distraction better omitted in WindowBuffer sketch
 //      isTrackMouse = !isTrackMouse;
 //      println("-- mouse tracking is " + isTrackMouse);
 //      break;
@@ -621,7 +758,7 @@ public void parseKey(char key, int keyCode) {
       isListening = listenToAnthem(!isListening);
       if (isListening) 
         isAnimating = false;    // generally don't want to animate and stream at the same time
-      animShift = 0;
+      totalShift = 0;
     }
     else {
       println("---- You need to load an audio file before you can window through the buffer.");
@@ -687,7 +824,7 @@ public void resetAudioWindow() {
   windowBuff.reset();
   audioSignal = windowBuff.nextWindow();
   playBuffer.setChannel(0, audioSignal);
-  animShift = 0;
+  totalShift = 0;
 }
 
 /**
@@ -697,7 +834,7 @@ public void moveAudioWindow(int howFar) {
   int i = this.windowBuff.getIndex();
   audioSignal = windowBuff.gettWindowAtIndex(i + howFar);
   playBuffer.setChannel(0, audioSignal);
-  animShift = 0;
+  totalShift = 0;
 }
 
 /**

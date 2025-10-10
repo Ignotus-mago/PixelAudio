@@ -24,12 +24,12 @@ public void initAudio() {
   windowBuff = new WindowedBuffer(anthemSignal, mapSize, 1024);
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
-  // TODO initialize animation buffer    
 }
 
 
 /**
- * Prepares audioSignal before it is used as an instrument source.
+ * Transcodes brightness channel of mapImage to audioSignal and sets playBuffer
+ * channel 0 to audioSignal. Of limited use with new sampler instruments and windowed buffer.
  * Modify as needed to prepare your audio signal data.
  */
 public void renderSignals() {
@@ -46,25 +46,45 @@ public void renderSignals() {
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
 public void audioMousePressed(int x, int y) {
-  this.sampleX = x;
-  this.sampleY = y;
-  samplePos = getSamplePos(x, y);
+  setSampleVars(x, y);
   // update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
   // playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
+  // TODO logic not used in current version, should be deleted?
   if (audioSignal == null || isBufferStale) {
     renderSignals();
     isBufferStale = false;
   }
-  this.samplelen = calcSampleLen(this.sampleBase, this.sampleScale, this.sampleScale * 0.125f);
-  // println("---- playBuffer index is "+ samplePos);
-  playSample(samplePos, samplelen, 0.5f, adsr);
+  if (pool == null || synth == null) {
+    println("---- You need to load a audio file before you can trigger audio events.");
+  }
+  else {
+    this.samplelen = calcSampleLen(this.sampleBase, this.sampleScale, this.sampleScale * 0.125f);    
+    // use the default envelope
+    playSample(samplePos, samplelen, 0.6f);
+  }
+}
+
+/**
+ * Sets variables sampleX, sampleY and samplePos. Arguments x and y may be outside
+ * the window bounds, sampleX and sampleY will be constrained to window bounds. As
+ * a result, samplePos will be within the bounds of audioSignal.
+ * 
+ * @param x    x coordinate, typically from a mouse event
+ * @param y    y coordinate, typically from a mouse event
+ * @return     samplePos, the index of of (x, y) along the signal path
+ */
+public int setSampleVars(int x, int y) {
+  sampleX = min(max(0, x), width - 1);
+  sampleY = min(max(0, y), height - 1);
+  samplePos = getSamplePos(sampleX, sampleY);
+  return samplePos;
 }
 
 public int getSamplePos(int x, int y) {
   samplePos = mapper.lookupSample(x, y);
   // calculate how much animation has shifted the indices into the buffer
-  animShift = (animShift + shift % mapSize + mapSize) % mapSize;
-  samplePos = (samplePos + animShift) % mapSize;
+  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
+  samplePos = (samplePos + totalShift) % mapSize;
   samplePos += this.windowBuff.getIndex();
   return samplePos % this.windowBuff.getBufferSize();
 }
@@ -81,8 +101,8 @@ public int getSamplePos(int x, int y) {
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
   if (pool == null) {
-   println("-->>> You must load a file ('o' key command) before you can play audio samples. <<<--");
-   return 0;
+    // println("-->>> You must load a file ('o' key command) before you can play audio samples. <<<--");
+    return 0;
   }
   samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
   int durationMS = (int)(samplelen/sampleRate * 1000);
@@ -101,8 +121,8 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
   if (pool == null) {
-   println("-->>> You must load a file ('o' key command) before you can play audio samples. <<<--");
-   return 0;
+    // println("-->>> You must load a file ('o' key command) before you can play audio samples. <<<--");
+    return 0;
   }
   samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
   int durationMS = (int)(samplelen/sampleRate * 1000);

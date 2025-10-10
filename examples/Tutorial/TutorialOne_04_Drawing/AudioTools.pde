@@ -31,7 +31,8 @@ public void initAudio() {
 }
 
 /**
- * Prepares audioSignal before it is used as an instrument source.
+ * Transcodes brightness channel of mapImage to audioSignal and sets playBuffer
+ * channel 0 to audioSignal. Of limited use.  
  * Modify as needed to prepare your audio signal data.
  */
 public void renderSignals() {
@@ -106,6 +107,7 @@ public int getSamplePos(int x, int y) {
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
+  if (pool == null || synth == null) return 0;
   if (isUseSynth) {
     samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
   }
@@ -127,6 +129,7 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
+  if (pool == null || synth == null) return 0;
   if (isUseSynth) {
     samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
   }

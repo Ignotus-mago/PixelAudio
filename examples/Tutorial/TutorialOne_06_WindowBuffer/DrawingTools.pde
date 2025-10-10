@@ -5,23 +5,22 @@
 /*----------------------------------------------------------------*/
 
 /**
-  * Initializes allPoints and adds the current mouse location to it. 
-  * Called when this.isDrawMode == true and mouse is pressed, to start
-  * accumulating points and event times into allPoints and allTimes lists. 
-  */
+ * Initializes allPoints and adds the current mouse location to it. 
+ * Called when this.isDrawMode == true and mouse is pressed, to start
+ * accumulating points and event times into allPoints and allTimes lists. 
+ */
 public void initAllPoints() {
   allPoints = new ArrayList<PVector>();
   allTimes = new ArrayList<Integer>();
   startTime = millis();
   allTimes.add(startTime);
-  addPoint();
+  addPoint(mouseX, mouseY);
 }
 
-
 /**
-  * Responds to mousePressed events associated with drawing.
-  */
-public void handleMousePressed() {
+ * Responds to mousePressed events associated with drawing.
+ */
+public void handleMousePressed(int x, int y) {
   if (activeBrush != null) {
     // a brushShape was triggered
     eventPoints = activeBrush.getEventPoints();
@@ -30,31 +29,23 @@ public void handleMousePressed() {
   } 
   else {
     // handle audio generation in response to a mouse click
-    audioMousePressed(PApplet.constrain(mouseX, 0, width - 1), PApplet.constrain(mouseY, 0, height));
+    audioMousePressed(PApplet.constrain(x, 0, width-1), PApplet.constrain(y, 0, height-1));
   }
 }
-
 
 /**
-  * While user is dragging the mouses and isDrawMode == true, accumulates new points
-  * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
-  * We constrain points outside the bounds of the display window. An alternative approach 
-  * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural" 
-  * appearance for fast drawing. 
-  */
-public void addPoint() {
+ * While user is dragging the mouses and isDrawMode == true, accumulates new points
+ * to allPoints and event times to allTimes.
+ */
+public void addPoint(int x, int y) {
   // we do some very basic point thinning to eliminate successive duplicate points
-  if (mouseX != currentPoint.x || mouseY != currentPoint.y) {
-    if (isIgnoreOutsideBounds && (mouseX < 0 || mouseX >= width || mouseY < 0 || mouseY >= height)) return;
-    sampleX = PApplet.constrain(mouseX, 0, width-1);
-    sampleY = PApplet.constrain(mouseY, 0, height-1);
-    currentPoint = new PVector(sampleX, sampleY);
+  if (x != currentPoint.x || y != currentPoint.y) {
+    currentPoint = new PVector(x, y);
     allPoints.add(currentPoint);
     allTimes.add(millis());
-    samplePos = mapper.lookupSample(sampleX, sampleY);
+    setSampleVars(x, y);
   }
 }
-
 
 /**
  * Processes the eventPoints list to create TimedLocation events 
@@ -125,18 +116,7 @@ public void initCurveMaker() {
   loadEventPoints();
   curveMaker.setDragTimes(reconfigureTimeList(allTimes));
   this.brushShapesList.add(curveMaker);
-  sampleX = PApplet.constrain(mouseX, 0, width-1);
-  sampleY = PApplet.constrain(mouseY, 0, height-1);
-  samplePos = mapper.lookupSample(sampleX, sampleY);
-  // Get the indices into allPoints of the points in RDP points
-  // the same indices point into the time stamps
-  /*
-  println("----- RDP Indices: ");
-  int[] ndx = curveMaker.getRdpIndicesAsInts();
-  for (int n : ndx) {
-    println(n);
-  }
-  */
+  setSampleVars(mouseX, mouseY);
 }
 
 

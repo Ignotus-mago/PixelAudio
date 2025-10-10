@@ -349,9 +349,9 @@ public void initDrawing() {
 }
 
 public void draw() {
-  image(mapImage, 0, 0);
-  // runTimeArray();    // animate audio event markers
-  handleDrawing();
+  image(mapImage, 0, 0);    // draw mapImage to the display window
+  // runTimeArray();        // animate audio event markers
+  handleDrawing();          // handle interactive drawing and audio events created by drawing
   if (isAnimating) {
     animate();
     updateAudio();
@@ -481,6 +481,12 @@ public void mousePressed() {
   }
 }
 
+/**
+ * Used for interactively setting the amount of pixel array shift when animating.
+ * TODO, since this app is a demo for WindowedBuffer, we can probably do without 
+ * setting shift interactively. 
+ */
+@Override
 public void mouseDragged() {
   if (isTrackMouse) {
     shift = abs(width/2 - mouseX);
@@ -493,7 +499,7 @@ public void mouseDragged() {
 public void mouseReleased() {
   setSampleVars(mouseX, mouseY);      
   if (isAnimating && isTrackMouse) {
-    println("----- animation shift = "+ shift);
+    // println("----- animation shift = "+ shift);
   }
   if (isDrawMode && allPoints != null) {
     if (allPoints.size() > 2) {    // add curve data to the brush list

@@ -41,7 +41,7 @@ public void addPoint(int x, int y) {
     currentPoint = new PVector(x, y);
     allPoints.add(currentPoint);
     allTimes.add(millis());
-    setSampleVars(mouseX, mouseY);
+    setSampleVars(x, y);
   }
 }
 
