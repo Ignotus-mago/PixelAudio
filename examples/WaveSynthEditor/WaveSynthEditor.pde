@@ -442,9 +442,11 @@ public void stepAnimation() {
   renderFrame(step);
 }
 
+// Do we set isBufferStale = true on every animation frame? Only phase relationships are changing, 
+// so probably we don't need to do that, at least not in a demo sketch. 
 public void renderFrame(int frame) {
   wavesynth.renderFrame(frame);
-  isBufferStale = true;
+  // isBufferStale = true;
 }
 
 
