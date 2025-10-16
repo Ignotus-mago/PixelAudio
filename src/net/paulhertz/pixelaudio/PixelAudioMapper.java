@@ -684,7 +684,7 @@ public class PixelAudioMapper {
 	
 
 	/**
-	 * Writes transcoded pixel values directly to the signal, without using a LUT to redirect. V
+	 * Writes transcoded pixel values directly to the signal, without using a LUT to redirect.
 	 * Values are calculated with the standard luminosity equation, <code>gray = 0.3 * red + 0.59 * green + 0.11 * blue</code>.
 	 *
 	 * @param img		source array of RGB pixel values
@@ -831,7 +831,7 @@ public class PixelAudioMapper {
 
 	 
 	// It's not clear to me when this signature might be useful. Not yet, anyhow.
-	// It's supposed to return one channel of RGB, and that might be useful, after all. Implement it. TODO
+	// It's supposed to return one channel of RGB, and that might be useful, after all. Implement it later. TODO
 	  
 	/**
 	 * @param img
