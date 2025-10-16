@@ -302,6 +302,15 @@ public void setup() {
 }
 
 /**
+ * turn off audio processing when we exit
+ */
+public void stop() {
+  if (pool != null) pool.close();
+  if (minim != null) minim.stop();
+  super.stop();
+}
+
+/**
  * @param edgeLength    length in pixels of Hilbert curve, must be a power of 2.
  * @return              a HilbertGen with its mapping arrays initialized
  */
@@ -882,7 +891,6 @@ public void toggleRecording() {
   refreshGlobalPanel();
 }
 
-// ------------- WaveData methods ------------- //
 
 /**
  * Scales the amplitude of an ArrayList of WaveData objects.

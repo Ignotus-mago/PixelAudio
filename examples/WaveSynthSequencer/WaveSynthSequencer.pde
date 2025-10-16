@@ -26,7 +26,7 @@ import net.paulhertz.pixelaudio.*;
  * which generates WaveSynths in the diatonic system of Western music. 
  * Initially, we call buildWaveDataList() to create a WaveData array with eight operators. 
  * The array is passed to a WaveSynth which is further configured by initWaveSynth(). 
- * To load JSON data, press the 'o' key and go to the data folder of this sketch. 
+ * To load JSON data, press the 'o' key and go to the JSON folder in the example sketches data folder. 
  * 
  * Note that the sampleRate value influences the appearance of the image, the duration
  * of audio samples and the way data is written to an audio file. See BigWaveSynthAudio 
@@ -75,21 +75,19 @@ String comments;            // a JSON field that provides information about the 
 Minim minim;                // library that handles audio 
 AudioOutput audioOut;       // line out to sound hardware
 MultiChannelBuffer audioBuffer;   // data structure to hold audio samples
-boolean isBufferStale = false;    // flags that audioBuffer needs to be reset: i.e., after loading JSON data to wavesynth
+boolean isBufferStale = true;    // flags that audioBuffer needs to be reset: i.e., after loading JSON data to wavesynth
 int sampleRate = 48000;     // a critical value for display and audio
 float[] audioSignal;        // the audio signal as an array of floats
 int[] rgbSignal;            // the colors in the display image, in the order the signal path visits them
 int audioLength;            // length of the audioSignal, same as the number of pixels in the display image
 
 // SampleInstrument setup
-float sampleScale = 4;      // number of divisions of one second of sound, affects duration of audio sample triggered by mouseDown
-int sampleBase = (int) (sampleRate/sampleScale);
-int samplelen = (int) (sampleScale * sampleBase);
-Sampler audioSampler;       // minim class for sampled sound
-SamplerInstrument instrument;    // local class to wrap audioSampler
+int noteDuration = 1000;        // average sample synth note duration, milliseconds
+int samplelen;                  // calculated sample synth note length, samples
+WFSamplerInstrumentPool pool;   // pool of instruments
 
 // ADSR and params
-ADSR adsr;                  // good old attack, decay, sustain, release
+ADSRParams adsr;                   // good old attack, decay, sustain, release
 float maxAmplitude = 0.7f;
 float attackTime = 0.8f;
 float decayTime = 0.5f;
@@ -107,7 +105,7 @@ String daPath;
 boolean isWaveSynthAnimating = true;    // animation status
 boolean oldIsAnimating;      // keep old animation status if we suspend animation
 boolean isLooping = true;    // looping sample (our instrument ignores this)
-boolean isRaining = true;
+boolean isRaining = false;
 int circleColor = color(233, 220, 199, 128);
 
 // interaction
@@ -163,8 +161,6 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
   sampleRate = 48000;               // the animation uses sampleRate = 48000 for its symmetry effects
-  sampleBase = sampleRate / 4;      // a quarter of a second
-  initAudio();                      // set up audio output and an audio buffer
   multigen = loadLoopGen(genWidth, genHeight);  // See the MultiGenDemo example for details on how MultiGen works
   mapper = new PixelAudioMapper(multigen);    // initialize a PixelAudioMapper
   float drone = sampleRate/1024.0f;           // a frequency that generates visual symmetries
@@ -176,19 +172,12 @@ public void setup() {
   timeLocsArray = new ArrayList<TimedLocation>();     // initialize mouse event tracking array
   initDecimalFormats();             // initializes some utility functions for formatting numbers
   initWaveSynthList();              // sets up a sequencer using dbwfMusic, dbwfTimes, and dbwfAmps arrays
+  initAudio();                      // set up audio output and an audio buffer
   // path to the folder where PixelAudio examples keep their data files 
   // such as image, audio, .json, etc.
   daPath = sketchPath("") + "../examples_data";
   println("daPath: ", daPath);
   showHelp();
-}
-
-public void initAudio() {
-  // use the getLineOut method of the Minim object to get an AudioOutput object
-  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
-  this.audioBuffer = new MultiChannelBuffer(1024, 1);
-  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-  adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
 }
 
 /**
@@ -264,76 +253,6 @@ public void stepAnimation() {
   wavesynth.renderFrame(step);
 }
 
-/**
- * Run the animation for audio events. 
- */
-public void runTimeArray() {
-  int currentTime = millis();
-  timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.stopTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
-    }
-  });
-  timeLocsArray.removeIf(TimedLocation::isStale);
-}
-
-/**
- * Run the WaveSynth Sequencer.
- */
-public void runMusicArray() {
-  int currentTime = millis();
-  introMusic.forEach(tl -> {
-    if (tl.stopTime() < currentTime) {
-      isWaveSynthAnimating = false;
-      wavesynth = tl.getWaveSynth();
-      wavesynth.prepareAnimation();
-      wavesynth.renderFrame(0);
-      synthImage = wavesynth.mapImage;
-      renderSignal();
-      int len = (int) ((48 * tl.duration) * 0.4f);
-      sampleX = tl.getX();
-      sampleY = tl.getY();
-      circleColor = tl.getCircleColor();
-      // println("---> music ", tl.getX(), tl.getY(), mapper.lookupSample(tl.getX(), tl.getY()));
-      // println("---> music ", twoPlaces.format(tl.getAmplitude()));
-      playSample(mapper.lookupSample(tl.getX(), tl.getY()), len, tl.getAmplitude(), tl.getAdsr());
-      tl.setStale(true);
-    }
-    else {
-      return;
-    }
-  });
-  introMusic.removeIf(NoteTimedLocation::isStale);
-}
-
-/**
- * Draws a circle at the location of an audio trigger (mouseDown event).
- * @param x    x coordinate of circle
- * @param y    y coordinate of circle
- */
-public void drawCircle(int x, int y) {
-  float size = isRaining? random(10, 30) : 60;
-  fill(circleColor);
-  noStroke();
-  circle(x, y, size);
-}  
-
-/**
- * Trigger a WaveSynth sample at a random location.
- */
-public void raindrops() {
-  int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
-  int[] coords = mapper.lookupCoordinate(signalPos);
-  sampleX = coords[0];
-  sampleY = coords[1];
-  if (audioSignal == null || isBufferStale) {
-    renderSignal();
-    isBufferStale = false;
-  }
-  playSample(signalPos, samplelen, 0.15f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));  
-}
-
 public void keyPressed() {
   switch (key) {
   case ' ':
@@ -346,7 +265,6 @@ public void keyPressed() {
     oldIsAnimating = isWaveSynthAnimating;
     isWaveSynthAnimating = false;
     this.loadWaveData();
-    isBufferStale = true;
     break;
   case 'O':
     if (currentDataFile == null) {
@@ -377,7 +295,7 @@ public void keyPressed() {
     break;
   case 'W':
     stepWaveSynth();
-    playSample(mapper.lookupSample(width/2, height/2), calcSampleLen(), 0.3f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+    playSample(mapper.lookupSample(width/2, height/2), calcSampleLen(), 0.3f, new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
     break;
   case 'd':
     isRaining = !isRaining;
@@ -416,6 +334,7 @@ public void stepWaveSynth() {
   renderSignal();            // copy wavesynth audio to audio buffer
   wsIndex++;
   if (wsIndex > waveSynthList.size() - 1) wsIndex = 0;
+  isBufferStale = true;
 }
 
 public void showHelp() {
@@ -450,73 +369,10 @@ public void saveToAudio() {
   }
 }
 
-/**
- * Calls WaveSynth to render a audio sample array derived from the same math that creates the image.
- */
-public void renderSignal() {
-  this.audioSignal = wavesynth.renderAudioRaw(step);      // get the signal "as is" from WaveSynth
-  audioSignal = WaveSynth.normalize(audioSignal, 0.9f);    // normalize samples to the range (-0.9f, 0.9f) 
-  audioLength = audioSignal.length;
-  audioBuffer.setBufferSize(audioLength);
-  audioBuffer.setChannel(0, audioSignal);            // copy audioSignal to channel 0 of audioBuffer
-  // println("--->> copied audio signal to audio buffer");
-}
-
 public void mousePressed() {
-  sampleX = mouseX;
-  sampleY = mouseY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);
-  if (audioSignal == null || isBufferStale) {
-    renderSignal();
-    isBufferStale = false;
-  }
-  playSample(samplePos, calcSampleLen(), 0.3f, new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+  audioMousePressed(constrain(mouseX, 0, width - 1), constrain(mouseY, 0, height - 1));
 }
 
-/**
- * @param samplePos    position of the sample in the audio buffer
- * @param samplelen    length of the sample (will be adjusted)
- * @param amplitude    amplitude of the sample on playback
- * @param adsr      an ADSR envelope for the sample
- * @return        the calculated sample length in samples
- */
-public int playSample(int samplePos, int samplelen, float amplitude, ADSR adsr) {
-  // println("--- play "+ twoPlaces.format(amplitude));
-  // create a Minim Sampler from the buffer, with sampleRate sampling rate, 
-  // for up to 8 simultaneous outputs
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8);
-  // set amplitude for the Sampler
-  audioSampler.amplitude.setLastValue(amplitude);
-  // set the Sampler to begin playback at samplePos, which corresponds 
-  // to the place the mouse was clicked
-  audioSampler.begin.setLastValue(samplePos);
-  // do some calculation to include the release time.
-  int releaseDuration = (int) (releaseTime * sampleRate); 
-  if (samplePos + samplelen >= mapSize) {
-    // make sure we don't exceed the mapSize
-    samplelen = mapSize - samplePos; 
-    println("----->>> sample length = " + samplelen);
-  }
-  int durationPlusRelease = this.samplelen + releaseDuration;
-  int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1
-      : samplePos + durationPlusRelease;
-  // println("----->>> end = " + end);
-  audioSampler.end.setLastValue(end);
-  this.instrument = new SamplerInstrument(audioSampler, adsr);
-  // play command takes a duration in seconds
-  float duration = samplelen / (float) (sampleRate);
-  instrument.play(duration);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, (int) (duration * 1000) + millis()));
-  // return the length of the sample
-  return samplelen;
-}
-
-public int calcSampleLen() {
-  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary the duration of the signal 
-  // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
-  return samplelen;
-}
 
 
 // ------------------------------------------- //
@@ -709,7 +565,7 @@ public void loadMusic() {
   int x;
   int y;
   float span;
-  ADSR adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime, 0, 0);
+  ADSRParams adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   println("\n----- SEQUENCER DATA -----\n   piano key, frequency, duration, stop time ms");
   for (int dur : this.dbwfTimes) {
     signalPos = (int) random(samplelen, mapSize - samplelen - 1);
@@ -717,7 +573,7 @@ public void loadMusic() {
     x = coords[0];
     y = coords[1];
     circ = color(233, 220, 199, 128);
-    adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime, 0, 0);
+    adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
     span = dur * this.beatSpan;
     int pianoKey = this.dbwfMusic[i];
     float f = 1.0f * pianoKeyFrequency(pianoKey);

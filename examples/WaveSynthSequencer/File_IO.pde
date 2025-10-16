@@ -1,7 +1,23 @@
-//-------------------------------------------//
-//              AUDIO FILE I/O               //
-//-------------------------------------------//
+public void saveToImage() {
+    // File folderToStartFrom = new File(dataPath(""));
+    selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
+}
+public void imageFileSelectedWrite(File selection) {
+    if (selection == null) {
+        println("Window was closed or the user hit cancel.");
+        return;            
+    }
+    String fileName = selection.getAbsolutePath();
+    if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
+        fileName += ".png";
+    }
+    // saveImageToFile(mapImage, fileName);
+    save(fileName);
+}
 
+public void saveImageToFile(PImage img, String fileName) {
+    img.save(fileName);
+}
 
 /**
  * Saves to a 32-bit floating point format that has higher resolution than 16-bit integer PCM. 

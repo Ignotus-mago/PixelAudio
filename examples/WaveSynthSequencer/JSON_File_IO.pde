@@ -27,6 +27,7 @@ public void fileSelectedOpen(File selection) {
   setWaveSynthFromJSON(json, wavesynth);
   surface.setTitle(currentFileName);
   isWaveSynthAnimating = oldIsAnimating;
+  isBufferStale = true;
 }
 
 /**

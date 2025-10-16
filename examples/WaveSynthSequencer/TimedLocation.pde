@@ -44,10 +44,10 @@ public class NoteTimedLocation extends TimedLocation {
   private int note;
   private float duration;
   private float amplitude;
-  private ADSR adsr;
+  private ADSRParams adsr;
   private WaveSynth wavesynth;
   private int circleColor;
-  public NoteTimedLocation(int x, int y, int stop, int pos, int note, float duration, float amplitude, int circ, ADSR adsr, WaveSynth ws) {
+  public NoteTimedLocation(int x, int y, int stop, int pos, int note, float duration, float amplitude, int circ, ADSRParams adsr, WaveSynth ws) {
     super(x, y, stop);
     this.pos = pos;
     this.note = note;
@@ -78,7 +78,7 @@ public class NoteTimedLocation extends TimedLocation {
     return this.circleColor;
   }
   
-  public ADSR getAdsr() {
+  public ADSRParams getAdsr() {
     return this.adsr;
   }
   
