@@ -26,8 +26,8 @@ import java.util.Arrays;
 
 /**
  * <p>
- * As of pre-release version 0.9-beta PixelAudioMapper is reasonably complete, though there are a
- * number of features that have not been tested or demonstrated with code examples. 
+ * As of pre-release version 0.9.2-beta, PixelAudioMapper is substantially complete, though
+ * there are a number of features that have not been tested or demonstrated with code examples. 
  * </p>
  * 
  * <p>
