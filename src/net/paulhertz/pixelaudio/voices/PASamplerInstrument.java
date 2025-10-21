@@ -1,110 +1,170 @@
 package net.paulhertz.pixelaudio.voices;
 
 import ddf.minim.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import ddf.minim.ugens.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
 
 /**
  * Sampler-based instrument that manages a small pool of WFSamplerVoice objects.
- * Each voice plays independently, allowing limited polyphony.
+ * Each voice plays independently, allowing limited polyphony. 
  *
  * Supports pitch scaling, ADSR envelopes, and buffer replacement.
  */
 public class PASamplerInstrument implements PASamplerPlayable {
-    private final AudioOutput out;
-    private final float sampleRate;
-    private final int voices;
-    private final ADSRParams defaultEnv;
+    private final AudioOutput out;                                        // Minim AudioOutput, must be STEREO 
+    private final float sampleRate;                                       // sample rate for output
+    private final int maxVoices;                                          // number of individual voices in voicePool
+    
+    private List<PASamplerVoice> voices = new ArrayList<>();              // voices for this instrument
+    private final ADSRParams defaultEnv;                                  // envelope to use with playSample(...) when one is not supplied
+    private volatile float pitchScale = 1.0f;                             // Global pitch scaling factor (applied to all play calls)
+    private float globalPan = 0.0f;                                             // -1.0 = left, +1.0 = right, 0.0 = center
+    
+    private MultiChannelBuffer buffer;                                    // audio buffer
+    private int bufferSize;                                               // size of the buffer
+    private Sampler sharedSampler;                                        // Sampler for this instrument, shared with voices
+    private int nextVoice = 0;                                            // index to next voice
+    private boolean isClosed = false;                                     // flag set to true on shutdown, closing all active threads 
+    private final ScheduledExecutorService scheduler;
 
-    private MultiChannelBuffer buffer;
-    private PASamplerVoice[] voicePool;
-    private final AtomicInteger nextVoiceIndex = new AtomicInteger(0);
-    private boolean isClosed = false;
-
-    // Global pitch scaling factor (applied to all play calls)
-    private volatile float pitchScale = 1.0f;
 
     /**
-     * Constructs a WFSamplerInstrument with multiple voices.
+     * Constructs a WFSamplerInstrument with multiple voices, default pan (0.0f).
      *
-     * @param buffer     The source MultiChannelBuffer.
-     * @param sampleRate Sample rate of the buffer.
-     * @param voices     Number of simultaneous playback voices.
-     * @param out        AudioOutput to patch into.
-     * @param env        Default ADSR envelope parameters.
+     * @param buffer     The source MultiChannelBuffer
+     * @param sampleRate Sample rate of the buffer
+     * @param maxVoices  Number of simultaneous playback voices
+     * @param out        AudioOutput to patch into, must be STEREO
+     * @param env        Default ADSR envelope parameters
      */
-    public PASamplerInstrument(MultiChannelBuffer buffer, float sampleRate, int voices, AudioOutput out, ADSRParams env) {
-        this.buffer = buffer;
-        this.sampleRate = sampleRate;
-        this.voices = voices;
-        this.out = out;
-        this.defaultEnv = env;
-        this.voicePool = new PASamplerVoice[voices];
-        for (int i = 0; i < voices; i++) {
-            voicePool[i] = new PASamplerVoice(buffer, sampleRate, out, env);
-        }
+    public PASamplerInstrument(MultiChannelBuffer buffer, float sampleRate, int maxVoices, AudioOutput audioOut, ADSRParams env) {
+    	this.sampleRate = sampleRate;
+    	this.maxVoices = Math.max(1, maxVoices);
+    	this.out = audioOut;
+    	this.defaultEnv = env;
+    	this.buffer = buffer;
+    	this.sharedSampler = new Sampler(buffer, sampleRate, this.maxVoices);
+    	this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+    		Thread t = new Thread(r, "PASamplerInstrument-scheduler");
+    		t.setDaemon(true);
+    		return t;
+    	});
+    	this.bufferSize = buffer.getBufferSize();
+    	// Initialize independent voices sharing one Sampler
+    	for (int i = 0; i < this.maxVoices; i++) {
+    		voices.add(new PASamplerVoice(sharedSampler, bufferSize, sampleRate, audioOut, defaultEnv));
+    	}
+    }
+
+
+    // ------------------------------------------------------------------------
+    // Core playback
+    // ------------------------------------------------------------------------
+
+    /**
+     * Trigger playback using per-voice parameters.
+     *
+     * @param samplePos  start position (samples)
+     * @param sampleLen  playback length (samples)
+     * @param amplitude  per-voice amplitude
+     * @param env        ADSR envelope parameters
+     * @param pitch      playback rate (1.0 = normal)
+     * @param pan        stereo position (-1.0 = left, +1.0 = right)
+     */
+    public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
+    		ADSRParams env, float pitch, float pan) {
+    	if (isClosed) return 0;
+
+    	PASamplerVoice voice = getNextAvailableVoice();
+    	if (voice == null) return 0;
+
+    	// Apply global pitch and pan modifiers
+    	float actualPitch = pitch * pitchScale;
+    	float actualPan = pan + globalPan;
+    	actualPan = Math.max(-1.0f, Math.min(1.0f, actualPan)); // clamp
+
+    	int actualLen = voice.play(samplePos, sampleLen, amplitude, env, actualPitch, actualPan);
+    	return actualLen;
     }
 
     /**
-     * Plays a sample using the default buffer, ADSR, and global pitch scale.
+     * Convenience overload: uses default envelope and center pan.
+     */
+    public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
+    	return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
+    }
+
+    /**
+     * Convenience overload: uses default envelope, default pitch, and center pan.
+     */
+    public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
+    	return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitchScale, 0.0f);
+    }
+
+    /**
+     * Plays a sample using a supplied envelope with default pitch and default pan.
      */
     @Override
     public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
-        return playSample(buffer, samplePos, sampleLen, amplitude, pitchScale, env);
+    	return playSample(samplePos, sampleLen, amplitude, env, pitchScale, globalPan);
     }
 
-    /**
-     * Plays a sample from the given buffer using the specified ADSR and global pitch scale.
-     */
-    @Override
-    public int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen, float amplitude, ADSRParams env) {
-        return playSample(buffer, samplePos, sampleLen, amplitude, pitchScale, env);
+	@Override
+	public int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen, 
+			             float amplitude, ADSRParams env, float pitch) {
+		this.setBuffer(buffer);
+		return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+	}
+
+	@Override
+	public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch) {
+		return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+	}
+
+       
+    
+    
+    // ------------------------------------------------------------------------
+    // Voice management
+    // ------------------------------------------------------------------------
+
+    private PASamplerVoice getNextAvailableVoice() {
+        // Round-robin allocation with voice stealing
+        for (int i = 0; i < maxVoices; i++) {
+            int index = (nextVoice + i) % maxVoices;
+            PASamplerVoice v = voices.get(index);
+            if (!v.isBusy()) {
+                nextVoice = (index + 1) % maxVoices;
+                return v;
+            }
+        }
+        // All voices busy — steal next in line
+        nextVoice = (nextVoice + 1) % maxVoices;
+        return voices.get(nextVoice);
     }
 
-    /**
-     * Plays a sample from the default buffer with an explicit pitch factor.
-     */
-    @Override
-    public int playSample(int samplePos, int sampleLen, float amplitude, float pitch, ADSRParams env) {
-        return playSample(buffer, samplePos, sampleLen, amplitude, pitch, env);
+    public boolean isAnyVoiceBusy() {
+        for (PASamplerVoice v : voices)
+            if (v.isBusy()) return true;
+        return false;
     }
 
-    /**
-     * Plays a sample from the default buffer with an explicit pitch factor.
-     */
-    public int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
-        return playSample(buffer, samplePos, sampleLen, amplitude, pitch, defaultEnv);
+    
+    // ------------------------------------------------------------------------
+    // Loop & pitch management
+    // ------------------------------------------------------------------------
+
+    public void setIsLooping(boolean looping) {
+        for (PASamplerVoice v : voices) v.setIsLooping(looping);
     }
 
-    /**
-     * Plays a sample from the default buffer with an explicit pitch factor.
-     */
-    public int playSample(int samplePos, int sampleLen, float amplitude) {
-        return playSample(buffer, samplePos, sampleLen, amplitude, pitchScale, defaultEnv);
-    }
-
-    /**
-     * Plays a sample from the specified buffer with explicit pitch and ADSR.
-     */
-    @Override
-    public int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen, float amplitude, float pitch, ADSRParams env) {
-        if (isClosed) return -1;
-
-        PASamplerVoice voice = getNextVoice();
-        if (voice == null) return -1;
-
-        // Combine global pitch scale with per-call pitch factor
-        float effectivePitch = pitch * pitchScale;
-
-        voice.play(buffer, samplePos, sampleLen, amplitude, effectivePitch, env);
-        return nextVoiceIndex.get();
-    }
-
-    /**
-     * Returns the next available voice in a round-robin fashion.
-     */
-    private PASamplerVoice getNextVoice() {
-        int idx = nextVoiceIndex.getAndUpdate(i -> (i + 1) % voices);
-        return voicePool[idx];
+    public void stopAllLoops() {
+        for (PASamplerVoice v : voices) {
+            if (v.isLooping()) v.stopLoop();
+        }
     }
 
     /**
@@ -125,15 +185,33 @@ public class PASamplerInstrument implements PASamplerPlayable {
     public float getPitchScale() {
         return pitchScale;
     }
+    
+    /** Set default stereo pan for instrument (-1.0 left to +1.0 right). */
+    public void setPan(float pan) {
+        if (pan < -1f) pan = -1f;
+        if (pan > +1f) pan = +1f;
+        this.globalPan = pan;
+    }
+
+    /** Get current default pan. */
+    public float getPan() {
+        return globalPan;
+    }    
+
+    // ------------------------------------------------------------------------
+    // Lazy buffer reload
+    // ------------------------------------------------------------------------
 
     /**
-     * Replace the buffer used by all voices.
-     * Creates a new Sampler per voice.
+     * Replaces the buffer in the shared sampler and rebuilds voices.
      */
     public synchronized void setBuffer(MultiChannelBuffer buffer) {
-        this.buffer = buffer;
-        for (PASamplerVoice voice : voicePool) {
-            voice.setBuffer(buffer);
+        if (isClosed) return;
+        int bufferSize = buffer.getBufferSize();
+        sharedSampler.setSample(buffer, sampleRate);
+        voices.clear();
+        for (int i = 0; i < maxVoices; i++) {
+            voices.add(new PASamplerVoice(sharedSampler, bufferSize, sampleRate, out, defaultEnv));
         }
     }
 
@@ -144,6 +222,19 @@ public class PASamplerInstrument implements PASamplerPlayable {
         return buffer;
     }
 
+    // ------------------------------------------------------------------------
+    // Lifecycle
+    // ------------------------------------------------------------------------
+
+    public synchronized void close() {
+        if (isClosed) return;
+        isClosed = true;
+        scheduler.shutdownNow();
+        for (PASamplerVoice v : voices) v.close();
+        voices.clear();
+    }
+
+
     /**
      * Get the buffer currently assigned to this instrument.
      */
@@ -152,22 +243,10 @@ public class PASamplerInstrument implements PASamplerPlayable {
     }
 
     /**
-     * Cleanly shuts down all voices and releases resources.
-     */
-    @Override
-    public void close() {
-        if (!isClosed) {
-            for (PASamplerVoice voice : voicePool) {
-                voice.close();
-            }
-            isClosed = true;
-        }
-    }
-
-    /**
      * Indicates whether this instrument has been closed.
      */
     public boolean isClosed() {
         return isClosed;
     }
+
 }

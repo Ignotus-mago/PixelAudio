@@ -22,13 +22,13 @@ public interface PAPlayable {
      * pitchScale = 1.0 → normal speed, 2.0 → one octave up, 0.5 → one octave down.
      */
     default int playSample(int samplePos, int sampleLen, float amplitude,
-                           float pitchScale, ADSRParams env) {
+                           ADSRParams env, float pitchScale) {
         throw new UnsupportedOperationException("Pitch scaling not supported by this class.");
     }
 
     /** Same as above, but tied to a particular buffer (for multi-buffer implementations). */
     default int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
-                           float amplitude, float pitchScale, ADSRParams env) {
+                           float amplitude, ADSRParams env, float pitchScale) {
         throw new UnsupportedOperationException("Pitch scaling with multiple buffers not supported by this class.");
     }
 
