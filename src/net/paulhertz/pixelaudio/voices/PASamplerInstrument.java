@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 /**
- * Sampler-based instrument that manages a small pool of WFSamplerVoice objects.
+ * Sampler-based instrument that manages a small pool of PASamplerVoice objects.
  * Each voice plays independently, allowing limited polyphony. 
  *
  * Supports pitch scaling, ADSR envelopes, and buffer replacement.
@@ -18,7 +18,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
     private final float sampleRate;                                       // sample rate for output
     private final int maxVoices;                                          // number of individual voices in voicePool
     
-    private List<PASamplerVoice> voices = new ArrayList<>();              // voices for this instrument
+    private final List<PASamplerVoice> voices = new ArrayList<>();              // voices for this instrument
     private final ADSRParams defaultEnv;                                  // envelope to use with playSample(...) when one is not supplied
     private volatile float pitchScale = 1.0f;                             // Global pitch scaling factor (applied to all play calls)
     private float globalPan = 0.0f;                                             // -1.0 = left, +1.0 = right, 0.0 = center
@@ -28,11 +28,11 @@ public class PASamplerInstrument implements PASamplerPlayable {
     private Sampler sharedSampler;                                        // Sampler for this instrument, shared with voices
     private int nextVoice = 0;                                            // index to next voice
     private boolean isClosed = false;                                     // flag set to true on shutdown, closing all active threads 
-    private final ScheduledExecutorService scheduler;
+    private final ScheduledExecutorService scheduler;                     // TODO awaiting future use for timing or cleanup tasks 
 
 
     /**
-     * Constructs a WFSamplerInstrument with multiple voices, default pan (0.0f).
+     * Constructs a PASamplerInstrument with multiple voices, default pan (0.0f).
      *
      * @param buffer     The source MultiChannelBuffer
      * @param sampleRate Sample rate of the buffer
@@ -90,18 +90,19 @@ public class PASamplerInstrument implements PASamplerPlayable {
     	return actualLen;
     }
 
-    /**
-     * Convenience overload: uses default envelope and center pan.
-     */
-    public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
-    	return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
-    }
-
+    
     /**
      * Convenience overload: uses default envelope, default pitch, and center pan.
      */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
     	return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitchScale, 0.0f);
+    }
+
+    /**
+     * Convenience overload: uses default envelope, supplied pitch and center pan.
+     */
+    public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
+    	return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
     }
 
     /**
@@ -114,7 +115,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	@Override
 	public int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen, 
-			             float amplitude, ADSRParams env, float pitch) {
+			              float amplitude, ADSRParams env, float pitch) {
 		this.setBuffer(buffer);
 		return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
 	}
@@ -123,10 +124,15 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch) {
 		return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
 	}
+	
+	@Override
+	public int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
+	                      float amplitude, ADSRParams env, float pitch, float pan) {
+	    this.setBuffer(buffer);
+	    return playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
+	}
+	
 
-       
-    
-    
     // ------------------------------------------------------------------------
     // Voice management
     // ------------------------------------------------------------------------
@@ -136,7 +142,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
         for (int i = 0; i < maxVoices; i++) {
             int index = (nextVoice + i) % maxVoices;
             PASamplerVoice v = voices.get(index);
-            if (!v.isBusy()) {
+            if (!v.isBusy() && !v.isClosed()) {
                 nextVoice = (index + 1) % maxVoices;
                 return v;
             }
@@ -150,6 +156,10 @@ public class PASamplerInstrument implements PASamplerPlayable {
         for (PASamplerVoice v : voices)
             if (v.isBusy()) return true;
         return false;
+    }
+    
+    public List<PASamplerVoice> getVoices() {
+    	return voices;
     }
 
     
@@ -198,6 +208,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
         return globalPan;
     }    
 
+    
     // ------------------------------------------------------------------------
     // Lazy buffer reload
     // ------------------------------------------------------------------------
@@ -207,6 +218,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
      */
     public synchronized void setBuffer(MultiChannelBuffer buffer) {
         if (isClosed) return;
+        this.buffer = buffer;
         int bufferSize = buffer.getBufferSize();
         sharedSampler.setSample(buffer, sampleRate);
         voices.clear();
@@ -222,6 +234,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
         return buffer;
     }
 
+    
     // ------------------------------------------------------------------------
     // Lifecycle
     // ------------------------------------------------------------------------

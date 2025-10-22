@@ -197,6 +197,7 @@ public class PASamplerVoice {
     public boolean isLooping() { return isLooping; }
 
     public boolean isBusy() { return isBusy; }
+    public boolean isClosed() { return isClosed; }
 
     // -------------------------------------------------------------------------
     // Lifecycle
