@@ -17,7 +17,7 @@ public class PASamplerVoice {
     private final ScheduledExecutorService scheduler;
     private final ADSRParams defaultEnv;
 
-    private final Sampler sharedSampler;
+    private final Sampler sampler;
     private final int bufferSize; 
     private final Multiplier gain;
     private final Pan panner;
@@ -36,7 +36,7 @@ public class PASamplerVoice {
                           float sampleRate,
                           AudioOutput out,
                           ADSRParams env) {
-        this.sharedSampler = sharedSampler;
+        this.sampler = sharedSampler;
         this.bufferSize = bufferSize;
         this.sampleRate = sampleRate;
         this.out = out;
@@ -74,75 +74,72 @@ public class PASamplerVoice {
     		float pan) {
     	if (isClosed || isBusy) return 0;
     	isBusy = true;
-
-    	if (samplePos < 0) samplePos = 0;
+    	// clamp samplePos and sampleLen to positive numbers or 0
+    	samplePos = Math.max(0, samplePos);
     	if (sampleLen < 0) sampleLen = 0;
-
-    	// When looping, allow playback to wrap without truncation
-    	if (!isLooping) {
-    		if (samplePos + sampleLen > bufferSize) {
-    			sampleLen = Math.max(0, bufferSize - samplePos);
-    		}
+    	// Clamp to buffer
+    	if (!isLooping && samplePos + sampleLen > bufferSize) {
+    		sampleLen = Math.max(0, bufferSize - samplePos);
     	}
-
-    	// Compute effective end index including release
-    	int releaseSamples = Math.round(env.getRelease() * sampleRate);
-    	int end = samplePos + sampleLen + releaseSamples;
-    	if (end >= bufferSize) end = bufferSize - 1;
-
-    	// Apply per-voice amplitude and pan
+    	// Compute sample end (no release extension)
+    	int end = Math.min(samplePos + sampleLen - 1, bufferSize - 1);
+    	// Configure sampler snapshot
+    	sampler.begin.setLastValue(samplePos);
+    	sampler.end.setLastValue(end);
+    	sampler.rate.setLastValue(pitch);
+    	sampler.looping = isLooping;
+    	// Set amplitude and pan
     	gain.setValue(amplitude);
     	panner.setPan(pan);
-
-    	// Configure the shared Sampler’s snapshot parameters
-    	sharedSampler.begin.setLastValue(samplePos);
-    	sharedSampler.end.setLastValue(end);
-    	sharedSampler.rate.setLastValue(pitch);
-    	sharedSampler.looping = isLooping;
-
-    	// Create per-voice envelope and patch chain:
-    	// Sampler → gain (per-voice amplitude) → ADSR → Pan → Out
+    	// Build envelope chain
     	currentEnvelope = env.toADSR();
-    	sharedSampler.patch(gain);
+    	sampler.patch(gain);
     	gain.patch(currentEnvelope);
     	currentEnvelope.patch(panner);
     	panner.patch(out);
-
-    	// Trigger playback (snapshots begin/end/rate)
-    	sharedSampler.trigger();
-    	currentEnvelope.noteOn();
-
-    	// Schedule noteOff and cleanup only if not looping
+    	// and play the samples
+    	try {
+    		sampler.trigger();
+    		currentEnvelope.noteOn();
+    	} 
+    	catch (Exception e) {
+    		isBusy = false;
+    		e.printStackTrace();
+    		return 0;
+    	}
+    	// if we're not looping, handle note off and unpatch the processing chain
     	if (!isLooping && sampleLen > 0) {
-    		long durationMillis = Math.round((sampleLen / (double) sampleRate) * 1000.0);
+    		// if you want to adjust duration to frequency, the next line does that:
+    		// long durationMillis = Math.round((sampleLen / (sampleRate * Math.abs(pitch))) * 1000.0);
+    		// We generally want note duration to be independent of pitch: pitch affects frequency only,
+    		// not playback length or envelope timing.
+    		long durationMillis = Math.round((sampleLen / sampleRate) * 1000.0);
     		long releaseMillis = Math.round(env.getRelease() * 1000.0);
-
-    		// Schedule ADSR noteOff
+    		final ADSR envUGen = currentEnvelope;
+    		// schedule note off and cleanup 
     		scheduler.schedule(() -> {
     			try {
-    				currentEnvelope.noteOff();
-    				currentEnvelope.unpatchAfterRelease(panner);
-    			} 
-    			catch (Exception ignored) {}
+    				envUGen.noteOff();
+    				envUGen.unpatchAfterRelease(panner);
+    			} catch (Exception ignored) {}
     		}, durationMillis, TimeUnit.MILLISECONDS);
-
-    		// Unpatch after envelope finishes
+    		// unpatch in reverse order
     		scheduler.schedule(() -> {
     			try {
-    				if (currentEnvelope != null) {
-    					gain.unpatch(currentEnvelope);
-    					currentEnvelope.unpatch(panner);
-    					panner.unpatch(out);
-    				}
+    				sampler.unpatch(gain);
+    				gain.unpatch(envUGen);
+    				envUGen.unpatch(panner);
+    				panner.unpatch(out);
     			} 
     			catch (Exception ignored) {}
     			isBusy = false;
     		}, durationMillis + releaseMillis + 50, TimeUnit.MILLISECONDS);
     	} 
     	else {
-    		// If looping, let caller handle stopLoop()
+    		// Looping playback managed externally
     		isBusy = false;
     	}
+    	// return the actual duration of the event
     	return sampleLen;
     }
     
@@ -162,7 +159,7 @@ public class PASamplerVoice {
         if (isClosed || !isLooping) return;
 
         try {
-            sharedSampler.looping = false;
+            sampler.looping = false;
             isLooping = false;
 
             if (currentEnvelope != null) {
@@ -204,7 +201,7 @@ public class PASamplerVoice {
     // -------------------------------------------------------------------------
 
     public void stop() {
-        try { sharedSampler.stop(); } catch (Exception ignored) {}
+        try { sampler.stop(); } catch (Exception ignored) {}
     }
 
     public void close() {
