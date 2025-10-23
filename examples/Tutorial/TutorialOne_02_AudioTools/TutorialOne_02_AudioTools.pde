@@ -18,8 +18,8 @@
  *      random ADSR envelope from adsrList on and off. Press 'c' to load only color 
  *      data (hue and saturation) from an image file. 
  *
- * Audio events are generated through WFSamplerInstrument, which is essentially a wrapper
- * for Minim's AudioSampler class. WFSamplerInstrument lets us add an ADSR (attack, decay,
+ * Audio events are generated through PASamplerInstrument, which is essentially a wrapper
+ * for Minim's AudioSampler class. PASamplerInstrument lets us add an ADSR (attack, decay,
  * sustain, release) envelope to an AudioSampler instance. AudioSampler maintains an audio
  * buffer, a copy of playBuffer. It can support multiple voices -- in the initAudio() 
  * method we set the number to 16. This is a reasonable number of voices for tracking 
@@ -30,7 +30,7 @@
  *  playSample(int samplePos, int samplelen, float amplitude)
  *  playSample(int samplePos, int samplelen, float amplitude, ADSRParams env)
  *
- * The first method uses the built-in ADSR supplied on initializing WFSamplerInstrument.
+ * The first method uses the built-in ADSR supplied on initializing PASamplerInstrument.
  * The second method allows you to supply you own ADSR. 
  *
  * Still to come, as the tutorial advances:
@@ -67,6 +67,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 //Mama's ever-lovin' blue-eyed PixelAudio library
 import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.voices.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 //audio library
@@ -114,7 +115,7 @@ int imageFileHeight;
  * 
  * Audio playback support is added with the audio variables and audio methods 
  * (below, in Eclipse, in a tab, in Processing). You will also need the 
- * WFSamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
+ * PASamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
  * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
  * and call runTimeArray() in your draw method. 
  * 
@@ -133,7 +134,7 @@ int audioLength;                // length of the audioSignal, same as the number
 int noteDuration = 1500;        // average sample synth note duration, milliseconds
 int samplelen;                  // calculated sample synth note length, samples
 Sampler audioSampler;           // minim class for sampled sound
-WFSamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
+PASamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
 // ADSR and its parameters
 ADSRParams adsrParams;          // wrapper for ADSR that keeps its values visible
 float maxAmplitude = 0.7f;      // 0..1

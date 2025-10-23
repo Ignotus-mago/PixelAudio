@@ -11,7 +11,7 @@
 public void initAudio() {
   minim = new Minim(this);
   // use the getLineOut method of the Minim object to get an AudioOutput object
-  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
+  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
   // reduce gain to avoid clipping from multiple voices
   audioOut.setGain(-6.0f);
   // create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
@@ -21,9 +21,9 @@ public void initAudio() {
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsrParams = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   initADSRList();
-  // create a WFSamplerInstrument with 16 voices
+  // create a PASamplerInstrument with 16 voices
   // adsrParams will be the default ADSR for the synth
-  synth = new WFSamplerInstrument(playBuffer, audioOut.sampleRate(), 16, audioOut, adsrParams);
+  synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 16, audioOut, adsrParams);
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
 }
@@ -116,10 +116,8 @@ public int getSamplePos(int x, int y) {
   return mapper.lookupSample(x, y);
 }
 
-
-  
 /**
- * Plays an audio sample with WFSamplerInstrument and custom ADSR.
+ * Plays an audio sample with PASamplerInstrument and custom ADSR.
  * 
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
@@ -136,7 +134,7 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
 }
 
 /**
- * Plays an audio sample with WFSamplerInstrument and default ADSR.
+ * Plays an audio sample with PASamplerInstrument and default ADSR.
  * 
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
@@ -144,7 +142,7 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude);
+  samplelen = synth.playSample(samplePos, samplelen, amplitude);
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
@@ -168,7 +166,7 @@ public int calcSampleLen() {
 public void runTimeArray() {
   int currentTime = millis();
   timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.stopTime() < currentTime);
+    tl.setStale(tl.eventTime() < currentTime);
     if (!tl.isStale()) {
       drawCircle(tl.getX(), tl.getY());
     }

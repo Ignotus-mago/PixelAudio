@@ -56,6 +56,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 //Mama's ever-lovin' blue-eyed PixelAudio library
 import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.voices.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 //audio library
@@ -103,7 +104,7 @@ int imageFileHeight;
  * 
  * Audio playback support is added with the audio variables and audio methods 
  * (below, in Eclipse, in a tab, in Processing). You will also need the 
- * WFSamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
+ * PASamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
  * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
  * and call runTimeArray() in your draw method. 
  * 
@@ -123,7 +124,7 @@ int audioLength;                // length of the audioSignal, same as the number
 int noteDuration = 1500;        // average sample synth note duration, milliseconds
 int samplelen;                  // calculated sample synth note length, samples
 Sampler audioSampler;           // minim class for sampled sound
-WFSamplerInstrument synth;      // instance of a local class to wrap audioSampler
+PASamplerInstrument synth;      // instance of a local class to wrap audioSampler
 // ADSR and its parameters
 ADSRParams adsrParams;          // good old attack, decay, sustain, release
 float maxAmplitude = 0.7f;      // 0..1
@@ -132,6 +133,7 @@ float decayTime = 0.3f;         // seconds
 float sustainLevel = 0.25f;     // 0..1
 float releaseTime = 0.1f;       // seconds
 ArrayList<ADSRParams> adsrList; // list of ADSR values
+boolean isRandomADSR = false;   // choose a random envelope from adsrList, or not
 
 // interaction variables for audio
 int sampleX;                    // x-coordinate of audio event, set when an audio event is triggered
