@@ -18,14 +18,13 @@ public class PASamplerInstrument implements PASamplerPlayable {
     private final float sampleRate;                                       // sample rate for output
     private final int maxVoices;                                          // number of individual voices in voicePool
     
-    private final List<PASamplerVoice> voices = new ArrayList<>();              // voices for this instrument
+    private final List<PASamplerVoice> voices = new ArrayList<>();        // voices for this instrument
     private final ADSRParams defaultEnv;                                  // envelope to use with playSample(...) when one is not supplied
     private volatile float pitchScale = 1.0f;                             // Global pitch scaling factor (applied to all play calls)
-    private float globalPan = 0.0f;                                             // -1.0 = left, +1.0 = right, 0.0 = center
+    private float globalPan = 0.0f;                                       // -1.0 = left, +1.0 = right, 0.0 = center
     
     private MultiChannelBuffer buffer;                                    // audio buffer
     private int bufferSize;                                               // size of the buffer
-    private Sampler sharedSampler;                                        // Sampler for this instrument, shared with voices
     private int nextVoice = 0;                                            // index to next voice
     private boolean isClosed = false;                                     // flag set to true on shutdown, closing all active threads 
     private final ScheduledExecutorService scheduler;                     // TODO awaiting future use for timing or cleanup tasks 
@@ -46,16 +45,17 @@ public class PASamplerInstrument implements PASamplerPlayable {
     	this.out = audioOut;
     	this.defaultEnv = env;
     	this.buffer = buffer;
-    	this.sharedSampler = new Sampler(buffer, sampleRate, this.maxVoices);
     	this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
     		Thread t = new Thread(r, "PASamplerInstrument-scheduler");
     		t.setDaemon(true);
     		return t;
     	});
     	this.bufferSize = buffer.getBufferSize();
-    	// Initialize independent voices sharing one Sampler
-    	for (int i = 0; i < this.maxVoices; i++) {
-    		voices.add(new PASamplerVoice(sharedSampler, bufferSize, sampleRate, audioOut, defaultEnv));
+    	for (int i = 0; i < maxVoices; i++) {
+    	    // Each voice gets its own Sampler, but shares the same MultiChannelBuffer reference
+    	    Sampler sampler = new Sampler(buffer, out.sampleRate(), 1);
+    	    PASamplerVoice voice = new PASamplerVoice(sampler, bufferSize, sampleRate, out, defaultEnv);
+    	    voices.add(voice);
     	}
     }
 
@@ -220,11 +220,13 @@ public class PASamplerInstrument implements PASamplerPlayable {
         if (isClosed) return;
         this.buffer = buffer;
         int bufferSize = buffer.getBufferSize();
-        sharedSampler.setSample(buffer, sampleRate);
         voices.clear();
-        for (int i = 0; i < maxVoices; i++) {
-            voices.add(new PASamplerVoice(sharedSampler, bufferSize, sampleRate, out, defaultEnv));
-        }
+    	for (int i = 0; i < maxVoices; i++) {
+    	    // Each voice gets its own Sampler, but shares the same MultiChannelBuffer reference
+    	    Sampler sampler = new Sampler(buffer, out.sampleRate(), 1);
+    	    PASamplerVoice voice = new PASamplerVoice(sampler, bufferSize, sampleRate, out, defaultEnv);
+    	    voices.add(voice);
+    	}
     }
 
     /**
