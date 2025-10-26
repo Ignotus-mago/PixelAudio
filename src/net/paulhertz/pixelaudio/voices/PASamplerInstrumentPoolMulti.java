@@ -2,6 +2,7 @@ package net.paulhertz.pixelaudio.voices;
 
 import ddf.minim.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * PASamplerInstrumentPoolMulti
@@ -13,20 +14,30 @@ import java.util.*;
  *  - Optional strict mode: only preallocated buffers may be added
  *  - Preallocation utilities for performance-critical workflows
  *  - Tag-based lookup, playback, and control for easier live use
+ *  
+ * This refactored version removes unnecessary synchronization on playback, 
+ * uses concurrent maps for safe parallel access, and relies on the improved
+ * PASamplerInstrumentPool (map-based pan and stable scheduling).
+ * 
+ * https://chatgpt.com/c/68fe47f3-8800-832d-873f-b8f4e8c0a294
+ *  
  */
 public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
 
     // ------------------------------------------------------------------------
     // Shared configuration
     // ------------------------------------------------------------------------
+
     private final AudioOutput out;
     private final float sampleRate;
     private final ADSRParams defaultEnv;
 
-    private final Map<MultiChannelBuffer, PASamplerInstrumentPool> pools = new HashMap<>();
-    private final Map<MultiChannelBuffer, PoolConfig> poolConfigs = new HashMap<>();
-    private final List<MultiChannelBuffer> preallocatedBuffers = new ArrayList<>();
-    private final Map<String, MultiChannelBuffer> tagMap = new HashMap<>();
+    // Use concurrent maps for safe, lock-free access
+    private final Map<MultiChannelBuffer, PASamplerInstrumentPool> pools = new ConcurrentHashMap<>();
+    private final Map<MultiChannelBuffer, PoolConfig> poolConfigs = new ConcurrentHashMap<>();
+
+    private final List<MultiChannelBuffer> preallocatedBuffers = Collections.synchronizedList(new ArrayList<>());
+    private final Map<String, MultiChannelBuffer> tagMap = new ConcurrentHashMap<>();
 
     private volatile float pitchScale = 1.0f;
     private volatile boolean isClosed = false;
@@ -36,12 +47,12 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
     private int defaultVoicesPerInstrument = 1;
 
     // ------------------------------------------------------------------------
-    // PoolConfig inner class
+    // PoolConfig inner class (unchanged)
     // ------------------------------------------------------------------------
     private static class PoolConfig {
         int poolSize;
         int voicesPerInstrument;
-        float basePan; // -1..+1
+        float basePan;
 
         PoolConfig(int poolSize, int voicesPerInstrument, float basePan) {
             this.poolSize = poolSize;
@@ -51,15 +62,13 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
     }
 
     // ------------------------------------------------------------------------
-    // Constructors
+    // Constructors (unchanged)
     // ------------------------------------------------------------------------
 
-    /** Default constructor (isStrict = false). */
     public PASamplerInstrumentPoolMulti(float sampleRate, AudioOutput out, ADSRParams env) {
         this(sampleRate, out, env, false);
     }
 
-    /** Constructor with explicit strict mode flag. */
     public PASamplerInstrumentPoolMulti(float sampleRate, AudioOutput out, ADSRParams env, boolean isStrict) {
         this.sampleRate = sampleRate;
         this.out = out;
@@ -67,7 +76,6 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
         this.isStrict = isStrict;
     }
 
-    /** Constructor that parallels PASamplerInstrumentPool. */
     public PASamplerInstrumentPoolMulti(MultiChannelBuffer buffer1,
                                         float sampleRate,
                                         AudioOutput out,
@@ -80,13 +88,12 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
     }
 
     // ------------------------------------------------------------------------
-    // Pool management
+    // Pool management (minor concurrency-safe tweaks)
     // ------------------------------------------------------------------------
 
-    public synchronized void addPool(MultiChannelBuffer buffer, int poolSize, int voices, float basePan) {
+    public void addPool(MultiChannelBuffer buffer, int poolSize, int voices, float basePan) {
         if (isClosed) return;
 
-        // Strict mode check
         if (isStrict && !preallocatedBuffers.contains(buffer)) {
             throw new IllegalStateException("Strict mode: buffer must be preallocated before adding to pool.");
         }
@@ -98,6 +105,7 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
             new PASamplerInstrumentPool(buffer, sampleRate, poolSize, voices, out, defaultEnv);
         pool.setPitchScale(pitchScale);
 
+        // Apply base pan directly — safe with new map-based pan handling
         for (int i = 0; i < poolSize; i++) {
             pool.setPanForInstrument(i, basePan);
         }
@@ -106,7 +114,7 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
         poolConfigs.put(buffer, new PoolConfig(poolSize, voices, basePan));
     }
 
-    private synchronized PASamplerInstrumentPool getOrCreatePool(MultiChannelBuffer buffer) {
+    private PASamplerInstrumentPool getOrCreatePool(MultiChannelBuffer buffer) {
         if (isClosed) return null;
 
         PASamplerInstrumentPool pool = pools.get(buffer);
@@ -114,9 +122,8 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
             if (isStrict) {
                 throw new IllegalStateException("Strict mode: cannot create new pool for unallocated buffer.");
             }
-            PoolConfig cfg = poolConfigs.getOrDefault(buffer,
-                new PoolConfig(defaultPoolSize, defaultVoicesPerInstrument, 0.0f));
-            poolConfigs.put(buffer, cfg);
+            PoolConfig cfg = poolConfigs.computeIfAbsent(buffer,
+                b -> new PoolConfig(defaultPoolSize, defaultVoicesPerInstrument, 0.0f));
 
             pool = new PASamplerInstrumentPool(buffer, sampleRate, cfg.poolSize, cfg.voicesPerInstrument, out, defaultEnv);
             pool.setPitchScale(pitchScale);
@@ -131,40 +138,41 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
     }
 
     // ------------------------------------------------------------------------
-    // Playback delegation (PASamplerPlayable)
+    // Playback delegation (no global synchronization)
     // ------------------------------------------------------------------------
 
     @Override
-    public synchronized int playSample(MultiChannelBuffer buffer,
-                                       int samplePos,
-                                       int sampleLen,
-                                       float amplitude,
-                                       ADSRParams env,
-                                       float pitch,
-                                       float pan) {
+    public int playSample(MultiChannelBuffer buffer,
+                          int samplePos,
+                          int sampleLen,
+                          float amplitude,
+                          ADSRParams env,
+                          float pitch,
+                          float pan) {
         if (isClosed || buffer == null) return 0;
         PASamplerInstrumentPool pool = getOrCreatePool(buffer);
-        if (pool == null) return 0;
-        return pool.playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
+        return (pool != null)
+                ? pool.playSample(samplePos, sampleLen, amplitude, env, pitch, pan)
+                : 0;
     }
 
     @Override
-    public synchronized int playSample(MultiChannelBuffer buffer,
-                                       int samplePos,
-                                       int sampleLen,
-                                       float amplitude,
-                                       ADSRParams env,
-                                       float pitch) {
+    public int playSample(MultiChannelBuffer buffer,
+                          int samplePos,
+                          int sampleLen,
+                          float amplitude,
+                          ADSRParams env,
+                          float pitch) {
         return playSample(buffer, samplePos, sampleLen, amplitude, env, pitch, 0.0f);
     }
 
     @Override
-    public synchronized int playSample(int samplePos,
-                                       int sampleLen,
-                                       float amplitude,
-                                       ADSRParams env,
-                                       float pitch,
-                                       float pan) {
+    public int playSample(int samplePos,
+                          int sampleLen,
+                          float amplitude,
+                          ADSRParams env,
+                          float pitch,
+                          float pan) {
         if (isClosed) return 0;
         if (pools.size() == 1) {
             PASamplerInstrumentPool only = pools.values().iterator().next();
@@ -174,29 +182,27 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
     }
 
     @Override
-    public synchronized int playSample(int samplePos,
-                                       int sampleLen,
-                                       float amplitude,
-                                       ADSRParams env,
-                                       float pitch) {
+    public int playSample(int samplePos,
+                          int sampleLen,
+                          float amplitude,
+                          ADSRParams env,
+                          float pitch) {
         return playSample(samplePos, sampleLen, amplitude, env, pitch, 0.0f);
     }
 
     @Override
-    public synchronized int playSample(int samplePos,
-                                       int sampleLen,
-                                       float amplitude,
-                                       ADSRParams env) {
+    public int playSample(int samplePos,
+                          int sampleLen,
+                          float amplitude,
+                          ADSRParams env) {
         return playSample(samplePos, sampleLen, amplitude, env, pitchScale, 0.0f);
     }
 
-    //@Override
-    public synchronized int playSample(int samplePos,
-                                       int sampleLen,
-                                       float amplitude) {
+    public int playSample(int samplePos,
+                          int sampleLen,
+                          float amplitude) {
         return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitchScale, 0.0f);
     }
-
     // ------------------------------------------------------------------------
     // TAGGING UTILITIES
     // ------------------------------------------------------------------------
@@ -443,4 +449,15 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable {
         this.defaultPoolSize = poolSize;
         this.defaultVoicesPerInstrument = voicesPerInstrument;
     }
+    
+    public void debugPools() {
+        pools.forEach((buffer, pool) -> {
+            System.out.printf("Buffer %s → Available=%d, InUse=%d, Looping=%b%n",
+                buffer.hashCode(),
+                pool.getAvailableCount(),
+                pool.getInUseCount(),
+                pool.isAnyInstrumentLooping());
+        });
+    }
+    
 }
