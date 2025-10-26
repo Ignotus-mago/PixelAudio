@@ -1,6 +1,6 @@
 public void initAudio() {
   this.audioIn = minim.getLineIn(Minim.MONO);
-  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
+  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
   this.audioBuffer = new MultiChannelBuffer(mapSize, 1);
   this.audioSignal = new float[mapSize];
   this.rgbSignal = new int[mapSize];
@@ -101,7 +101,9 @@ public void listenToFile() {
  * @return
  */
 /**
- * Plays an audio sample with WFSamplerInstrument and custom ADSR.
+ * Plays an audio sample with PASamplerInstrument and custom ADSR.
+ * TODO we're churning more memory than necessary, creating a MultiChannelBuffer every time.
+ * If the audio signal has not changed, we don't have to reinitialize the PASamplerInstrument.
  * 
  * @param samplePos    position of the sample in the audio buffer
  * @return the calculated sample length in samples
@@ -113,7 +115,7 @@ public int playSample(int samplePos) {
   System.arraycopy(audioSignal, 0, samples, 0, samples.length);
   MultiChannelBuffer buf = new MultiChannelBuffer(samples.length, 1);
   buf.setChannel(0, samples);
-  instrument = new WFSamplerInstrument(buf, sampleRate, 1, audioOut, adsr);
+  instrument = new PASamplerInstrument(buf, sampleRate, 1, audioOut, adsr);
   int sampleCount = instrument.playSample(samplePos, (int) samplelen, 0.9f, adsr);
   int durationMS = (int) (sampleCount * 1000.0f/sampleRate);
   if (isVerbose) println("---- ADSR "+ adsr.toString() +"; duration: "+ durationMS +" ms");

@@ -82,6 +82,7 @@ import processing.sound.*;
 import java.util.Arrays;
 
 import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.voices.*;
 import processing.core.*;
 import ddf.minim.*;
 import ddf.minim.ugens.*;
@@ -113,7 +114,7 @@ Sampler audioSampler;
 /** An audio recorder for capturing input from the microphone */
 AudioRecorder recorder;
 /** Our homemade audio sampling instrument */
-WFSamplerInstrument instrument;
+PASamplerInstrument instrument;
 /** A source for streaming audio from a file */
 AudioPlayer anthem;
 /** The class that captures audio for us */
