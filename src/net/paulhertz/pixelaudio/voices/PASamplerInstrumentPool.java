@@ -2,345 +2,368 @@ package net.paulhertz.pixelaudio.voices;
 
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
+
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
- * PASamplerInstrumentPool (refactored)
+ * PASamplerInstrumentPool
  *
- * Same API and behavior as original.
- * Fixes IndexOutOfBoundsException by replacing index-based pan lookup
- * with identity-based mapping.
+ * Manages a pool of PASamplerInstrument instances for polyphonic playback.
+ * - Backward-compatible playSample(...) overloads
+ * - Deterministic round-robin allocation
+ * - Pool-level global pitch/pan
+ * - Buffer + sample-rate propagation
+ * - "TimedLocation hooks" for future scheduling integration
  */
-public class PASamplerInstrumentPool implements PASamplerPlayable {
-    // Shared settings and resources
+public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
+
+    // ------------------------------------------------------------------------
+    // Core state
+    // ------------------------------------------------------------------------
     private final AudioOutput out;
-    private final float sampleRate;
-    private final ADSRParams defaultEnv;
-
-    // global pitch-scaling
-    private volatile float pitchScale = 1.0f;
-
-    // Manual per-instrument pan offsets, identity-based
-    private final Map<PASamplerInstrument, Float> instrumentPan = new HashMap<>();
-
-    // shared buffer
     private MultiChannelBuffer buffer;
-    private int bufferSize;
 
-    // Pool settings
-    private final int poolSize;
-    private final int perInstrumentVoices;
+    private final List<PASamplerInstrument> pool = new ArrayList<>();
+    private int poolSize;
+    private int rrIndex = 0; // round-robin pointer
 
-    // pool containers
-    private final ArrayDeque<PASamplerInstrument> available = new ArrayDeque<>();
-    private final Set<PASamplerInstrument> inUse = new HashSet<>();
+    // Pool-wide defaults / modifiers
+    private ADSRParams defaultEnv;
+    private float globalPitch = 1.0f; // multiplier
+    private float globalPan = 0.0f;   // -1..+1
 
-    // Scheduler handles delayed noteOff/unpatch cleanup
-    private final ScheduledExecutorService scheduler;
-
-    // Round-robin index
-    private int rrIndex = 0;
-
-    // voice-stealing toggle
-    private volatile boolean voiceStealingEnabled = true;
-
-    // shutdown status
-    private boolean isClosed = false;
+    // Output / buffer timing info (useful now; essential for TimedLocation later)
+    private float outputSampleRate;
+    private int outputBufferSize;     // frames per audio callback
+    private float bufferSampleRate;   // nominal rate of the currently assigned buffer
 
     // ------------------------------------------------------------------------
-    // Construction
+    // Constructors
     // ------------------------------------------------------------------------
 
+ // ------------------------------------------------------------------------
+ // Constructors
+ // ------------------------------------------------------------------------
+
+    /**
+     * Full backward-compatible constructor.
+     *
+     * @param buffer               shared MultiChannelBuffer
+     * @param sampleRate           nominal sample rate of the buffer (Hz)
+     * @param poolSize             number of instruments in the pool
+     * @param perInstrumentVoices  number of voices per instrument
+     * @param out                  AudioOutput to patch instruments into
+     * @param defaultEnv           default ADSR envelope for all instruments
+     */
     public PASamplerInstrumentPool(MultiChannelBuffer buffer,
-                                   float sampleRate,
-                                   int poolSize,
-                                   int perInstrumentVoices,
-                                   AudioOutput out,
-                                   ADSRParams defaultEnv)
-    {
-        this.out = out;
-        this.sampleRate = sampleRate;
-        this.poolSize = Math.max(1, poolSize);
-        this.perInstrumentVoices = Math.max(1, perInstrumentVoices);
-        this.defaultEnv = defaultEnv;
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "PASamplerInstrumentPool-scheduler");
-            t.setDaemon(true);
-            return t;
-        });
-        setBufferInternal(buffer);
+    		float sampleRate,
+    		int poolSize,
+    		int perInstrumentVoices,
+    		AudioOutput out,
+    		ADSRParams defaultEnv) {
+    	this.out = out;
+    	this.buffer = buffer;
+    	this.poolSize = Math.max(1, poolSize);
+    	this.bufferSampleRate = sampleRate;
+    	this.outputSampleRate = (out != null) ? out.sampleRate() : sampleRate;
+    	this.outputBufferSize = (out != null) ? out.bufferSize() : 1024;
+    	this.defaultEnv = (defaultEnv != null)
+    			? defaultEnv
+    					: new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f);
+    	this.globalPitch = 1.0f;
+    	this.globalPan = 0.0f;
+
+    	// Initialize instruments
+    	pool.clear();
+    	for (int i = 0; i < this.poolSize; i++) {
+    		PASamplerInstrument inst = new PASamplerInstrument(
+    				buffer,
+    				sampleRate,
+    				perInstrumentVoices,
+    				out,
+    				this.defaultEnv
+    				);
+    		pool.add(inst);
+    	}
+
+    	rrIndex = 0;
     }
 
-    private synchronized void setBufferInternal(MultiChannelBuffer newBuffer) {
-        available.clear();
-        inUse.clear();
-        instrumentPan.clear();
+ /**
+     * Full constructor.
+     *
+     * @param out               target AudioOutput
+     * @param buffer            shared MultiChannelBuffer
+     * @param poolSize          number of instruments to preallocate
+     * @param bufferSampleRate  nominal sample rate of buffer (Hz)
+     * @param env               default ADSR (nullable)
+     */
+    public PASamplerInstrumentPool(AudioOutput out,
+                                   MultiChannelBuffer buffer,
+                                   int poolSize,
+                                   float bufferSampleRate,
+                                   ADSRParams env)
+    {
+        this.out = out;
+        this.buffer = buffer;
+        this.poolSize = Math.max(1, poolSize);
+        this.bufferSampleRate = bufferSampleRate;
+        this.defaultEnv = (env != null) ? env : new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f);
 
-        this.buffer = newBuffer;
-        this.bufferSize = newBuffer.getBufferSize();
+        this.outputSampleRate = (out != null) ? out.sampleRate() : bufferSampleRate;
+        this.outputBufferSize = (out != null) ? out.bufferSize() : 1024;
 
+        initializePool();
+    }
+
+    /**
+     * Convenience constructor: default env, bufferSampleRate = out.sampleRate().
+     */
+    public PASamplerInstrumentPool(AudioOutput out,
+                                   MultiChannelBuffer buffer,
+                                   int poolSize)
+    {
+        this(out, buffer, poolSize, out.sampleRate(),
+             new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f));
+    }
+
+    private void initializePool() {
+        pool.clear();
         for (int i = 0; i < poolSize; i++) {
-            PASamplerInstrument inst = new PASamplerInstrument(
-                    newBuffer,
-                    sampleRate,
-                    perInstrumentVoices,
-                    out,
-                    defaultEnv
-            );
-            inst.setPitchScale(pitchScale);
-            available.add(inst);
-            instrumentPan.put(inst, 0.0f); // default pan center
+            // Create an instrument and force it to this pool's buffer + nominal rate
+            PASamplerInstrument inst = new PASamplerInstrument(out, buffer);
+            inst.setDefaultEnv(defaultEnv);
+            inst.setPitchScale(1.0f);               // instrument-local baseline
+            inst.setGlobalPan(0.0f);                 // instrument-local baseline
+            inst.setBuffer(buffer, bufferSampleRate);
+            pool.add(inst);
         }
         rrIndex = 0;
     }
 
     // ------------------------------------------------------------------------
-    // PASamplerPlayable — Core playback API (+ convenience overloads)
+    // Allocation (round-robin)
+    // ------------------------------------------------------------------------
+
+    /** Deterministic round-robin selection. Instruments can be re-triggered polyphonically. */
+    protected synchronized PASamplerInstrument nextInstrument() {
+        if (pool.isEmpty()) return null;
+        PASamplerInstrument inst = pool.get(rrIndex);
+        rrIndex = (rrIndex + 1) % pool.size();
+        return inst;
+    }
+
+    // ------------------------------------------------------------------------
+    // PAPlayable implementation (simple play)
     // ------------------------------------------------------------------------
 
     @Override
-    public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
-                                       ADSRParams env, float pitch, float pan)
-    {
-        if (isClosed) return 0;
-        PASamplerInstrument inst = acquireInstrument();
+    public synchronized int play(float amplitude, float pitch, float pan) {
+        PASamplerInstrument inst = nextInstrument();
+        if (inst == null || buffer == null) return 0;
+
+        int sampleLen = buffer.getBufferSize();
+        float scaledPitch = pitch * globalPitch;
+        float finalPan = clampPan(globalPan + pan);
+
+        return inst.playSample(0, sampleLen, amplitude, defaultEnv, scaledPitch, finalPan);
+    }
+
+    @Override
+    public synchronized void stop() {
+        for (PASamplerInstrument inst : pool) {
+            inst.stop();
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // PASamplerPlayable implementation (detailed play)
+    // ------------------------------------------------------------------------
+
+    @Override
+    public synchronized int play(int samplePos, int sampleLen, float amplitude,
+                                 ADSRParams env, float pitch, float pan) {
+        PASamplerInstrument inst = nextInstrument();
         if (inst == null) return 0;
 
-        float basePan = getInstrumentPan(inst);
-        float actualPan = clampPan(pan + basePan);
-        float actualPitch = pitch * this.pitchScale;
+        float scaledPitch = pitch * globalPitch;
+        float finalPan = clampPan(globalPan + pan);
+        ADSRParams useEnv = (env != null) ? env : defaultEnv;
 
-        int actualLen = inst.playSample(samplePos, sampleLen, amplitude, env, actualPitch, actualPan);
-        scheduleReturn(inst, actualLen, env);
-        return actualLen;
+        return inst.playSample(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan);
     }
 
-    public synchronized int playSample(MultiChannelBuffer buffer,
-                                       int samplePos, int sampleLen, float amplitude,
-                                       ADSRParams env, float pitch, float pan)
-    {
-        if (isClosed) return 0;
-        setBuffer(buffer);
-        return playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
+    // @Override
+    public synchronized boolean isLooping() {
+        // Pool-level loop status: true if any sampler reports looping
+        for (PASamplerInstrument inst : pool) {
+            PASampler s = inst.getSampler();
+            if (s != null && s.isLooping()) return true;
+        }
+        return false;
     }
 
-    public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
-        return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
+    // @Override
+    public synchronized void stopAll() {
+        stop();
+    }
+
+    // ------------------------------------------------------------------------
+    // Backward-compatible playSample(...) overloads
+    // ------------------------------------------------------------------------
+
+    public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
+                                       ADSRParams env, float pitch, float pan) {
+        return play(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
-        return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitchScale, 0.0f);
+        return play(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, 0.0f);
     }
 
-    @Override
+    public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
+        return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
+    }
+
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
-        return playSample(samplePos, sampleLen, amplitude, env, pitchScale, 0.0f);
+        return play(samplePos, sampleLen, amplitude, env, globalPitch, globalPan);
     }
 
     public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
-                                       float amplitude, ADSRParams env, float pitch)
+                                       float amplitude, ADSRParams env, float pitch, float pan) {
+        // Use this call to temporarily switch the instrument's buffer for the event.
+        PASamplerInstrument inst = nextInstrument();
+        if (inst == null) return 0;
+
+        inst.setBuffer(buffer, bufferSampleRate); // assumes same nominal rate; call setBufferRate(...) first if needed
+        float scaledPitch = pitch * globalPitch;
+        float finalPan = clampPan(globalPan + pan);
+        ADSRParams useEnv = (env != null) ? env : defaultEnv;
+
+        return inst.playSample(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan);
+    }
+
+    public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
+                                       float amplitude, ADSRParams env, float pitch) {
+        return playSample(buffer, samplePos, sampleLen, amplitude, env, pitch, globalPan);
+    }
+
+    public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
+                                       ADSRParams env, float pitch) {
+        return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+    }
+
+    // ------------------------------------------------------------------------
+    // Buffer & sample-rate propagation
+    // ------------------------------------------------------------------------
+
+    /** Swap the pool's shared buffer; keeps existing bufferSampleRate. */
+    public synchronized void setBuffer(MultiChannelBuffer newBuffer) {
+        if (newBuffer == null) return;
+        this.buffer = newBuffer;
+        for (PASamplerInstrument inst : pool) {
+            inst.setBuffer(newBuffer);
+        }
+    }
+
+    /** Swap the pool's shared buffer and update its nominal sample rate. */
+    public synchronized void setBuffer(MultiChannelBuffer newBuffer, float newBufferSampleRate) {
+        if (newBuffer == null) return;
+        this.buffer = newBuffer;
+        this.bufferSampleRate = newBufferSampleRate;
+        for (PASamplerInstrument inst : pool) {
+            inst.setBuffer(newBuffer, newBufferSampleRate);
+        }
+    }
+
+    /** Re-sync instruments to current AudioOutput sample rate (if device changes). */
+    public synchronized void updateRateFromOutput() {
+        if (out == null) return;
+        this.outputSampleRate = out.sampleRate();
+        this.outputBufferSize = out.bufferSize();
+        for (PASamplerInstrument inst : pool) {
+            inst.setOutputSampleRate(outputSampleRate);
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Global modifiers
+    // ------------------------------------------------------------------------
+
+    public synchronized void setGlobalPitch(float pitch) { this.globalPitch = pitch; }
+    public synchronized float getGlobalPitch() { return globalPitch; }
+
+    public synchronized void setGlobalPan(float pan) { this.globalPan = clampPan(pan); }
+    public synchronized float getGlobalPan() { return globalPan; }
+
+    public synchronized void setDefaultEnv(ADSRParams env) {
+        this.defaultEnv = (env != null) ? env : this.defaultEnv;
+        for (PASamplerInstrument inst : pool) inst.setDefaultEnv(this.defaultEnv);
+    }
+    public synchronized ADSRParams getDefaultEnv() { return defaultEnv; }
+
+    // ------------------------------------------------------------------------
+    // TimedLocation hooks (stubs)
+    // ------------------------------------------------------------------------
+
+    /** Hook: schedule by (future) wallclock ms — will be wired to TimedLocation later. */
+    public synchronized void schedulePlayAtMillis(long triggerTimeMillis,
+                                                  int samplePos, int sampleLen,
+                                                  float amplitude, ADSRParams env,
+                                                  float pitch, float pan)
     {
-        return playSample(buffer, samplePos, sampleLen, amplitude, env, pitch, 0.0f);
+        // Stub: immediate play for now. TimedLocation will call into here later.
+        playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
+    }
+
+    /** Hook: schedule by audio-frame index (frame = one AudioOutput callback). */
+    public synchronized void schedulePlayAtFrame(long frameIndex,
+                                                 int samplePos, int sampleLen,
+                                                 float amplitude, ADSRParams env,
+                                                 float pitch, float pan)
+    {
+        // Stub: immediate play for now. TimedLocation will call into here later.
+        playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
     // ------------------------------------------------------------------------
-    // Allocation / scheduling
+    // Diagnostics
     // ------------------------------------------------------------------------
 
-    private PASamplerInstrument acquireInstrument() {
-        PASamplerInstrument inst = available.poll();
-        if (inst != null) {
-            inUse.add(inst);
-            return inst;
-        }
-        if (voiceStealingEnabled && !inUse.isEmpty()) {
-            int skip = rrIndex++ % inUse.size();
-            Iterator<PASamplerInstrument> it = inUse.iterator();
-            PASamplerInstrument stolen = null;
-            for (int i = 0; i <= skip && it.hasNext(); i++) {
-                stolen = it.next();
-            }
-            return stolen;
-        }
-        return null;
-    }
-
-    private void scheduleReturn(PASamplerInstrument inst, int actualLen, ADSRParams env) {
-        if (actualLen <= 0) {
-            releaseInstrument(inst);
-            return;
-        }
-        long durMs = Math.round((actualLen / (double) sampleRate) * 1000.0);
-        long envTailMs = Math.round((env.getAttack() + env.getDecay() + env.getRelease()) * 1000.0);
-        long totalMs = durMs + envTailMs + 50L;
-        scheduler.schedule(() -> releaseInstrument(inst), totalMs, TimeUnit.MILLISECONDS);
-    }
-
-    private synchronized void releaseInstrument(PASamplerInstrument inst) {
-        if (isClosed) return;
-        inUse.remove(inst);
-        available.add(inst);
-    }
+    public synchronized int getPoolSize() { return pool.size(); }
+    public synchronized float getOutputSampleRate() { return outputSampleRate; }
+    public synchronized int getOutputBufferSize() { return outputBufferSize; }
+    public synchronized float getBufferSampleRate() { return bufferSampleRate; }
 
     // ------------------------------------------------------------------------
-    // Fixed pan lookup
+    // Helpers
     // ------------------------------------------------------------------------
-
-    private float getInstrumentPan(PASamplerInstrument inst) {
-        // Identity-based lookup — no index math, no out-of-bounds
-        Float pan = instrumentPan.get(inst);
-        return (pan != null) ? pan : 0.0f;
-    }
 
     private static float clampPan(float pan) {
         return (pan < -1f) ? -1f : (pan > 1f ? 1f : pan);
     }
 
     // ------------------------------------------------------------------------
-    // Pan API
+    // Resource management
     // ------------------------------------------------------------------------
 
-    public synchronized void setPanForInstrument(int index, float pan) {
-        if (index < 0 || index >= available.size() + inUse.size()) return;
-        PASamplerInstrument inst = getInstrumentByIndex(index);
-        if (inst != null) instrumentPan.put(inst, clampPan(pan));
-    }
+    private boolean isClosed = false;
 
-    public synchronized void setPanForAll(float[] pans) {
-        if (pans == null) return;
-        int i = 0;
-        for (PASamplerInstrument inst : getAllInConstructionOrder()) {
-            if (i >= pans.length) break;
-            instrumentPan.put(inst, clampPan(pans[i]));
-            i++;
-        }
-    }
-
-    public synchronized float getPanForInstrument(int index) {
-        PASamplerInstrument inst = getInstrumentByIndex(index);
-        if (inst == null) return 0.0f;
-        return instrumentPan.getOrDefault(inst, 0.0f);
-    }
-
-    private PASamplerInstrument getInstrumentByIndex(int index) {
-        List<PASamplerInstrument> ordered = getAllInConstructionOrder();
-        if (index < 0 || index >= ordered.size()) return null;
-        return ordered.get(index);
-    }
-
-    private List<PASamplerInstrument> getAllInConstructionOrder() {
-        List<PASamplerInstrument> all = new ArrayList<>(poolSize);
-        all.addAll(available);
-        all.addAll(inUse);
-        return all;
-    }
-
-    // ------------------------------------------------------------------------
-    // Loop & pitch management (unchanged)
-    // ------------------------------------------------------------------------
-
-    public synchronized void setIsLooping(boolean looping) {
-        for (PASamplerInstrument inst : available) inst.setIsLooping(looping);
-        for (PASamplerInstrument inst : inUse) inst.setIsLooping(looping);
-    }
-
-    public boolean isAnyInstrumentLooping() {
-        synchronized (this) {
-            for (PASamplerInstrument inst : available) {
-                for (PASamplerVoice v : inst.getVoices()) {
-                    if (v != null && v.isLooping()) return true;
-                }
-            }
-            for (PASamplerInstrument inst : inUse) {
-                for (PASamplerVoice v : inst.getVoices()) {
-                    if (v != null && v.isLooping()) return true;
-                }
-            }
-            return false;
-        }
-    }
-
-    public synchronized void stopAllLoops() {
-        for (PASamplerInstrument inst : available) inst.stopAllLoops();
-        for (PASamplerInstrument inst : inUse) inst.stopAllLoops();
-    }
-
-    @Override
-    public synchronized void setPitchScale(float scale) {
-        if (scale <= 0) throw new IllegalArgumentException("Pitch scale must be positive.");
-        this.pitchScale = scale;
-        for (PASamplerInstrument inst : available) inst.setPitchScale(scale);
-        for (PASamplerInstrument inst : inUse) inst.setPitchScale(scale);
-    }
-
-    @Override
-    public synchronized float getPitchScale() {
-        return pitchScale;
-    }
-
-    // ------------------------------------------------------------------------
-    // Buffer management
-    // ------------------------------------------------------------------------
-
-    public synchronized void setBuffer(MultiChannelBuffer newBuffer) {
-        if (isClosed) return;
-        setBufferInternal(newBuffer);
-    }
-
-    public synchronized MultiChannelBuffer getBuffer() {
-        return buffer;
-    }
-
-    public synchronized int getBufferSize() {
-        return bufferSize;
-    }
-
-    // ------------------------------------------------------------------------
-    // Pool behavior & lifecycle
-    // ------------------------------------------------------------------------
-
-    public void setVoiceStealingEnabled(boolean enabled) {
-        this.voiceStealingEnabled = enabled;
-    }
-
-    public boolean isVoiceStealingEnabled() {
-        return voiceStealingEnabled;
-    }
-
+    /** Close all instruments and free audio resources. */
     public synchronized void close() {
-        if (isClosed) return;
-        isClosed = true;
-        scheduler.shutdownNow();
-        for (PASamplerInstrument inst : available) inst.close();
-        for (PASamplerInstrument inst : inUse) inst.close();
-        available.clear();
-        inUse.clear();
-        instrumentPan.clear();
+    	if (isClosed) return;
+
+    	for (PASamplerInstrument inst : pool) {
+    		inst.close();
+    	}
+
+    	pool.clear();
+    	buffer = null;
+
+    	isClosed = true;
     }
 
-    public boolean isClosed() {
-        return isClosed;
-    }
-
-    // ------------------------------------------------------------------------
-    // Diagnostics / Pool State
-    // ------------------------------------------------------------------------
-
-    /**
-     * Returns the number of instruments currently available for reuse.
-     * Useful for debugging pool pressure and voice allocation.
-     */
-    public synchronized int getAvailableCount() {
-    	return available.size();
-    }
-
-    /**
-     * Returns the number of instruments currently in use (playing or reserved).
-     */
-    public synchronized int getInUseCount() {
-    	return inUse.size();
-    }
-
+    /** Check whether the pool has been closed. */
+    public synchronized boolean isClosed() { return isClosed; }
 
 }

@@ -1,212 +1,141 @@
 package net.paulhertz.pixelaudio.voices;
 
-import ddf.minim.*;
-import ddf.minim.ugens.*;
-import java.util.concurrent.*;
+import ddf.minim.ugens.ADSR;
 
 /**
- * Voice that shares a Sampler but has independent amplitude, envelope, and panning.
- * 
- * Leverages Minim's snapshot behavior: each trigger() call snapshots begin, end, and rate.
- * Only amplitude is shared globally across voices, so this class inserts a per-voice
- * Multiplier for individual amplitude scaling.
+ * Represents a single playback "voice" reading from a shared mono buffer.
+ * Each voice has its own pitch, gain, pan, looping, and envelope.
  */
 public class PASamplerVoice {
-    private final AudioOutput out;
-    private final float sampleRate;
-    private final ScheduledExecutorService scheduler;
-    private final ADSRParams defaultEnv;
+    private static long NEXT_VOICE_ID = 0;
 
-    private final Sampler sampler;
-    private final int bufferSize; 
-    private final Multiplier gain;
-    private final Pan panner;
+    private float[] buffer;
+    private float playbackSampleRate;
 
-    private ADSR currentEnvelope = null;
-    private boolean isBusy = false;
-    private boolean isClosed = false;
-    private boolean isLooping = false;
+    private long voiceId;
+    private boolean active;
+    private boolean looping;
 
-    /**
-     * Construct a voice that shares a Sampler with others but has independent control
-     * of amplitude, envelope, and panning.
-     */
-    public PASamplerVoice(Sampler sharedSampler,
-    		              int bufferSize,
-                          float sampleRate,
-                          AudioOutput out,
-                          ADSRParams env) {
-        this.sampler = sharedSampler;
-        this.bufferSize = bufferSize;
-        this.sampleRate = sampleRate;
-        this.out = out;
-        this.defaultEnv = env;
+    private int start;
+    private int end;
+    private float position;
+    private float rate;
+    private float gain;
+    private float pan;
 
-        this.gain = new Multiplier(1.0f);
-        this.panner = new Pan(0.0f);
+    private ADSR envelope;
+    private final float[] envFrame = new float[1]; // single-sample output for envelope
+    private boolean released = false;
+    private int silenceCounter = 0;
+    private static final int SILENCE_THRESHOLD = 512; // samples near 0 before deactivate
 
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "PASamplerVoice-scheduler");
-            t.setDaemon(true);
-            return t;
-        });
+    public PASamplerVoice(float[] buffer, float sampleRate) {
+        this.buffer = buffer;
+        this.playbackSampleRate = sampleRate;
     }
 
-    // -------------------------------------------------------------------------
-    // Core playback
-    // -------------------------------------------------------------------------
-
     /**
-     * Trigger playback using independent per-voice parameters.
-     *
-     * @param samplePos  start position (samples)
-     * @param sampleLen  playback length (samples)
-     * @param amplitude  per-voice amplitude
-     * @param env        ADSR parameters
-     * @param pitch      playback rate (1.0 = normal)
-     * @param pan        stereo position (-1.0 left, +1.0 right)
+     * Activates this voice for playback.
      */
-    public synchronized int play(int samplePos,
-    		int sampleLen,
-    		float amplitude,
-    		ADSRParams env,
-    		float pitch,
-    		float pan) {
-    	if (isClosed || isBusy) return 0;
-    	isBusy = true;
-    	// clamp samplePos and sampleLen to positive numbers or 0
-    	samplePos = Math.max(0, samplePos);
-    	if (sampleLen < 0) sampleLen = 0;
-    	// Clamp to buffer
-    	if (!isLooping && samplePos + sampleLen > bufferSize) {
-    		sampleLen = Math.max(0, bufferSize - samplePos);
-    	}
-    	// Compute sample end (no release extension)
-    	int end = Math.min(samplePos + sampleLen - 1, bufferSize - 1);
-    	// Configure sampler snapshot
-    	sampler.begin.setLastValue(samplePos);
-    	sampler.end.setLastValue(end);
-    	sampler.rate.setLastValue(pitch);
-    	sampler.looping = isLooping;
-    	// Set amplitude and pan
-    	gain.setValue(amplitude);
-    	panner.setPan(pan);
-    	// Build envelope chain
-    	currentEnvelope = env.toADSR();
-    	sampler.patch(gain);
-    	gain.patch(currentEnvelope);
-    	currentEnvelope.patch(panner);
-    	panner.patch(out);
-    	// and play the samples
-    	try {
-    		sampler.trigger();
-    		currentEnvelope.noteOn();
-    	} 
-    	catch (Exception e) {
-    		isBusy = false;
-    		e.printStackTrace();
-    		return 0;
-    	}
-    	// if we're not looping, handle note off and unpatch the processing chain
-    	if (!isLooping && sampleLen > 0) {
-    		// if you want to adjust duration to frequency, the next line does that:
-    		// long durationMillis = Math.round((sampleLen / (sampleRate * Math.abs(pitch))) * 1000.0);
-    		// We generally want note duration to be independent of pitch: pitch affects frequency only,
-    		// not playback length or envelope timing.
-    		long durationMillis = Math.round((sampleLen / sampleRate) * 1000.0);
-    		long releaseMillis = Math.round(env.getRelease() * 1000.0);
-    		final ADSR envUGen = currentEnvelope;
-    		// schedule note off and cleanup 
-    		scheduler.schedule(() -> {
-    			try {
-    				envUGen.noteOff();
-    				envUGen.unpatchAfterRelease(panner);
-    			} catch (Exception ignored) {}
-    		}, durationMillis, TimeUnit.MILLISECONDS);
-    		// unpatch in reverse order
-    		scheduler.schedule(() -> {
-    			try {
-    				sampler.unpatch(gain);
-    				gain.unpatch(envUGen);
-    				envUGen.unpatch(panner);
-    				panner.unpatch(out);
-    			} 
-    			catch (Exception ignored) {}
-    			isBusy = false;
-    		}, durationMillis + releaseMillis + 50, TimeUnit.MILLISECONDS);
-    	} 
-    	else {
-    		// Looping playback managed externally
-    		isBusy = false;
-    	}
-    	// return the actual duration of the event
-    	return sampleLen;
-    }
-    
-    public int play(int samplePos, int sampleLen, float amplitude, float pitch) {
-        return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
-    }
-    
+    public void activate(int start, int length, float gain,
+                         ADSRParams envParams, float pitch, float pan, boolean looping) {
+        this.voiceId = NEXT_VOICE_ID++;
+        this.start = Math.max(0, start);
+        this.end = Math.min(buffer.length, start + Math.max(0, length));
+        this.position = this.start;
+        this.rate = pitch;
+        this.gain = gain;
+        this.pan = Math.max(-1f, Math.min(1f, pan));
+        this.looping = looping;
+        this.active = (this.start < this.end);
+        this.released = false;
+        this.silenceCounter = 0;
 
-    // -------------------------------------------------------------------------
-    // Loop control
-    // -------------------------------------------------------------------------
-
-    /**
-     * Gracefully stop a looping sample and release its envelope.
-     */
-    public synchronized void stopLoop() {
-        if (isClosed || !isLooping) return;
-
-        try {
-            sampler.looping = false;
-            isLooping = false;
-
-            if (currentEnvelope != null) {
-                currentEnvelope.noteOff();
-                currentEnvelope.unpatchAfterRelease(panner);
-            }
-
-            scheduler.schedule(() -> {
-                try {
-                    gain.unpatch(currentEnvelope);
-                    currentEnvelope.unpatch(panner);
-                    panner.unpatch(out);
-                } 
-                catch (Exception ignored) {}
-                isBusy = false;
-            }, Math.round(defaultEnv.getRelease() * 1000.0) + 50, TimeUnit.MILLISECONDS);
-        } 
-        catch (Exception e) {
-            e.printStackTrace();
-            isBusy = false;
+        if (envParams != null) {
+            this.envelope = envParams.toADSR();
+            this.envelope.noteOn();
+        } else {
+            this.envelope = null;
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Accessors
-    // -------------------------------------------------------------------------
+    /**
+     * Generate next sample. Returns NaN when inactive or finished.
+     */
+    public float nextSample() {
+        if (!active) return Float.NaN;
 
-    public void setPan(float pan) { panner.setPan(pan); }
-    public float getPan() { return panner.pan.getLastValue(); }
+        int idx = (int) position;
+        if (idx >= end) {
+            if (looping) {
+                position = start;
+                idx = start;
+            } else {
+                if (!released) {
+                    released = true;
+                    if (envelope != null) envelope.noteOff();
+                }
+            }
+        }
 
-    public void setIsLooping(boolean looping) { this.isLooping = looping; }
-    public boolean isLooping() { return isLooping; }
+        // Drive the envelope UGen
+        float envValue = 1.0f;
+        if (envelope != null) {
+            envelope.tick(envFrame);
+            envValue = envFrame[0];
+        }
 
-    public boolean isBusy() { return isBusy; }
-    public boolean isClosed() { return isClosed; }
+        float sample = buffer[idx] * gain * envValue;
+        position += rate;
 
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
+        // Detect if envelope has faded to silence
+        if (released && Math.abs(sample) < 1e-6f) {
+            if (++silenceCounter > SILENCE_THRESHOLD) {
+                active = false;
+            }
+        } else {
+            silenceCounter = 0;
+        }
 
+        return sample;
+    }
+
+    /** Begin release phase for smooth voice stealing. */
+    public void release() {
+        if (!released) {
+            released = true;
+            if (envelope != null) envelope.noteOff();
+        }
+        looping = false;
+    }
+
+    /** Hard stop (no envelope). */
     public void stop() {
-        try { sampler.stop(); } catch (Exception ignored) {}
+        active = false;
+        looping = false;
+        released = true;
     }
 
-    public void close() {
-        if (isClosed) return;
-        scheduler.shutdownNow();
-        isClosed = true;
+    // ---- Getters ----
+
+    public boolean isActive() { return active; }
+    public boolean isLooping() { return looping; }
+    public float getPosition() { return position; }
+    public float getGain() { return gain; }
+    public float getPan() { return pan; }
+    public long getVoiceId() { return voiceId; }
+    public int getStart() { return start; }
+    public int getEnd() { return end; }
+    
+    /** Returns the current sample rate for this voice. */
+    public synchronized float getPlaybackSampleRate() { return playbackSampleRate; }
+    
+    /** Update the sample rate for this voice (used when sampler changes rate). */
+    public synchronized void setPlaybackSampleRate(float newRate) {
+    	if (newRate > 0f) {
+    		this.playbackSampleRate = newRate;
+    	}
     }
+
+    public void setLooping(boolean looping) { this.looping = looping; }
 }

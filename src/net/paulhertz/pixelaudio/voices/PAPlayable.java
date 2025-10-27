@@ -1,37 +1,56 @@
 package net.paulhertz.pixelaudio.voices;
 
-import ddf.minim.MultiChannelBuffer;
-
 /**
- * Interface for any object capable of playing audio samples from a buffer,
- * with optional support for ADSR envelopes and pitch scaling.
+ * Generic interface for anything that can be "played."
+ * Provides a minimal playback API plus backward-compatible overloads
+ * for sampler instruments and other PAPlayable classes.
  */
 public interface PAPlayable {
 
-    /** Plays a sample using the default buffer (or the buffer this object was initialized with). */
-    int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env);
+    /**
+     * Minimal play signature for generic playables.
+     * Implementations may ignore parameters they don't need.
+     *
+     * @param amplitude gain multiplier (0..1+)
+     * @param pitch     playback rate or pitch factor (implementation-defined)
+     * @param pan       stereo pan (-1 left .. +1 right)
+     * @return non-zero if a voice/event was triggered
+     */
+    int play(float amplitude, float pitch, float pan);
 
-    /** Plays a sample from the specified buffer, if supported. */
-    default int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
-                           float amplitude, ADSRParams env) {
-        throw new UnsupportedOperationException("Multiple buffers not supported by this class.");
+    /** Stop playback immediately (implementation-defined). */
+    void stop();
+
+    // --------------------------------------------------------------------
+    // Backward-compatible overloads
+    // --------------------------------------------------------------------
+
+    /** Simple play call using default amplitude, pitch, and pan. */
+    default int play() {
+        return play(1.0f, 1.0f, 0.0f);
+    }
+
+    /** Play with amplitude only. */
+    default int play(float amplitude) {
+        return play(amplitude, 1.0f, 0.0f);
+    }
+
+    /** Play with amplitude and pitch. */
+    default int play(float amplitude, float pitch) {
+        return play(amplitude, pitch, 0.0f);
+    }
+
+    /** Play with amplitude, pitch, and pan. */
+    default int play(float amplitude, float pitch, float pan, boolean unused) {
+        // 'unused' parameter is included for legacy signatures
+        return play(amplitude, pitch, pan);
     }
 
     /**
-     * Plays a sample with pitch scaling (multiplicative playback rate).
-     * pitchScale = 1.0 → normal speed, 2.0 → one octave up, 0.5 → one octave down.
+     * Optional interface for playables that support envelopes.
+     * Implementations that don't use ADSR can ignore this overload.
      */
-    default int playSample(int samplePos, int sampleLen, float amplitude,
-                           ADSRParams env, float pitchScale) {
-        throw new UnsupportedOperationException("Pitch scaling not supported by this class.");
+    default int play(float amplitude, ADSRParams env, float pitch, float pan) {
+        return play(amplitude, pitch, pan);
     }
-
-    /** Same as above, but tied to a particular buffer (for multi-buffer implementations). */
-    default int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
-                           float amplitude, ADSRParams env, float pitchScale) {
-        throw new UnsupportedOperationException("Pitch scaling with multiple buffers not supported by this class.");
-    }
-
-    /** Shut down and release resources. */
-    void close();
 }
