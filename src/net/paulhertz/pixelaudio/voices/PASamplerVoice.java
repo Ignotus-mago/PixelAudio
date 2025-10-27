@@ -1,6 +1,7 @@
 package net.paulhertz.pixelaudio.voices;
 
 import ddf.minim.ugens.ADSR;
+import ddf.minim.ugens.Constant;
 
 /**
  * Represents a single playback "voice" reading from a shared mono buffer.
@@ -24,10 +25,15 @@ public class PASamplerVoice {
     private float pan;
 
     private ADSR envelope;
+    private Constant envCarrier;  
     private final float[] envFrame = new float[1]; // single-sample output for envelope
     private boolean released = false;
     private int silenceCounter = 0;
     private static final int SILENCE_THRESHOLD = 512; // samples near 0 before deactivate
+    
+    // debugging
+    private static final boolean DEBUG = true;
+    int frameCounter = 0;
 
     public PASamplerVoice(float[] buffer, float sampleRate) {
         this.buffer = buffer;
@@ -52,33 +58,46 @@ public class PASamplerVoice {
         this.silenceCounter = 0;
 
         if (envParams != null) {
-            this.envelope = envParams.toADSR();
+            this.envelope = envParams.toADSR();                // e.g., new ADSR(attack, decay, sustain, release)
+            this.envelope.setSampleRate(playbackSampleRate);
+            this.envCarrier = new Constant(envParams.getMaxAmp());  // steady “carrier” at your peak amplitude
+            this.envCarrier.patch(this.envelope);              // <<— this is the key line
             this.envelope.noteOn();
-        } else {
+        } 
+        else {
             this.envelope = null;
+            this.envCarrier = null;
         }
+        System.out.printf("Voice %d activated: start=%d end=%d len=%d rate=%.3f gain=%.3f pan=%.3f looping=%b%n",
+        		           voiceId, start, end, (end - start), rate, gain, pan, looping);
     }
 
-    /**
-     * Generate next sample. Returns NaN when inactive or finished.
-     */
     public float nextSample() {
         if (!active) return Float.NaN;
 
         int idx = (int) position;
+ 
+        if (DEBUG && frameCounter++ % 1000 == 0) {
+            System.out.printf("[Voice %d] idx=%d pos=%.2f env=%.4f gain=%.3f active=%b looping=%b released=%b%n",
+                voiceId, idx, position, envFrame[0], gain, active, looping, released);
+        }
+
         if (idx >= end) {
             if (looping) {
                 position = start;
                 idx = start;
-            } else {
+            } 
+            else {
                 if (!released) {
                     released = true;
                     if (envelope != null) envelope.noteOff();
                 }
+                active = false;
+                return 0.0f;  // <-- prevents out-of-bounds read
             }
         }
 
-        // Drive the envelope UGen
+        // Drive envelope
         float envValue = 1.0f;
         if (envelope != null) {
             envelope.tick(envFrame);
@@ -88,12 +107,13 @@ public class PASamplerVoice {
         float sample = buffer[idx] * gain * envValue;
         position += rate;
 
-        // Detect if envelope has faded to silence
+        // Detect sustained silence for deactivation
         if (released && Math.abs(sample) < 1e-6f) {
             if (++silenceCounter > SILENCE_THRESHOLD) {
                 active = false;
             }
-        } else {
+        } 
+        else {
             silenceCounter = 0;
         }
 
@@ -114,6 +134,10 @@ public class PASamplerVoice {
         active = false;
         looping = false;
         released = true;
+        // tidy up patch (optional but clean)
+        if (envCarrier != null && envelope != null) {
+            envCarrier.unpatch(envelope);
+        }
     }
 
     // ---- Getters ----
