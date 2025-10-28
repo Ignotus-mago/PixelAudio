@@ -1,5 +1,7 @@
 package net.paulhertz.pixelaudio.voices;
 
+import java.util.Arrays;
+
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
 
@@ -57,30 +59,26 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * @param audioOut        target AudioOutput
 	 * @param env             default ADSR envelope parameters
 	 */
-	 public PASamplerInstrument(MultiChannelBuffer buffer, float sampleRate, int maxVoices,  AudioOutput audioOut, ADSRParams env) {
-		    this.out = audioOut;
-		    this.buffer = buffer;
-		    this.bufferSize = buffer.getBufferSize();
-		    this.bufferSampleRate = sampleRate;
-		    this.outputSampleRate = (audioOut != null) ? audioOut.sampleRate() : sampleRate;
-		    this.sampleRateRatio = (outputSampleRate > 0f) ? bufferSampleRate / outputSampleRate : 1.0f;
-		    this.defaultEnv = (env != null) ? env : new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f);
-		    this.pitchScale = 1.0f;
-		    this.globalPan = 0.0f;
-		    this.isClosed = false;
-		    this.maxVoices = Math.max(1, maxVoices);
-		    // pass through to sampler
-		    this.sampler = new PASharedBufferSampler(buffer, sampleRate, audioOut, this.maxVoices);
-		}
+	public PASamplerInstrument(MultiChannelBuffer buffer, float sampleRate, int maxVoices,  AudioOutput audioOut, ADSRParams env) {
+		this.out = audioOut;
+		this.buffer = buffer;
+		this.bufferSize = buffer.getBufferSize();
+		this.bufferSampleRate = sampleRate;
+		this.outputSampleRate = (audioOut != null) ? audioOut.sampleRate() : sampleRate;
+		this.sampleRateRatio = (outputSampleRate > 0f) ? bufferSampleRate / outputSampleRate : 1.0f;
+		this.defaultEnv = (env != null) ? env : new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f);
+		this.pitchScale = 1.0f;
+		this.globalPan = 0.0f;
+		this.isClosed = false;
+		this.maxVoices = Math.max(1, maxVoices);
+		// pass through to sampler
+		this.sampler = new PASharedBufferSampler(buffer, sampleRate, audioOut, this.maxVoices);
+	}
 
 	/**
 	 * Full constructor with explicit buffer sample rate, custom sampler, and envelope.
 	 */
-	public PASamplerInstrument(AudioOutput out,
-			MultiChannelBuffer buffer,
-			PASampler sampler,
-			ADSRParams defaultEnv,
-			float bufferSampleRate) {
+	public PASamplerInstrument(AudioOutput out, MultiChannelBuffer buffer, PASampler sampler, ADSRParams defaultEnv, float bufferSampleRate) {
 		this.out = out;
 		this.buffer = buffer;
 		this.sampler = sampler;
@@ -96,11 +94,11 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * Convenience constructor assuming buffer and output share the same rate.
 	 */
 	public PASamplerInstrument(AudioOutput out, MultiChannelBuffer buffer) {
-		this(out,
-				buffer,
-				new PASharedBufferSampler(buffer, out.sampleRate(), out),
-				new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f),
-				out.sampleRate());
+		this(out, 
+			 buffer, 
+			 new PASharedBufferSampler(buffer, out.sampleRate(), out),
+			 new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f),
+			 out.sampleRate());
 	}
 
 	// ------------------------------------------------------------------------
@@ -109,34 +107,27 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/** Generic play() from PAPlayable. */
 	@Override
-	public int play(float amplitude, float pitch, float pan)
-	{
+	public int play(float amplitude, float pitch, float pan) {
 		if (sampler == null || bufferSize <= 0) return 0;
-
 		float scaledPitch = pitch * pitchScale * sampleRateRatio;
 		float finalPan = clampPan(globalPan + pan);
-
 		return sampler.play(0, bufferSize, amplitude, defaultEnv, scaledPitch, finalPan);
 	}
 
 	/** Full play() from PASamplerPlayable. */
 	@Override
 	public int play(int samplePos, int sampleLen, float amplitude,
-			ADSRParams env, float pitch, float pan)
-	{
+			ADSRParams env, float pitch, float pan) {
 		if (sampler == null || bufferSize <= 0) return 0;
-
 		float scaledPitch = pitch * pitchScale * sampleRateRatio;
 		float finalPan = clampPan(globalPan + pan);
 		ADSRParams useEnv = (env != null) ? env : defaultEnv;
-
 		return sampler.play(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan);
 	}
 
 	/** Stop playback (stop all active voices). */
 	@Override
-	public void stop()
-	{
+	public void stop() {
 		if (sampler != null) sampler.stopAll();
 	}
 
@@ -155,38 +146,32 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * @param pan        stereo position (-1.0 = left, +1.0 = right)
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
-			ADSRParams env, float pitch, float pan)
-	{
+			ADSRParams env, float pitch, float pan) {
 		if (sampler == null) return 0;
-
 		float actualPitch = pitch * pitchScale * sampleRateRatio;
 		float actualPan = clampPan(pan + globalPan);
 		ADSRParams useEnv = (env != null) ? env : defaultEnv;
-
 		return sampler.play(samplePos, sampleLen, amplitude, useEnv, actualPitch, actualPan);
 	}
 
 	/**
 	 * Convenience overload: uses default envelope, default pitch, and center pan.
 	 */
-	public synchronized int playSample(int samplePos, int sampleLen, float amplitude)
-	{
+	public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
 		return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitchScale, 0.0f);
 	}
 
 	/**
 	 * Convenience overload: uses default envelope, supplied pitch and center pan.
 	 */
-	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch)
-	{
+	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
 		return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
 	}
 
 	/**
 	 * Plays a sample using a supplied envelope with default pitch and default pan.
 	 */
-	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env)
-	{
+	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
 		return playSample(samplePos, sampleLen, amplitude, env, pitchScale, globalPan);
 	}
 
@@ -195,8 +180,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * Updates this instrument's buffer reference before playback.
 	 */
 	public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
-			float amplitude, ADSRParams env, float pitch, float pan)
-	{
+			float amplitude, ADSRParams env, float pitch, float pan) {
 		if (buffer != null) this.setBuffer(buffer);
 		return playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
 	}
@@ -236,6 +220,8 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	        this.buffer = newBuffer;
 	        // update bufferSize if you want to support swapping:
 	        this.bufferSize = newBuffer.getBufferSize();
+	        float[] sharedBuffer = Arrays.copyOf(newBuffer.getChannel(0), newBuffer.getBufferSize());
+	        sampler.setBuffer(sharedBuffer);
 	    }
 	}
 	
@@ -244,6 +230,8 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	    	this.buffer = newBuffer;
 	    	this.bufferSize = newBuffer.getBufferSize();
 	    	setBufferSampleRate(newSampleRate);
+	        float[] sharedBuffer = Arrays.copyOf(newBuffer.getChannel(0), newBuffer.getBufferSize());
+	        sampler.setBuffer(sharedBuffer);
 	    }
 	}
 

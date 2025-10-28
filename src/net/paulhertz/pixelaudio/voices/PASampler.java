@@ -16,4 +16,8 @@ public interface PASampler {
 
 	void setSampleRate(float newRate);
 	
+	public void setBuffer(float[] buffer);
+	
+	public void setBuffer(float[] buffer, float playbackSampleRate);
+	
 }
