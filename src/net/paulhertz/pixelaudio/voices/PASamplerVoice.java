@@ -38,7 +38,7 @@ public class PASamplerVoice {
     private int silenceCounter = 0;
     private static final int SILENCE_THRESHOLD = 512;
     
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     int frameCounter = 0;
 
     // -------------------------------------------------------------------------
@@ -121,26 +121,26 @@ public class PASamplerVoice {
     public float nextSample() {
         if (!active) return Float.NaN;
         int idx = (int) position;
-
+        
         // Debug output
         if (DEBUG && frameCounter++ % 2000 == 0) {
             System.out.printf("[Voice %d] idx=%d pos=%.2f env=%.4f gain=%.3f active=%b looping=%b released=%b%n",
                               voiceId, idx, position, envFrame[0], gain, active, looping, released);
         }
-
+        
         // End of buffer handling
         if (idx >= end) {
             if (looping) {
                 position = start;
                 idx = start;
-            } else {
+            }
+            else {
                 if (!released) {
                     released = true;
                     if (envelope != null) envelope.noteOff();
                     if (fallbackEnv != null) fallbackEnv.noteOff();
                 }
-                active = false;
-                return 0.0f;
+                idx = end - 1;
             }
         }
 
@@ -153,7 +153,8 @@ public class PASamplerVoice {
                 // fallback if Minim ADSR produces silence
                 envValue = fallbackEnv.tick();
             }
-        } else if (fallbackEnv != null) {
+        } 
+        else if (fallbackEnv != null) {
             envValue = fallbackEnv.tick();
         }
 
@@ -162,11 +163,19 @@ public class PASamplerVoice {
 
         // Silence auto-deactivation
         if (released && Math.abs(sample) < 1e-6f) {
-            if (++silenceCounter > SILENCE_THRESHOLD) active = false;
-        } else {
-            silenceCounter = 0;
+        	boolean envDone = false;
+            if (fallbackEnv != null && fallbackEnv.getValue() <= 0f)
+                envDone = true;
+            if (envelope != null && envFrame[0] <= 1e-6f)
+                envDone = true;
+            if (envDone) {
+                silenceCounter++;
+                if (silenceCounter > SILENCE_THRESHOLD)
+                    active = false;
+            } else {
+                silenceCounter = 0;
+            }
         }
-
         return sample;
     }
 
@@ -251,14 +260,16 @@ public class PASamplerVoice {
                     attackPhase = false;
                     decayPhase = true;
                 }
-            } else if (decayPhase) {
+            } 
+            else if (decayPhase) {
                 value -= decay;
                 if (value <= sustain) {
                     value = sustain;
                     decayPhase = false;
                     sustainPhase = true;
                 }
-            } else if (releasePhase) {
+            } 
+            else if (releasePhase) {
                 value -= release;
                 if (value <= 0f) {
                     value = 0f;
@@ -270,4 +281,23 @@ public class PASamplerVoice {
         
         public float getValue() { return this.value; }
     }
+    
+    /**
+     * Finds a nearby zero crossing starting at index in given direction (±1).
+     * Returns the adjusted index or the original if none found within 256 samples.
+     */
+    private int findZeroCrossing(int index, int direction) {
+        int limit = Math.min(buffer.length - 2, Math.max(1, index));
+        int step = (direction >= 0) ? 1 : -1;
+        float prev = buffer[limit];
+        for (int i = 0; i < 256 && limit + i * step > 1 && limit + i * step < buffer.length - 1; i++) {
+            int pos = limit + i * step;
+            float next = buffer[pos];
+            if ((prev <= 0 && next > 0) || (prev >= 0 && next < 0)) return pos;
+            prev = next;
+        }
+        return index;
+    }
+
+    
 }

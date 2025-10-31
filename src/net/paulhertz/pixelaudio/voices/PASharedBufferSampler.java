@@ -31,7 +31,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     private boolean globalLooping = false;
     private boolean smoothSteal = true;
     
-    protected boolean DEBUG = true;
+    protected boolean DEBUG = false;
 
     /**
      * Construct a sampler over a shared MultiChannelBuffer.
@@ -152,25 +152,19 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     protected void uGenerate(float[] channels) {
         float left = 0f;
         float right = 0f;
-
-        synchronized (this)
-        {
-            for (PASamplerVoice v : voices)
-            {
+        synchronized (this) {
+            for (PASamplerVoice v : voices) {
                 if (!v.isActive()) continue;
                 float s = v.nextSample();
                 if (Float.isNaN(s)) continue;
-
                 // Simple linear pan (can upgrade to equal-power if desired)
                 float pan = v.getPan();
                 float leftGain  = (pan <= 0f) ? 1f : 1f - pan;
                 float rightGain = (pan >= 0f) ? 1f : 1f + pan;
-
                 left  += s * leftGain;
                 right += s * rightGain;
             }
         }
-
         channels[0] = left;
         channels[1] = right;
     }
@@ -179,16 +173,14 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     @Override
     public void stopAll() {
-        synchronized (this)
-        {
+        synchronized (this) {
             for (PASamplerVoice v : voices) v.stop();
         }
     }
 
     @Override
     public boolean isLooping() {
-        for (PASamplerVoice v : voices)
-        {
+        for (PASamplerVoice v : voices) {
             if (v.isActive() && v.isLooping()) return true;
         }
         return false;
