@@ -10,6 +10,7 @@ import ddf.minim.ugens.ADSR;
 import ddf.minim.ugens.Instrument;
 import ddf.minim.ugens.Sampler;
 import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.voices.*;
 
 /**
  * BigWaveSynthAudio shows how you can load a WaveSynth into the pixel array of a
@@ -102,7 +103,7 @@ float sampleScale = 4;         // == number of divisions of one second, used to 
 int sampleBase = (int) (sampleRate/(float) sampleScale);  
 int samplelen = sampleRate;    // one second
 Sampler audioSampler;          // minim class for sampled sound
-WFInstrument instrument;       // local class to wrap audioSampler
+PASamplerInstrument instrument;       // local class to wrap audioSampler
 
 // ADSR and params
 ADSR adsr;            // good old attack, decay, sustain, release
@@ -140,7 +141,6 @@ public void settings() {
 public void setup() {
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
-  initAudio();
   initAudio();                           // set up audio output and an audio buffer
   multigen = hilbertLoop3x2(genWidth, genHeight);  // See the MultiGenDemo example for details on how MultiGen works
   mapper = new PixelAudioMapper(multigen);         // initialize a PixelAudioMapper
