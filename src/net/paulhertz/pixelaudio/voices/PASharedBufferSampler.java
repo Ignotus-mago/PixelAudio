@@ -116,14 +116,14 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      */
     private PASamplerVoice getAvailableVoice() {
         // 1) Free voice first
-        for (PASamplerVoice v : voices)
-        {
-            if (!v.isActive()) return v;
+        for (PASamplerVoice v : voices) {
+            if (!v.isActive() && !v.isReleasing()) {
+                return v;
+            }
         }
 
         // 2) Allocate if under limit
-        if (voices.size() < maxVoices)
-        {
+        if (voices.size() < maxVoices) {
             PASamplerVoice v = new PASamplerVoice(buffer, playbackSampleRate);
             voices.add(v);
             return v;
@@ -131,15 +131,12 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
         // 3) Recycle oldest
         PASamplerVoice oldest = null;
-        for (PASamplerVoice v : voices)
-        {
-            if (v.isActive() && (oldest == null || v.getVoiceId() < oldest.getVoiceId()))
-            {
+        for (PASamplerVoice v : voices) {
+            if (v.isActive() && (oldest == null || v.getVoiceId() < oldest.getVoiceId())) {
                 oldest = v;
             }
         }
-        if (oldest != null)
-        {
+        if (oldest != null) {
             if (smoothSteal) oldest.release();
             else oldest.stop();
             return oldest;
@@ -149,24 +146,37 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     }
 
     @Override
-    protected void uGenerate(float[] channels) {
-        float left = 0f;
-        float right = 0f;
-        synchronized (this) {
-            for (PASamplerVoice v : voices) {
-                if (!v.isActive()) continue;
-                float s = v.nextSample();
-                if (Float.isNaN(s)) continue;
-                // Simple linear pan (can upgrade to equal-power if desired)
-                float pan = v.getPan();
-                float leftGain  = (pan <= 0f) ? 1f : 1f - pan;
-                float rightGain = (pan >= 0f) ? 1f : 1f + pan;
-                left  += s * leftGain;
-                right += s * rightGain;
-            }
-        }
-        channels[0] = left;
-        channels[1] = right;
+    protected synchronized void uGenerate(float[] channels) {
+    	// clear mix buffer for this frame
+    	Arrays.fill(channels, 0f);
+    	Iterator<PASamplerVoice> it = voices.iterator();
+    	while (it.hasNext()) {
+    		PASamplerVoice v = it.next();
+    		// advance voice
+    		float sample = 0f;
+    		try {
+    			sample = v.nextSample();
+    		} 
+    		catch (ArrayIndexOutOfBoundsException e) {
+    			// hard stop if buffer index ever slips past the end
+    			v.stop();
+    			it.remove();
+    			continue;
+    		}
+    		// continue mixing while voice is active or still releasing
+    		if (v.isActive() || v.isReleasing()) {
+    			float pan = v.getPan();
+    			float leftGain  = (pan <= 0) ? 1f : 1f - pan;
+    			float rightGain = (pan >= 0) ? 1f : 1f + pan;
+    			channels[0] += sample * leftGain;
+    			if (channels.length > 1)
+    				channels[1] += sample * rightGain;
+    		} 
+    		else {
+    			// release phase done — remove voice from list
+    			// it.remove();
+    		}
+    	}
     }
 
     // PASampler methods
@@ -216,17 +226,21 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     
     // ----- Accessors ----- //
     
-    public void setBuffer(float[] buffer) {
+    public synchronized void setBuffer(float[] buffer) {
     	this.buffer = buffer;
     	for (PASamplerVoice v : this.voices) {
+    		v.stop();
     		v.setBuffer(buffer);
+    		v.resetPosition();
     	}
     }
-    public void setBuffer(float[] buffer, float playbackSampleRate) {
+    public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
     	this.buffer = buffer;
     	this.playbackSampleRate = playbackSampleRate;
     	for (PASamplerVoice v : this.voices) {
-    		v.setBuffer(buffer, playbackSampleRate);
+    		v.stop();
+    		v.setBuffer(buffer);
+    		v.resetPosition();
     	}
     }
 
