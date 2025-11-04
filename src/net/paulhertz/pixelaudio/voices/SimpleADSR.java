@@ -1,97 +1,159 @@
 package net.paulhertz.pixelaudio.voices;
 
 /**
- * A lightweight, sample-rate–aware ADSR envelope generator for offline or manual sample processing.
- *
- * All times (attack, decay, release) are in seconds.
- * Sustain is a level between 0 and 1.
- *
- * Typical use:
- *   SimpleADSR env = new SimpleADSR(0.1f, 0.2f, 0.7f, 0.5f);
- *   env.setSampleRate(44100);
- *   env.noteOn();
- *   while (!env.isFinished()) {
- *       float gain = env.tick();
- *       // multiply your sample by gain
- *   }
+ * SimpleADSR — software envelope generator with optional exponential curves.
+ * 
+ * Features:
+ *  - Sample-rate–based time scaling
+ *  - Per-stage exponential curvature
+ *  - Sustain-level clamping
+ *  - `noteOn()`, `noteOff()`, `tick()`, and `isFinished()`
  */
 public class SimpleADSR {
-    private float attackTime, decayTime, sustainLevel, releaseTime;
-    private float value = 0f;
-    private boolean attackPhase, decayPhase, sustainPhase, releasePhase;
-    private float attackInc, decayDec, releaseDec;
+
+    // --- Time and shape parameters ---
+    private float attackTime;   // seconds
+    private float decayTime;    // seconds
+    private float sustainLevel; // 0–1
+    private float releaseTime;  // seconds
     private float sampleRate = 44100f;
 
+    // --- Shape curvature ---
+    private float attackCurve = 4.0f;   // >1 = more exponential, 1 = linear
+    private float decayCurve = 4.0f;
+    private float releaseCurve = 4.0f;
+
+    // --- Internal state ---
+    private enum Stage { IDLE, ATTACK, DECAY, SUSTAIN, RELEASE, FINISHED }
+    private Stage stage = Stage.IDLE;
+    private float value = 0f;
+    private float releaseStart = 0f;  
+    private int samplesInStage = 0;
+    private int stageSamples = 0;
+
+    // ------------------------------------------------------------------------
+    // Constructors
+    // ------------------------------------------------------------------------
+
     public SimpleADSR(float attack, float decay, float sustain, float release) {
-        this.attackTime = Math.max(attack, 0.0001f);
-        this.decayTime = Math.max(decay, 0.0001f);
+        this.attackTime = Math.max(attack, 0f);
+        this.decayTime = Math.max(decay, 0f);
         this.sustainLevel = Math.max(0f, Math.min(1f, sustain));
-        this.releaseTime = Math.max(release, 0.0001f);
-        updateIncrements();
+        this.releaseTime = Math.max(release, 0f);
     }
 
-    /** Must be called after constructing or when sample rate changes. */
-    public void setSampleRate(float sampleRate) {
-        this.sampleRate = Math.max(1f, sampleRate);
-        updateIncrements();
+    // Optionally allow curvature control
+    public SimpleADSR(float attack, float decay, float sustain, float release,
+                      float attackCurve, float decayCurve, float releaseCurve) {
+        this(attack, decay, sustain, release);
+        this.attackCurve = Math.max(0.1f, attackCurve);
+        this.decayCurve = Math.max(0.1f, decayCurve);
+        this.releaseCurve = Math.max(0.1f, releaseCurve);
     }
 
-    private void updateIncrements() {
-        attackInc  = 1.0f / (attackTime  * sampleRate);
-        decayDec   = (1.0f - sustainLevel) / (decayTime * sampleRate);
-        releaseDec = sustainLevel / (releaseTime * sampleRate);
+    // ------------------------------------------------------------------------
+    // Lifecycle control
+    // ------------------------------------------------------------------------
+
+    public void setSampleRate(float sr) {
+        if (sr > 0) sampleRate = sr;
     }
 
     public void noteOn() {
-        attackPhase = true;
-        decayPhase = sustainPhase = releasePhase = false;
+        stage = Stage.ATTACK;
+        samplesInStage = 0;
+        stageSamples = Math.max(1, (int)(attackTime * sampleRate));
     }
 
     public void noteOff() {
-        releasePhase = true;
-        attackPhase = decayPhase = sustainPhase = false;
+    	releaseStart = value;      // capture current amplitude
+        stage = Stage.RELEASE;
+        samplesInStage = 0;
+        stageSamples = Math.max(1, (int)(releaseTime * sampleRate));
     }
 
-    /** Advance envelope one sample. Returns gain [0..1]. */
+    public boolean isFinished() {
+        return stage == Stage.FINISHED || stage == Stage.IDLE;
+    }
+
+    // ------------------------------------------------------------------------
+    // Tick: advance one sample
+    // ------------------------------------------------------------------------
+
     public float tick() {
-        if (attackPhase) {
-            value += attackInc;
-            if (value >= 1.0f) {
-                value = 1.0f;
-                attackPhase = false;
-                decayPhase = true;
-            }
-        }
-        else if (decayPhase) {
-            value -= decayDec;
-            if (value <= sustainLevel) {
+        switch (stage) {
+            case ATTACK:
+                value = exponentialInterp(samplesInStage, stageSamples, 0f, 1f, attackCurve);
+                if (++samplesInStage >= stageSamples) {
+                    stage = Stage.DECAY;
+                    samplesInStage = 0;
+                    stageSamples = Math.max(1, (int)(decayTime * sampleRate));
+                }
+                break;
+
+            case DECAY:
+                value = exponentialInterp(samplesInStage, stageSamples, 1f, sustainLevel, decayCurve);
+                if (++samplesInStage >= stageSamples) {
+                    stage = Stage.SUSTAIN;
+                    value = sustainLevel;
+                }
+                break;
+
+            case SUSTAIN:
                 value = sustainLevel;
-                decayPhase = false;
-                sustainPhase = true;
-            }
-        }
-        else if (releasePhase) {
-            value -= releaseDec;
-            if (value <= 0f) {
+                break;
+
+            case RELEASE:
+                value = exponentialInterp(samplesInStage, stageSamples, releaseStart, 0f, releaseCurve);
+                if (++samplesInStage >= stageSamples) {
+                    stage = Stage.FINISHED;
+                    value = 0f;
+                }
+                break;
+
+            case FINISHED:
+            case IDLE:
+            default:
                 value = 0f;
-                releasePhase = false;
-            }
+                break;
         }
+        /*
+        if (stage == Stage.RELEASE && samplesInStage % 2000 == 0) {
+            System.out.printf("[ADSR release] tick=%d value=%.5f stage=%s%n",
+                samplesInStage, value, stage);
+        }
+		*/
         return value;
     }
 
-    public float getValue() { return value; }
-    
-    public boolean isReleasing() { return releasePhase; }
+    // ------------------------------------------------------------------------
+    // Exponential interpolation utility
+    // ------------------------------------------------------------------------
 
-    /** True when envelope is idle (at zero). */
-    public boolean isFinished() {
-        return !(attackPhase || decayPhase || sustainPhase || releasePhase) && value <= 0f;
+    private static float exponentialInterp(int step, int total, float start, float end, float curve) {
+        if (total <= 0) return end;
+        float t = (float) step / total;
+        if (curve == 1.0f) return start + (end - start) * t; // linear
+        float shaped = (float) ((Math.pow(curve, t) - 1.0) / (curve - 1.0));
+        return start + (end - start) * shaped;
     }
-    
-    @Override
-    public String toString() {
-        return String.format("SimpleADSR[a=%.3fs, d=%.3fs, s=%.3f, r=%.3fs, value=%.4f]",
-                attackTime, decayTime, sustainLevel, releaseTime, value);
+
+    // ------------------------------------------------------------------------
+    // Accessors
+    // ------------------------------------------------------------------------
+
+    public float getValue() { return value; }
+
+    public void setCurves(float attackC, float decayC, float releaseC) {
+        attackCurve = Math.max(0.1f, attackC);
+        decayCurve = Math.max(0.1f, decayC);
+        releaseCurve = Math.max(0.1f, releaseC);
+    }
+
+    public void setTimes(float a, float d, float s, float r) {
+        attackTime = a;
+        decayTime = d;
+        sustainLevel = s;
+        releaseTime = r;
     }
 }

@@ -48,7 +48,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------
     // Constructors
     // TODO is there a standard order for constructor arguments?
-    // TODO do we duplicate MultiChannelBuffers supplied to instruments or not? Big question. 
+    // TODO do we duplicate MultiChannelBuffers supplied to instruments or not? RESOLVED: we do.
     // If we do it for one PASamplerInstrument*, we should do it for all. PASharedBufferSampler
     // and PASamplerVoice are not affected by this choice. 
     //
@@ -137,35 +137,32 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------
 
     /**
-     * Find a free or least-busy instrument.
-     * If none are free, reuses the oldest (smoothly if supported).
+     * Find a free instrument; otherwise least-busy; otherwise smooth-steal one.
      */
     private synchronized PASamplerInstrument getAvailableInstrument() {
-        // 1. Prefer inactive instruments
-        for (PASamplerInstrument inst : pool) {
-            if (!inst.getSampler().isLooping()) return inst;
-        }
-        // 2. Otherwise, recycle the oldest instrument
-        PASamplerInstrument oldest = null;
-        long oldestId = Long.MAX_VALUE;
-        for (PASamplerInstrument inst : pool) {
-            for (PASamplerVoice v : ((PASharedBufferSampler) inst.getSampler()).getVoices()) {
-                if (v.isActive() && v.getVoiceId() < oldestId) {
-                    oldestId = v.getVoiceId();
-                    oldest = inst;
-                }
-            }
-        }
-        // 3. release all active voices in oldest instrument
-        if (oldest != null) {
-            // smooth voice steal if supported
-            for (PASamplerVoice v :  ((PASharedBufferSampler) oldest.getSampler()).getVoices()) {
-                if (v.isActive()) v.release();
-            }
-            return oldest;
-        }
-        // fallback (shouldn't happen)
-        return pool.get(0);
+    	PASamplerInstrument free = null;
+    	PASamplerInstrument leastBusy = null;
+    	int leastCount = Integer.MAX_VALUE;
+    	for (PASamplerInstrument inst : pool) {
+    		if (!inst.hasActiveOrReleasingVoices()) {
+    			free = inst;
+    			break;
+    		}
+    		// track least busy in case none are free
+    		int c = inst.activeOrReleasingVoiceCount();
+    		if (c < leastCount) {
+    			leastCount = c;
+    			leastBusy = inst;
+    		}
+    	}
+    	if (free != null) return free;
+    	// If we get here, all instruments are busy.
+    	// Prefer the least-busy instrument (lets its tails finish if possible).
+    	if (leastBusy != null) return leastBusy;
+    	// Fallback: smooth-steal the first instrument (should be rare)
+    	PASamplerInstrument victim = pool.get(0);
+    	victim.releaseAllVoices(); // smooth release instead of hard stop
+    	return victim;
     }
 
     // ------------------------------------------------------------------------
@@ -195,7 +192,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------
 
     /**
-     * The most useful play command, with all common arguments in standard order. 
+     * The primary play command, with all common arguments in standard order. 
      * The playSample(...) methods provide the greatest flexibility in method signatures
      * and will call this method. 
      */
@@ -233,7 +230,12 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         return play(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
-    public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
+	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, 
+			float pitch, float pan) {
+		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, pan);
+	}
+
+	public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
         return play(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, globalPan);
     }
 
@@ -247,7 +249,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
 
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
                                        ADSRParams env, float pitch) {
-        return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+        return play(samplePos, sampleLen, amplitude, env, pitch, globalPan);
     }
     
     public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
@@ -258,7 +260,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     	inst.setBuffer(buffer, bufferSampleRate);    // assumes same nominal bufferSampleRate; call setBufferRate(...) first if needed
     	// ADSRParams useEnv = (env != null) ? env : defaultEnv;
     	// return inst.playSample(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan);
-    	return inst.playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
+    	return inst.play(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
     public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
@@ -269,7 +271,6 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------
     // Buffer & sample-rate propagation
     // ------------------------------------------------------------------------
-
     
     /**
      * Swap the pool's shared buffer; keeps existing bufferSampleRate.
@@ -279,7 +280,16 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
      */
     public synchronized void setBuffer(MultiChannelBuffer newBuffer) {
         if (newBuffer == null) return;       
-        this.buffer.set(newBuffer);
+        // Ensure channel count matches to avoid hidden exceptions in Minim
+        if (this.buffer.getChannelCount() != newBuffer.getChannelCount() ||
+            this.buffer.getBufferSize()  != newBuffer.getBufferSize()) {
+            // Different shape: replace instead of set()
+        	this.buffer = new MultiChannelBuffer(newBuffer.getBufferSize(), newBuffer.getChannelCount());
+            this.buffer.set(newBuffer);
+        } 
+        else {
+            this.buffer.set(newBuffer); // fast path
+        }
         for (PASamplerInstrument inst : pool) {
             inst.setBuffer(newBuffer);
         }
@@ -293,7 +303,16 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
      */
     public synchronized void setBuffer(MultiChannelBuffer newBuffer, float newBufferSampleRate) {
         if (newBuffer == null) return;
-        this.buffer.set(newBuffer);
+        // Ensure channel count matches to avoid hidden exceptions in Minim
+        if (this.buffer.getChannelCount() != newBuffer.getChannelCount() ||
+            this.buffer.getBufferSize()  != newBuffer.getBufferSize()) {
+            // Different shape: replace instead of set()
+            this.buffer = new MultiChannelBuffer(newBuffer.getBufferSize(), newBuffer.getChannelCount());
+            this.buffer.set(newBuffer);
+        } 
+        else {
+            this.buffer.set(newBuffer); // fast path
+        }
         this.bufferSampleRate = newBufferSampleRate;
         for (PASamplerInstrument inst : pool) {
             inst.setBuffer(newBuffer, newBufferSampleRate);
@@ -305,7 +324,12 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
      */
     public synchronized void setBuffer(float[] newBuffer, float newBufferSampleRate) {
     	if (newBuffer == null || newBuffer.length == 0) return;
-    	this.buffer.setChannel(0, newBuffer);
+    	if (newBuffer.length != this.buffer.getBufferSize()) {
+    		this.buffer = new MultiChannelBuffer(newBuffer.length, 1);
+    	}
+    	else {
+    		this.buffer.setChannel(0, newBuffer);
+    	}
     	this.bufferSampleRate = newBufferSampleRate;
     	for (PASamplerInstrument inst : pool) {
     		inst.setBuffer(newBuffer, newBufferSampleRate);
@@ -356,8 +380,40 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     public synchronized int getOutputBufferSize() { return outputBufferSize; }
     public synchronized float getBufferSampleRate() { return bufferSampleRate; }
     
-    private void reinitInstruments() {
-        initPool();
+    /** 
+     * Resize the pool gracefully without disrupting existing instruments unnecessarily.
+     * Active instruments are preserved whenever possible.
+     */
+    private synchronized void reinitInstruments() {
+        int currentSize = pool.size();
+        // --- Grow the pool ---
+        if (poolSize > currentSize) {
+            for (int i = currentSize; i < poolSize; i++) {
+                PASamplerInstrument inst = new PASamplerInstrument(buffer, bufferSampleRate, maxVoices, out, defaultEnv);
+                inst.setPitchScale(globalPitch);
+                inst.setGlobalPan(globalPan);
+                pool.add(inst);
+            }
+        }
+        // --- Shrink the pool ---
+        else if (poolSize < currentSize) {
+            // Stop any extra instruments before removing them
+            for (int i = poolSize; i < currentSize; i++) {
+                PASamplerInstrument inst = pool.get(i);
+                inst.stop();
+                inst.close();
+            }
+            // Trim the list
+            while (pool.size() > poolSize) {
+                pool.remove(pool.size() - 1);
+            }
+        }
+        // Update shared parameters on all instruments
+        for (PASamplerInstrument inst : pool) {
+            inst.setDefaultEnv(defaultEnv);
+            inst.setPitchScale(globalPitch);
+            inst.setGlobalPan(globalPan);
+        }
     }
 
     public List<PASamplerInstrument> getInstruments() {

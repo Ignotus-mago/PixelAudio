@@ -106,8 +106,6 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	/** 
 	 * Generic play() from PAPlayable, will play the entire buffer from the beginning of the buffer
 	 * with specified pitch and pan and default envelope. 
-	 * 
-	 * 
 	 */
 	@Override
 	public int play(float amplitude, float pitch, float pan) {
@@ -117,7 +115,9 @@ public class PASamplerInstrument implements PASamplerPlayable {
 		return sampler.play(0, bufferSize, amplitude, defaultEnv, scaledPitch, finalPan);
 	}
 
-	/** Full play() from PASamplerPlayable. */
+	/**
+	 * The primary play method, called by all playSample() methods, from PASamplerPlayable interface.
+	 */
 	@Override
 	public int play(int samplePos, int sampleLen, float amplitude,
 			ADSRParams env, float pitch, float pan) {
@@ -136,10 +136,14 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	// ------------------------------------------------------------------------
 	// Core playback - legacy playSample() overloads
+    //
+    // Standard argument order: 
+    // (int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch, float pan)
+    //
 	// ------------------------------------------------------------------------
 
 	/**
-	 * Trigger playback using per-voice parameters.
+	 * Trigger playback using all six standard per-voice parameters.
 	 *
 	 * @param samplePos  start position (samples)
 	 * @param sampleLen  playback length (samples)
@@ -147,42 +151,54 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * @param env        ADSR envelope parameters
 	 * @param pitch      playback rate (1.0 = normal)
 	 * @param pan        stereo position (-1.0 = left, +1.0 = right)
+	 * @return the actual length of the audio event, in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
 			ADSRParams env, float pitch, float pan) {
-		if (sampler == null) return 0;
-		float actualPitch = pitch * globalPitch * sampleRateRatio;
-		float actualPan = clampPan(pan + globalPan);
-		ADSRParams useEnv = (env != null) ? env : defaultEnv;
-		return sampler.play(samplePos, sampleLen, amplitude, useEnv, actualPitch, actualPan);
+		return play(samplePos, sampleLen, amplitude, env, pitch, pan);
+	}
+
+	/**
+	 * All params except the envelope, so we use the default envelope. 
+	 * 
+	 * @param samplePos
+	 * @param sampleLen
+	 * @param amplitude
+	 * @param pitch
+	 * @param pan
+	 * @return the actual length of the audio event, in samples
+	 */
+	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, 
+			float pitch, float pan) {
+		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, pan);
 	}
 
 	/**
 	 * Convenience overload: uses default envelope, default pitch, and center pan.
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
-		return playSample(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, 0.0f);
+		return play(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, globalPan);
 	}
 
 	/**
 	 * Convenience overload: uses default envelope, supplied pitch and center pan.
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
-		return playSample(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
+		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, globalPan);
 	}
 
 	/**
 	 * Plays a sample using a supplied envelope with default pitch and default pan.
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
-		return playSample(samplePos, sampleLen, amplitude, env, globalPitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, env, globalPitch, globalPan);
 	}
 
 	/**
 	 * Plays a sample using a supplied envelope, pitch, and current global pan.
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch) 	{
-		return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, env, pitch, globalPan);
 	}
 
 	/**
@@ -192,7 +208,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
 			float amplitude, ADSRParams env, float pitch, float pan) {
 		if (buffer != null) this.setBuffer(buffer);
-		return playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
+		return play(samplePos, sampleLen, amplitude, env, pitch, pan);
 	}
 
 	/**
@@ -201,7 +217,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
 			float amplitude, ADSRParams env, float pitch) {
 		if (buffer != null) this.setBuffer(buffer);
-		return playSample(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, env, pitch, globalPan);
 	}
 
 	// ------------------------------------------------------------------------
@@ -216,6 +232,32 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	        }
 	    }
 	    return false;
+	}
+
+	// --- Helpers for pool orchestration (non-invasive; read-only) ---
+	public boolean hasActiveOrReleasingVoices() {
+	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
+	    for (PASamplerVoice v : s.getVoices()) {
+	        if (v.isActive() || v.isReleasing()) return true;
+	    }
+	    return false;
+	}
+
+	public int activeOrReleasingVoiceCount() {
+	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
+	    int c = 0;
+	    for (PASamplerVoice v : s.getVoices()) {
+	        if (v.isActive() || v.isReleasing()) c++;
+	    }
+	    return c;
+	}
+
+	/** Smoothly release all active voices (used only if we must recycle an instrument). */
+	public void releaseAllVoices() {
+	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
+	    for (PASamplerVoice v : s.getVoices()) {
+	        if (v.isActive() || v.isReleasing()) v.release();
+	    }
 	}
 
 	public PASampler getSampler() { return sampler; }

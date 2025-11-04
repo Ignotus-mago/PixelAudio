@@ -145,34 +145,41 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     @Override
     protected synchronized void uGenerate(float[] channels) {
-    	// clear mix buffer for this frame
-    	Arrays.fill(channels, 0f);
-    	Iterator<PASamplerVoice> it = voices.iterator();
-    	while (it.hasNext()) {
-    		PASamplerVoice v = it.next();
-    		// advance voice
-    		float sample = 0f;
-    		try {
-    			sample = v.nextSample();
-    		} 
-    		catch (ArrayIndexOutOfBoundsException e) {
-    			// hard stop if buffer index ever slips past the end
-    			v.stop();
-    			continue;
-    		}
-            // Mix only active or releasing voices
+        // --- 1. clear output frame (stereo or mono) ---
+        Arrays.fill(channels, 0f);
+
+        // --- 2. iterate over active voices safely ---
+        Iterator<PASamplerVoice> it = voices.iterator();
+        while (it.hasNext()) {
+            PASamplerVoice v = it.next();
+
+            float sample = 0f;
+            try {
+                sample = v.nextSample();
+            }
+            catch (ArrayIndexOutOfBoundsException e) {
+                // Defensive stop in case of runaway indexing
+                v.stop();
+                continue;
+            }
+
+            // --- 3. Mix active or releasing voices ---
             if (v.isActive() || v.isReleasing()) {
                 float pan = v.getPan();
-                float leftGain = (pan <= 0) ? 1f : 1f - pan;
-                float rightGain = (pan >= 0) ? 1f : 1f + pan;
+                float leftGain  = (pan <= 0f) ? 1f : 1f - pan;
+                float rightGain = (pan >= 0f) ? 1f : 1f + pan;
+
+                // Mix voice sample into output
                 channels[0] += sample * leftGain;
-                if (channels.length > 1) channels[1] += sample * rightGain;
+                if (channels.length > 1)
+                    channels[1] += sample * rightGain;
             }
-            // Recycle finished voices
+            // --- 4. Remove fully finished voices ---
             if (v.isFinished()) {
-                v.resetPosition();  // resets active=false, released=false
+                // optional: reset for reuse immediately
+                v.resetPosition();
             }
-         }
+        }
     }
 
     // PASampler methods

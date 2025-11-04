@@ -62,62 +62,92 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayab
     // Playback (PAPlayable, PASamplerPlayable)
     // ------------------------------------------------------------------------
 
+    /**
+     * Plays the instrument's entire buffer, from PAPlayable interface.
+     */
     @Override
 	public int play(float amplitude, float pitch, float pan) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.play(amplitude, pitch, pan) : 0;
 	}
+    
 	@Override
 	public void stop() {
 		for (PASamplerInstrumentPool p : pools.values()) p.stop();
 	}
 
 	// --- PASamplerPlayable ---
+	
+	/**
+	 * PASamplerPlayable's play method, all six standard params in satandard order,
+	 * called by other methods. 
+	 */
 	@Override
 	public int play(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch, float pan) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.play(samplePos, sampleLen, amplitude, env, pitch, pan) : 0;
 	}
+	
 	// @Override
 	public boolean isLooping() {
 		for (PASamplerInstrumentPool p : pools.values()) if (p.isLooping()) return true;
 		return false;
 	}
+	
 	//  @Override
 	public void stopAll() {
 		for (PASamplerInstrumentPool p : pools.values()) p.stopAll();
 	}
 
-	// --- Back-compat playSample(...) shims ---
+    // ------------------------------------------------------------------------
+    // Backward-compatible playSample(...) overloads
+    //
+    // Standard argument order: 
+    // (int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch, float pan)
+    //
+    // ------------------------------------------------------------------------
+
 	public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch, float pan) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.playSample(samplePos, sampleLen, amplitude, env, pitch, pan) : 0;
 	}
+
+	public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch) {
+		PASamplerInstrumentPool p = current();
+		return (p != null) ? p.playSample(samplePos, sampleLen, amplitude, env, pitch) : 0;
+	}
+	
+	public int playSample(int samplePos, int sampleLen, float amplitude, float pitch, float pan) {
+		PASamplerInstrumentPool p = current();
+		return (p != null) ? p.playSample(samplePos, sampleLen, amplitude, pitch, pan) : 0;
+	}
+
 	public int playSample(int samplePos, int sampleLen, float amplitude) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.playSample(samplePos, sampleLen, amplitude) : 0;
 	}
+	
 	public int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.playSample(samplePos, sampleLen, amplitude, pitch) : 0;
 	}
+	
 	public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.playSample(samplePos, sampleLen, amplitude, env) : 0;
+		
 	}
+	
 	public int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
 			float amplitude, ADSRParams env, float pitch, float pan) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.playSample(buffer, samplePos, sampleLen, amplitude, env, pitch, pan) : 0;
 	}
+	
 	public int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
 			float amplitude, ADSRParams env, float pitch) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.playSample(buffer, samplePos, sampleLen, amplitude, env, pitch) : 0;
-	}
-	public int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch) {
-		PASamplerInstrumentPool p = current();
-		return (p != null) ? p.playSample(samplePos, sampleLen, amplitude, env, pitch) : 0;
 	}
 
     // ------------------------------------------------------------------------
