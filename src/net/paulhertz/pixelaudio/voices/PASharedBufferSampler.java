@@ -8,7 +8,8 @@ import java.util.*;
 
 /**
  * UGen-based sampler that plays multiple PASamplerVoice instances
- * from a single shared mono buffer (channel 0 of a MultiChannelBuffer).
+ * from a single shared mono buffer (channel 0 of a MultiChannelBuffer)
+ * which is an array of floating point samples over (-1.0..1.0).
  *
  * Features:
  *  - Shared buffer (no duplication)
@@ -19,6 +20,7 @@ import java.util.*;
  *  - Thread-safe triggering
  *
  * Automatically patches to the provided AudioOutput.
+ * 
  */
 public class PASharedBufferSampler extends UGen implements PASampler {
     private float[] buffer;     // mono source (channel 0)
@@ -67,18 +69,19 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         this(multiBuffer, (out != null ? out.sampleRate() : 44100), out);
     }
 
-    @Override
+    /**
+     * Play command with all the useful arguments in standard order, overrides PASampler.play().
+     * TODO We plan to make this the only play() method PASharedBufferSampler. 
+     */
+     @Override
     public synchronized int play(int samplePos, int sampleLen, float amplitude,
                                  ADSRParams env, float pitch, float pan) {
         if (sampleLen <= 0 || samplePos >= bufferLen) return 0;
         if (samplePos < 0) samplePos = 0;
         if (samplePos + sampleLen > bufferLen) sampleLen = bufferLen - samplePos;
-
         PASamplerVoice v = getAvailableVoice();
         if (v == null) return 0;
-
         v.activate(samplePos, sampleLen, amplitude, env, pitch, pan, globalLooping);
-        
         int eventSamples = PlaybackInfo.computeVoiceDuration(
                 samplePos,
                 sampleLen,
@@ -88,11 +91,10 @@ public class PASharedBufferSampler extends UGen implements PASampler {
                 globalLooping,
                 playbackSampleRate
             );
-        
         float bufferReadSamples = sampleLen * Math.abs(pitch);
         float durationMS = eventSamples / playbackSampleRate * 1000f;
         long startSample = 0; // later replace with an actual sample clock
-
+        // information to be shared later
         PlaybackInfo info = new PlaybackInfo(
             v.getVoiceId(),
             eventSamples,
@@ -102,12 +104,11 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             startSample,
             playbackSampleRate
         );
-
+        // debugging
         if (DEBUG) 
             System.out.printf("[Voice %d] eventDuration=%d samples (%.2f ms)%n",
             v.getVoiceId(), eventSamples,
-            eventSamples / playbackSampleRate * 1000f);
-        
+            eventSamples / playbackSampleRate * 1000f);        
         return eventSamples;
     }
 
@@ -121,14 +122,12 @@ public class PASharedBufferSampler extends UGen implements PASampler {
                 return v;
             }
         }
-
         // 2) Allocate if under limit
         if (voices.size() < maxVoices) {
             PASamplerVoice v = new PASamplerVoice(buffer, playbackSampleRate);
             voices.add(v);
             return v;
         }
-
         // 3) Recycle oldest
         PASamplerVoice oldest = null;
         for (PASamplerVoice v : voices) {
@@ -141,7 +140,6 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             else oldest.stop();
             return oldest;
         }
-
         return null; // shouldn't happen
     }
 
@@ -160,23 +158,21 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     		catch (ArrayIndexOutOfBoundsException e) {
     			// hard stop if buffer index ever slips past the end
     			v.stop();
-    			it.remove();
     			continue;
     		}
-    		// continue mixing while voice is active or still releasing
-    		if (v.isActive() || v.isReleasing()) {
-    			float pan = v.getPan();
-    			float leftGain  = (pan <= 0) ? 1f : 1f - pan;
-    			float rightGain = (pan >= 0) ? 1f : 1f + pan;
-    			channels[0] += sample * leftGain;
-    			if (channels.length > 1)
-    				channels[1] += sample * rightGain;
-    		} 
-    		else {
-    			// release phase done — remove voice from list
-    			// it.remove();
-    		}
-    	}
+            // Mix only active or releasing voices
+            if (v.isActive() || v.isReleasing()) {
+                float pan = v.getPan();
+                float leftGain = (pan <= 0) ? 1f : 1f - pan;
+                float rightGain = (pan >= 0) ? 1f : 1f + pan;
+                channels[0] += sample * leftGain;
+                if (channels.length > 1) channels[1] += sample * rightGain;
+            }
+            // Recycle finished voices
+            if (v.isFinished()) {
+                v.resetPosition();  // resets active=false, released=false
+            }
+         }
     }
 
     // PASampler methods
@@ -234,6 +230,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     		v.resetPosition();
     	}
     }
+ 
     public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
     	this.buffer = buffer;
     	this.playbackSampleRate = playbackSampleRate;
@@ -243,6 +240,13 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     		v.resetPosition();
     	}
     }
+        
+    public int countAvailableVoices() {
+        int n = 0;
+        for (var v : voices) if (!v.isActive() && !v.isReleasing()) n++;
+        return n;
+    }
+
 
     // ------------------------------------------------------------------------
     // Sample rate management

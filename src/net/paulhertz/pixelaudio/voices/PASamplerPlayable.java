@@ -9,13 +9,18 @@ public interface PASamplerPlayable extends PAPlayable {
 
     /**
      * Core playback method: start playback from a given buffer range
-     * with amplitude, envelope, pitch, and pan control.
+     * with start index, duration, amplitude, envelope, pitch, and pan control,
+     * arguments in standard order for PixalAudio library.
      */
     int play(int samplePos, int sampleLen, float amplitude,
              ADSRParams env, float pitch, float pan);
 
     // --------------------------------------------------------------------
     // Backward-compatible playSample(...) overloads
+    // TODO decide behavior of methods with -1 sampleLen argument, at the 
+    // moment the expectation is that they return 0, no sound played. 
+    // Mostly, they will be ignored when not present int he implementing 
+    // class in a more complete version. 
     // --------------------------------------------------------------------
 
     /** Simplest: play whole buffer at default amplitude and pitch. */

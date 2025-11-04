@@ -14,35 +14,36 @@ import net.paulhertz.pixelaudio.voices.SimpleADSR;
  *  - Otherwise, falls back to a manual "SimpleADSR" tick inside nextSample().
  */
 public class PASamplerVoice {
-    private static long NEXT_VOICE_ID = 0;
-
+	private boolean isFindZeroCrossing = false;    // if true, shift start to a zero crossing (does not change the buffer, change initial sample position)
+	private boolean isMicroFadeIn = false;         // if true, impose a mini-envolope on buffer values at start (changes the buffer)
+	// buffer
     private float[] buffer;
     private float playbackSampleRate;
-
+    // voices
+	private static long NEXT_VOICE_ID = 0;
     private long voiceId;
     private boolean active;
     private boolean looping;
-
+    // sample indexing
     private int start;
     private int end;
     private float position;
     private float rate;
     private float gain;
     private float pan;
-
     // --- Envelope handling ---
-    private ADSR envelope;         // Minim envelope (UGen)
-    private Constant envCarrier;   // Input UGen for ADSR (only used if patched)
-    private SimpleADSR fallbackEnv; // Fallback software envelope
-    private final float[] envFrame = new float[1];
-
-    private boolean released = false;
-    private int silenceCounter = 0;
-    private static final int SILENCE_THRESHOLD = 512;
+    private ADSR envelope;                         // Minim envelope (UGen), commented out
+    private Constant envCarrier;                   // Input UGen for ADSR (only used if patched)
     
+    private SimpleADSR fallbackEnv;                // Fallback software envelope, the one we will use
+    private final float[] envFrame = new float[1]; // frame for tick function
+    private boolean released = false;              // is the voice released
+    private boolean finished = false;
+        
     private static final boolean DEBUG = false;
     int frameCounter = 0;
 
+    
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
@@ -55,89 +56,67 @@ public class PASamplerVoice {
      * Activates this voice for playback.
      */
     public void activate(int start, int length, float gain,
-                         ADSRParams envParams, float pitch, float pan, boolean looping) {
-        // --- full state reset ---
-        this.active = false;       // prevent mid-update reuse
-        this.released = false;
-        this.looping = false;
-        this.silenceCounter = 0;
-        this.envelope = null;      // (if you ever reinstate Minim)
-        this.envCarrier = null;
-        this.fallbackEnv = null;   // guarantee fresh envelope each trigger
-    	
-        this.voiceId = NEXT_VOICE_ID++;
-        this.start = Math.max(0, start);
-        this.end = Math.min(buffer.length, start + Math.max(0, length));
-        this.active = (this.start < this.end);
-        this.position = this.start;
-        this.rate = pitch;
-        this.gain = gain;
-        this.pan = Math.max(-1f, Math.min(1f, pan));
-        this.looping = looping;
-        this.released = false;
-        this.silenceCounter = 0;
- 
-        // --- 1. optional zero-crossing adjustment ---
-        this.start = findZeroCrossing(this.start, 1);
-        this.position = this.start;
+    		ADSRParams envParams, float pitch, float pan, boolean looping) {
+    	// --- full state reset ---
+    	this.active = false;       // prevent mid-update reuse
+    	this.released = false;
+    	this.finished = false;
+    	this.looping = false;
+    	this.envelope = null;      // (if you ever reinstate Minim)
+    	this.envCarrier = null;
+    	this.fallbackEnv = null;   // guarantee fresh envelope each trigger
+    	// --- voice settings ---
+    	this.voiceId = NEXT_VOICE_ID++;
+    	this.start = Math.max(0, start);
+    	this.end = Math.min(buffer.length, start + Math.max(0, length));
+    	this.active = (this.start < this.end);
+    	this.position = this.start;
+    	this.rate = pitch;
+    	this.gain = gain;
+    	this.pan = Math.max(-1f, Math.min(1f, pan));
+    	this.looping = looping;
+    	this.released = false;
 
-     // --- 2. Envelope setup ---
-        if (envParams != null) {
-            try {
-                // Try Minim ADSR
-            	/*
-                this.envelope = envParams.toADSR();
-                this.envelope.setSampleRate(playbackSampleRate);
-                this.envCarrier = new Constant(envParams.getMaxAmp());
-                this.envCarrier.patch(this.envelope);
-                this.envelope.noteOn();
-                */
+    	// --- 1. optional zero-crossing adjustment ---
+    	if (isFindZeroCrossing) {
+    		this.start = findZeroCrossing(this.start, 1);
+    		this.position = this.start;
+    	}
 
-                // Initialize fallback envelope (software version)
-                this.fallbackEnv = new SimpleADSR(
-                        envParams.getAttack(),
-                        envParams.getDecay(),
-                        envParams.getSustain(),
-                        envParams.getRelease());
-                this.fallbackEnv.setSampleRate(playbackSampleRate);
-                this.fallbackEnv.noteOn();
-                
-                // --- 3. Pre-tick ADSR a few times to settle attack start ---
-                for (int i = 0; i < 5; i++) envelope.tick(envFrame);
-            }
-            catch (Exception e) {
-                // fallback only
-                this.envelope = null;
-                this.envCarrier = null;
-                this.fallbackEnv = new SimpleADSR(
-                        envParams.getAttack(),
-                        envParams.getDecay(),
-                        envParams.getSustain(),
-                        envParams.getRelease());
-                this.fallbackEnv.setSampleRate(playbackSampleRate);
-                this.fallbackEnv.noteOn();
-            }
-        }
-        else {
-            this.envelope = null;
-            this.envCarrier = null;
-            this.fallbackEnv = null;
-        }
+    	// --- 2. Envelope setup (fallback only) ---
+    	if (envParams != null) {
+    		this.fallbackEnv = new SimpleADSR(
+				envParams.getAttack(),
+				envParams.getDecay(),
+				envParams.getSustain(),
+				envParams.getRelease());
+    		this.fallbackEnv.setSampleRate(playbackSampleRate);
+    		this.fallbackEnv.noteOn();
 
-        // --- 4. Apply micro-fade-in to first few samples (1–2 ms) ---
-        int fadeSamples = Math.min(64, end - start);
-        float fadeAmp = 0f;
-        float fadeStep = 1f / fadeSamples;
-        for (int i = 0; i < fadeSamples; i++) {
-            buffer[start + i] *= fadeAmp;
-            fadeAmp += fadeStep;
-        }
+    		// Optional: "warm up" a few ticks
+    		for (int i = 0; i < 5; i++) this.fallbackEnv.tick();
+    	} 
+    	else {
+    		this.fallbackEnv = null;
+    	}
 
-        if (DEBUG && frameCounter++ % 2000 == 0) {
-            float debugEnv = (fallbackEnv != null) ? fallbackEnv.getValue() : envFrame[0];
-            System.out.printf("[Voice %d] idx=%d pos=%.2f env=%.4f gain=%.3f active=%b looping=%b released=%b%n",
-                              voiceId, getCurrentIndex(), position, debugEnv, gain, active, looping, released);
-        }
+    	// --- 4. Apply micro-fade-in to first few samples (1–2 ms) ---
+
+    	if (isMicroFadeIn) {
+    		int fadeSamples = Math.min(64, end - start);
+    		float fadeAmp = 0f;
+    		float fadeStep = 1f / fadeSamples;
+    		for (int i = 0; i < fadeSamples; i++) {
+    			buffer[start + i] *= fadeAmp;
+    			fadeAmp += fadeStep;
+    		}
+    	}
+
+    	if (DEBUG && frameCounter++ % 2000 == 0) {
+    		float debugEnv = (fallbackEnv != null) ? fallbackEnv.getValue() : envFrame[0];
+    		System.out.printf("[Voice %d] idx=%d pos=%.2f env=%.4f gain=%.3f active=%b looping=%b released=%b%n",
+    				voiceId, getCurrentIndex(), position, debugEnv, gain, active, looping, released);
+    	}
     }
 
     
@@ -189,14 +168,12 @@ public class PASamplerVoice {
             envValue = fallbackEnv.tick();
         }
 
-        float sample = buffer[idx] * gain * envValue;
+        float sample = buffer[idx] * gain * envValue;    // we have a sample
         position += rate;
 
-        // Silence auto-deactivation
-     // Envelope-driven deactivation (replaces silenceCounter logic)
+        // Envelope-driven deactivation (replaces silenceCounter logic)
         if (released) {
             boolean envDone = false;
-
             if (fallbackEnv != null) {
                 // If fallback envelope exists, check if it's finished
                 if (fallbackEnv.isFinished()) envDone = true;
@@ -205,9 +182,10 @@ public class PASamplerVoice {
                 // Minim ADSR: consider finished when envelope output nearly zero
                 if (envFrame[0] <= 1e-6f) envDone = true;
             }
-
             if (envDone) {
                 active = false;
+                released = false;
+                finished = true;
             }
         }
         return sample;
@@ -243,7 +221,15 @@ public class PASamplerVoice {
     }
     
     public boolean isActive() { return active; }
+    public boolean isReleasing() { return released && active; }
+    public boolean isFinished() {
+        // A voice is finished when inactive and envelope fully completed.
+        return !active && (fallbackEnv == null || fallbackEnv.isFinished());
+    }
+    
     public boolean isLooping() { return looping; }
+    public void setLooping(boolean looping) { this.looping = looping; }
+
     public float getPosition() { return position; }
     public float getGain() { return gain; }
     public float getPan() { return pan; }
@@ -255,16 +241,30 @@ public class PASamplerVoice {
     public synchronized void setPlaybackSampleRate(float newRate) {
         if (newRate > 0f) this.playbackSampleRate = newRate;
     }
-    public void setLooping(boolean looping) { this.looping = looping; }
-    public boolean isReleasing() { return released; }
 
     
-    public void resetPosition() {
+    
+    public boolean isFindZeroCrossing() {
+		return isFindZeroCrossing;
+	}
+	public void setFindZeroCrossing(boolean isFindZeroCrossing) {
+		this.isFindZeroCrossing = isFindZeroCrossing;
+	}
+
+	public boolean isMicroFadeIn() {
+		return isMicroFadeIn;
+	}
+	public void setMicroFadeIn(boolean isMicroFadeIn) {
+		this.isMicroFadeIn = isMicroFadeIn;
+	}
+
+	public void resetPosition() {
         this.start = 0;
         this.end = (buffer != null ? buffer.length : 0);
         this.position = 0f;
         this.released = false;
         this.active = false;
+        this.finished = false;
     }
 
     /**

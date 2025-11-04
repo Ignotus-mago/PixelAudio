@@ -18,9 +18,7 @@ package net.paulhertz.pixelaudio.voices;
 public class SimpleADSR {
     private float attackTime, decayTime, sustainLevel, releaseTime;
     private float value = 0f;
-
     private boolean attackPhase, decayPhase, sustainPhase, releasePhase;
-
     private float attackInc, decayDec, releaseDec;
     private float sampleRate = 44100f;
 
@@ -83,6 +81,7 @@ public class SimpleADSR {
     }
 
     public float getValue() { return value; }
+    
     public boolean isReleasing() { return releasePhase; }
 
     /** True when envelope is idle (at zero). */
