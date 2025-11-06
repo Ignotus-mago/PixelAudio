@@ -196,6 +196,7 @@ public class PASamplerVoice {
     // ------------------------------------------------------------------------
     // Optional features
     // ------------------------------------------------------------------------
+    
     private void applyMicroFadeIn() {
         int fadeSamples = Math.min(64, end - start);
         float fadeAmp = 0f;
@@ -224,4 +225,15 @@ public class PASamplerVoice {
 
     public boolean isMicroFadeIn() { return isMicroFadeIn; }
     public void setMicroFadeIn(boolean val) { this.isMicroFadeIn = val; }
+    
+    // TODO consider a utility class for tailoring audio sample arrays with normalization, DC subtraction, etc.
+    /*
+     *   // worth considering for noise reduction, but the sum call is not supported in Java Arrays
+    public float[] subtractDC(float[] buffer) {
+    	float mean = Arrays.stream(buffer).sum() / buffer.length;
+    	for (int i = 0; i < buffer.length; i++) buffer[i] -= mean;
+    	return buffer;
+    }
+    */
+    
 }
