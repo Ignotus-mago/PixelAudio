@@ -1,47 +1,66 @@
 /*
- * This example application completes the first part of Tutorial One for the PixelAudio 
- * library for Processing. It provides methods for generating a rainbow color array that
- * can reveal the structure of an audio path, a curve that maps audio signals onto an image.
- * It can open and display audio and image files, transcode image pixel data to audio samples
- * and transcode audio samples to image pixel data, and save audio and image files. It can 
+ * This example application builds on TutorialOne_01_FileIO, which provided commands to
+ * open and display audio and image files, transcode image pixel data to audio samples
+ * and transcode audio samples to image pixel data, and save audio and image files. It can
  * respond to mouse clicks by playing the audio samples corresponding to the click location
- * in the display image. It is designed to be a good starting place for your own coding. 
+ * in the display image.
  *
- * >>>>>  We add animation and saving to video <<<<< in this very sketch
- * 
+ * We add animation and saving to video in this sketch, which also provides a complete version
+ * of the playSample(...) command that can control the pitch and panning of an audio event.
+ * Animation is simple: we shift the pixels along the signal path. We keep track of how far
+ * the pixels have been shifted and use that information to determine the correct location
+ * in the audio buffer to trigger an audio event with playSample(). If you are looking at
+ * an image that represents audio data, such as Saucer_mixdown.wav, you can see how animation
+ * changes the apparent position of the audio data. When animation is running, repeated clicks
+ * at the same location in the window will trigger different audio events.
+ *
+ * The playSample() methods in this sketch introduce the most complete audio triggering
+ * method available in PASamplerInstrument, one which can set sample start position, length,
+ * amplitude, ADSR-style envelope, pitch scaling and stereo pan location.
+ *
+ *   samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env, pitchScaling, pan);
+ *
+ * Pitch scaling by default is 1.0, which is to say that samples will be played back at
+ * the recorded frequency. The recorded frequency is not necessarily the same as the audio
+ * output frequency, which is
+ *
+ *
+ * Here are the primary changes from the FileIO tutorial:
+ *
  *     import the video export library, com.hamoid.*, a Processing library
  *     add animation and video variables
  *     add animate() method
  *     modify draw() loop
- *     create mouseDragged() and mouseReleased() methods
- *     add key commands, edit showHelp() and test
- *     add updateAudio() method, test
+ *     create mouseDragged() and mouseReleased() methods to handle
+ *       interactive setting of animation step size
+ *     new key commands, descriptions added to showHelp() method
+ *     updateAudio() method tracks number of pixels shifted by animation
  *     add logic in chooseFile() and fileSelected() to pause animation when opening a file
  *     add video variables and key commands
  *     add stepAnimation() and renderFrame() methods, edit animate() method to call these new methods
  *     add doRain method and key command to trigger rain
  *
- *   1. Launch the sketch and press the 'o' key to open an audio or image file.
- *   2. As in the previous tutorial, the file loads to both audio buffer and display image. 
- *   3. Click on the image to trigger audio events. 
- *   4. Press the space bar to start or stop animation. Animation consists of rotating the image
- *      pixels along the signal path in the renderFrame() methdo. The audio buffer is also rotated, 
- *      in the updateAudio() method. By rotating both the image and the audio buffer, we keep
- *      pixels and audio samples aligned. 
- *   5. Press the 'r' key to turn random audio events ("it's raining") on and off. 
- *   6. If you press 'o' to open a file while animation is running, animation will stop. 
- *      This is a precaution, followed in later example sketches. The sketch, audio events, and
- *      file input all run in separate threads. We want to avoid having two different threads
- *      attempt to write to the audio buffer at the same time.  
- *
  * Still to come, as the tutorial advances:
  * -- drawing to trigger audio events
  * -- UDP communication with Max and other media applications
- * -- loading a file to memory and traversing it with a windowed buffer
- * 
+ * -- Windowed buffer use to load an audio file into memory and advance through it
+ *
+ * Press ' ' to turn animation on or off.
+ * Press 'a' to rotate pixels left by shift value.
+ * Press 'A' to rotate pixels right by shift value.
+ * Press 'm' to turn interactive setting of shift value on or off (drag to set).
+ * Press 'c' to apply color from image file to display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage .
+ * Press 'o' or 'O' to open an audio or image file.
+ * Press 'p' to select low pitch scaling or default pitch scaling.
+ * Press 'P' to select high pitch scaling or default pitch scaling.
+ * Press 'd' or 'D' to turn rain on and off.
+ * Press 'r' or 'R' to set isRandomADSR, to use default envelope or a random choice.
+ * Press 'V' to record a video from frame 0 to frame animSteps.
+ * Press 'h' or 'H' to show help message.
+ *
  */
 
-import java.awt.Color;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -61,11 +80,9 @@ import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 //audio library
 import ddf.minim.*;
-import ddf.minim.ugens.*;
 
 //video export library
 import com.hamoid.*;
-
 
 // PixelAudio vars and objects
 PixelAudio pixelaudio;     // our shiny new library
@@ -88,6 +105,7 @@ String audioFilePath;
 String audioFileName;
 String audioFileTag;
 int audioFileLength;
+
 // image file
 File imageFile;
 String imageFilePath;
@@ -96,37 +114,37 @@ String imageFileTag;
 int imageFileWidth;
 int imageFileHeight;
 
+
 /* ------------------------------------------------------------------ */
 /*                          AUDIO VARIABLES                           */
 /* ------------------------------------------------------------------ */
 
 /*
- * 
- * Audio playback support is added with the audio variables and audio methods 
- * (below, in Eclipse, in a tab, in Processing). You will also need the 
+ *
+ * Audio playback support is added with the audio variables and audio methods
+ * (below, in Eclipse, in a tab, in Processing). You will also need the
  * PASamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
  * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
- * and call runTimeArray() in your draw method. 
- * 
+ * and call runTimeArray() in your draw method.
+ *
  */
- 
+
 /** Minim audio library */
-Minim minim;                    // library that handles audio 
-AudioOutput audioOut;           // line out to sound hardware
+Minim minim;                    // library that handles audio
+AudioOutput audioOut;           // output to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-float sampleRate = 48000;       // a critical value for display and audio, see the setup method
+float sampleRate = 44100;       // sample rate of audioOut
+float fileSampleRate;           // sample rate of most recently opened file
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
-int samplePos;                  // an index into the audio signal, set when audio events are triggered
+int samplePos;                  // index into the audio signal, set when an audio event is triggered
 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
-// SampleInstrument setup
 // SampleInstrument setup
 int noteDuration = 1500;        // average sample synth note duration, milliseconds
 int samplelen;                  // calculated sample synth note length, samples
-Sampler audioSampler;           // minim class for sampled sound
-PASamplerInstrument synth;      // instance of a local class to wrap audioSampler
+PASamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
 // ADSR and its parameters
-ADSRParams adsrParams;          // good old attack, decay, sustain, release
+ADSRParams defaultEnv;          // wrapper for ADSR that keeps its values visible
 float maxAmplitude = 0.7f;      // 0..1
 float attackTime = 0.1f;        // seconds
 float decayTime = 0.3f;         // seconds
@@ -134,23 +152,24 @@ float sustainLevel = 0.25f;     // 0..1
 float releaseTime = 0.1f;       // seconds
 ArrayList<ADSRParams> adsrList; // list of ADSR values
 boolean isRandomADSR = false;   // choose a random envelope from adsrList, or not
+float pitchScaling = 1.0f;      // factor for changing pitch
+float defaultPitchScaling = 1.0f;
+float lowPitchScaling = 0.5f;
+float highPitchScaling = 2.0f;
 
 // interaction variables for audio
 int sampleX;                    // x-coordinate of audio event, set when an audio event is triggered
 int sampleY;                    // y-coordinate of audio event, set when an audio event is triggered
 ArrayList<TimedLocation> timeLocsArray;
-int count = 0;  
+int count = 0;
 int fileIndex = 0;
 
-// ** LOCAL ** Audio Variables for YOUR Processing app may go here ** //
-
-/* ---------------- end audio variables ---------------- */
 
 /* ------------------------------------------------------------------ */
 /*                   ANIMATION AND VIDEO VARIABLES                    */
 /* ------------------------------------------------------------------ */
-  
-int shift = 64;                      // number of pixels to shift the animation
+
+int shift = 256;                     // number of pixels to shift the animation
 int totalShift = 0;                  // cumulative shift
 boolean isAnimating = false;         // do we run animation or not?
 boolean oldIsAnimating;              // keep track of animation state when opening a file
@@ -163,9 +182,7 @@ int videoFrameRate = 24;             // fps
 int step;                            // number of current step in animation loop, used when recording video
 VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
 
-// ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **  //
 
-  
 public void settings() {
   size(3 * genWidth, 2 * genHeight);
 }
@@ -174,8 +191,8 @@ public void setup() {
   frameRate(24);
   // initialize our library
   pixelaudio = new PixelAudio(this);
-  // create a PixelMapGen subclass such as MultiGen, with dimensions equal to our display window
-  // the call to hilbertLoop3x2() produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
+  // create a PixelMapGen subclass such as MultiGen, with dimensions equal to the display window
+  // the call to hilbertLoop3x2 produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
   // genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
   multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
   // create a PixelAudioMapper to handle the mapping of pixel colors to audio samples
@@ -189,12 +206,6 @@ public void setup() {
   showHelp();
 }
 
-// turn off audio processing when we exit
-public void stop() {
-  if (synth != null) synth.close();
-  if (minim != null) minim.stop();
-  super.stop();
-}
 
 /**
  * Generates an array of rainbow colors using the HSB color space.
@@ -211,7 +222,7 @@ public int[] getColors(int size) {
   popStyle(); // restore styles, including the default RGB color space
   return colorWheel;
 }
-  
+
 /**
  * Initialize mapImage with the colors array. MapImage will handle the color data for mapper
  * and also serve as our display image.
@@ -225,7 +236,7 @@ public void initImages() {
 
 public void draw() {
   image(mapImage, 0, 0);
-  if (isRaining) 
+  if (isRaining)
     doRain();
   runTimeArray();    // animate audio event markers
   if (isAnimating) {
@@ -236,12 +247,12 @@ public void draw() {
     writeToScreen("shift = "+ shift, 16, 24, 24, false);
   }
 }
-  
+
 public void animate() {
-  stepAnimation();      // handle animation step count and video recording
+  stepAnimation();
   renderFrame(step);
 }
-  
+
 /**
  * Step through the animation, called by the draw() method.
  * Will also record a frame of video, if we're recording.
@@ -270,11 +281,11 @@ public void stepAnimation() {
     }
   }
 }
-  
+
 /**
- * Renders a frame of animation: moving along the signal path, copies mapImage pixels into rgbSignal, 
+ * Renders a frame of animation: moving along the signal path, copies mapImage pixels into rgbSignal,
  * rotates them shift elements left, writes them back to mapImage.
- * 
+ *
  * @param step   current animation step
  */
 public void renderFrame(int step) {
@@ -296,7 +307,7 @@ public void renderFrame(int step) {
 public void updateAudio() {
   PixelAudioMapper.rotateLeft(audioSignal, shift);
 }
-  
+
 /**
  * drop some random audio events, like unto the gentle rain
  */
@@ -306,15 +317,16 @@ public void doRain() {
   int samplePos = (int) random(sampleLength, mapSize - sampleLength - 1);
   int[] coords = mapper.lookupCoordinate(samplePos);
   setSampleVars(coords[0], coords[1]);    // set sampleX, sampleY and samplePos
+  float panning = map(sampleX, 0, width, -0.8f, 0.8f);
   // println("----- Rain samplePos = "+ samplePos);
-  adsrParams = adsrList.get((int)random(3));
-  playSample(samplePos, calcSampleLen(), 0.4f, adsrParams);
+  ADSRParams env = adsrList.get((int)random(3));
+  playSample(samplePos, calcSampleLen(), 0.4f, env, panning);
 }
 
 /**
  * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
  * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
- * 
+ *
  * @param msg     message to write
  * @param x       x coordinate
  * @param y       y coordinate
@@ -339,19 +351,19 @@ public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite)
  * The built-in mousePressed handler for Processing, but note that it forwards mouse coords to audiMousePressed().
  */
 public void mousePressed() {
-  println("mousePressed:", mouseX, mouseY);
+  // println("mousePressed:", mouseX, mouseY);
   // handle audio generation in response to a mouse click
   audioMousePressed(mouseX, mouseY);
 }
 
 public void mouseDragged() {
-    if (isTrackMouse) {
-      shift = abs(width/2 - mouseX);
-      if (mouseY < height/2) {
-        shift = -shift;
-      }
-      writeToScreen("shift = "+ shift, 16, 24, 24, false);
+  if (isTrackMouse) {
+    shift = abs(width/2 - mouseX);
+    if (mouseY < height/2) {
+      shift = -shift;
     }
+    writeToScreen("shift = "+ shift, 16, 24, 24, false);
+  }
 }
 
 public void mouseReleased() {
@@ -364,45 +376,73 @@ public void mouseReleased() {
  * built-in keyPressed handler, forwards events to parseKey
  */
 public void keyPressed() {
-  parseKey(key, keyCode);    
+  parseKey(key, keyCode);
 }
 
 /**
- * Handles key press events passed on by the built-in keyPressed method. 
- * By moving key event handling outside the built-in keyPressed method, 
+ * Handles key press events passed on by the built-in keyPressed method.
+ * By moving key event handling outside the built-in keyPressed method,
  * we make it possible to post key commands without an actual key event.
- * Methods and interfaces and even other threads can call parseKey(). 
- * This opens up many possibilities and a some dangers, too.  
- * 
+ * Methods and interfaces and even other threads can call parseKey().
+ * This opens up many possibilities and a some dangers, too.
+ *
  * @param key
  * @param keyCode
  */
 public void parseKey(char key, int keyCode) {
   switch(key) {
-  case ' ':
+  case ' ': // turn animation on or off
     isAnimating = !isAnimating;
     println("-- animation is " + isAnimating);
     break;
-  case 'm':
+  case 'a': // rotate pixels left by shift value
+    renderFrame(step);
+    break;
+  case 'A': // rotate pixels right by shift value
+    shift = -shift;
+    renderFrame(step);
+    shift = -shift;
+    break;
+  case 'm': // turn interactive setting of shift value on or off (drag to set)
     isTrackMouse = !isTrackMouse;
     println("-- mouse tracking is " + isTrackMouse);
     break;
   case 'c': // apply color from image file to display image
     chooseColorImage();
     break;
-  case 'k': // apply the hue and saturation in the colors array to mapImage 
+  case 'k': // apply the hue and saturation in the colors array to mapImage
     mapImage.loadPixels();
     applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
     mapImage.updatePixels();
     break;
-  case 'o': case 'O': // open an audio or image file
+  case 'o':
+  case 'O': // open an audio or image file
     chooseFile();
     break;
-  case 'r': case 'R': // turn rain on and off
+  case 'p': // select low pitch scaling or default pitch scaling
+    if (pitchScaling != lowPitchScaling)
+      pitchScaling = lowPitchScaling;
+    else
+      pitchScaling = defaultPitchScaling;
+    break;
+  case 'P': // select high pitch scaling or default pitch scaling
+    if (pitchScaling != highPitchScaling)
+      pitchScaling = highPitchScaling;
+    else
+      pitchScaling = defaultPitchScaling;
+    break;
+  case 'd':
+  case 'D': // turn rain on and off
     isRaining = !isRaining;
     println(isRaining ? "It's raining" : "It's not raining");
     break;
-  case 'V':
+  case 'r':
+  case'R': // set isRandomADSR, to use default envelope or a random choice
+    isRandomADSR = !isRandomADSR;
+    String msg = isRandomADSR ? " synth uses a random ADSR" : " synth uses default ADSR";
+    println("---- isRandomADSR = "+ isRandomADSR +","+ msg);
+    break;
+  case 'V': // record a video from frame 0 to frame animSteps
     // records a complete video loop with following actions:
     // Go to frame 0, turn recording on, turn animation on.
     // This will record a complete video loop, from frame 0 to the
@@ -413,7 +453,8 @@ public void parseKey(char key, int keyCode) {
     oldIsAnimating = isAnimating;
     isAnimating = true;
     break;
-  case 'h': case 'H':
+  case 'h':
+  case 'H': // show help message
     showHelp();
     break;
   default:
@@ -423,19 +464,24 @@ public void parseKey(char key, int keyCode) {
 
 public void showHelp() {
   println(" * Press ' ' to turn animation on or off.");
-  println(" * Press 'm' to turn mouse tracking on or off (controls animation speed).");
+  println(" * Press 'a' to rotate pixels left by shift value.");
+  println(" * Press 'A' to rotate pixels right by shift value.");
+  println(" * Press 'm' to turn interactive setting of shift value on or off (drag to set).");
   println(" * Press 'c' to apply color from image file to display image.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
   println(" * Press 'o' or 'O' to open an audio or image file.");
-  println(" * Press 'r' or 'R' to turn rain on and off.");
-  println(" * Press 'V' to record a video sequence.");
-  println(" * Press 'h' or 'H' to show help and key commands in the console.");
+  println(" * Press 'p' to select low pitch scaling or default pitch scaling.");
+  println(" * Press 'P' to select high pitch scaling or default pitch scaling.");
+  println(" * Press 'd' or 'D' to turn rain on and off.");
+  println(" * Press 'r' or 'R' to set isRandomADSR, to use default envelope or a random choice.");
+  println(" * Press 'V' to record a video from frame 0 to frame animSteps.");
+  println(" * Press 'h' or 'H' to show help message.");
 }
 
 /**
  * Utility method for applying hue and saturation values from a source array of RGB values
  * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- * 
+ *
  * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
  * @param graySource     an target array of RGB data from which to obtain brightness values
  * @param lut            a lookup table, must be the same size as colorSource and graySource
@@ -443,9 +489,9 @@ public void showHelp() {
  * @throws IllegalArgumentException if array arguments are null or if they are not the same length
  */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
-  if (colorSource == null || graySource == null || lut == null) 
+  if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
-  if (colorSource.length != graySource.length || colorSource.length != lut.length) 
+  if (colorSource.length != graySource.length || colorSource.length != lut.length)
     throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
   // initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
   float[] hsbPixel = new float[3];

@@ -1,7 +1,7 @@
 /**
  * TutorialOne_00_BeginHere
  * 
- * This tutorial give you the bare bones for a PixelAudio application. It shows up in all 
+ * This tutorial give you the bare bones for a PixelAudio application, which appear in all 
  * the tutorials that follow. The fundamental concept of PixelAudio is that the pixels in
  * an image and the samples in an audio signal can be put into one-to-one correspondence. 
  * In other words, there are just as many pixels as there are samples, and every pixel has
