@@ -17,8 +17,7 @@ public interface PASampler {
      * @param pan          location of audio event in stereo field, -1.0f = left, 0.0f = center, 1.0f = right
      * @return             actual duration of event in samples, typically sampleLen + envelope release time
      */
-    int play(int samplePos, int sampleLen, float amplitude,
-             ADSRParams env, float pitch, float pan);
+    int play(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch, float pan);
 
     /** Returns true if any currently active voice is looping. */
     boolean isLooping();

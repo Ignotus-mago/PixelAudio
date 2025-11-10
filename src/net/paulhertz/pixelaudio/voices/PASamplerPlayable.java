@@ -19,7 +19,7 @@ public interface PASamplerPlayable extends PAPlayable {
     // Backward-compatible playSample(...) overloads
     // TODO decide behavior of methods with -1 sampleLen argument, at the 
     // moment the expectation is that they return 0, no sound played. 
-    // Mostly, they will be ignored when not present int he implementing 
+    // Mostly, they will be ignored when not present in the implementing 
     // class in a more complete version. 
     // --------------------------------------------------------------------
 

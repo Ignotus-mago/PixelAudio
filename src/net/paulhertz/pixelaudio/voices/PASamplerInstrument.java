@@ -33,7 +33,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	private int maxVoices;
 
 	// Sample rate information
-	private float bufferSampleRate;  // sample rate at which buffer was loaded
+	private float bufferSampleRate;  // sample rate of source from which buffer was loaded
 	private float outputSampleRate;  // sample rate of AudioOutput
 	private float sampleRateRatio;   // bufferRate / outputRate, used to correct playback speed
 

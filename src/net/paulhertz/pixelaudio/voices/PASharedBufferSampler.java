@@ -250,7 +250,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         
     public int countAvailableVoices() {
         int n = 0;
-        for (var v : voices) if (!v.isActive() && !v.isReleasing()) n++;
+        for (PASamplerVoice v : voices) if (!v.isActive() && !v.isReleasing()) n++;
         return n;
     }
 

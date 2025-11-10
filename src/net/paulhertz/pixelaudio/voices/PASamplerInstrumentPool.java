@@ -40,9 +40,9 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     private float globalPan = 0.0f;      // -1..+1 left to right panning
 
     // Output / buffer timing info (useful now; essential for TimedLocation later)
-    private float outputSampleRate;
     private int outputBufferSize;        // frames per audio callback
-    private float bufferSampleRate;      // nominal rate of the currently assigned buffer
+	private float bufferSampleRate;      // sample rate of source from which buffer was loaded
+	private float outputSampleRate;      // sample rate of AudioOutput
 
 
     // ------------------------------------------------------------------------
