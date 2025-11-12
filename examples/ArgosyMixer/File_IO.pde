@@ -1,19 +1,22 @@
+// ------------- SAVE IMAGE FILE ------------- //
+
 /**
- * Starts the image saving event chain. 
+ * Starts the image saving event chain.
  */
 public void saveImage() {
   // File folderToStartFrom = new File(dataPath(""));
   selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
 }
+
 /**
  * Handles image file output once an output file is selected.
- * 
+ *
  * @param selection    an output file for the image, forwarded from saveImage()
  */
 public void imageFileSelectedWrite(File selection) {
   if (selection == null) {
-      println("Window was closed or the user hit cancel.");
-      return;      
+    println("Window was closed or the user hit cancel.");
+    return;
   }
   String fileName = selection.getAbsolutePath();
   if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
@@ -24,7 +27,7 @@ public void imageFileSelectedWrite(File selection) {
 
 /**
  * Saves display image to a specified file.
- * 
+ *
  * @param img         image to save, reference to a PImage
  * @param fileName    name of the file to save, typically a fully qualified file path + file name
  */
@@ -54,16 +57,20 @@ public void saveToAudio(boolean isStereo) {
   if (!isStereo) {
     try {
       PixelAudio.saveAudioToFile(argo1Signal, sampleRate, "argo1_" + fileIndex + ".wav");
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       println("--->> There was an error outputting the audio file argo1_"+ fileIndex +".wav"+ e.getMessage());
-    } catch (UnsupportedAudioFileException e) {
+    }
+    catch (UnsupportedAudioFileException e) {
       println("--->> The file format is unsupported " + e.getMessage());
     }
     try {
       PixelAudio.saveAudioToFile(argo2Signal, sampleRate, "argo2_" + fileIndex + ".wav");
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       println("--->> There was an error outputting the audio file argo2_"+ fileIndex +".wav"+ e.getMessage());
-    } catch (UnsupportedAudioFileException e) {
+    }
+    catch (UnsupportedAudioFileException e) {
       println("--->> The file format is unsupported " + e.getMessage());
     }
     fileIndex++;
@@ -71,9 +78,11 @@ public void saveToAudio(boolean isStereo) {
   else {
     try {
       PixelAudio.saveStereoAudioToFile(argo1Signal, argo2Signal, sampleRate, "argo1+2_" + fileIndex + ".wav");
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       println("--->> There was an error outputting the audio file argo1+2"+ fileIndex +".wav"+ e.getMessage());
-    } catch (UnsupportedAudioFileException e) {
+    }
+    catch (UnsupportedAudioFileException e) {
       println("--->> The file format is unsupported " + e.getMessage());
     }
     fileIndex++;
