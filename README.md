@@ -30,8 +30,9 @@ PixelAudio is at the beta testing stage, functional but incomplete. You can down
 
 Version 0.9-beta, May 31, 2025: Composer Christopher Walczak and I used the `WaveSynth`, `Argosy` and `Lindenmayer` classes to produce the music and animation for [Campos | Temporales](https://vimeo.com/856300250 "Campos | Temporales") (2023). These classes are substantially complete and supported by example code: [ArgosyMixer](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples/ArgosyMixer "ArgosyMixer") and  [WaveSynthEditor](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples/WaveSynthEditor "WaveSynthEditor"). Notably, these examples support simultaneous audio and image generation, as does the "performance example app," [AriaDemoApp](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples/AriaDemoApp "AriaDemoApp").
 
-**TODO**: The base code is not likely to change much, but testing is not complete. I still have to complete work on the "peel' and "stamp" methods in `PixelAudioMapper`. UDP/OSC interfacing (with Max, in my example code) is working but in need of both definition and elaboration. 
+Version 0.9.5-beta, November 12, 2025: A new package of classes to support digital audio sampling synthesis, [net.paulhertz.pixelaudio.voices](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/voices), is a major addition to PixelAudio and replaces previous audio generation classes, which were mostly created withing Processing. The tutorials provide an introduction to the use of `PASamplerInstrument` and `PASamplerInstruemntPool`. The next release will document the use of `PASamplerInstrumentPoolMulti`. 
 
+**TODO**: The "peel' and "stamp" methods in `PixelAudioMapper` are still awaiting example code. For the next release, I also expect to add an audio-rate scheduler, probably by modifiying `TimedLocation` to work in its own thread, independent of the `draw()` loop. A genuine granular sysnthesis class should round out the library. Other developments will probably arrive after the publication version, PixelAudio 1.0.
 
 
 
