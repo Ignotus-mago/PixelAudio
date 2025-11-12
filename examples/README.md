@@ -26,6 +26,8 @@ As of November 12, 2025, we have these examples, in the suggested order for lear
 - **ArgosyMixer**: create Argosy patterns with a GUI, play them as audio, export animations to video.
 - **AudioCapture**: capture streaming or live audio and turn it into a bitmap.
 
+The tutorial is designed to get you up and running with creating your own sampling audio synth, where you draw on an image to generate non-linear samples from an audio file. 
+
 You can open library examples with the Processing File menu->Examples... command. 
 Look for PixelAudio in the Look for PixelAudio in the Contributed LIbraries in the Java Examples. 
 This is the recommended way to explore PixelAudio features. 
