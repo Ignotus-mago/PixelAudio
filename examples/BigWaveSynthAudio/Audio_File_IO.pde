@@ -18,8 +18,6 @@ public void saveToAudio() {
   }
 }
 
-
-
 /**
  * Saves to a 32-bit floating point format that has higher resolution than 16-bit integer PCM. 
  * The format can't be opened by Processing but can be opened by audio applications. 

@@ -1,41 +1,59 @@
 /**
  * LoadImageToAudio shows how to load an image and turn it into an audio file
- * that can be played by clicking on the image. It will probably be noisy, both because
- * it's an image and because its resolution is only 8 bits. When you load an audio, it
- * will exist both as a floating point audio signal and as an image. When you
- * click in the image, you will be playing a sample from the signal. You can write
- * the image to the audio signal ('w' key command).
+ * that can be played by clicking on the image. You can also load an audio file
+ * and turn it into an image.
+ *
+ * You can write the current image to the audio signal with the 'w' key command.
+ * The sound of an image will probably be noisy since it is not designed with cyclic
+ * functions along the arbitrary signal path we impose on it with a PixelMapGen.
+ * RGB values range in integer steps from 0 to 255. When we transcode them to
+ * audio values in the range (-1.0, 1.0), we have less resolution than the full
+ * range of floating point values. There's always some noise in values transcoded
+ * from images. In most of the examples for the PixelAudio library when you load
+ * an audio file and it gets transcoded into an image, we still use the audio
+ * signal with all its resolution to play sounds. When you click in the image,
+ * you will be playing a sample from the signal.
+ *
+ * You can write the audio signal to the image with the 'W' key command. This will
+ * convert the audioSignal into HSB Brightness values and write them to mapImage.
+ * If you open this image in all color channels or in the HSB Brightness channel
+ * and then write it to the audio channel, you will get a reasonably good recreation
+ * of the audio, at 8-bit resolution.
  *
  * An audio signal or image can be loaded to various channels of the image: Red,
- * Green, Blue or all channels in the RGB color space or Hue or Brightness in the
- * HSB color space (We ignore Saturation for now). 
+ * Green, Blue or all channels in the RGB color space or Hue, Brightness, or
+ * Saturation in the HSB color space. HSB Hue operations on grayscale images may
+ * result in no change to the image. Grayscale images have no saturation or hue,
+ * only brightness, when they are represented in the HSB color space. Loading the
+ * saturation of a grayscale image or a transcoded audio file to a color image
+ * will turn it gray. To work more effectively with HSB, we can load both hue and
+ * saturation from a color image to another color image or to a grayscale image,
+ * maintaining the brightness channel of the target image, with the 'c' command key.
  *
  * You can enhance image contrast by stretching its histogram ('m' key).
  * You can make the image brighter ('=' and '+' keys) or darker ('-' or '_' key)
  * using a gamma function, a non-linear adjustment.
  *
  * Press ' ' to toggle animation.
- * Press 'o' to load an image or audio file to all color channels.
- * Press 'r' to load an image or audio file to the red color channel.
- * Press 'g' to load an image or audio file to the green color channel.
- * Press 'b' to load an image or audio file to the blue color channel.
- * Press 'h' to load an image or audio file to the HSB hue channel.
- * Press 'v' to load an image or audio file to the HSB saturation (vibrance) channel.
- * Press 'l' to load an image or audio file to the HSB brightness (lightness) channel.
- * Press 'O' to reload the most recent audio or image file.
- * Press 'k' or 'K' to load the color spectrum along the signal path over the most recent image.
- * Press 'm' to apply a contrast enhancement (histogram stretch) to the image.
- * Press '=' or '+' to make the image brighter
- * Press '-' or '_' to make the image darker.
- * Press 's' to save to an audio file.
- * Press 'S' to save to an image file.
- * Press 'f' to show frameRate in the console.
- * Press 'w' to write the image to the audio buffer (expect noise)
- * Press '1' to set sampleRate to 44100Hz
- * Press '2' to set sampleRate to 22050Hz
- * Press '3' to set sampleRate to 11025Hz
- * Press '4' to set sampleRate to genWidth * genHeight = 262144Hz
- * Press '?' to show this help message.
+ * Press 'o' to open an audio or image file in all RGB channels.
+ * Press 'r' to open an audio or image file in the RED channel of the image.
+ * Press 'g' to open an audio or image file in the GREEN channel of the image.
+ * Press 'b' to open an audio or image file in the BLUE channel of the image.
+ * Press 'h' to open an audio or image file in the HSB Hue channel of the image.
+ * Press 'v' to open an audio or image file in the HSB Saturation channel of the image.
+ * Press 'l' to open an audio or image file in the HSB Brightness channel of the image.
+ * Press 'c' to apply color from an image file to the display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage .
+ * Press 'O' to reload the most recent image or audio file or show an Open File dialog.
+ * Press 'm' to remap the histogram of the image.
+ * Press '=' to use a gamma function to make the image lighter.
+ * Press '-' to use a gamma function to make the image darker.
+ * Press 'S' to save the audio signal to an audio file.
+ * Press 's' to save the image to a PNG file.
+ * Press 'f' to print the current frame rate to the console.
+ * Press 'w' to transcode the image and write it to the audio signal.
+ * Press 'W' to transcode the audio signal and write it to the image.
+ * Press '?' to show the Help Message in the console.
  *
  * PLEASE NOTE: Hue (H) and Saturation (V) operations may have no effect on gray pixels.
  * ALSO: Image brightness determines image audio. Images with uniform brightness will be silent.
@@ -45,15 +63,15 @@
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 import javax.sound.sampled.*;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import ddf.minim.*;
-import ddf.minim.ugens.*;
 
 import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.voices.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
+
 
 // PixelAudio vars and objects
 PixelAudio pixelaudio;     // our shiny new library
@@ -67,27 +85,27 @@ int mapSize;              // size of the display bitmap, audio signal, wavesynth
 PImage mapImage;          // image for display
 PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
 int[] colors;             // array of spectral colors
-boolean isBlending = false;
+
+// Java random number generator
+Random rando;
 
 /** Minim audio library */
 Minim minim;              // library that handles audio
 AudioOutput audioOut;     // line out to sound hardware
-MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
+MultiChannelBuffer playBuffer;     // data structure to hold audio samples
 boolean isBufferStale = false;     // do we need to reset the audio buffer?
-int sampleRate = 41500;   // ----->> a critical value, see the setup method <<-----
+float sampleRate = 44100;   // audioOut sample rate
 float[] audioSignal;      // the audio signal as an array
 int[] rgbSignal;          // the colors in the display image, in the order the signal path visits them
 int audioLength;
 int audioFileLength;
 
 // SampleInstrument setup
-float sampleScale = 4;
-int sampleBase = sampleRate / 4;
-int samplelen = (int) (sampleScale * sampleBase);
-Sampler audioSampler;     // minim class for sampled sound
-WFInstrument instrument;      // local class to wrap audioSampler
+int sampleLen;
+int durationMS = 2000;
+PASamplerInstrument synth;      // instrument to generate audio events
 // ADSR and params
-ADSR adsr;                // good old attack, decay, sustain, release
+ADSRParams adsr;                // good old attack, decay, sustain, release
 float maxAmplitude = 0.9f;
 float attackTime = 0.2f;
 float decayTime = 0.125f;
@@ -95,7 +113,6 @@ float sustainLevel = 0.5f;
 float releaseTime = 0.2f;
 
 // audio file
-String daPath;
 File audioFile;
 String audioFilePath;
 String audioFileName;
@@ -114,18 +131,20 @@ boolean isLoadFromImage = false;
 // animation
 boolean isAnimating = false;       // animation status
 boolean oldIsAnimating;            // keep old animation status if we suspend animation
-boolean isLooping = true;          // looping sample (our instrument ignores this
+int shift = 1024;                  // number of pixels to shift the animation
+int totalShift = 0;                // cumulative shift
+boolean isLooping = true;          // looping sample (our instrument ignores this)
 // interaction
-int sampleX;
-int sampleY;
-int samplePos;            // position of a mouse click along the signal path, index into the audio array
+int sampleX;      // x-coordinate of a sample point on the image
+int sampleY;      // y-coordinate of a sample point on the image
+int samplePos;    // position of a mouse click along the signal path, index into the audio array
 ArrayList<TimedLocation> timeLocsArray;
 int count = 0;
 // histogram and gamma adjustments
 int histoHigh = 240;
 int histoLow = 32;
-float gammaUp = 0.9f;
-float gammaDown = 1.2f;
+float gammaLighter = 0.9f;
+float gammaDarker = 1.2f;
 int[] gammaTable;
 
 
@@ -136,82 +155,50 @@ public void settings() {
 public void setup() {
   frameRate(30);
   pixelaudio = new PixelAudio(this);
-  minim = new Minim(this);
-  // sampleRate affects image display and audio sample calculation.
-  // For compatibility with other applications, including Processing, it's a good
-  // idea to use a standard sampling rate, like 44100 or 48000 However, you can 
-  // experiment with other sampling rates and probably can play audio and save files.
-  // The behavior of files with non-standard sampling rates when open them in 
-  // Processing can be unpredictable.
-  //
-  // Setting sampleRate = genWidth * genHeight provides interesting symmetries in
-  // the image and will play audio and save to file -- but it's not a standard sample rate
-  // and though Processing may open files saved with non-standard sampling rates, it
-  // usually shifts the frequency according the sampleRate you have set.
-  sampleRate = 44100; // = genWidth * genHeight;
-  sampleBase = sampleRate / 4;
-  initAudio();
+  sampleRate = 44100;
+  rando = new Random();
   genList = new ArrayList<PixelMapGen>();
-  multigen = hilbertLoop3x2(genWidth, genHeight);
+  multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
   mapper = new PixelAudioMapper(multigen);
   mapSize = mapper.getSize();
-  colors = getColors(); // create an array of rainbow colors
-  // instantiate the display image
-  mapImage = createImage(width, height, ARGB); // an image to use with mapper
-  // path to the folder where PixelAudio examples keep their data files
-  daPath = sketchPath("") + "../examples_data/";
-  // the audio file we want to open on startup
-  File audioSource = new File(daPath +"Saucer_mixdown.wav");
-  // load the file into audio buffer and Brightness channel of display image (mapImage)
-  fileSelected(audioSource);
-  // overlay colors on mapImage
-  mapImage.loadPixels();
-  applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
-  mapImage.updatePixels();
-  // instantiate timeLocsArray
+  initAudio();
+  initImage();
   timeLocsArray = new ArrayList<TimedLocation>();
-}
-
-public void initAudio() {
-  // use the getLineOut method of the Minim object to get an AudioOutput object
-  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
-  this.audioBuffer = new MultiChannelBuffer(1024, 1);
+  showHelp();
 }
 
 /**
- * Generates a looping fractal signal path consisting of 6 HilbertGens,
- * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
- * This particular MultiGen configuration was used so extensively in
- * my sample code that I've given it its own static method in HilbertGen.
- * 
- * Note that genW must be a power of 2 and genH == genW. For the 
- * image size we're using in this example, image width = 3 * genW
- * and image height = 2 * genH.
- * 
- * @param genW    width of each HilbertGen 
- * @param genH    height of each HilbertGen
- * @return
+ * Initialize audio variables
  */
-public MultiGen hilbertLoop3x2(int genW, int genH) {
-    // list of PixelMapGens that create a path through an image using PixelAudioMapper
-  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
-  // list of x,y coordinates for placing gens from genList
-  ArrayList<int[]> offsetList = new ArrayList<int[]>();     
-  genList.add(new HilbertGen(genW, genH, AffineTransformType.FX270));
-  offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(genW, genH, AffineTransformType.NADA));
-  offsetList.add(new int[] { genW, 0 });
-  genList.add(new HilbertGen(genW, genH, AffineTransformType.FX90));
-  offsetList.add(new int[] { 2 * genW, 0 });
-  genList.add(new HilbertGen(genW, genH, AffineTransformType.FX90));
-  offsetList.add(new int[] { 2 * genW, genH });
-  genList.add(new HilbertGen(genW, genH, AffineTransformType.R180));
-  offsetList.add(new int[] { genW, genH });
-  genList.add(new HilbertGen(genW, genH,AffineTransformType.FX270));
-  offsetList.add(new int[] { 0, genH });
-  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
+public void initAudio() {
+  this.minim = new Minim(this);
+  // use the getLineOut method of the Minim object to get an AudioOutput object
+  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
+  // create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
+  // playBuffer will not contain audio data until we load a file
+  this.playBuffer = new MultiChannelBuffer(mapSize, 1);
+  this.audioSignal = playBuffer.getChannel(0);
+  this.audioLength = audioSignal.length;
+  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
+  adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  // create a PASamplerInstrument with 8 voices, adsrParams will be its default envelope
+  synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, adsr);
 }
 
+/**
+ * Initialize mapImage and associated variables
+ */
+public void initImage() {
+  colors = getColors(); // create an array of rainbow colors
+  mapImage = createImage(width, height, ARGB); // an image to use with mapper
+  mapImage.loadPixels();
+  mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
+  mapImage.updatePixels();
+}
+
+/**
+ * @return an array of RGB colors that cover a full rainbow spectrum
+ */
 public int[] getColors() {
   int[] colorWheel = new int[mapSize]; // an array for our colors
   pushStyle(); // save styles
@@ -233,19 +220,21 @@ public void draw() {
 public void stepAnimation() {
   mapImage.loadPixels();
   rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
-  PixelAudioMapper.rotateLeft(rgbSignal, 16);
+  PixelAudioMapper.rotateLeft(rgbSignal, shift);
   mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
   mapImage.updatePixels();
+  totalShift += shift;
 }
 
 public void runTimeArray() {
   int currentTime = millis();
   timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.stopTime() < currentTime);
+    tl.setStale(tl.eventTime() < currentTime);
     if (!tl.isStale()) {
       drawCircle(tl.getX(), tl.getY());
     }
-  });
+  }
+  );
   timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
@@ -253,50 +242,55 @@ public void drawCircle(int x, int y) {
   fill(color(233, 220, 199, 128));
   noStroke();
   circle(x, y, 60);
-}  
+}
 
 public void keyPressed() {
   switch (key) {
-  case ' ':
+  case ' ': // toggle animation
     isAnimating = !isAnimating;
     break;
-  case 'o':
+  case 'o': // open an audio or image file in all RGB channels
     chan = PixelAudioMapper.ChannelNames.ALL;
     chooseFile();
     break;
-  case 'r':
+  case 'r': // open an audio or image file in the RED channel of the image
     chan = PixelAudioMapper.ChannelNames.R;
     chooseFile();
     break;
-  case 'g':
+  case 'g': // open an audio or image file in the GREEN channel of the image
     chan = PixelAudioMapper.ChannelNames.G;
     chooseFile();
     break;
-  case 'b':
+  case 'b': // open an audio or image file in the BLUE channel of the image
     chan = PixelAudioMapper.ChannelNames.B;
     chooseFile();
     break;
-  case 'h':
+  case 'h': // open an audio or image file in the HSB Hue channel of the image
     chan = PixelAudioMapper.ChannelNames.H;
     chooseFile();
     break;
-  case 'v':
+  case 'v': // open an audio or image file in the HSB Saturation channel of the image
     chan = PixelAudioMapper.ChannelNames.S;
     chooseFile();
     break;
-  case 'l':
+  case 'l': // open an audio or image file in the HSB Brightness channel of the image
     chan = PixelAudioMapper.ChannelNames.L;
     chooseFile();
     break;
-  case 'a':
-    isBlending = !isBlending;
-    println("-- isBlending is "+ isBlending);
+  case 'c': // apply color from an image file to the display image
+    chooseColorImage();
     break;
-  case 'O':
+  case 'k': // apply the hue and saturation in the colors array to mapImage
+    mapImage.loadPixels();
+    applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+    mapImage.updatePixels();
+    break;
+  case 'O': // reload the most recent image or audio file or show an Open File dialog
     if (isLoadFromImage) {
       if (imageFile == null) {
         chooseFile();
-      } else {
+      } 
+      else {
         // reload image
         loadImageFile(imageFile);
         println("-------->>>>> Reloaded image file");
@@ -312,48 +306,45 @@ public void keyPressed() {
       }
     }
     break;
-  case 'c': // apply color from image file to display image
-    chooseColorImage();
-    break;
-  case 'k': // apply the hue and saturation in the colors array to mapImage 
-    mapImage.loadPixels();
-    applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
-    mapImage.updatePixels();
-    break;
-  case 'm':
+  case 'm': // remap the histogram of the image
     mapImage.loadPixels();
     int[] bounds = getHistoBounds(mapImage.pixels);
     mapImage.pixels = stretch(mapImage.pixels, bounds[0], bounds[1]);
     mapImage.updatePixels();
     break;
-  case '=':
+  case '=': // use a gamma function to make the image lighter
   case '+':
-    setGamma(gammaUp);
+    setGamma(gammaLighter);
     mapImage.loadPixels();
     mapImage.pixels = adjustGamma(mapImage.pixels);
     mapImage.updatePixels();
     break;
-  case '-':
+  case '-': // use a gamma function to make the image darker
   case '_':
-    setGamma(gammaDown);
+    setGamma(gammaDarker);
     mapImage.loadPixels();
     mapImage.pixels = adjustGamma(mapImage.pixels);
     mapImage.updatePixels();
     break;
-  case 's':
+  case 'S': // save the audio signal to an audio file
     saveToAudio();
     break;
-  case 'S':
+  case 's': // save the image to a PNG file
     saveToImage();
     break;
-  case 'f':
+  case 'f': // print the current frame rate to the console
     println("--->> frame rate: " + frameRate);
     break;
-  case 'w':
+  case 'w': // transcode the image and write it to the audio signal
     writeImageToAudio();
+    synth.setBuffer(audioSignal, sampleRate);
     println("--->> Wrote image to audio as audio data.");
     break;
-  case '?':
+  case 'W': // transcode the audio signal and write it to the image
+    writeAudioToImage();
+    println("--->> Wrote audio to image as audio data.");
+    break;
+  case '?': // show the Help Message in the console
     showHelp();
     break;
   default:
@@ -363,29 +354,31 @@ public void keyPressed() {
 
 public void showHelp() {
   println(" * Press ' ' to toggle animation.");
-  println(" * Press 'o' to load an image or audio file to all color channels.");
-  println(" * Press 'r' to load an image or audio file to the red color channel.");
-  println(" * Press 'g' to load an image or audio file to the green color channel.");
-  println(" * Press 'b' to load an image or audio file to the blue color channel.");
-  println(" * Press 'h' to load an image or audio file to the HSB hue channel.");
-  println(" * Press 'v' to load an image or audio file to the HSB saturation (vibrance) channel.");
-  println(" * Press 'l' to load an image or audio file to the HSB brightness (lightness) channel.");
-  println(" * Press 'c' to open an image and apply its hue and saturation to the display image brightness channel.");
-  println(" * Press 'O' to reload the most recent audio or image file.");
-  println(" * Press 'm' to apply a contrast enhancement (histogram stretch) to the image.");
-  println(" * Press '=' or '+' to make the image brighter");
-  println(" * Press '-' or '_' to make the image darker.");
-  println(" * Press 's' to save to an audio file.");
-  println(" * Press 'S' to save to an image file.");
-  println(" * Press 'f' to show frameRate in the console.");
-  println(" * Press 'w' to write the image to the audio buffer (expect noise)");
-  println(" * Press '?' to show this help message.");    
+  println(" * Press 'o' to open an audio or image file in all RGB channels.");
+  println(" * Press 'r' to open an audio or image file in the RED channel of the image.");
+  println(" * Press 'g' to open an audio or image file in the GREEN channel of the image.");
+  println(" * Press 'b' to open an audio or image file in the BLUE channel of the image.");
+  println(" * Press 'h' to open an audio or image file in the HSB Hue channel of the image.");
+  println(" * Press 'v' to open an audio or image file in the HSB Saturation channel of the image.");
+  println(" * Press 'l' to open an audio or image file in the HSB Brightness channel of the image.");
+  println(" * Press 'c' to apply color from an image file to the display image.");
+  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
+  println(" * Press 'O' to reload the most recent image or audio file or show an Open File dialog.");
+  println(" * Press 'm' to remap the histogram of the image.");
+  println(" * Press '=' to use a gamma function to make the image lighter.");
+  println(" * Press '-' to use a gamma function to make the image darker.");
+  println(" * Press 'S' to save the audio signal to an audio file.");
+  println(" * Press 's' to save the image to a PNG file.");
+  println(" * Press 'f' to print the current frame rate to the console.");
+  println(" * Press 'w' to transcode the image and write it to the audio signal.");
+  println(" * Press 'W' to transcode the audio signal and write it to the image.");
+  println(" * Press '?' to show the Help Message in the console.");
 }
 
 /**
  * Utility method for applying hue and saturation values from a source array of RGB values
  * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- * 
+ *
  * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
  * @param graySource     an target array of RGB data from which to obtain brightness values
  * @param lut            a lookup table, must be the same size as colorSource and graySource
@@ -393,9 +386,9 @@ public void showHelp() {
  * @throws IllegalArgumentException if array arguments are null or if they are not the same length
  */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
-  if (colorSource == null || graySource == null || lut == null) 
+  if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
-  if (colorSource.length != graySource.length || colorSource.length != lut.length) 
+  if (colorSource.length != graySource.length || colorSource.length != lut.length)
     throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
   // initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
   float[] hsbPixel = new float[3];
@@ -408,40 +401,71 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
 public void mousePressed() {
   sampleX = mouseX;
   sampleY = mouseY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);
-  if (audioSignal == null || isBufferStale) {
-    isBufferStale = false;
-  }
-  playSample(samplePos);
+  samplePos = getSamplePos(sampleX, sampleY);
+  int varyDuration = calcSampleLen(durationMS);
+  int sampleLength = playSample(samplePos, varyDuration, 0.9f);
 }
 
-public int playSample(int samplePos) {
-  // create a Minim Sampler from audioBuffer with sample rate sampleRate and up to 8 voices
-  audioSampler = new Sampler(audioBuffer, sampleRate, 8); 
-  audioSampler.amplitude.setLastValue(0.9f);  // set amplitude for the Sampler
-  audioSampler.begin.setLastValue(samplePos); // set the Sampler to begin playback at samplePos
-  int releaseDuration = (int) (releaseTime * sampleRate); // do some calculation to include the release time.
-  float vary = (float) (PixelAudio.gauss(this.sampleScale, this.sampleScale * 0.125f)); // vary duration
-  // println("----->>> vary = "+ vary +", sampleScale = "+ sampleScale);
-  this.samplelen = (int) (vary * this.sampleBase); // calculate the duration of the sample
-  if (samplePos + samplelen >= mapSize) {
-    samplelen = mapSize - samplePos; // make sure we don't exceed the mapSize
-    println("----->>> sample length = " + samplelen);
+/**
+ * Calculates the index of the image pixel within the signal path,
+ * taking the shifting of pixels and audioSignal into account.
+ * See the MusicWindowBox sketch for use of a windowed buffer in this calculation.
+ *
+ * @param x    an x coordinate within mapImage and display bounds
+ * @param y    a y coordinate within mapImage and display bounds
+ * @return     the index of the sample corresponding to (x,y) on the signal path
+ */
+public int getSamplePos(int x, int y) {
+  int pos = mapper.lookupSample(x, y);
+  // calculate how much animation has shifted the indices into the buffer
+  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
+  return (pos + totalShift) % mapSize;
+}
+
+
+/**
+ * @return a length in samples with some Gaussian variation
+ */
+public int calcSampleLen(int durationMS) {
+  float vary = 0;
+  // skip the fairly rare negative numbers
+  while (vary <= 0) {
+    vary = (float) gauss(1.0, 0.0625);
   }
-  int durationPlusRelease = this.samplelen + releaseDuration;
-  int end = (samplePos + durationPlusRelease >= this.mapSize) ? this.mapSize - 1
-      : samplePos + durationPlusRelease;
-  // println("----->>> end = " + end);
-  audioSampler.end.setLastValue(end);
-  // ADSR envelope with max amplitude, attack Time, decay time, sustain level, release time
-  adsr = new ADSR(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-  this.instrument = new WFInstrument(audioOut, audioSampler, adsr);
-  // play command takes a duration in seconds
-  float duration = samplelen / (float) (sampleRate);
-  instrument.play(duration);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, (int) (duration * 1000) + millis()));
+  int len = (int)(abs((vary * durationMS) * sampleRate / 1000.0f));
+  int actualLength = (int)((len / sampleRate) * 1000);
+  println("---- calcSampleLen result = "+ len +" samples at "+ sampleRate +" Hz sample rate, "+ actualLength +" milliseconds");
+  return len;
+}
+
+/**
+ * Returns a Gaussian variable using a Java library call to
+ * <code>Random.nextGaussian</code>.
+ *
+ * @param mean
+ * @param variance
+ * @return a Gaussian-distributed random number with mean <code>mean</code> and
+ *         variance <code>variance</code>
+ */
+public double gauss(double mean, double variance) {
+  return rando.nextGaussian() * Math.sqrt(variance) + mean;
+}
+
+/**
+ * Plays an audio sample with PASamplerInstrument and default ADSR.
+ *
+ * @param samplePos    position of the sample in the audio buffer
+ * @param sampleCount      number of samples to play
+ * @param amplitude    amplitude of the samples on playback
+ * @return the calculated sample length in samples
+ */
+public int playSample(int samplePos, int sampleCount, float amplitude) {
+  sampleCount = synth.playSample(samplePos, sampleCount, amplitude);
+  int durationMS = (int)(sampleCount/sampleRate * 1000);
+  println("----- audio event duration = "+ durationMS +" millisconds");
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
-  return samplelen;
+  return sampleCount;
 }
 
 
@@ -450,26 +474,25 @@ public void writeImageToAudio() {
   mapImage.loadPixels();
   audioSignal = new float[mapSize];
   mapper.mapImgToSig(mapImage.pixels, audioSignal);
-  audioBuffer.setBufferSize(mapSize);
-  audioBuffer.setChannel(0, audioSignal);
-  if (audioBuffer != null) println("--->> audioBuffer length channel 0 = "+ audioBuffer.getChannel(0).length);
+  playBuffer.setBufferSize(mapSize);
+  playBuffer.setChannel(0, audioSignal);
+  if (playBuffer != null) println("--->> audioBuffer length channel 0 = "+ playBuffer.getChannel(0).length);
 }
 
+// ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- //
 
-// ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- // 
-  
 public int[] getHistoBounds(int[] source) {
-    int min = 255;
-    int max = 0;
-    for (int i = 0; i < source.length; i++) {
-      int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-      for (int j = 0; j < comp.length; j++) {
-        if (comp[j] > max) max = comp[j];
-        if (comp[j] < min) min = comp[j];
-      }
+  int min = 255;
+  int max = 0;
+  for (int i = 0; i < source.length; i++) {
+    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
+    for (int j = 0; j < comp.length; j++) {
+      if (comp[j] > max) max = comp[j];
+      if (comp[j] < min) min = comp[j];
     }
-    println("--- min", min, " max ", max);
-    return new int[]{min, max};
+  }
+  println("--- min", min, " max ", max);
+  return new int[]{min, max};
 }
 
 // histogram stretch -- run getHistoBounds to determine low and high
@@ -513,6 +536,4 @@ public int[] adjustGamma(int[] source) {
     out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
   }
   return out;
-}  
-
- 
+}

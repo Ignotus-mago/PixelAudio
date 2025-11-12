@@ -74,6 +74,8 @@ public void setup() {
 }
 
 /**
+ * Copied from HilbertGen's static method hilbertLoop3x2(int genW, int genH)
+ * 
  * Generates a looping fractal signal path consisting of 6 HilbertGens,
  * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
  * This particular MultiGen configuration is used so extensively in my 
@@ -174,7 +176,8 @@ public void keyPressed() {
   case 'O': // reopen JSON file, if one is already open, or open a new JSON file
     if (currentDataFile == null) {
       loadWaveData();
-    } else {
+    } 
+    else {
       fileSelectedOpen(currentDataFile);
       println("-------->>>>> Reloaded file");
     }

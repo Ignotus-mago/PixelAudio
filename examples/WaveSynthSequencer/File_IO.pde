@@ -1,23 +1,7 @@
-public void saveToImage() {
-    // File folderToStartFrom = new File(dataPath(""));
-    selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
-}
-public void imageFileSelectedWrite(File selection) {
-    if (selection == null) {
-        println("Window was closed or the user hit cancel.");
-        return;            
-    }
-    String fileName = selection.getAbsolutePath();
-    if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
-        fileName += ".png";
-    }
-    // saveImageToFile(mapImage, fileName);
-    save(fileName);
-}
+//-------------------------------------------//
+//              AUDIO FILE I/O               //
+//-------------------------------------------//
 
-public void saveImageToFile(PImage img, String fileName) {
-    img.save(fileName);
-}
 
 /**
  * Saves to a 32-bit floating point format that has higher resolution than 16-bit integer PCM. 
@@ -29,23 +13,24 @@ public void saveImageToFile(PImage img, String fileName) {
  * @throws IOException    an Exception you'll need to catch to call this method (see keyPressed entry for 's')
  */
 public static void saveAudioTo32BitPCMFile(float[] samples, float sampleRate, String fileName) throws IOException {
-  // convert samples to 32-bit PCM float
-  byte[] audioBytes = new byte[samples.length * 4];
-  int index = 0;
-  // convert to IEEE 754 floating-point "single format" bit layout 
-  for (float sample : samples) {
-    int intBits = Float.floatToIntBits(sample);
-    audioBytes[index++] = (byte) (intBits & 0xFF);
-    audioBytes[index++] = (byte) ((intBits >> 8) & 0xFF);
-    audioBytes[index++] = (byte) ((intBits >> 16) & 0xFF);
-    audioBytes[index++] = (byte) ((intBits >> 24) & 0xFF);
-  }
-  ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
-  AudioFormat format = new AudioFormat(sampleRate, 32, 1, true, false);
+    // convert samples to 32-bit PCM float
+    byte[] audioBytes = new byte[samples.length * 4];
+    int index = 0;
+    // convert to IEEE 754 floating-point "single format" bit layout 
+    for (float sample : samples) {
+        int intBits = Float.floatToIntBits(sample);
+        audioBytes[index++] = (byte) (intBits & 0xFF);
+        audioBytes[index++] = (byte) ((intBits >> 8) & 0xFF);
+        audioBytes[index++] = (byte) ((intBits >> 16) & 0xFF);
+        audioBytes[index++] = (byte) ((intBits >> 24) & 0xFF);
+    }
+    ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+    AudioFormat format = new AudioFormat(sampleRate, 32, 1, true, false);
     AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
     File outFile = new File(fileName);
     AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);      
 }
+
 
 /**
  * Saves audio data to 16-bit integer PCM format, which Processing can also open.

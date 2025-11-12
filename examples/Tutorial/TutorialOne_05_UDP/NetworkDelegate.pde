@@ -4,7 +4,7 @@ import netP5.*;
 /**
  * A class to handle network connections over UDP, for example, with a Max or Pd patch.
  * Used by applications that implement the PANetworkClientINF.
- * 
+ *
  * @see PANetworkClientINF
  */
 public class NetworkDelegate {
@@ -19,7 +19,7 @@ public class NetworkDelegate {
   private NetAddress remoteFrom;
   private NetAddress remoteTo;
   private int drawCount = 0;
-  
+
 
   public NetworkDelegate(TutorialOne_05_UDP app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort) {
     this.app = app;
@@ -40,23 +40,28 @@ public class NetworkDelegate {
     this.remoteToAddress = remoteToAddr;
     init();
   }
-  
+
   public NetworkDelegate(TutorialOne_05_UDP app) {
     this.app = app;
     this.parent = app.getPApplet();
     this.osc = new OscP5(parent, inPort);
     init();
   }
-    
+
   public void init() {
     this.remoteFrom = new NetAddress(this.remoteFromAddress, this.inPort);
     this.remoteTo = new NetAddress(this.remoteToAddress, this.outPort);
     System.out.println("== remoteFromAddress "+ remoteFromAddress +", in port: "+ inPort);
     System.out.println("== remoteToAddress "+ remoteToAddress +", out port: "+ outPort);
-    initOscPlugs();    
+    initOscPlugs();
   }
-  
-  
+
+  /*----------------------------------------------------------------*/
+  /*                                                                */
+  /*                      GETTERS AND SETTERS                       */
+  /*                                                                */
+  /*----------------------------------------------------------------*/
+
   public int getInPort() {
     return inPort;
   }
@@ -97,11 +102,17 @@ public class NetworkDelegate {
     this.drawCount = drawCount;
   }
 
+  /*----------------------------------------------------------------*/
+  /*                                                                */
+  /*                  OscP5 PLUG & MESSAGE SETUP                    */
+  /*                                                                */
+  /*----------------------------------------------------------------*/
+
   /**
    * SET UP RESPONSE TO INCOMING MESSAGES
    * Call the osc.plug(Object theObject, String the MethodName, String theAddrPattern)
    * or osc.plug(Object theObject, String the MethodName, String theAddrPattern, String the TypeTag)
-   * to setup callbacks to methods in the current object ("this") or other object instance. 
+   * to setup callbacks to methods in the current object ("this") or other object instance.
    */
   public void initOscPlugs() {
     osc.plug(this, "sampleHit", "/sampleHit");
@@ -120,13 +131,13 @@ public class NetworkDelegate {
     PApplet.println(" typetag: "+theOscMessage.typetag());
   }
 
-  
+
   /*----------------------------------------------------------------*/
   /*                                                                */
   /*                   OUTGOING MESSAGE METHODS                     */
   /*                                                                */
   /*----------------------------------------------------------------*/
-  
+
   public void oscSendMousePressed(int sampleX, int sampleY, int sample) {
     OscMessage msg = new OscMessage("/press");
     msg.add(sample);
@@ -151,8 +162,8 @@ public class NetworkDelegate {
       msg.add(multi[i]);
     }
     osc.send(msg, this.remoteTo);
-  }  
-  
+  }
+
   public void oscSendDrawPoints(ArrayList<PVector> drawPoints) {
     OscMessage msg = new OscMessage("/draw");
     int i = 0;
@@ -167,7 +178,7 @@ public class NetworkDelegate {
     }
     osc.send(msg, this.remoteTo);
   }
-  
+
   public void oscSendTimeStamp(int timeStamp, int timeOffset) {
     OscMessage msg = new OscMessage("/time");
     msg.add(drawCount);
@@ -175,24 +186,24 @@ public class NetworkDelegate {
     msg.add(timeOffset);
     osc.send(msg, this.remoteTo);
   }
-      
+
   public void oscSendTrig(int index) {
     OscMessage msg = new OscMessage("/trig");
     msg.add(index);
     osc.send(msg, this.remoteTo);
   }
-  
+
   public void oscSendDelete(int index) {
     OscMessage msg = new OscMessage("/del");
     msg.add(index);
     osc.send(msg, this.remoteTo);
   }
-  
+
   public void oscSendClear() {
     OscMessage msg = new OscMessage("/clear");
     osc.send(msg, this.remoteTo);
   }
-  
+
   public void oscSendFileInfo(String path, String name, String tag) {
     OscMessage msg = new OscMessage("/file");
     msg.add(path);
@@ -200,22 +211,23 @@ public class NetworkDelegate {
     msg.add(tag);
     osc.send(msg, this.remoteTo);
   }
-  
+
   /*----------------------------------------------------------------*/
   /*                                                                */
   /*                      OscP5 PLUG METHODS                        */
   /*                                                                */
   /*----------------------------------------------------------------*/
-  
-  /* 
+
+
+  /*
    * OscP5 plug-in methods, which call methods on the client,
-   * are implemented in this section. They take calls from 
+   * are implemented in this section. They take calls from
    * the service (UDP, here) and pass them on to the client.
-   * If you want to extend the available calls, modify the 
+   * If you want to extend the available calls, modify the
    * PANetworkClientINF interface to make the contracts
-   * between client and delegate explicit. 
+   * between client and delegate explicit.
    */
-  
+
   public void sampleHit(int sam) {
     int[] xy = app.getMapper().lookupCoordinate(sam);
     PApplet.println("---> sampleHit " + xy[0], xy[1]);
@@ -240,15 +252,14 @@ public class NetworkDelegate {
     }
     PApplet.println();
   }
-  
+
   public void parseKey(int arg) {
     char ch = PApplet.parseChar(arg);
     PApplet.println("---> parseKey: "+ ch);
     app.parseKey(ch, 0);
   }
-  
-  public void controlMsg(String ctrl, float val) {
-    PApplet.println("---> control: "+ ctrl +", value: "+ val);    
-  }
 
+  public void controlMsg(String ctrl, float val) {
+    PApplet.println("---> control: "+ ctrl +", value: "+ val);
+  }
 }

@@ -1,3 +1,24 @@
+/*
+ * SimpleWaveSynth provides the basic code for setting up a WaveSynth.
+ * BigWaveSynth provides a similar example using a MultiGen, a PixelMapGen  
+ * composed of multiple individual PixelMapGens with a single signal path. 
+ * For more in depth code, check out WaveSynthEditor, WaveSynthSequencer, 
+ * and BigWaveSynthAudio. 
+ *
+ * press '1' to set gamma to 1.0.
+ * press '2' to set gamma to 1.4.
+ * press '3' to set gamma to 1.8.
+ * press '4' to set gamma to 0.5.
+ * press 'e' to set WaveSynth sample rate to (width * height)/2
+ * press 'E' to set WaveSynth sample rate to (width * height)/4
+ * press 'r' to set WaveSynth sample rate to 44100
+ * press 'R' to set WaveSynth sample rate to image size (width * height)
+ * press 't' to print the lookup table for current gamma to console.
+ * press 'u' to change gamma calculation between table lookup and calculation.
+ * press 'h' to show Help.
+ * 
+ */
+
 import net.paulhertz.pixelaudio.*;
 
 PixelAudio pixelaudio;
@@ -107,21 +128,26 @@ public void stepAnimation() {
 }
 
 public void keyPressed() {
+  String gammaCalc = (wavesynth.useGammaTable) ? "gamma table" : "mathematical function";
   switch (key) {
   case '1':
     myGamma = 1.0;
     wavesynth.setGamma(myGamma);
+    println("-- gamma = 1.0, no gamma calculation needed. ");
     break;
   case '2':
     myGamma = 1.4;
+    println("-- gamma = "+ myGamma +", calculating with "+ gammaCalc);
     wavesynth.setGamma(myGamma);
     break;
   case '3':
     myGamma = 1.8;
+    println("-- gamma = "+ myGamma +", calculating with "+ gammaCalc);
     wavesynth.setGamma(myGamma);
     break;
   case '4':
     myGamma = 0.5;
+    println("-- gamma = "+ myGamma +", calculating with "+ gammaCalc);
     wavesynth.setGamma(myGamma);
     break;
   case 'g':
@@ -142,7 +168,7 @@ public void keyPressed() {
     wavesynth.setSampleRate(wavesynth.mapSize/4);
     break;
   case 'r':
-    wavesynth.setSampleRate(41500);
+    wavesynth.setSampleRate(44100);
     break;
   case 'R':
     wavesynth.setSampleRate(wavesynth.mapSize);
@@ -153,7 +179,7 @@ public void keyPressed() {
   case 'u':
     wavesynth.useGammaTable = !wavesynth.useGammaTable;
     if (wavesynth.useGammaTable) println("-- using gamma table");
-    else println("-- calculating gamma ");
+    else println("-- calculating gamma with mathematical function");
     break;
   case 'h':
     showHelp();
@@ -164,17 +190,17 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println("press '1' to set gamma to 1.0.");
-  println("press '2' to set gamma to 1.4.");
-  println("press '3' to set gamma to 1.8.");
-  println("press '4' to set gamma to 0.5.");
-  println("press 'e' to set sample rate to (width * height)/2");
-  println("press 'E' to set sample rate to (width * height)/4");
-  println("press 'r' to set sample rate to 41500");
-  println("press 'R' to set sample rate to image size (width * height)");
-  println("press 't' to print the lookup table for current gamma to console.");
-  println("press 'u' to change gamma calculation between table lookup and calculation.");
-  println("press 'h' to show Help.");
+  println(" * press '1' to set gamma to 1.0.");
+  println(" * press '2' to set gamma to 1.4.");
+  println(" * press '3' to set gamma to 1.8.");
+  println(" * press '4' to set gamma to 0.5.");
+  println(" * press 'e' to set WaveSynth sample rate to (width * height)/2");
+  println(" * press 'E' to set WaveSynth sample rate to (width * height)/4");
+  println(" * press 'r' to set WaveSynth sample rate to 44100");
+  println(" * press 'R' to set WaveSynth sample rate to image size (width * height)");
+  println(" * press 't' to print the lookup table for current gamma to console.");
+  println(" * press 'u' to change gamma calculation between table lookup and calculation.");
+  println(" * press 'h' to show Help.");
 }
 
 // code for generating a gamma table, a non-linear adjustment of brightness

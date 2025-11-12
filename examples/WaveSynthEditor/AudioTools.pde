@@ -10,11 +10,14 @@
 public void initAudio() {
   minim = new Minim(this);
   // use the getLineOut method of the Minim object to get an AudioOutput object
-  this.audioOut = minim.getLineOut(Minim.MONO, 1024, sampleRate);
+  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
+  this.setAudioGain(outputGain);
   this.audioBuffer = new MultiChannelBuffer(mapSize, 1);
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
   adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-  pool = new WFSamplerInstrumentPool(audioBuffer, sampleRate, 8, 1, audioOut, adsr);
+  this.renderSignal();
+  // creae a PASamplerInstrumentPool with 8 instruments, each with a single (monophonic) voice
+  pool = new PASamplerInstrumentPool(audioBuffer, sampleRate, 8, 1, audioOut, adsr);
   timeLocsArray = new ArrayList<TimedLocation>();     // initialize mouse event tracking array
 }
 
@@ -40,7 +43,7 @@ public void saveToAudio() {
  */
 public void renderSignal() {
   this.audioSignal = wavesynth.renderAudioRaw(step);           // get the signal "as is" from WaveSynth
-  audioSignal = WaveSynth.normalize(audioSignal, 0.9f);        // normalize samples to the range (-0.9f, 0.9f) 
+  audioSignal = WaveSynth.normalize(audioSignal, 0.9f);        // normalize samples to the range (-0.9f, 0.9f)
   audioLength = audioSignal.length;
   audioBuffer.setBufferSize(audioLength);
   audioBuffer.setChannel(0, audioSignal);                      // copy audioSignal to channel 0 of audioBuffer
@@ -65,14 +68,14 @@ public void checkBufferState() {
     isBufferStale = false;
   }
 }
-    
+
 /**
  * Plays an audio sample with WFSamplerInstrument and custom ADSR.
- * 
+ *
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
  * @param amplitude    amplitude of the sample on playback
- * @param adsr         an ADSR envelope for the sample
+ * @param defaultEnv         an ADSR envelope for the sample
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
@@ -85,7 +88,7 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
 
 /**
  * Plays an audio sample with WFSamplerInstrument and default ADSR.
- * 
+ *
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
  * @param amplitude    amplitude of the sample on playback
@@ -100,7 +103,7 @@ public int playSample(int samplePos, int samplelen, float amplitude) {
 }
 
 public int calcSampleLen() {
-  float vary = 0; 
+  float vary = 0;
   // skip the fairly rare negative numbers
   while (vary <= 0) {
     vary = (float) PixelAudio.gauss(1.0, 0.0625);
@@ -111,17 +114,18 @@ public int calcSampleLen() {
 }
 
 /**
- * Run the animation for audio events. 
+ * Run the animation for audio events.
  */
 public void runTimeArray() {
-    int currentTime = millis();
-    timeLocsArray.forEach(tl -> {
-        tl.setStale(tl.stopTime() < currentTime);
-        if (!tl.isStale()) {
-            drawCircle(tl.getX(), tl.getY());
-        }
-    });
-    timeLocsArray.removeIf(TimedLocation::isStale);
+  int currentTime = millis();
+  timeLocsArray.forEach(tl -> {
+    tl.setStale(tl.eventTime() < currentTime);
+    if (!tl.isStale()) {
+      drawCircle(tl.getX(), tl.getY());
+    }
+  }
+  );
+  timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
 /**
@@ -130,8 +134,8 @@ public void runTimeArray() {
  * @param y        y coordinate of circle
  */
 public void drawCircle(int x, int y) {
-    //float size = isRaining? random(10, 30) : 60;
-    fill(color(233, 220, 199));
-    noStroke();
-    circle(x, y, 60);
-}    
+  //float size = isRaining? random(10, 30) : 60;
+  fill(color(233, 220, 199));
+  noStroke();
+  circle(x, y, 60);
+}
