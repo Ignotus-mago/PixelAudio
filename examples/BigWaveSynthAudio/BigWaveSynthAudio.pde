@@ -177,144 +177,147 @@ int count = 0;
 
 
 public void settings() {
-    size(rows * genWidth, columns * genHeight);
+  size(rows * genWidth, columns * genHeight);
 }
 
 public void setup() {
-    pixelaudio = new PixelAudio(this);
-    multigen = hilbertLoop3x2(genWidth, genHeight);  // See the MultiGenDemo example for details on how MultiGen works
-    mapper = new PixelAudioMapper(multigen);    // initialize a PixelAudioMapper
-    mapSize = mapper.getSize();            // set mapSize
-    wdList = initWaveDataList();          // generate a list of WaveData objects
-    wavesynth = new WaveSynth(mapper, wdList);    // create a WaveSynth object
-    initWaveSynth(wavesynth);            // set wavesynth fields
-    synthImage = wavesynth.mapImage;        // set the image to display
-    timeLocsArray = new ArrayList<TimedLocation>(); // initialize mouse event tracking array
-    initAudio();
-    showHelp();
+  pixelaudio = new PixelAudio(this);
+  multigen = hilbertLoop3x2(genWidth, genHeight);  // See the MultiGenDemo example for details on how MultiGen works
+  mapper = new PixelAudioMapper(multigen);    // initialize a PixelAudioMapper
+  mapSize = mapper.getSize();                 // set mapSize
+  wdList = initWaveDataList();                // generate a list of WaveData objects
+  wavesynth = new WaveSynth(mapper, wdList);  // create a WaveSynth object
+  initWaveSynth(wavesynth);                   // set wavesynth fields
+  synthImage = wavesynth.mapImage;            // set the image to display
+  timeLocsArray = new ArrayList<TimedLocation>(); // initialize mouse event tracking array
+  initAudio();
+  showHelp();
 }
 
 /**
  * Generates a looping fractal signal path consisting of 6 HilbertGens,
- * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
- * This particular MultiGen configuration is used so extensively in my 
+ * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image.
+ * This particular MultiGen configuration is used so extensively in my
  * sample code that I've given it a factory method in the HilbertGen class.
- * It's written out here so you can see how it works. 
- * 
- * Note that genH must equal genW and both must be powers of 2. For the 
- * image size we're using in this example, genW = image width / 3 and 
+ * It's written out here so you can see how it works.
+ *
+ * Note that genH must equal genW and both must be powers of 2. For the
+ * image size we're using in this example, genW = image width / 3 and
  * genH = image height / 2.
- * 
- * @param genW    width of each HilbertGen 
+ *
+ * @param genW    width of each HilbertGen
  * @param genH    height of each HilbertGen
- * @return a 3 x 2 array of Hilbert curves, connected in 
+ * @return a 3 x 2 array of Hilbert curves, connected in
  *         a loop (3 * genWidth by 2 * genHeight pixels)
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
-    // list of PixelMapGens that create an image using mapper
-    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
-    // list of x,y coordinates for placing gens from genList
-    ArrayList<int[]> offsetList = new ArrayList<int[]>();
-    genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-    offsetList.add(new int[] { 0, 0 });
-    genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
-    offsetList.add(new int[] { genW, 0 });
-    genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-    offsetList.add(new int[] { 2 * genW, 0 });
-    genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-    offsetList.add(new int[] { 2 * genW, genH });
-    genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
-    offsetList.add(new int[] { genW, genH });
-    genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
-    offsetList.add(new int[] { 0, genH });
-    return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
+  // list of PixelMapGens that create an image using mapper
+  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
+  // list of x,y coordinates for placing gens from genList
+  ArrayList<int[]> offsetList = new ArrayList<int[]>();
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
+  offsetList.add(new int[] { 0, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
+  offsetList.add(new int[] { genW, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+  offsetList.add(new int[] { 2 * genW, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+  offsetList.add(new int[] { 2 * genW, genH });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
+  offsetList.add(new int[] { genW, genH });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
+  offsetList.add(new int[] { 0, genH });
+  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 public ArrayList<WaveData> initWaveDataList() {
-    ArrayList<WaveData> list = new ArrayList<WaveData>();
-    float frequency = 768;     // sampleRate/62.5f;
-    float amplitude = 0.8f;
-    float phase = 0.0f;
-    float dc = 0.0f;
-    float cycles = 1.0f;
-    int waveColor = color(159, 190, 251);
-    int steps = this.animSteps;
-    WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-    list.add(wd);
-    frequency = 192;       // sampleRate/250.0f;
-    phase = 0.0f;
-    cycles = 2.0f;
-    waveColor = color(209, 178, 117);
-    wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
-    list.add(wd);
-    return list;
+  ArrayList<WaveData> list = new ArrayList<WaveData>();
+  float frequency = 768;     // sampleRate/62.5f;
+  float amplitude = 0.8f;
+  float phase = 0.0f;
+  float dc = 0.0f;
+  float cycles = 1.0f;
+  int waveColor = color(159, 190, 251);
+  int steps = this.animSteps;
+  WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+  list.add(wd);
+  frequency = 192;       // sampleRate/250.0f;
+  phase = 0.0f;
+  cycles = 2.0f;
+  waveColor = color(209, 178, 117);
+  wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
+  list.add(wd);
+  return list;
 }
 
 /**
- * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables 
+ * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
  * of a WaveSynth object and generates its first frame of animation.
- * 
+ *
  * @param synth    a WaveSynth object whose attributes will be set
  * @return      the WaveSynth object with attributes set
  */
 public WaveSynth initWaveSynth(WaveSynth synth) {
-    synth.setGain(0.8f);
-    synth.setGamma(myGamma);
-    synth.setScaleHisto(false);
-    synth.setAnimSteps(this.animSteps);
-    synth.setSampleRate(genWidth * genHeight);
-    println("--- mapImage size = " + synth.mapImage.pixels.length);
-    synth.prepareAnimation();
-    synth.renderFrame(0);
-    return synth;
+  synth.setGain(0.8f);
+  synth.setGamma(myGamma);
+  synth.setScaleHisto(false);
+  synth.setAnimSteps(this.animSteps);
+  synth.setSampleRate(genWidth * genHeight);
+  println("--- mapImage size = " + synth.mapImage.pixels.length);
+  synth.prepareAnimation();
+  synth.renderFrame(0);
+  return synth;
 }
 
 
 public void initAudio() {
-    minim = new Minim(this);
-    // use the getLineOut method of the Minim object to get an AudioOutput object
-    // PixelAudio instruments require a STEREO AudioOutput
-    this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
-    this.audioBuffer = new MultiChannelBuffer(1024, 1);
-    renderSignal();
-    println("----->> initialized audio buffer, length is "+ audioBuffer.getBufferSize() +(" samples."));
-    // ADSR envelope slow attack and decay, fast release, good for moderately short audio events
-    shortAdsr = new ADSRParams(0.875f, 0.7f, 0.1f, 0.3f, 0.1f);
-    // ADSR envelope with fast attack, slow decay, very long release, good for long audio events
-    longAdsr = new ADSRParams(0.875f, 0.001f, 0.2f, 0.6f, 5.0f);
-    // create a pool with 24 instruments, each with 4 polyphonic voices
-    synth = new PASamplerInstrumentPool(audioBuffer, audioOut.sampleRate(), poolSize, 4, audioOut, shortAdsr);
+  minim = new Minim(this);
+  // use the getLineOut method of the Minim object to get an AudioOutput object
+  // PixelAudio instruments require a STEREO AudioOutput
+  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
+  this.audioBuffer = new MultiChannelBuffer(1024, 1);
+  renderSignal();
+  println("----->> initialized audio buffer, length is "+ audioBuffer.getBufferSize() +(" samples."));
+  // ADSR envelope slow attack and decay, fast release, good for moderately short audio events
+  shortAdsr = new ADSRParams(0.875f, 0.7f, 0.1f, 0.3f, 0.1f);
+  // ADSR envelope with fast attack, slow decay, very long release, good for long audio events
+  longAdsr = new ADSRParams(0.875f, 0.001f, 0.2f, 0.6f, 5.0f);
+  // create a pool with 24 instruments, each with 4 polyphonic voices
+  synth = new PASamplerInstrumentPool(audioBuffer, audioOut.sampleRate(), poolSize, 4, audioOut, shortAdsr);
 }
 
 public void draw() {
-    image(synthImage, 0, 0, width, height);
-    if (isAnimating) stepAnimation();
-    runTimeArray();                // animate audio event markers
-    if (isRaining) {
-        // animation slows the frame rate, so we change the threshold when animating
-        float thresh = (isAnimating) ? 0.25f : 0.05f;
-        if (random(0,1) < thresh) {
-            raindrops();              // trigger random audio events
-        }
+  image(synthImage, 0, 0, width, height);
+  if (isAnimating) stepAnimation();
+  runTimeArray();                // animate audio event markers
+  if (isRaining) {
+    // animation slows the frame rate, so we change the threshold when animating
+    float thresh = (isAnimating) ? 0.25f : 0.05f;
+    if (random(0, 1) < thresh) {
+      raindrops();              // trigger random audio events
     }
-    if (isBufferStale) {
-        renderSignal();
-        wavesynth.renderFrame(step);
-    }
+  }
+  if (isBufferStale) {
+    renderSignal();
+    synth.setBuffer(audioBuffer);
+    wavesynth.renderFrame(step);
+    isBufferStale = false;
+  }
 }
 
 /**
- * Run the animation for audio events. 
+ * Run the animation for audio events.
  */
 public void runTimeArray() {
-    int currentTime = millis();
-    timeLocsArray.forEach(tl -> {
-        tl.setStale(tl.eventTime() < currentTime);
-        if (!tl.isStale()) {
-            drawCircle(tl.getX(), tl.getY());
-        }
-    });
-    timeLocsArray.removeIf(TimedLocation::isStale);
+  int currentTime = millis();
+  timeLocsArray.forEach(tl -> {
+    tl.setStale(tl.eventTime() < currentTime);
+    if (!tl.isStale()) {
+      drawCircle(tl.getX(), tl.getY());
+    }
+  }
+  );
+  timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
 /**
@@ -323,251 +326,254 @@ public void runTimeArray() {
  * @param y    y coordinate of circle
  */
 public void drawCircle(int x, int y) {
-    float size = isRaining? random(10, 30) : 60;
-    fill(circleColor);
-    noStroke();
-    circle(x, y, size);
-}  
+  float size = isRaining? random(10, 30) : 60;
+  fill(circleColor);
+  noStroke();
+  circle(x, y, size);
+}
 
 /**
  * Trigger a WaveSynth sample at a random location.
  */
 public void raindrops() {
-    int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
-    int[] coords = mapper.lookupCoordinate(signalPos);
-    sampleX = coords[0];
-    sampleY = coords[1];
-    if (audioSignal == null || isBufferStale) {
-        renderSignal();
-        isBufferStale = false;
-    }
-    float panning = map(sampleX, 0, width, -0.9f, 0.9f);
-    // calculate average duration centered on 2.0 seconds
-    int duration = calcSampleLen(2.0f);
-    int actualLen = playSample(samplePos, duration, 0.15f, shortAdsr, 1.0f, panning);
-    // uncomment for debugging
-    // println("--- raindrop duration "+ nf(duration / sampleRate, 0, 4) +" secs, actual length "+ nf(actualLen / sampleRate, 0, 4) +" secs");
+  int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
+  int[] coords = mapper.lookupCoordinate(signalPos);
+  sampleX = coords[0];
+  sampleY = coords[1];
+  if (audioSignal == null || isBufferStale) {
+    renderSignal();
+    isBufferStale = false;
+  }
+  float panning = map(sampleX, 0, width, -0.9f, 0.9f);
+  // calculate average duration centered on 2.0 seconds
+  int duration = calcSampleLen(2.0f);
+  int actualLen = playSample(samplePos, duration, 0.15f, shortAdsr, 1.0f, panning);
+  // uncomment for debugging
+  // println("--- raindrop duration "+ nf(duration / sampleRate, 0, 4) +" secs, actual length "+ nf(actualLen / sampleRate, 0, 4) +" secs");
 }
 
 /**
- * Detunes each instrument in the polyphonic synth by a small amount. 
- * Demonstrates how to access individual PASamplerInstrument instances in 
- * PASamplerInstrumentPool's list of instruments. 
+ * Detunes each instrument in the polyphonic synth by a small amount.
+ * Demonstrates how to access individual PASamplerInstrument instances in
+ * PASamplerInstrumentPool's list of instruments.
  */
 public void detuneInstruments() {
-    List<PASamplerInstrument> pool = synth.getInstruments();
-    for (PASamplerInstrument inst : pool) {
-        float pitch = inst.getPitchScale();
-        float newPitch = randomShift(pitch, 0.001f);
-        inst.setPitchScale(newPitch);
-    }
+  List<PASamplerInstrument> pool = synth.getInstruments();
+  for (PASamplerInstrument inst : pool) {
+    float pitch = inst.getPitchScale();
+    float newPitch = randomShift(pitch, 0.001f);
+    inst.setPitchScale(newPitch);
+  }
 }
 
 /**
- * Restores the tuning of individual instruments in the polyphonic synth. 
+ * Restores the tuning of individual instruments in the polyphonic synth.
  */
 public void retuneInstruments() {
-    List<PASamplerInstrument> pool = synth.getInstruments();
-    for (PASamplerInstrument inst : pool) {
-        inst.setPitchScale(1.0f);
-    }
+  List<PASamplerInstrument> pool = synth.getInstruments();
+  for (PASamplerInstrument inst : pool) {
+    inst.setPitchScale(1.0f);
+  }
 }
 
 public float randomShift(float val, float shift) {
-    val = (float) PixelAudio.gauss(val, shift);
-    return val;
+  val = (float) PixelAudio.gauss(val, shift);
+  return val;
 }
 
 public void keyPressed() {
-    float newSampleRate;
-    switch (key) {
-    case ' ': // turn animation on and off
-        isAnimating = !isAnimating;
-        println(isAnimating ? "Starting animation at frame " + step + " of " + animSteps
-                : "Stopping animation at frame " + step + " of " + animSteps);
-        break;
-    case 'd': // turn raindrops on and off
-        isRaining = !isRaining;
-        println("--- isRaining = " + isRaining);
-        break;
-    case 't': // detune instruments by a small amount
-        detuneInstruments();
-        break;
-    case 'T': // restore tuning to instruments
-        retuneInstruments();
-        break;
-    case 'l': case 'L': // select long or short notes for audio events
-        isPlayLongNote = !isPlayLongNote;
-        println("----- isPlayLongNote = "+ isPlayLongNote);
-        break;
-    case 'o': case 'O': // open a WaveSynth settings JSON file
-        // turn off animation while reading new settings for wavesynth
-        oldIsAnimating = isAnimating;
-        isAnimating = false;
-        this.loadWaveData();
-        isBufferStale = true;    // the audio buffer will need to be refreshed
-        break;
-    case 'j': case 'J': // save current WaveSynth to a JSON file
-        saveWaveData();
-        break;
-    case 'f': // print the current frame rate to the console
-        println("--->> frame rate: " + frameRate);
-        break;
-    case '1': // set the current WaveSynth's sample rate to genWidth * genHeight
-        newSampleRate = genWidth * genHeight;
-        println("--->> new sample rate for WaveSynth = genWidth * genHeight = "+ newSampleRate);
-        wavesynth.setSampleRate(newSampleRate);
-        isBufferStale = true;
-        break;
-    case '2': // set the current WaveSynth's sample rate to genWidth * genHeight / 2
-        newSampleRate = genWidth * genHeight / 2;
-        println("--->> new sample rate for WaveSynth = genWidth * genHeight / 2 = "+ newSampleRate);
-        wavesynth.setSampleRate(newSampleRate);
-        isBufferStale = true;
-        break;
-    case '3': // set the current WaveSynth's sample rate to genWidth * genHeight / 3
-        newSampleRate = genWidth * genHeight / 3;
-        println("--->> new sample rate for WaveSynth = genWidth * genHeight / 3 = "+ newSampleRate);
-        wavesynth.setSampleRate(newSampleRate);
-        isBufferStale = true;
-        break;
-    case '4': // set the current WaveSynth's sample rate to genWidth * genHeight / 4
-        newSampleRate = genWidth * genHeight / 4;
-        println("--->> new sample rate for WaveSynth = genWidth * genHeight / 4 = "+ newSampleRate);
-        wavesynth.setSampleRate(newSampleRate);
-        isBufferStale = true;
-        break;
-    case '5': // set the current WaveSynth's sample rate to genWidth * genHeight / 5
-        newSampleRate = genWidth * genHeight / 5;
-        println("--->> new sample rate for WaveSynth = genWidth * genHeight / 5 = "+ newSampleRate);
-        wavesynth.setSampleRate(newSampleRate);
-        isBufferStale = true;
-        break;
-    case '6': // set the current WaveSynth's sample rate to genWidth * genHeight / 6
-        newSampleRate = genWidth * genHeight / 6;
-        println("--->> new sample rate for WaveSynth = genWidth * genHeight / 6 = "+ newSampleRate);
-        wavesynth.setSampleRate(newSampleRate);
-        isBufferStale = true;
-        break;
-    case '7': // set the current WaveSynth's sample rate to the audio sample rate
-        newSampleRate = this.sampleRate;
-        println("--->> new sample rate for WaveSynth = this.sampleRate = "+ newSampleRate);
-        wavesynth.setSampleRate(newSampleRate);
-        isBufferStale = true;
-        break;
-    case 'h': // show help message in console
-        showHelp();
-        break;
-    default:
-        break;
-    }
+  float newSampleRate;
+  switch (key) {
+  case ' ': // turn animation on and off
+    isAnimating = !isAnimating;
+    println(isAnimating ? "Starting animation at frame " + step + " of " + animSteps
+      : "Stopping animation at frame " + step + " of " + animSteps);
+    break;
+  case 'd': // turn raindrops on and off
+    isRaining = !isRaining;
+    println("--- isRaining = " + isRaining);
+    break;
+  case 't': // detune instruments by a small amount
+    detuneInstruments();
+    break;
+  case 'T': // restore tuning to instruments
+    retuneInstruments();
+    break;
+  case 'l':
+  case 'L': // select long or short notes for audio events
+    isPlayLongNote = !isPlayLongNote;
+    println("----- isPlayLongNote = "+ isPlayLongNote);
+    break;
+  case 'o':
+  case 'O': // open a WaveSynth settings JSON file
+    // turn off animation while reading new settings for wavesynth
+    oldIsAnimating = isAnimating;
+    isAnimating = false;
+    this.loadWaveData();
+    isBufferStale = true;    // the audio buffer will need to be refreshed
+    break;
+  case 'j':
+  case 'J': // save current WaveSynth to a JSON file
+    saveWaveData();
+    break;
+  case 'f': // print the current frame rate to the console
+    println("--->> frame rate: " + frameRate);
+    break;
+  case '1': // set the current WaveSynth's sample rate to genWidth * genHeight
+    newSampleRate = genWidth * genHeight;
+    println("--->> new sample rate for WaveSynth = genWidth * genHeight = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
+    isBufferStale = true;
+    break;
+  case '2': // set the current WaveSynth's sample rate to genWidth * genHeight / 2
+    newSampleRate = genWidth * genHeight / 2;
+    println("--->> new sample rate for WaveSynth = genWidth * genHeight / 2 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
+    isBufferStale = true;
+    break;
+  case '3': // set the current WaveSynth's sample rate to genWidth * genHeight / 3
+    newSampleRate = genWidth * genHeight / 3;
+    println("--->> new sample rate for WaveSynth = genWidth * genHeight / 3 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
+    isBufferStale = true;
+    break;
+  case '4': // set the current WaveSynth's sample rate to genWidth * genHeight / 4
+    newSampleRate = genWidth * genHeight / 4;
+    println("--->> new sample rate for WaveSynth = genWidth * genHeight / 4 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
+    isBufferStale = true;
+    break;
+  case '5': // set the current WaveSynth's sample rate to genWidth * genHeight / 5
+    newSampleRate = genWidth * genHeight / 5;
+    println("--->> new sample rate for WaveSynth = genWidth * genHeight / 5 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
+    isBufferStale = true;
+    break;
+  case '6': // set the current WaveSynth's sample rate to genWidth * genHeight / 6
+    newSampleRate = genWidth * genHeight / 6;
+    println("--->> new sample rate for WaveSynth = genWidth * genHeight / 6 = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
+    isBufferStale = true;
+    break;
+  case '7': // set the current WaveSynth's sample rate to the audio sample rate
+    newSampleRate = this.sampleRate;
+    println("--->> new sample rate for WaveSynth = this.sampleRate = "+ newSampleRate);
+    wavesynth.setSampleRate(newSampleRate);
+    isBufferStale = true;
+    break;
+  case 'h': // show help message in console
+    showHelp();
+    break;
+  default:
+    break;
+  }
 }
 
 public void showHelp() {
-    println(" * Press ' ' to turn animation on and off.");
-    println(" * Press 'd' to turn raindrops on and off.");
-    println(" * Press 't' to detune instruments by a small amount.");
-    println(" * Press 'T' to restore tuning to instruments.");
-    println(" * Press 'l' or 'L' to select long or short notes for audio events.");
-    println(" * Press 'o' or 'O' to open a WaveSynth settings JSON file.");
-    println(" * Press 'j' or 'J' to save current WaveSynth to a JSON file.");
-    println(" * Press 'f' to print the current frame rate to the console.");
-    println(" * Press '1' to set the current WaveSynth's sample rate to genWidth * genHeight.");
-    println(" * Press '2' to set the current WaveSynth's sample rate to genWidth * genHeight / 2.");
-    println(" * Press '3' to set the current WaveSynth's sample rate to genWidth * genHeight / 3.");
-    println(" * Press '4' to set the current WaveSynth's sample rate to genWidth * genHeight / 4.");
-    println(" * Press '5' to set the current WaveSynth's sample rate to genWidth * genHeight / 5.");
-    println(" * Press '6' to set the current WaveSynth's sample rate to genWidth * genHeight / 6.");
-    println(" * Press '7' to set the current WaveSynth's sample rate to the audio sample rate.");
-    println(" * Press 'h' to show help message in console.");
+  println(" * Press ' ' to turn animation on and off.");
+  println(" * Press 'd' to turn raindrops on and off.");
+  println(" * Press 't' to detune instruments by a small amount.");
+  println(" * Press 'T' to restore tuning to instruments.");
+  println(" * Press 'l' or 'L' to select long or short notes for audio events.");
+  println(" * Press 'o' or 'O' to open a WaveSynth settings JSON file.");
+  println(" * Press 'j' or 'J' to save current WaveSynth to a JSON file.");
+  println(" * Press 'f' to print the current frame rate to the console.");
+  println(" * Press '1' to set the current WaveSynth's sample rate to genWidth * genHeight.");
+  println(" * Press '2' to set the current WaveSynth's sample rate to genWidth * genHeight / 2.");
+  println(" * Press '3' to set the current WaveSynth's sample rate to genWidth * genHeight / 3.");
+  println(" * Press '4' to set the current WaveSynth's sample rate to genWidth * genHeight / 4.");
+  println(" * Press '5' to set the current WaveSynth's sample rate to genWidth * genHeight / 5.");
+  println(" * Press '6' to set the current WaveSynth's sample rate to genWidth * genHeight / 6.");
+  println(" * Press '7' to set the current WaveSynth's sample rate to the audio sample rate.");
+  println(" * Press 'h' to show help message in console.");
 }
 
 public void stepAnimation() {
-    step += 1;
-    step %= animSteps;
-    wavesynth.renderFrame(step);
+  step += 1;
+  step %= animSteps;
+  wavesynth.renderFrame(step);
 }
 
 public void mousePressed() {
-    sampleX = mouseX;
-    sampleY = mouseY;
-    samplePos = mapper.lookupSample(sampleX, sampleY);
-    println("---> samplePos = "+ samplePos);
-    float panning = map(sampleX, 0, width, -0.875f, 0.875f);
-    if (audioSignal == null || isBufferStale) {
-        renderSignal();
-        synth.setBuffer(audioBuffer);
-        isBufferStale = false;
-    }
-    if (isPlayLongNote) playLongNote(panning);
-    else playShortNote(panning);
-    // playSample(samplePos, calcSampleLen(), 0.3f, adsr, 1.0f, panning);
+  sampleX = mouseX;
+  sampleY = mouseY;
+  samplePos = mapper.lookupSample(sampleX, sampleY);
+  println("---> samplePos = "+ samplePos);
+  float panning = map(sampleX, 0, width, -0.875f, 0.875f);
+  if (audioSignal == null || isBufferStale) {
+    renderSignal();
+    synth.setBuffer(audioBuffer);
+    isBufferStale = false;
+  }
+  if (isPlayLongNote) playLongNote(panning);
+  else playShortNote(panning);
+  // playSample(samplePos, calcSampleLen(), 0.3f, adsr, 1.0f, panning);
 }
 
 /**
- * Triggers an audio event with a 3-second initial duration followed by a 5-second long release. 
+ * Triggers an audio event with a 3-second initial duration followed by a 5-second long release.
  */
 public void playLongNote(float panning) {
-    int samples = Math.round(longDuration * sampleRate / 1000);
-    int totalLen = playSample(samplePos, samples, 0.3f, longAdsr, 1.0f, panning);
-    println("----- samples = "+ samples +" at sample rate "+ sampleRate 
-            +", actual duration "+ totalLen +" samples = "+ nf(totalLen/sampleRate, 0, 4) +" seconds.");
+  int samples = Math.round(longDuration * sampleRate / 1000);
+  int totalLen = playSample(samplePos, samples, 0.3f, longAdsr, 1.0f, panning);
+  println("----- samples = "+ samples +" at sample rate "+ sampleRate
+    +", actual duration "+ totalLen +" samples = "+ nf(totalLen/sampleRate, 0, 4) +" seconds.");
 }
 
 /**
- * Triggers an audio event with a 3-second initial duration followed by a 5-second long release. 
+ * Triggers an audio event with a 3-second initial duration followed by a 5-second long release.
  */
 public void playShortNote(float panning) {
-    int samples = Math.round(shortDuration * sampleRate / 1000);
-    int totalLen = playSample(samplePos, samples, 0.3f, shortAdsr, 1.0f, panning);
-    println("----- samples = "+ samples +" at sample rate "+ sampleRate 
-            +", actual duration "+ totalLen +" samples = "+ nf(totalLen/sampleRate, 0, 4) +" seconds.");
+  int samples = Math.round(shortDuration * sampleRate / 1000);
+  int totalLen = playSample(samplePos, samples, 0.3f, shortAdsr, 1.0f, panning);
+  println("----- samples = "+ samples +" at sample rate "+ sampleRate
+    +", actual duration "+ totalLen +" samples = "+ nf(totalLen/sampleRate, 0, 4) +" seconds.");
 }
 
-    
+
 /**
  * Calls WaveSynth to render a audio sample array derived from the same math that creates the image.
  */
 public void renderSignal() {
-    this.audioSignal = wavesynth.renderAudioRaw(step);      // get the signal "as is" from WaveSynth
-    audioSignal = WaveSynth.normalize(audioSignal, 0.9f);    // normalize samples to the range (-0.9f, 0.9f) 
-    audioLength = audioSignal.length;
-    audioBuffer.setBufferSize(audioLength);
-    audioBuffer.setChannel(0, audioSignal);            // copy audioSignal to channel 0 of audioBuffer
-    // println("--->> copied audio signal to audio buffer");
-}  
+  this.audioSignal = wavesynth.renderAudioRaw(step);      // get the signal "as is" from WaveSynth
+  audioSignal = WaveSynth.normalize(audioSignal, 0.9f);    // normalize samples to the range (-0.9f, 0.9f)
+  audioLength = audioSignal.length;
+  audioBuffer.setBufferSize(audioLength);
+  audioBuffer.setChannel(0, audioSignal);            // copy audioSignal to channel 0 of audioBuffer
+  // println("--->> copied audio signal to audio buffer");
+}
 
 /**
  * Plays an audio sample with  with a custom envelope, pitch and stereo pan.
- * 
+ *
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
  * @param amplitude    amplitude of the sample on playback
  * @param env          an ADSR envelope for the sample
- * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher 
+ * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher
  * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
  * @return
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-    samplelen = synth.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-    // samplelen = synth.playSample(samplePos, samplelen, amplitude);
-    int durationMS = (int)(samplelen/sampleRate * 1000);
-    timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-    // return the length of the sample
-    return samplelen;
+  samplelen = synth.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+  // samplelen = synth.playSample(samplePos, samplelen, amplitude);
+  int durationMS = (int)(samplelen/sampleRate * 1000);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
+  // return the length of the sample
+  return samplelen;
 }
 
 /**
  * @return a length in samples with some Gaussian variation
  */
 public int calcSampleLen(float timeInSecs) {
-    float timeInSamples = timeInSecs * sampleRate;
-    float vary = 0; 
-    // skip the fairly rare negative numbers
-    while (vary <= 0) {
-        vary = (float) PixelAudio.gauss(1.0, 0.0625);
-    }
-    samplelen = (int)(abs(vary * timeInSamples));
-    // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
-    return samplelen;
+  float timeInSamples = timeInSecs * sampleRate;
+  float vary = 0;
+  // skip the fairly rare negative numbers
+  while (vary <= 0) {
+    vary = (float) PixelAudio.gauss(1.0, 0.0625);
+  }
+  samplelen = (int)(abs(vary * timeInSamples));
+  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  return samplelen;
 }
