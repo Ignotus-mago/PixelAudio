@@ -10,20 +10,24 @@
  */
 public void initAudio() {
   minim = new Minim(this);
-  // use the getLineOut method of the Minim object to get an AudioOutput object
+  // Use the getLineOut method of the Minim object to get an AudioOutput object.
+  // PixelAudio instruments require a STEREO output. 1024 is a standard number
+  // of samples for the output buffer to process at one time. You should usually
+  // set the output sampleRate to either 41500 or 48000, standards for digital 
+  // audio recordings.
   this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
-  // reduce gain to avoid clipping from multiple voices
+  // reduce the output level by 6.0 dB.
   audioOut.setGain(-6.0f);
   // create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
+  // playBuffer will not contain audio data until we load a file
   this.playBuffer = new MultiChannelBuffer(mapSize, 1);
   this.audioSignal = playBuffer.getChannel(0);
   this.audioLength = audioSignal.length;
   // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-  adsrParams = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  defaultEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   initADSRList();
-  // create a PASamplerInstrument with 16 voices
-  // adsrParams will be the default ADSR for the synth
-  synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 16, audioOut, adsrParams);
+  // create a PASamplerInstrument with 8 voices, adsrParams will be its default envelope
+  synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv);
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
 }
@@ -32,26 +36,26 @@ public void initAudio() {
 public void initADSRList() {
   adsrList = new ArrayList<ADSRParams>();
   ADSRParams env0 = new ADSRParams(
-    0.7f,   // maxAmp
-    0.05f,  // fast attack (s)
-    0.1f,   // fast decay (s)
-    0.35f,  // sustain level
-    0.5f    // slow release (s)
-  );
+      0.7f,   // maxAmp
+      0.05f,  // fast attack (s)
+      0.1f,   // fast decay (s)
+      0.35f,  // sustain level
+      0.5f    // slow release (s)
+      );
   ADSRParams env1 = new ADSRParams(
-    0.7f,   // maxAmp
-    0.4f,   // slow attack (s)
-    0.0f,   // no decay (s)
-    0.7f,   // sustain level
-    0.4f    // slow release (s)
-  );
+      0.7f,   // maxAmp
+      0.4f,   // slow attack (s)
+      0.0f,   // no decay (s)
+      0.7f,   // sustain level
+      0.4f    // slow release (s)
+      );
   ADSRParams env2 = new ADSRParams(
-    0.7f,   // maxAmp
-    0.75f,  // slow attack (s)
-    0.1f,   // decay (s)
-    0.6f,  // sustain level
-    0.05f    // release (s)
-  );
+      0.7f,   // maxAmp
+      0.75f,  // slow attack (s)
+      0.1f,   // decay (s)
+      0.6f,  // sustain level
+      0.05f    // release (s)
+      );
   adsrList.add(env0);
   adsrList.add(env1);
   adsrList.add(env2);
@@ -66,6 +70,7 @@ public void renderSignals() {
   playBuffer.setChannel(0, audioSignal);
   audioLength = audioSignal.length;
 }
+
 
 /**
  * Typically called from mousePressed with mouseX and mouseY, generates audio events.
@@ -82,9 +87,9 @@ public void audioMousePressed(int x, int y) {
     isBufferStale = false;
   }
   if (isRandomADSR) {
-    adsrParams = adsrList.get((int)random(3));
-    println("-- "+ adsrParams.toString());
-    playSample(samplePos, calcSampleLen(), 0.6f, adsrParams);
+    defaultEnv = adsrList.get((int)random(3));
+    println("-- "+ defaultEnv.toString());
+    playSample(samplePos, calcSampleLen(), 0.6f, defaultEnv);
   }
   else {
     playSample(samplePos, calcSampleLen(), 0.6f);
@@ -116,6 +121,8 @@ public int getSamplePos(int x, int y) {
   return mapper.lookupSample(x, y);
 }
 
+
+
 /**
  * Plays an audio sample with PASamplerInstrument and custom ADSR.
  * 
@@ -126,7 +133,7 @@ public int getSamplePos(int x, int y) {
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-  samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env);
+  samplelen = synth.playSample(samplePos, samplelen, amplitude, env);
   int durationMS = (int)(samplelen/sampleRate * 1000);
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
@@ -186,4 +193,4 @@ public void drawCircle(int x, int y) {
   circle(x, y, 60);
 }  
 
-/*        END AUDIO METHODS                        */
+/*        END AUDIO METHODS                        */  

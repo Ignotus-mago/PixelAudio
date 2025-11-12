@@ -31,7 +31,7 @@ public int playSample(int samplePos) {
     renderSignals();
     isBufferStale = false;
   }
-  return playSample(samplePos, calcSampleLen(), 0.6f, new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));    
+  return playSample(samplePos, calcSampleLen(), 0.6f, new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
 }
 
 // required by the PANetworkCLientINF interface

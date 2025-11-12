@@ -1,69 +1,66 @@
 package net.paulhertz.pixelaudio.voices;
 
-import ddf.minim.MultiChannelBuffer;
-
 /**
- * Interface for sampler-based instruments with optional multi-buffer playback
- * and per-note pitch control.
- *
- * Extends PAPlayable, which provides the base playSample() definitions.
+ * Specialized playable interface for sample-based instruments.
+ * Extends PAPlayable with buffer position, length, and envelope parameters.
+ * Includes multiple overloads of playSample(...) for backward compatibility.
  */
 public interface PASamplerPlayable extends PAPlayable {
 
     /**
-     * Play a sample from the default buffer using the given parameters.
-     *
-     * @param samplePos  start position in samples
-     * @param sampleLen  number of samples to play
-     * @param amplitude  amplitude multiplier (0.0–1.0 typical)
-     * @param env        ADSR envelope parameters
-     * @param pitch      pitch scaling factor (1.0 = normal, 2.0 = octave up)
-     * @param pan        stereo position (-1.0 = left, +1.0 = right)
-     * @return number of samples actually played
+     * Core playback method: start playback from a given buffer range
+     * with start index, duration, amplitude, envelope, pitch, and pan control,
+     * arguments in standard order for PixalAudio library.
      */
-    int playSample(int samplePos,
-                   int sampleLen,
-                   float amplitude,
-                   ADSRParams env,
-                   float pitch,
-                   float pan);
+    int play(int samplePos, int sampleLen, float amplitude,
+             ADSRParams env, float pitch, float pan);
 
-    /**
-     * Optional: play a sample from a supplied buffer (if supported).
-     * Implementations may choose to ignore this and always use the default buffer.
-     *
-     * @param buffer     MultiChannelBuffer to play from
-     * @param samplePos  start position in samples
-     * @param sampleLen  number of samples to play
-     * @param amplitude  amplitude multiplier
-     * @param env        ADSR envelope parameters
-     * @param pitch      pitch scaling factor
-     * @param pan        stereo position
-     * @return number of samples actually played
-     */
-    default int playSample(MultiChannelBuffer buffer,
-                           int samplePos,
-                           int sampleLen,
-                           float amplitude,
-                           ADSRParams env,
-                           float pitch,
-                           float pan) {
-        // Default implementation: use main buffer if applicable
-        return 0;
+    // --------------------------------------------------------------------
+    // Backward-compatible playSample(...) overloads
+    // TODO decide behavior of methods with -1 sampleLen argument, at the 
+    // moment the expectation is that they return 0, no sound played. 
+    // Mostly, they will be ignored when not present in the implementing 
+    // class in a more complete version. 
+    // --------------------------------------------------------------------
+
+    /** Simplest: play whole buffer at default amplitude and pitch. */
+    default int playSample() {
+        return play(0, -1, 1.0f, null, 1.0f, 0.0f);
     }
 
-    /**
-     * Set the global pitch scale factor for all playback.
-     * Example: 0.5 = half-speed (one octave down), 2.0 = double-speed (one octave up).
-     *
-     * @param scale pitch scaling factor (> 0)
-     */
-    void setPitchScale(float scale);
+    /** Play with amplitude only. */
+    default int playSample(float amplitude) {
+        return play(0, -1, amplitude, null, 1.0f, 0.0f);
+    }
 
-    /**
-     * Get the current global pitch scale factor.
-     *
-     * @return pitch scaling factor
-     */
-    float getPitchScale();
+    /** Play with amplitude and envelope. */
+    default int playSample(float amplitude, ADSRParams env) {
+        return play(0, -1, amplitude, env, 1.0f, 0.0f);
+    }
+
+    /** Play with amplitude, envelope, and pitch. */
+    default int playSample(float amplitude, ADSRParams env, float pitch) {
+        return play(0, -1, amplitude, env, pitch, 0.0f);
+    }
+
+    /** Play with amplitude, envelope, pitch, and pan. */
+    default int playSample(float amplitude, ADSRParams env, float pitch, float pan) {
+        return play(0, -1, amplitude, env, pitch, pan);
+    }
+
+    /** Play a subrange of the buffer with full parameters. */
+    default int playSample(int start, int length, float amplitude,
+                           ADSRParams env, float pitch, float pan) {
+        return play(start, length, amplitude, env, pitch, pan);
+    }
+
+    /** Play subrange with amplitude and pitch (no envelope). */
+    default int playSample(int start, int length, float amplitude, float pitch) {
+        return play(start, length, amplitude, null, pitch, 0.0f);
+    }
+
+    /** Play subrange with amplitude only. */
+    default int playSample(int start, int length, float amplitude) {
+        return play(start, length, amplitude, null, 1.0f, 0.0f);
+    }
 }

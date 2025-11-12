@@ -1,59 +1,60 @@
 /* ---------------------------------------------------------------- */
 /*                                                                  */
 /*                      GUI Interface Code                          */
-/*                       Uses G4P library                           */  
+/*                       Uses G4P library                           */
 /*                                                                  */
 /* ---------------------------------------------------------------- */
-// Variable declarations 
+
+// Variable declarations
 GWindow controlWindow;
-GLabel argo1Label; 
+GLabel argo1Label;
 GLabel genLabel1;
 GDropList genMenu1;
-GLabel colorsLabel1; 
-GDropList colorMenu1; 
-GLabel alpha1Label; 
+GLabel colorsLabel1;
+GDropList colorMenu1;
+GLabel alpha1Label;
 GTextField alpha1Text;
-GLabel patternLabel1; 
-GDropList patternMenu1; 
-GLabel repLabel1; 
-GTextField repText1; 
-GLabel unitLabel1; 
-GTextField unitSize1; 
-GLabel gapLabel1; 
-GTextField gap1Text; 
+GLabel patternLabel1;
+GDropList patternMenu1;
+GLabel repLabel1;
+GTextField repText1;
+GLabel unitLabel1;
+GTextField unitSize1;
+GLabel gapLabel1;
+GTextField gap1Text;
 GLabel gapColorLabel1;
 GDropList gapColorMenu1;
-GLabel gapAlpha1Label; 
+GLabel gapAlpha1Label;
 GTextField gapAlpha1Text;
 GCheckbox argo1Show;
 GCheckbox argo1Freeze;
 GLabel argoStepLabel1;
 GTextField argoStepText1;
 //
-GLabel argo2Label; 
+GLabel argo2Label;
 GLabel genLabel2;
 GDropList genMenu2;
-GLabel colorsLabel2; 
-GDropList colorMenu2; 
-GLabel alpha2Label; 
+GLabel colorsLabel2;
+GDropList colorMenu2;
+GLabel alpha2Label;
 GTextField alpha2Text;
-GLabel patternLabel2; 
-GDropList patternMenu2; 
-GLabel repLabel2; 
-GTextField repText2; 
-GLabel unitLabel2; 
-GTextField unitSize2; 
-GLabel gapLabel2; 
-GTextField gap2Text; 
+GLabel patternLabel2;
+GDropList patternMenu2;
+GLabel repLabel2;
+GTextField repText2;
+GLabel unitLabel2;
+GTextField unitSize2;
+GLabel gapLabel2;
+GTextField gap2Text;
 GLabel gapColorLabel2;
 GDropList gapColorMenu2;
-GLabel gapAlpha2Label; 
+GLabel gapAlpha2Label;
 GTextField gapAlpha2Text;
 GCheckbox argo2Show;
 GCheckbox argo2Freeze;
 GLabel argoStepLabel2;
 GTextField argoStepText2;
-// 
+//
 GLabel animationLabel;
 GLabel animOpenLabel;
 GTextField animOpenText;
@@ -70,29 +71,34 @@ GTextField animCloseText;
 GLabel animDurationLabel;
 GTextField animDurationText;
 GButton recordButton;
-// 
+
+//
 // menu items
-String[] genItems = {"Hilbert Loop 3x2", "Hilbert Loop 6x4", "Hilbert ZZ Loop", "Hilbert Stack Ortho", "Hilbert Stack Bou", "Hilbert Row Ortho", 
-     "Hilbert Column Ortho", "ZZ Loop 6x4", "ZZ Row Ortho","ZZ Row Alt Ortho", "ZZ Column Ortho", 
-     "ZZ Column Alt Ortho", "ZZ Row Random One", "ZZ Row Random Two", "Boustroph Row Random", "Hilbert Random One", "Hilbert Random Two", "Hilbert Random Three"};
-String[] colorItems = {"Black Alone", "Black, White", "White, Black", "Black, Gray, White", "Gray Ramp", "Gray Triangle", "Multicolor", "Spectrum 8", "Spectrum 6", "Blue Cream", "Cream Blue", "Four Color"};
-int[][] colorVars = {blackAlone, blackWhite, whiteBlack, blackGrayWhite, grayRamp, grayTriangle, multicolor, espectroOcho, espectroSeis, blueCream, creamBlue, fourColor};
+String[] genItems = {"Hilbert Loop 3x2", "Hilbert Loop 6x4", "Hilbert ZZ Loop", "Hilbert Stack Ortho", "Hilbert Stack Bou", "Hilbert Row Ortho",
+  "Hilbert Column Ortho", "ZZ Loop 6x4", "ZZ Row Ortho", "ZZ Row Alt Ortho", "ZZ Column Ortho",
+  "ZZ Column Alt Ortho", "ZZ Row Random One", "ZZ Row Random Two", "Boustroph Row Random", "Hilbert Random One", "Hilbert Random Two", "Hilbert Random Three"};
+String[] colorItems = {"Black Alone", "Black, White", "White, Black", "Black, Gray, White", "Gray Ramp", "Gray Triangle", "Multicolor", "Spectrum 8",
+  "Spectrum 6", "Blue Cream", "Cream Blue", "Four Color", "Five Color"};
+int[][] colorVars = {blackAlone, blackWhite, whiteBlack, blackGrayWhite, grayRamp, grayTriangle, multicolor, espectroOcho,
+  espectroSeis, blueCream, creamBlue, fourColor, fiveColor};
 String[] patternItems = {"The One", "One-one", "Count to Five", "Odd One to Seven", "Four Power", "Seven Forty-nine", "Fibo 55", "Fibonacci", "Lucas"};
 int[][] patternVars = {theOne, oneOne, countToFive, oddOneToSeven, fourPower, sevenFortyNine, fiboLSystem55, fibonacciNums, lucasNums};
 int[] gapColorVars = {black, white, gray, roig, roigtar, taronja, groc, vert, blau, blau2, violet, grana, blanc, gris, negre};
-String[] gapColorItems = {"black", "white", "gray", "red", "red orange", "orange", "yellow", "green", 
-                      "blue 1", "blue 2", "violet", "red violet", "bone", "blue gray", "midnight"};
+String[] gapColorItems = {"black", "white", "gray", "red", "red orange", "orange", "yellow", "green",
+  "blue 1", "blue 2", "violet", "red violet", "bone", "blue gray", "midnight"};
 
 // spacing variables
 int ypos = 10;
 int inc = 28;
-// Create all the GUI controls. 
-public void createGUI(){
+
+
+// Create all the GUI controls.
+public void createGUI() {
   G4P.messagesEnabled(false);
   G4P.setGlobalColorScheme(GCScheme.BLUE_SCHEME);
   G4P.setMouseOverEnabled(false);
   surface.setTitle("Argosy Window");
-  /* ----->>> floating control window <<<----- */  
+  /* ----->>> floating control window <<<----- */
   controlWindow = GWindow.getWindow(this, "Argosy Settings", 0, 0, 480, 540, JAVA2D);
   controlWindow.noLoop();
   controlWindow.setActionOnClose(G4P.KEEP_OPEN);
@@ -193,14 +199,15 @@ public void createGUI(){
   gapAlpha1Label.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   gapAlpha1Label.setText("Gap opacity: ");
   gapAlpha1Label.setOpaque(false);
-  gapAlpha1Text = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  gapAlpha1Text = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   gapAlpha1Text.setText(String.valueOf(argo1GapAlpha));
   gapAlpha1Text.setOpaque(true);
   gapAlpha1Text.setNumeric(0, 255, 255);
   gapAlpha1Text.addEventHandler(this, "gapOpacity1_change");
   //
   ypos += inc;
-  // animation label -- print ypos to get coordinate 
+  // animation label -- print ypos to get coordinate
   animationLabel = new GLabel(controlWindow, 10, ypos, 460, 20);
   animationLabel.setText("Animation Settings");
   animationLabel.setTextBold();
@@ -319,7 +326,8 @@ public void createGUI(){
   gapAlpha2Label.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   gapAlpha2Label.setText("Gap opacity: ");
   gapAlpha2Label.setOpaque(false);
-  gapAlpha2Text = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  gapAlpha2Text = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   gapAlpha2Text.setText(String.valueOf(argo2GapAlpha));
   gapAlpha2Text.setOpaque(true);
   gapAlpha2Text.setNumeric(0, 255, 255);
@@ -351,7 +359,8 @@ public void createGUI(){
   argoStepLabel1.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   argoStepLabel1.setText("Step: ");
   argoStepLabel1.setOpaque(false);
-  argoStepText1 = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  argoStepText1 = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   argoStepText1.setText(String.valueOf(argo1Step));
   argoStepText1.setOpaque(true);
   argoStepText1.setNumericType(G4P.INTEGER);
@@ -361,7 +370,8 @@ public void createGUI(){
   argoStepLabel2.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   argoStepLabel2.setText("Step: ");
   argoStepLabel2.setOpaque(false);
-  argoStepText2 = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  argoStepText2 = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   argoStepText2.setText(String.valueOf(argo2Step));
   argoStepText2.setOpaque(true);
   argoStepText2.setNumericType(G4P.INTEGER);
@@ -372,17 +382,19 @@ public void createGUI(){
   animOpenLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   animOpenLabel.setText("Open frames: ");
   animOpenLabel.setOpaque(false);
-  animOpenText = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  animOpenText = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   animOpenText.setText(String.valueOf(animOpen));
   animOpenText.setOpaque(true);
   animOpenText.setNumeric(0, 65536, 0);
   animOpenText.addEventHandler(this, "animOpen_change");
-  // 
+  //
   animCloseLabel = new GLabel(controlWindow, 250, ypos, 80, 20);
   animCloseLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   animCloseLabel.setText("Close frames: ");
   animCloseLabel.setOpaque(false);
-  animCloseText = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  animCloseText = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   animCloseText.setText(String.valueOf(animClose));
   animCloseText.setOpaque(true);
   animCloseText.setNumeric(0, 65536, 0);
@@ -393,7 +405,8 @@ public void createGUI(){
   animRunLabel1.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   animRunLabel1.setText("Run 1: ");
   animRunLabel1.setOpaque(false);
-  animRunText1 = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  animRunText1 = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   animRunText1.setText(String.valueOf(animRun1));
   animRunText1.setOpaque(true);
   animRunText1.setNumeric(0, 65536, 0);
@@ -403,7 +416,8 @@ public void createGUI(){
   animRunLabel2.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   animRunLabel2.setText("Run 2: ");
   animRunLabel2.setOpaque(false);
-  animRunText2 = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  animRunText2 = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   animRunText2.setText(String.valueOf(animRun2));
   animRunText2.setOpaque(true);
   animRunText2.setNumeric(0, 65536, 0);
@@ -414,7 +428,8 @@ public void createGUI(){
   animHoldLabel1.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   animHoldLabel1.setText("Hold 1: ");
   animHoldLabel1.setOpaque(false);
-  animHoldText1 = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  animHoldText1 = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   animHoldText1.setText(String.valueOf(animHold1));
   animHoldText1.setOpaque(true);
   animHoldText1.setNumeric(0, 65536, 0);
@@ -424,7 +439,8 @@ public void createGUI(){
   animHoldLabel2.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   animHoldLabel2.setText("Hold 2: ");
   animHoldLabel2.setOpaque(false);
-  animHoldText2 = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  animHoldText2 = new GTextField(controlWindow, 340, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   animHoldText2.setText(String.valueOf(animHold2));
   animHoldText2.setOpaque(true);
   animHoldText2.setNumeric(0, 65536, 0);
@@ -435,11 +451,12 @@ public void createGUI(){
   animDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
   animDurationLabel.setText("Duration: ");
   animDurationLabel.setOpaque(false);
-  animDurationText = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);;
+  animDurationText = new GTextField(controlWindow, 100, ypos, 130, 20, G4P.SCROLLBARS_NONE);
+  ;
   animDurationText.setText(String.valueOf(animDuration));
   animDurationText.setOpaque(true);
   animDurationText.setNumeric(0, 65536, 0);
-  animDurationText.addEventHandler(this, "animDuration_change");    
+  animDurationText.addEventHandler(this, "animDuration_change");
   //
   recordButton = new GButton(controlWindow, 270, ypos, 160, 20);
   recordButton.setText("Record Video");
@@ -447,14 +464,19 @@ public void createGUI(){
   //
   controlWindow.loop();
 }
-/* ----->>> EVENT HANDLERS <<<----- */  
-/* ----->>>   ARGOSY ONE   <<<----- */  
+
+
+/* ----->>> EVENT HANDLERS <<<----- */
+/* ----->>>   ARGOSY ONE   <<<----- */
+
+
 synchronized public void drawControlWindow(PApplet appc, GWinData data) {
   appc.background(color(204, 199, 212));
   appc.stroke(gris);
   appc.strokeWeight(2);
   appc.line(10, 308, 470, 308);
 }
+
 public void genMenu1_hit(GDropList source, GEvent event) {
   argo1GenSelect = source.getSelectedIndex();
   int shift = argo1.getArgosyPixelShift();
@@ -470,9 +492,10 @@ public void colorMenu1_hit(GDropList source, GEvent event) {
   argo1.setArgosyColors(argo1Colors);
   if (shift != 0) {
     argo1.shift(-shift, true);
-  }    
+  }
   isBufferStale = true;
 }
+
 public void alphaText1_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo1Alpha != val) {
@@ -494,9 +517,10 @@ public void patternMenu1_hit(GDropList source, GEvent event) {
   argo1.setArgosyPattern(argo1Pattern);
   if (shift != 0) {
     argo1.shift(-shift, true);
-  }    
+  }
   isBufferStale = true;
 }
+
 public void repText1_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo1Reps != val) {
@@ -522,6 +546,7 @@ public void unitSize1_change(GTextField source, GEvent event) {
     isBufferStale = true;
   }
 }
+
 public void gap1_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo1Gap != val) {
@@ -535,6 +560,7 @@ public void gap1_change(GTextField source, GEvent event) {
     isBufferStale = true;
   }
 }
+
 public void gapColorMenu1_hit(GDropList source, GEvent event) {
   int index = source.getSelectedIndex();
   argo1GapColor = gapColorVars[index];
@@ -543,9 +569,10 @@ public void gapColorMenu1_hit(GDropList source, GEvent event) {
   argo1.setArgosyGapColor(PixelAudioMapper.setAlpha(argo1GapColor, argo1GapAlpha));
   if (shift != 0) {
     argo1.shift(-shift, true);
-  }    
+  }
   isBufferStale = true;
 }
+
 public void gapOpacity1_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo1GapAlpha != val) {
@@ -561,11 +588,12 @@ public void gapOpacity1_change(GTextField source, GEvent event) {
 }
 
 public void argoStep1_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (argo1Step != val) {
-        argo1Step = val;
-    }
+  int val = source.getValueI();
+  if (argo1Step != val) {
+    argo1Step = val;
+  }
 }
+
 public void argo1ShowCheck_hit(GCheckbox source, GEvent event) {
   isShowArgo1 = source.isSelected();
 }
@@ -580,7 +608,9 @@ public void argo1InitAndShift() {
   this.initArgo1(shift);
   isBufferStale = true;
 }
-/* ----->>>   ARGOSY TWO   <<<----- */  
+
+/* ----->>>   ARGOSY TWO   <<<----- */
+
 public void genMenu2_hit(GDropList source, GEvent event) {
   argo2GenSelect = source.getSelectedIndex();
   int shift = argo2.getArgosyPixelShift();
@@ -588,16 +618,18 @@ public void genMenu2_hit(GDropList source, GEvent event) {
   this.initArgo2(shift);
   isBufferStale = true;
 }
+
 public void colorMenu2_hit(GDropList source, GEvent event) {
-    argo2PaletteSelect = source.getSelectedIndex();
-    argo2Colors = setArgoColorsAlpha(colorVars[argo2PaletteSelect], argo2Alpha);
-    int shift = argo2.getArgosyPixelShift();
-    argo2.setArgosyColors(argo2Colors);
-    if (shift != 0) {
-        argo2.shift(-shift, true);
-    }    
+  argo2PaletteSelect = source.getSelectedIndex();
+  argo2Colors = setArgoColorsAlpha(colorVars[argo2PaletteSelect], argo2Alpha);
+  int shift = argo2.getArgosyPixelShift();
+  argo2.setArgosyColors(argo2Colors);
+  if (shift != 0) {
+    argo2.shift(-shift, true);
+  }
   isBufferStale = true;
 }
+
 public void alphaText2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo2Alpha != val) {
@@ -609,18 +641,20 @@ public void alphaText2_change(GTextField source, GEvent event) {
       argo2.shift(-shift, true);
     }
     isBufferStale = true;
-  }    
+  }
 }
+
 public void patternMenu2_hit(GDropList source, GEvent event) {
-    argo2PatternSelect = source.getSelectedIndex();
-    argo2Pattern = patternVars[argo2PatternSelect];
-    int shift = argo2.getArgosyPixelShift();
-    argo2.setArgosyPattern(argo2Pattern);
-    if (shift != 0) {
-        argo2.shift(-shift, true);
-    }    
+  argo2PatternSelect = source.getSelectedIndex();
+  argo2Pattern = patternVars[argo2PatternSelect];
+  int shift = argo2.getArgosyPixelShift();
+  argo2.setArgosyPattern(argo2Pattern);
+  if (shift != 0) {
+    argo2.shift(-shift, true);
+  }
   isBufferStale = true;
 }
+
 public void repText2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo2Reps != val) {
@@ -629,10 +663,11 @@ public void repText2_change(GTextField source, GEvent event) {
     argo2.setArgosyReps(argo2Reps);
     if (shift != 0) {
       argo2.shift(-shift, true);
-    }  
+    }
     isBufferStale = true;
-  }  
+  }
 }
+
 public void unitSize2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo2Unit != val) {
@@ -645,6 +680,7 @@ public void unitSize2_change(GTextField source, GEvent event) {
     isBufferStale = true;
   }
 }
+
 public void gap2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo2Gap != val) {
@@ -658,16 +694,18 @@ public void gap2_change(GTextField source, GEvent event) {
     isBufferStale = true;
   }
 }
+
 public void gapColorMenu2_hit(GDropList source, GEvent event) {
-    int index = source.getSelectedIndex();
-    argo2GapColor = gapColorVars[index];
-    int shift = argo2.getArgosyPixelShift();
-    argo2.setArgosyGapColor(PixelAudioMapper.setAlpha(argo2GapColor, argo2GapAlpha));
-    if (shift != 0) {
-        argo2.shift(-shift, true);
-    }    
+  int index = source.getSelectedIndex();
+  argo2GapColor = gapColorVars[index];
+  int shift = argo2.getArgosyPixelShift();
+  argo2.setArgosyGapColor(PixelAudioMapper.setAlpha(argo2GapColor, argo2GapAlpha));
+  if (shift != 0) {
+    argo2.shift(-shift, true);
+  }
   isBufferStale = true;
 }
+
 public void gapOpacity2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo2GapAlpha != val) {
@@ -681,12 +719,14 @@ public void gapOpacity2_change(GTextField source, GEvent event) {
     isBufferStale = true;
   }
 }
+
 public void argoStep2_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (argo2Step != val) {
-        argo2Step = val;
-    }
+  int val = source.getValueI();
+  if (argo2Step != val) {
+    argo2Step = val;
+  }
 }
+
 public void argo2ShowCheck_hit(GCheckbox source, GEvent event) {
   isShowArgo2 = source.isSelected();
 }
@@ -695,61 +735,64 @@ public void argo2FreezeCheck_hit(GCheckbox source, GEvent event) {
   this.isArgo2Freeze = source.isSelected();
   println("isArgo2Freeze is "+ isArgo2Freeze);
 }
+
 public void argo2InitAndShift() {
   int shift = argo1.getArgosyPixelShift();
   this.initArgo2(shift);
   isBufferStale = true;
 }
+
 public void animOpen_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (animOpen != val) {
-        animOpen = val;
-    }
+  int val = source.getValueI();
+  if (animOpen != val) {
+    animOpen = val;
+  }
 }
 
 public void animClose_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (animClose != val) {
-        animClose = val;
-    }
+  int val = source.getValueI();
+  if (animClose != val) {
+    animClose = val;
+  }
 }
 
 public void animRun1_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (animRun1 != val) {
-        animRun1 = val;
-        //println("--->> animRun1 = "+ animRun1);
-    }
+  int val = source.getValueI();
+  if (animRun1 != val) {
+    animRun1 = val;
+    //println("--->> animRun1 = "+ animRun1);
+  }
 }
 
 public void animHold1_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (animHold1 != val) {
-        animHold1 = val;
-        //println("--->> animHold1 = "+ animHold1);
-    }
+  int val = source.getValueI();
+  if (animHold1 != val) {
+    animHold1 = val;
+    //println("--->> animHold1 = "+ animHold1);
+  }
 }
 
 public void animRun2_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (animRun2 != val) {
-        animRun2 = val;
-        //println("--->> animRun2 = "+ animRun2);
-    }
+  int val = source.getValueI();
+  if (animRun2 != val) {
+    animRun2 = val;
+    //println("--->> animRun2 = "+ animRun2);
+  }
 }
 
 public void animHold2_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (animHold2 != val) {
-        animHold2 = val;
-        //println("--->> animHold2 = "+ animHold2);
-    }
+  int val = source.getValueI();
+  if (animHold2 != val) {
+    animHold2 = val;
+    //println("--->> animHold2 = "+ animHold2);
+  }
 }
+
 public void animDuration_change(GTextField source, GEvent event) {
-    int val = source.getValueI();
-    if (animDuration != val) {
-        animDuration = val;
-    }
+  int val = source.getValueI();
+  if (animDuration != val) {
+    animDuration = val;
+  }
 }
 
 public void recordButton_hit(GButton source, GEvent event ) {
@@ -757,6 +800,7 @@ public void recordButton_hit(GButton source, GEvent event ) {
   this.isRecordingVideo = true;
   initAnimation();
 }
+
 /* ---------------------------------------------------------------- */
 /*                                                                  */
 /*                    END GUI Interface Code                        */

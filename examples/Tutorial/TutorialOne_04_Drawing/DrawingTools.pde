@@ -5,14 +5,14 @@
 /*----------------------------------------------------------------*/
 
 /**
- * Initializes allPoints and adds the current mouse location to it. 
+ * Initializes allPoints and adds the current mouse location to it.
  */
 public void initAllPoints() {
   allPoints = new ArrayList<PVector>();
   allTimes = new ArrayList<Integer>();
   startTime = millis();
   allTimes.add(startTime);
-  addPoint(constrain(mouseX, 0, width-1), constrain(mouseY, 0, height-1));
+  addPoint(PApplet.constrain(mouseX, 0, width-1), PApplet.constrain(mouseY, 0, height-1));
 }
 
 /**
@@ -24,8 +24,7 @@ public void handleMousePressed(int x, int y) {
     eventPoints = activeBrush.getEventPoints();
     loadEventPoints();
     activeBrush = null;
-  } 
-  else {
+  } else {
     // handle audio generation in response to a mouse click
     audioMousePressed(PApplet.constrain(x, 0, width-1), PApplet.constrain(y, 0, height-1));
   }
@@ -33,7 +32,10 @@ public void handleMousePressed(int x, int y) {
 
 /**
  * While user is dragging the mouses and isDrawMode == true, accumulates new points
- * to allPoints and event times to allTimes.
+ * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
+ * We constrain points outside the bounds of the display window. An alternative approach
+ * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural"
+ * appearance for fast drawing.
  */
 public void addPoint(int x, int y) {
   // we do some very basic point thinning to eliminate successive duplicate points
@@ -46,8 +48,8 @@ public void addPoint(int x, int y) {
 }
 
 /**
- * Processes the eventPoints list to create TimedLocation events 
- * and stores them in curveTLEvents. 
+ * Processes the eventPoints list to create TimedLocation events
+ * and stores them in curveTLEvents.
  */
 public void loadEventPoints() {
   if (eventPoints != null) {
@@ -55,27 +57,12 @@ public void loadEventPoints() {
     int startTime = millis();
     // println("building pointsTimer: "+ startTime);
     if (curveTLEvents == null) curveTLEvents = new ArrayList<TimedLocation>();
-    storeCurveTL(eventPointsIter, startTime);
-  }
-  else {
-    println("--->> NULL eventPoints");
-  }
-}
-
-
-/**
- * Processes the eventPoints list to create TimedLocation events 
- * and stores them in curveTLEvents. 
- * @param startTime    time in millis (in the future!) when event should begin
- */
-public void loadEventPoints(int startTime) {
-  if (eventPoints != null) {
-    eventPointsIter = eventPoints.listIterator();
-    // println("building pointsTimer: "+ startTime);
-    if (curveTLEvents == null) curveTLEvents = new ArrayList<TimedLocation>();
-    storeCurveTL(eventPointsIter, startTime);
-  }
-  else {
+    if (!isGranular) {
+      storeCurveTL(eventPointsIter, startTime);
+    } else {
+      storeGranularCurveTL(eventPointsIter, startTime, grainDuration);
+    }
+  } else {
     println("--->> NULL eventPoints");
   }
 }
@@ -92,12 +79,28 @@ public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime)
     curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * eventStep));
   }
   Collections.sort(curveTLEvents);
-}  
+}
 
 /**
- * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
- * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from 
- * variables in the calling class (TutorialOneDrawing, here). 
+ * @param iter         a ListIterator over eventPoints
+ * @param startTime    a time in millis
+ * @param grainSize    a duration in milliseconds
+ */
+public synchronized void storeGranularCurveTL(ListIterator<PVector> iter, int startTime, int grainSize) {
+  startTime += 50;
+  int grainOffset = grainSize / 4;
+  int i = 0;
+  while (iter.hasNext()) {
+    PVector loc = iter.next();
+    curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * grainOffset));
+  }
+  Collections.sort(curveTLEvents);
+}
+
+/**
+ * Initializes a PACurveMaker instance with allPoints as an argument to the factory method
+ * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from
+ * variables in the calling class (TutorialOneDrawing, here).
  */
 public void initCurveMaker() {
   curveMaker = PACurveMaker.buildCurveMaker(allPoints);
@@ -113,6 +116,14 @@ public void initCurveMaker() {
   curveMaker.setDragTimes(reconfigureTimeList(allTimes));
   this.brushShapesList.add(curveMaker);
   setSampleVars(mouseX, mouseY);
+  // testing
+  /*
+    println("----- RDP Indices: ");
+   int[] ndx = curveMaker.getRdpIndicesAsInts();
+   for (int n : ndx) {
+   println(n);
+   }
+   */
 }
 
 /**
@@ -145,8 +156,8 @@ public ArrayList<Integer> reconfigureTimeList(ArrayList<Integer> timeList) {
 
 
 /**
- * Iterates over brushShapesList and draws the brushstrokes stored in 
- * each PACurveMaker in the list. 
+ * Iterates over brushShapesList and draws the brushstrokes stored in
+ * each PACurveMaker in the list.
  */
 public void drawBrushShapes() {
   if (this.brushShapesList.size() > 0) {
@@ -166,7 +177,7 @@ public void drawBrushShapes() {
 }
 
 /**
- * Draws shapes stored in curveMaker, a PACurveMaker instance that stores the most recent drawing data. 
+ * Draws shapes stored in curveMaker, a PACurveMaker instance that stores the most recent drawing data.
  */
 public void curveMakerDraw() {
   if (curveMaker.isReady()) {
@@ -185,38 +196,44 @@ public synchronized void runCurveEvents() {
   if (curveTLEvents != null && curveTLEvents.size() > 0) {
     int currentTime = millis();
     curveTLEvents.forEach(tl -> {
-      if (tl.stopTime() < currentTime) {
+      if (tl.eventTime() < currentTime) {
         // the curves may exceed display bounds, so we have to constrain values
         sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
         sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
+        float panning = map(sampleX, 0, width, -0.8f, 0.8f);
         int pos = getSamplePos(sampleX, sampleY);
-        playSample(pos, calcSampleLen(), 0.6f);          
+        if (!isGranular) {
+          playSample(pos, calcSampleLen(), synthGain, panning);
+        } else {
+          int len = (int)(abs((this.grainDuration) * sampleRate / 1000.0f));
+          playSample(pos, len, synthGain, granularEnv, panning);
+        }
         tl.setStale(true);
         // println("----- ");
-      } 
-      else {
+      } else {
         // pointEventsArray is sorted by time, so ignore events still in the future
         return;
       }
-    });
+    }
+    );
     curveTLEvents.removeIf(TimedLocation::isStale);
   }
 }
 
 /**
- * Tracks and runs TimedLocation events in the timeLocsArray list, which is 
+ * Tracks and runs TimedLocation events in the timeLocsArray list, which is
  * associated with mouse clicks that trigger audio a the click point.
  */
 public synchronized void runPointEvents() {
   int currentTime = millis();
-  for (Iterator<TimedLocation> iter = timeLocsArray.iterator(); iter.hasNext();) {
+  for (Iterator<TimedLocation> iter = timeLocsArray.iterator(); iter.hasNext(); ) {
     TimedLocation tl = iter.next();
-    tl.setStale(tl.stopTime() < currentTime);
+    tl.setStale(tl.eventTime() < currentTime);
     if (!tl.isStale()) {
       drawCircle(tl.getX(), tl.getY());
     }
   }
-  timeLocsArray.removeIf(TimedLocation::isStale);    
+  timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
 /**
@@ -243,14 +260,13 @@ public void reset(boolean isClearCurves) {
     if (this.brushShapesList != null) this.brushShapesList.clear();
     if (this.curveTLEvents != null) this.curveTLEvents.clear();
     println("----->>> RESET audio, event points and curves <<<------");
-  }
-  else {
+  } else {
     println("----->>> RESET audio and event points <<<------");
   }
 }
 
 /**
- * Plays all audio events controlled by PACurveMaker curves in brushShapesList, 
+ * Plays all audio events controlled by PACurveMaker curves in brushShapesList,
  * spaced out by offset milliseconds.
  * @param offset
  */
@@ -259,8 +275,8 @@ public void playBrushstrokes(int offset) {
   for (PACurveMaker curve : brushShapesList) {
     if (curve.isReady()) {
       eventPoints = curve.getCurveShape().getPointList(polySteps);
-      loadEventPoints(startTime);
-      startTime += offset;
+      loadEventPoints();
+      startTime = startTime + offset;
     }
   }
 }
@@ -308,6 +324,20 @@ public void removeOldestBrush() {
       brushShapesList.remove(0);    // brushShapes array starts at 0
       if (brushShapesList.isEmpty())
         curveMaker = null;
-      }
+    }
   }
 }
+
+
+class TimedLocationGrain extends TimedLocation {
+  int grainLength;
+  ADSRParams grainEnv;
+
+  public TimedLocationGrain(int x, int y, int stop) {
+    super(x, y, stop);
+  }
+}
+
+
+
+/*             END DRAWING METHODS              */

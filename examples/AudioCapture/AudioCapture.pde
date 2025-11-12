@@ -66,10 +66,11 @@ import processing.sound.*;
  * works as expected, using Minim. Outputs should be set with the System Sound control panel. 
  *
  *
- * Press the 'p' key to toggle between live streaming from the built-in microphone and streaming from a file.
+ * Press the 'p' key to play live audio from the built-in microphone or streaming from a file.
  * Press 't' to change the audio source from live audio to file or vice versa.
- * Press the spacebar to record audio from the current stream into the audio buffer and write it to the screen.
- * Click on the image to play a sample. Clicking turns off recording.
+ * Press the spacebar to capture audio from the current stream into the audio buffer and write it to the screen.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage.
+ * Click on the image to play a sample.
  * 
  * Information about current source and streaming status is displayed in the application window. 
  *
@@ -140,6 +141,9 @@ float[] releaseRange = {0.1f, 0.4f};
 /** audio variables */
 boolean listening = false;
 boolean listenLive = false;
+/** interaction */
+int pixelPos;
+int samplePos;
 
 boolean isVerbose = false;    // set true to get feedback in console
 
@@ -156,7 +160,6 @@ public void setup() {
   initMapper();
   mapSize = mapper.getSize();
   minim = new Minim(this);
-  initAudio();
   Sound.list();
   // set the devices you're using, depending on values from Sound.list()
   // works with Processing Sound library, but we're using Minim. 
@@ -164,6 +167,7 @@ public void setup() {
   // You should be able to do something similar in Windows. 
   // Sound.inputDevice(6);
   // Sound.outputDevice(6);
+  initAudio();
   showHelp();
 }
 
@@ -198,6 +202,13 @@ public void draw() {
     drawSignal();
   }
   drawInput();
+}
+
+public void mousePressed() {
+  // get the position in the audio buffer that corresponds to the pixel location in the image
+  pixelPos = mouseX + mouseY * width;
+  samplePos = mapper.lookupSample(mouseX, mouseY);
+  playSample(samplePos);
 }
 
 public void keyPressed() {
@@ -242,19 +253,12 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press the 'p' key to toggle between live streaming from the built-in microphone and streaming from a file.");
+  println(" * Press the 'p' key to play live audio from the built-in microphone or streaming from a file.");
   println(" * Press 't' to change the audio source from live audio to file or vice versa.");
   println(" * Press the spacebar to capture audio from the current stream into the audio buffer and write it to the screen.");
-  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage");
+  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage.");
   println(" * Click on the image to play a sample.");
 }
-
-public void mousePressed() {
-  // get the position in the audio buffer that corresponds to the pixel location in the image
-  int samplePos = mapper.lookupSample(mouseX, mouseY);
-  playSample(samplePos);
-}
-
 
 public void drawInput() {
   if (listenLive) {

@@ -22,6 +22,7 @@
  * demonstrates how to do that with HilbertGens. 
  *
  * Press ' ' to toggle animation that shifts pixels along the signal path.
+ * Drag the mouse to change animation shift.
  * 
  */
 
@@ -40,7 +41,8 @@ PixelAudioMapper mapper;         // PixelAudioMapper to handle mapping of pixels
 
 PImage mapImage;                 // A PImage to display
 int[] colors;                    // an array of color values for pixels
-int shift = 512;                // amount to displace pixels for animation
+int shift = 512;                 // amount to displace pixels for animation
+boolean isTrackMouse = true;     // track mouse toggle, dragging mouse to adjust the value of shift
 boolean isAnimating = false;     // well, are we animating or not?
 
 
@@ -76,7 +78,6 @@ public void setup() {
  * This method may be called as factory method of the HilbertGen class:
  * public static MultiGen hilbertLoop3x2(int genW, int genH)
  * example: MultiGen multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
- *
  *
  * Note that genH must equal genW and both must be powers of 2. For the 
  * image size we're using in this example, genW = image width / 3 and 
@@ -142,4 +143,11 @@ public void animate() {
   PixelAudioMapper.rotateLeft(colors, shift);
   mapper.plantPixels(colors, mapImage.pixels, 0, mapper.getSize());
   mapImage.updatePixels();
+}
+
+public void mouseDragged() {
+    if (isTrackMouse) {
+      shift = abs(width/2 - mouseX) * 16;
+      if (mouseY < height/2) shift = -shift;
+    }
 }

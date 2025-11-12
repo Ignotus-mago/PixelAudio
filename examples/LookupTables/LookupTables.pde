@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import net.paulhertz.pixelaudio.*;
 
 /**
+ *
  * The LookupTables example shows how a central element of PixelAudio, the
  * lookup table, connects a 1D audio signal with a 2D bitmap, putting audio
  * samples and RGB pixels in one-to-one correspondence. Imagine the audio signal
@@ -21,25 +22,31 @@ import net.paulhertz.pixelaudio.*;
  * This example also shows basic affine transforms of PixelMapGen objects, such
  * as rotation and reflection, how to change the PixelMapGen a PixelAudioMapper
  * instance is using, and basic animation using array rotation.
- * 
+ *
  * Signal path index numbers are small white numbers, bitmap index numbers are
  * big black numbers. Read the imageToSignalLUT values by following the pixel
  * index order and reading the white numbers. Read the signalToImageLUT values
  * by following the signal path order and reading the black numbers. Read the
  * imageToSignalLUT values by following the black pixel numbers in order and
  * reading the white numbers.
- * 
- * Press 'a' or 'A' to rotate the array of colors one step left or right. Press
- * 'g' to display a different generator. Press 'n' to hide or show numbers.
- * Press 'l' to hide or show lines. Press 'd' to print a description of the
- * current generator to the console. Press 'k' to print the imageToSignalLUT and
- * the signalToImageLUT to the console. Press 't' to print affine maps to the
- * console. Press 'f' to rotate 90 degress clockwise. Press 'b' to rotate 90
- * degress counterclockwise. Press 'r' to rotate 180 degress. Press 'x' to flip
- * x-coordinates (reflect on y-axis). Press 'y' to flip y-coordinates (reflect
- * on x-axis). Press '1' to flip on primary diagonal. Press '2' to flip on
- * secondary diagonal. Press 'h' to show this help text in the console.
- * 
+ *
+ * Press 'a' to advance animation by one step.
+ * Press 'A' to rewind animation by one step.
+ * Press 'd' to print the current PixelMapGen's description String.
+ * Press 'g' to swap in a new PixelMapGen.
+ * Press 'n' to hide the numbers overlay.
+ * Press 'l' to hide the lines overlay.
+ * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.
+ * Press 't' to print affine maps to the console.
+ * Press 'f' to rotate current gen 90 degrees clockwise.
+ * Press 'b' to rotate current gen 90 degrees counterclockwise.
+ * Press 'r' to rotate current gen 180 degrees.
+ * Press 'x' to flip x-coordinates (reflect on y-axis).
+ * Press 'y' to flip y-coordinates (reflect on x-axis).
+ * Press '1' to mirror current gen on the primary diagonal, upper left to lower right.
+ * Press '2' to mirror current gen on the secondary diagonal, upper right to lower left.
+ * Press 'h' to show this help text in the console.
+ *
  */
 
 PixelAudio pixelaudio;     // our library
@@ -56,9 +63,9 @@ int[] signalLUT;           // the signalToImageLUT from mapper, also the pixelMa
 int imageWidth = 1024;     // for Moore and Hilbert curves, use equal powers of 2
 int imageHeight = 1024;    // for imageWidth and imageHeight
 int genW = 4;              // the width of generator: must be a power of 2 for Hilbert and Moore, 4 and 8
-                           // are good, 1024 is the max
+// are good, 1024 is the max
 int genH = 4;              // the height of generator: must be a power of 2 for Hilbert and Moore, 4 and 8
-                           // are good, 1024 is the max
+// are good, 1024 is the max
 int drawingScale = 1;      // scaling of drawing
 int offset = 0;            // offset of big text
 int bigTextSize = 64;      // big text size
@@ -68,306 +75,309 @@ boolean isHideLines = false;      // show or hide the lines, good idea when genW
 
 
 public void settings() {
-    size(imageWidth, imageHeight, JAVA2D);
-    genW = constrain(genW, 2, 1024);
-    genH = constrain(genH, 2, 1024);
+  size(imageWidth, imageHeight, JAVA2D);
+  genW = constrain(genW, 2, 1024);
+  genH = constrain(genH, 2, 1024);
 }
 
 public void setup() {
-    pixelaudio = new PixelAudio(this);
-    println("---- generator size: " + genW + " * " + genH);
-    initGens();
-    initMapper(hGen);
-    // printLUTs();
-    spectrum = initColors();
-    drawingScale = imageWidth / gen.getWidth();
-    offset = drawingScale / 2;
-    if (genW > 8)
-        isHideNumbers = true;
-    if (genW > 128)
-        isHideLines = true;
-    showHelp();
+  pixelaudio = new PixelAudio(this);
+  println("---- generator size: " + genW + " * " + genH);
+  initGens();
+  initMapper(hGen);
+  // printLUTs();
+  spectrum = initColors();
+  drawingScale = imageWidth / gen.getWidth();
+  offset = drawingScale / 2;
+  if (genW > 8)
+    isHideNumbers = true;
+  if (genW > 128)
+    isHideLines = true;
+  showHelp();
 }
 
 public void initGens() {
-    // get a Hilbert curve generator
-    hGen = new HilbertGen(genW, genH);
-    // get a diagonal zigzag generator and flip the x-coordinates (same as
-    // reflecting it on the y-axis)
-    zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.FLIPX);
-    // get a Moore curve generator
-    mGen = new MooreGen(genW, genH);
-    // get a boustrophedon curve generator
-    bGen = new BoustropheGen(genW, genH, AffineTransformType.R270);
+  // get a Hilbert curve generator
+  hGen = new HilbertGen(genW, genH);
+  // get a diagonal zigzag generator and flip the x-coordinates (same as
+  // reflecting it on the y-axis)
+  zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.FLIPX);
+  // get a Moore curve generator
+  mGen = new MooreGen(genW, genH);
+  // get a boustrophedon curve generator
+  bGen = new BoustropheGen(genW, genH, AffineTransformType.R270);
 }
 
 public void initMapper(PixelMapGen gen) {
-    this.mapper = new PixelAudioMapper(gen);
-    this.coords = gen.getCoordinatesCopy();
-    this.imageLUT = mapper.getImageToSignalLUT(); // gen.getSampleMapCopy();
-    this.signalLUT = mapper.getSignalToImageLUT(); // gen.getPixelMapCopy();
-    this.gen = gen;
+  this.mapper = new PixelAudioMapper(gen);
+  this.coords = gen.getCoordinatesCopy();
+  this.imageLUT = mapper.getImageToSignalLUT(); // gen.getSampleMapCopy();
+  this.signalLUT = mapper.getSignalToImageLUT(); // gen.getPixelMapCopy();
+  this.gen = gen;
 }
 
 public void updateMapper(PixelMapGen gen) {
-    this.mapper.setGenerator(gen);
-    this.coords = gen.getCoordinatesCopy();
-    this.imageLUT = mapper.getImageToSignalLUT(); // gen.getSampleMapCopy();
-    this.signalLUT = mapper.getSignalToImageLUT(); // gen.getPixelMapCopy();
-    this.gen = gen;
+  this.mapper.setGenerator(gen);
+  this.coords = gen.getCoordinatesCopy();
+  this.imageLUT = mapper.getImageToSignalLUT(); // gen.getSampleMapCopy();
+  this.signalLUT = mapper.getSignalToImageLUT(); // gen.getPixelMapCopy();
+  this.gen = gen;
 }
 
 public void draw() {
-    background(255);
-    drawSquares();
-    if (!isHideLines)
-        drawLines();
-    if (!isHideNumbers)
-        drawNumbers();
+  background(255);
+  drawSquares();
+  if (!isHideLines)
+    drawLines();
+  if (!isHideNumbers)
+    drawNumbers();
 }
 
 public void keyPressed() {
-    switch (key) {
-    case 'a':
-        stepAnimation(1);
-        break;
-    case 'A':
-        stepAnimation(-1);
-        break;
-    case 'd':
-        println("\n" + mapper.getGeneratorDescription());
-        break;
-    case 'g':
-        if (gen == zGen) {
-            gen = hGen;
-            println("\nHilbert");
-            initMapper(gen);
-            break;
-        }
-        if (gen == hGen) {
-            gen = mGen;
-            println("\nMoore");
-            initMapper(gen);
-            break;
-        }
-        if (gen == mGen) {
-            gen = bGen;
-            println("\nBoustrophedon, rotated 90 degrees clockwise");
-            initMapper(gen);
-            break;
-        }
-        if (gen == bGen) {
-            gen = zGen;
-            println("\nZigzag path, flipped on x-axis");
-            initMapper(gen);
-            break;
-        }
-        break;
-    case 'n':
-        isHideNumbers = !isHideNumbers;
-        break;
-    case 'l':
-        isHideLines = !isHideLines;
-        break;
-    case 'k':
-    case 'K':
-        printLUTs();
-        break;
-    case 't':
-    case 'T':
-        testAffineMap(genW, genH);
-        break;
-    case 'f':
-        gen.setTransformType(AffineTransformType.R270);
-        updateMapper(gen);
-        break;
-    case 'b':
-        gen.setTransformType(AffineTransformType.R90);
-        updateMapper(gen);
-        break;
-    case 'r':
-        gen.setTransformType(AffineTransformType.R180);
-        updateMapper(gen);
-        break;
-    case 'x':
-        gen.setTransformType(AffineTransformType.FLIPX);
-        updateMapper(gen);
-        break;
-    case 'y':
-        gen.setTransformType(AffineTransformType.FLIPY);
-        updateMapper(gen);
-        break;
-    case '1':
-        gen.setTransformType(AffineTransformType.FX90);
-        updateMapper(gen);
-        break;
-    case '2':
-        gen.setTransformType(AffineTransformType.FX270);
-        updateMapper(gen);
-        break;
-    case 'h':
-        showHelp();
-        break;
-    default:
-        break;
+  switch (key) {
+  case 'a': // advance animation by one step
+    stepAnimation(1);
+    break;
+  case 'A': // rewind animation by one step
+    stepAnimation(-1);
+    break;
+  case 'd': // print the current PixelMapGen's description String
+    println("\n" + mapper.getGeneratorDescription());
+    break;
+  case 'g': // swap in a new PixelMapGen
+    if (gen == zGen) {
+      gen = hGen;
+      println("\nHilbert");
+      initMapper(gen);
+      break;
     }
+    if (gen == hGen) {
+      gen = mGen;
+      println("\nMoore");
+      initMapper(gen);
+      break;
+    }
+    if (gen == mGen) {
+      gen = bGen;
+      println("\nBoustrophedon, rotated 90 degrees clockwise");
+      initMapper(gen);
+      break;
+    }
+    if (gen == bGen) {
+      gen = zGen;
+      println("\nZigzag path");
+      initMapper(gen);
+      break;
+    }
+    break;
+  case 'n': // hide the numbers overlay
+    isHideNumbers = !isHideNumbers;
+    break;
+  case 'l': // hide the lines overlay
+    isHideLines = !isHideLines;
+    break;
+  case 'k': // print the Lookup Tables and coordinates for the current PixelMapGen
+  case 'K':
+    printLUTs();
+    break;
+  case 't': // print affine map geometric transforms
+  case 'T':
+    testAffineMap(genW, genH);
+    break;
+  case 'f': // rotate current gen 90 degrees clockwise
+    gen.setTransformType(AffineTransformType.R270);
+    updateMapper(gen);
+    break;
+  case 'b': // rotate current gen 90 degrees counterclockwise
+    gen.setTransformType(AffineTransformType.R90);
+    updateMapper(gen);
+    break;
+  case 'r': // rotate current gen 180 degrees
+    gen.setTransformType(AffineTransformType.R180);
+    updateMapper(gen);
+    break;
+  case 'x': // mirror current gen on the x-axis
+    gen.setTransformType(AffineTransformType.FLIPX);
+    updateMapper(gen);
+    break;
+  case 'y': // mirror current gen on the y-axis
+    gen.setTransformType(AffineTransformType.FLIPY);
+    updateMapper(gen);
+    break;
+  case '1': // mirror current gen on the primary diagonal, upper left to lower right
+    gen.setTransformType(AffineTransformType.FX90);
+    updateMapper(gen);
+    break;
+  case '2': // mirror current gen on the secondary diagonal, upper right to lower left
+    gen.setTransformType(AffineTransformType.FX270);
+    updateMapper(gen);
+    break;
+  case 'h': // print help message to the console
+    showHelp();
+    break;
+  default:
+    break;
+  }
 }
 
 public int[] initColors() {
-    int[] colorWheel = new int[mapper.getSize()];
-    pushStyle();
-    colorMode(HSB, colorWheel.length, 100, 100);
-    int h = 0;
-    for (int i = 0; i < colorWheel.length; i++) {
-        colorWheel[i] = color(h, 66, 66);
-        h++;
-    }
-    popStyle();
-    return colorWheel;
+  int[] colorWheel = new int[mapper.getSize()];
+  pushStyle();
+  colorMode(HSB, colorWheel.length, 100, 100);
+  int h = 0;
+  for (int i = 0; i < colorWheel.length; i++) {
+    colorWheel[i] = color(h, 66, 66);
+    h++;
+  }
+  popStyle();
+  return colorWheel;
 }
 
 public void printLUTs() {
-    println("\n----- imageToSignalLUT -----");
-    for (int i = 0; i < imageLUT.length; i++) {
-        print(imageLUT[i] + "  ");
-    }
-    println();
-    println("----- signaToImagelLUT -----");
-    for (int i = 0; i < signalLUT.length; i++) {
-        print(signalLUT[i] + "  ");
-    }
-    println();
-    println("----- Coordinates -----");
-    for (int[] xy : this.coords) {
-        print("(" + xy[0] + ", " + xy[1] + ")  ");
-    }
+  println("\n----- imageToSignalLUT -----");
+  for (int i = 0; i < imageLUT.length; i++) {
+    print(imageLUT[i] + "  ");
+  }
+  println();
+  println("----- signaToImagelLUT -----");
+  for (int i = 0; i < signalLUT.length; i++) {
+    print(signalLUT[i] + "  ");
+  }
+  println();
+  println("----- Coordinates -----");
+  for (int[] xy : this.coords) {
+    print("(" + xy[0] + ", " + xy[1] + ")  ");
+  }
 }
 
 public void testAffineMap(int w, int h) {
-    println("\n" + w + " x " + h + " bitmap index remapping\n");
-    for (AffineTransformType type : AffineTransformType.values()) {
-        println("------------- " + type.name() + " -------------");
-        int[] newMap = BitmapTransform.getIndexMap(w, h, type);
-        int i = 0;
-        for (int n : newMap) {
-            if (i < newMap.length - 1)
-                print(n + ", ");
-            else
-                print(n + "\n ");
-            i++;
-        }
+  println("\n" + w + " x " + h + " bitmap index remapping\n");
+  for (AffineTransformType type : AffineTransformType.values()) {
+    println("------------- " + type.name() + " -------------");
+    int[] newMap = BitmapTransform.getIndexMap(w, h, type);
+    int i = 0;
+    for (int n : newMap) {
+      if (i < newMap.length - 1)
+        print(n + ", ");
+      else
+        print(n + "\n ");
+      i++;
     }
+  }
 }
 
 public void drawSquares() {
-    int x1 = 0;
-    int y1 = 0;
-    int x2 = 0;
-    int y2 = 0;
-    int pos = 0;
-    pushStyle();
-    for (int[] coordinate : coords) {
-        fill(spectrum[pos]);
-        if (pos == 0) {
-            x1 = coordinate[0] * drawingScale;
-            y1 = coordinate[1] * drawingScale;
-        } else {
-            x2 = coordinate[0] * drawingScale;
-            y2 = coordinate[1] * drawingScale;
-            x1 = x2;
-            y1 = y2;
-        }
-        noStroke();
-        square(x1, y1, drawingScale);
-        pos++;
+  int x1 = 0;
+  int y1 = 0;
+  int x2 = 0;
+  int y2 = 0;
+  int pos = 0;
+  pushStyle();
+  for (int[] coordinate : coords) {
+    fill(spectrum[pos]);
+    if (pos == 0) {
+      x1 = coordinate[0] * drawingScale;
+      y1 = coordinate[1] * drawingScale;
+    } else {
+      x2 = coordinate[0] * drawingScale;
+      y2 = coordinate[1] * drawingScale;
+      x1 = x2;
+      y1 = y2;
     }
     noStroke();
-    square(x2, y2, drawingScale);
-    popStyle();
+    square(x1, y1, drawingScale);
+    pos++;
+  }
+  noStroke();
+  square(x2, y2, drawingScale);
+  popStyle();
 }
 
 public void drawLines() {
-    int x1 = 0;
-    int y1 = 0;
-    int x2 = 0;
-    int y2 = 0;
-    int pos = 0;
-    pushStyle();
-    strokeWeight(1);
-    stroke(255, 216);
-    for (int[] coordinate : coords) {
-        if (pos == 0) {
-            x1 = coordinate[0] * drawingScale + offset;
-            y1 = coordinate[1] * drawingScale + offset;
-        } else {
-            x2 = coordinate[0] * drawingScale + offset;
-            y2 = coordinate[1] * drawingScale + offset;
-            line(x1, y1, x2, y2);
-            x1 = x2;
-            y1 = y2;
-        }
-        pos++;
+  int x1 = 0;
+  int y1 = 0;
+  int x2 = 0;
+  int y2 = 0;
+  int pos = 0;
+  pushStyle();
+  strokeWeight(1);
+  stroke(255, 216);
+  for (int[] coordinate : coords) {
+    if (pos == 0) {
+      x1 = coordinate[0] * drawingScale + offset;
+      y1 = coordinate[1] * drawingScale + offset;
+    } else {
+      x2 = coordinate[0] * drawingScale + offset;
+      y2 = coordinate[1] * drawingScale + offset;
+      line(x1, y1, x2, y2);
+      x1 = x2;
+      y1 = y2;
     }
-    // line(x1, y1, x2, y2);
-    popStyle();
+    pos++;
+  }
+  // line(x1, y1, x2, y2);
+  popStyle();
 }
 
 public void drawNumbers() {
-    int x1 = 0;
-    int y1 = 0;
-    int pos = 0;
-    int drop = bigTextSize / 4;
-    pushStyle();
-    for (int[] coordinate : coords) { // coords follows the signal path
-        x1 = coordinate[0] * drawingScale + offset; // x-coordinate along the signal path
-        y1 = coordinate[1] * drawingScale + offset + drop; // y-coordinate along the signal path
-        textAlign(CENTER); // text for the center of each square
-        textSize(bigTextSize); // big font size
-        fill(0, 192); // dark color
-        text(signalLUT[pos], x1, y1); // show the bitmap pixel number in the signalToImageLUT
-        textAlign(LEFT); // small white text for the signal path index numbers
-        textSize(smallTextSize); // which we a flagging with the pos variable
-        fill(255, 192); // upper left corner
-        text(pos, x1 - offset + smallTextSize / 2, y1 - offset + smallTextSize / 2);
-        pos++;
-    }
-    popStyle();
+  int x1 = 0;
+  int y1 = 0;
+  int pos = 0;
+  int drop = bigTextSize / 4;
+  pushStyle();
+  for (int[] coordinate : coords) { // coords follows the signal path
+    x1 = coordinate[0] * drawingScale + offset; // x-coordinate along the signal path
+    y1 = coordinate[1] * drawingScale + offset + drop; // y-coordinate along the signal path
+    textAlign(CENTER); // text for the center of each square
+    textSize(bigTextSize); // big font size
+    fill(0, 192); // dark color
+    text(signalLUT[pos], x1, y1); // show the bitmap pixel number in the signalToImageLUT
+    textAlign(LEFT); // small white text for the signal path index numbers
+    textSize(smallTextSize); // which we a flagging with the pos variable
+    fill(255, 192); // upper left corner
+    text(pos, x1 - offset + smallTextSize / 2, y1 - offset + smallTextSize / 2);
+    pos++;
+  }
+  popStyle();
 }
 
 public void stepAnimation(int step) {
-    PixelAudioMapper.rotateLeft(spectrum, step);
+  PixelAudioMapper.rotateLeft(spectrum, step);
 }
 
 public void showHelp() {
-    println("\n----- HELP -----\n");
-    println(" * Signal path index numbers are small white numbers, bitmap index numbers are big black numbers.");
-    println(" * Read the imageToSignalLUT values by following the pixel index order and reading the white numbers.");
-    println(" * Read the signalToImageLUT values by following the signal path order and reading the black numbers.");
-    println(" * Read the imageToSignalLUT values by following the black pixel numbers in order and reading the white numbers.\n");
-    println(" * Press 'a' or 'A' to rotate the array of colors one step left or right.");
-    println(" * Press 'g' to display a different generator.");
-    println(" * Press 'n' to hide or show numbers.");
-    println(" * Press 'l' to hide or show lines.");
-    println(" * Press 'd' to print a description of the current generator to the console.");
-    if (genW <= 4)
-        println(" * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
-    if (genW <= 4)
-        println(" * Press 't' to print affine maps to the console."); // omit for published version
-    println(" * Press 'f' to rotate 90 degress clockwise.");
-    println(" * Press 'b' to rotate 90 degress counterclockwise.");
-    println(" * Press 'r' to rotate 180 degress.");
-    println(" * Press 'x' to flip x-coordinates (reflect on y-axis).");
-    println(" * Press 'y' to flip y-coordinates (reflect on x-axis).");
-    println(" * Press '1' to flip on primary diagonal.");
-    println(" * Press '2' to flip on secondary diagonal.");
-    println(" * Press 'h' to show this help text in the console.");
+  println("\n----- HELP -----\n");
+  println(" * Signal path index numbers are small white numbers, bitmap index numbers are big black numbers.");
+  println(" * Read the imageToSignalLUT values by following the pixel index order and reading the white numbers.");
+  println(" * Read the signalToImageLUT values by following the signal path order and reading the black numbers.");
+  println(" * Read the imageToSignalLUT values by following the black pixel numbers in order and reading the white numbers.\n");
+  println(" * Press 'a' to advance animation by one step.");
+  println(" * Press 'A' to rewind animation by one step.");
+  println(" * Press 'd' to print the current PixelMapGen's description String.");
+  println(" * Press 'g' to swap in a new PixelMapGen.");
+  println(" * Press 'n' to hide the numbers overlay.");
+  println(" * Press 'l' to hide the lines overlay.");
+  // println(" * Press 'k'or 'K'  to print the Lookup Tables and coordinates for the current PixelMapGen.");
+  // println(" * Press 't' or 'T' to print affine map geometric transforms.");
+  if (genW <= 4)
+    println(" * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
+  if (genW <= 4)
+    println(" * Press 't' to print affine maps to the console."); // omit for published version
+  println(" * Press 'f' to rotate current gen 90 degrees clockwise.");
+  println(" * Press 'b' to rotate current gen 90 degrees counterclockwise.");
+  println(" * Press 'r' to rotate current gen 180 degrees.");
+  println(" * Press 'x' to flip x-coordinates (reflect on y-axis).");
+  println(" * Press 'y' to flip y-coordinates (reflect on x-axis).");
+  println(" * Press '1' to mirror current gen on the primary diagonal, upper left to lower right.");
+  println(" * Press '2' to mirror current gen on the secondary diagonal, upper right to lower left.");
+  println(" * Press 'h' to show this help text in the console.");
 }
 
 public void testRotate90Coords() {
-    println("----->>> Rotated Coords, maybe <<<-----");
-    for (int[] xy : this.coords) {
-        int[] newXY = BitmapTransform.rotate90Coord(xy[0], xy[1], genW, genH);
-        print("(" + newXY[0] + ", " + newXY[1] + ")  ");
-    }
-    println("\n");
+  println("----->>> Rotated Coords, maybe <<<-----");
+  for (int[] xy : this.coords) {
+    int[] newXY = BitmapTransform.rotate90Coord(xy[0], xy[1], genW, genH);
+    print("(" + newXY[0] + ", " + newXY[1] + ")  ");
+  }
+  println("\n");
 }

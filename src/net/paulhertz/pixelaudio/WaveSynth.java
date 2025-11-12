@@ -87,7 +87,7 @@ public class WaveSynth {
 	 *  that is also produced by additive synthesis, we should set samplingFrequency to
 	 *  a standard such as 44100 or 48000. 
 	 */
-	public int sampleRate;
+	public float sampleRate;
 	/** the increment in phase over the image pixels, typically TWO_PI / image size */
 	public float mapInc;
 	/** array of amplitudes associated with the WaveData operators */
@@ -309,11 +309,11 @@ public class WaveSynth {
 		return this.h;
 	}
 	
-	public int getSampleRate() {
+	public float getSampleRate() {
 		return this.sampleRate;
 	}
 	
-	public void setSampleRate(int newSampleRate) {
+	public void setSampleRate(float newSampleRate) {
 		this.sampleRate = newSampleRate;
 		this.mapInc = PConstants.TWO_PI / this.sampleRate;
 	}

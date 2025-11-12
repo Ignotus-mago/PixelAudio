@@ -1,212 +1,243 @@
 package net.paulhertz.pixelaudio.voices;
 
-import ddf.minim.*;
-import ddf.minim.ugens.*;
-import java.util.concurrent.*;
-
 /**
- * Voice that shares a Sampler but has independent amplitude, envelope, and panning.
- * 
- * Leverages Minim's snapshot behavior: each trigger() call snapshots begin, end, and rate.
- * Only amplitude is shared globally across voices, so this class inserts a per-voice
- * Multiplier for individual amplitude scaling.
+ * PASamplerVoice — a single playback "voice" reading from a shared mono buffer.
+ *
+ * Each voice handles:
+ *   - playback position and pitch
+ *   - per-voice amplitude and pan
+ *   - one independent SimpleADSR envelope (sample-accurate)
+ *   - optional zero-crossing start and micro-fade-in
+ *
+ * Voices can be smoothly released and are recycled once the envelope finishes.
  */
 public class PASamplerVoice {
-    private final AudioOutput out;
-    private final float sampleRate;
-    private final ScheduledExecutorService scheduler;
-    private final ADSRParams defaultEnv;
 
-    private final Sampler sampler;
-    private final int bufferSize; 
-    private final Multiplier gain;
-    private final Pan panner;
+    // ------------------------------------------------------------------------
+    // Core state
+    // ------------------------------------------------------------------------
+    private static long NEXT_VOICE_ID = 0;
 
-    private ADSR currentEnvelope = null;
-    private boolean isBusy = false;
-    private boolean isClosed = false;
-    private boolean isLooping = false;
+    private float[] buffer;
+    private float playbackSampleRate;
 
-    /**
-     * Construct a voice that shares a Sampler with others but has independent control
-     * of amplitude, envelope, and panning.
-     */
-    public PASamplerVoice(Sampler sharedSampler,
-    		              int bufferSize,
-                          float sampleRate,
-                          AudioOutput out,
-                          ADSRParams env) {
-        this.sampler = sharedSampler;
-        this.bufferSize = bufferSize;
-        this.sampleRate = sampleRate;
-        this.out = out;
-        this.defaultEnv = env;
+    private long voiceId;
+    private boolean active;
+    private boolean released;
+    private boolean finished;
+    private boolean looping;
 
-        this.gain = new Multiplier(1.0f);
-        this.panner = new Pan(0.0f);
+    private int start;
+    private int end;
+    private float position;
+    private float rate;
+    private float gain;
+    private float pan;
 
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "PASamplerVoice-scheduler");
-            t.setDaemon(true);
-            return t;
-        });
+    // ------------------------------------------------------------------------
+    // Envelope
+    // ------------------------------------------------------------------------
+    private SimpleADSR envelope;
+
+    // Optional pre-start processing
+    private boolean isFindZeroCrossing = false;
+    private boolean isMicroFadeIn = false;
+
+    private static final boolean DEBUG = false;
+    private int frameCounter = 0;
+
+    // ------------------------------------------------------------------------
+    // Constructor
+    // ------------------------------------------------------------------------
+    public PASamplerVoice(float[] buffer, float sampleRate) {
+        this.buffer = buffer;
+        this.playbackSampleRate = sampleRate;
+        this.active = false;
+        this.released = false;
+        this.finished = false;
     }
 
-    // -------------------------------------------------------------------------
-    // Core playback
-    // -------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // Activation
+    // ------------------------------------------------------------------------
+    public void activate(int start, int length, float gain,
+                         ADSRParams envParams, float pitch, float pan, boolean looping) {
+        this.active = false;
+        this.released = false;
+        this.finished = false;
+        this.looping = looping;
 
-    /**
-     * Trigger playback using independent per-voice parameters.
-     *
-     * @param samplePos  start position (samples)
-     * @param sampleLen  playback length (samples)
-     * @param amplitude  per-voice amplitude
-     * @param env        ADSR parameters
-     * @param pitch      playback rate (1.0 = normal)
-     * @param pan        stereo position (-1.0 left, +1.0 right)
-     */
-    public synchronized int play(int samplePos,
-    		int sampleLen,
-    		float amplitude,
-    		ADSRParams env,
-    		float pitch,
-    		float pan) {
-    	if (isClosed || isBusy) return 0;
-    	isBusy = true;
-    	// clamp samplePos and sampleLen to positive numbers or 0
-    	samplePos = Math.max(0, samplePos);
-    	if (sampleLen < 0) sampleLen = 0;
-    	// Clamp to buffer
-    	if (!isLooping && samplePos + sampleLen > bufferSize) {
-    		sampleLen = Math.max(0, bufferSize - samplePos);
-    	}
-    	// Compute sample end (no release extension)
-    	int end = Math.min(samplePos + sampleLen - 1, bufferSize - 1);
-    	// Configure sampler snapshot
-    	sampler.begin.setLastValue(samplePos);
-    	sampler.end.setLastValue(end);
-    	sampler.rate.setLastValue(pitch);
-    	sampler.looping = isLooping;
-    	// Set amplitude and pan
-    	gain.setValue(amplitude);
-    	panner.setPan(pan);
-    	// Build envelope chain
-    	currentEnvelope = env.toADSR();
-    	sampler.patch(gain);
-    	gain.patch(currentEnvelope);
-    	currentEnvelope.patch(panner);
-    	panner.patch(out);
-    	// and play the samples
-    	try {
-    		sampler.trigger();
-    		currentEnvelope.noteOn();
-    	} 
-    	catch (Exception e) {
-    		isBusy = false;
-    		e.printStackTrace();
-    		return 0;
-    	}
-    	// if we're not looping, handle note off and unpatch the processing chain
-    	if (!isLooping && sampleLen > 0) {
-    		// if you want to adjust duration to frequency, the next line does that:
-    		// long durationMillis = Math.round((sampleLen / (sampleRate * Math.abs(pitch))) * 1000.0);
-    		// We generally want note duration to be independent of pitch: pitch affects frequency only,
-    		// not playback length or envelope timing.
-    		long durationMillis = Math.round((sampleLen / sampleRate) * 1000.0);
-    		long releaseMillis = Math.round(env.getRelease() * 1000.0);
-    		final ADSR envUGen = currentEnvelope;
-    		// schedule note off and cleanup 
-    		scheduler.schedule(() -> {
-    			try {
-    				envUGen.noteOff();
-    				envUGen.unpatchAfterRelease(panner);
-    			} catch (Exception ignored) {}
-    		}, durationMillis, TimeUnit.MILLISECONDS);
-    		// unpatch in reverse order
-    		scheduler.schedule(() -> {
-    			try {
-    				sampler.unpatch(gain);
-    				gain.unpatch(envUGen);
-    				envUGen.unpatch(panner);
-    				panner.unpatch(out);
-    			} 
-    			catch (Exception ignored) {}
-    			isBusy = false;
-    		}, durationMillis + releaseMillis + 50, TimeUnit.MILLISECONDS);
-    	} 
-    	else {
-    		// Looping playback managed externally
-    		isBusy = false;
-    	}
-    	// return the actual duration of the event
-    	return sampleLen;
-    }
-    
-    public int play(int samplePos, int sampleLen, float amplitude, float pitch) {
-        return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0.0f);
-    }
-    
+        this.voiceId = NEXT_VOICE_ID++;
+        this.start = Math.max(0, start);
+        this.end = Math.min(buffer.length, start + Math.max(0, length));
+        this.position = this.start;
+        this.rate = pitch;
+        this.gain = gain;
+        this.pan = Math.max(-1f, Math.min(1f, pan));
 
-    // -------------------------------------------------------------------------
-    // Loop control
-    // -------------------------------------------------------------------------
+        // Optional zero-crossing adjustment
+        if (isFindZeroCrossing) {
+            this.start = findZeroCrossing(this.start, 1);
+            this.position = this.start;
+        }
 
-    /**
-     * Gracefully stop a looping sample and release its envelope.
-     */
-    public synchronized void stopLoop() {
-        if (isClosed || !isLooping) return;
+        // Envelope setup
+        if (envParams != null) {
+            envelope = new SimpleADSR(
+                    envParams.getAttack(),
+                    envParams.getDecay(),
+                    envParams.getSustain(),
+                    envParams.getRelease()
+            );
+            envelope.setSampleRate(playbackSampleRate);
+            envelope.noteOn();
+        } else {
+            envelope = null;
+        }
 
-        try {
-            sampler.looping = false;
-            isLooping = false;
+        // Optional micro-fade at buffer start
+        if (isMicroFadeIn) applyMicroFadeIn();
 
-            if (currentEnvelope != null) {
-                currentEnvelope.noteOff();
-                currentEnvelope.unpatchAfterRelease(panner);
-            }
+        this.active = (this.start < this.end);
 
-            scheduler.schedule(() -> {
-                try {
-                    gain.unpatch(currentEnvelope);
-                    currentEnvelope.unpatch(panner);
-                    panner.unpatch(out);
-                } 
-                catch (Exception ignored) {}
-                isBusy = false;
-            }, Math.round(defaultEnv.getRelease() * 1000.0) + 50, TimeUnit.MILLISECONDS);
-        } 
-        catch (Exception e) {
-            e.printStackTrace();
-            isBusy = false;
+        if (DEBUG && frameCounter++ % 2000 == 0) {
+            System.out.printf("[Voice %d] Activated: start=%d end=%d gain=%.3f pitch=%.3f pan=%.3f%n",
+                    voiceId, start, end, gain, pitch, pan);
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Accessors
-    // -------------------------------------------------------------------------
+    public float nextSample() {
+        if (finished || buffer == null) return 0f;
 
-    public void setPan(float pan) { panner.setPan(pan); }
-    public float getPan() { return panner.pan.getLastValue(); }
+        int idx = (int) position;
 
-    public void setIsLooping(boolean looping) { this.isLooping = looping; }
-    public boolean isLooping() { return isLooping; }
+        // --- 1. Trigger release once we pass the "note" window ---
+        if (idx >= end && !released) {
+            released = true;
+            if (envelope != null) envelope.noteOff();
+        }
 
-    public boolean isBusy() { return isBusy; }
-    public boolean isClosed() { return isClosed; }
+        // --- 2. Clamp buffer index safely ---
+        if (idx >= buffer.length) {
+            // We've run off the end of the buffer — output silence but keep fading envelope
+            idx = buffer.length - 1;   // clamp to last valid sample
+        }
 
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
+        // --- 3. Read sample and advance ---
+        float base = (idx >= 0 && idx < buffer.length) ? buffer[idx] : 0f;
+        position += rate;
+
+        // --- 4. Envelope always ticks ---
+        float envValue = (envelope != null) ? envelope.tick() : 1f;
+        float sample = base * gain * envValue;
+
+        // --- 5. Voice finishes when envelope fully decays ---
+        if (released && (envelope == null || envelope.isFinished())) {
+            active = false;
+            finished = true;
+        }
+
+        return sample;
+    }
+
+    // ------------------------------------------------------------------------
+    // Lifecycle control
+    // ------------------------------------------------------------------------
+    public void release() {
+        if (!released) {
+            released = true;
+            if (envelope != null) envelope.noteOff();
+        }
+        looping = false;
+    }
 
     public void stop() {
-        try { sampler.stop(); } catch (Exception ignored) {}
+        active = false;
+        released = false;
+        finished = true;
     }
 
-    public void close() {
-        if (isClosed) return;
-        scheduler.shutdownNow();
-        isClosed = true;
+    public void resetPosition() {
+        this.start = 0;
+        this.end = (buffer != null ? buffer.length : 0);
+        this.position = 0f;
+        this.released = false;
+        this.active = false;
+        this.finished = false;
     }
+
+    // ------------------------------------------------------------------------
+    // Buffer management
+    // ------------------------------------------------------------------------
+    public synchronized void setBuffer(float[] buffer) {
+        this.buffer = buffer;
+        resetPosition();
+    }
+
+    public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
+        this.buffer = buffer;
+        this.playbackSampleRate = playbackSampleRate;
+        resetPosition();
+    }
+
+    // ------------------------------------------------------------------------
+    // Accessors and state checks
+    // ------------------------------------------------------------------------
+    public boolean isActive()     { return active; }
+    public boolean isReleasing()  { return released && !finished; }
+    public boolean isFinished()   { return finished; }
+
+    public boolean isLooping()    { return looping; }
+    public void setLooping(boolean looping) { this.looping = looping; }
+
+    public float getPan()         { return pan; }
+    public long getVoiceId()      { return voiceId; }
+
+    // ------------------------------------------------------------------------
+    // Optional features
+    // ------------------------------------------------------------------------
+    
+    private void applyMicroFadeIn() {
+        int fadeSamples = Math.min(64, end - start);
+        float fadeAmp = 0f;
+        float fadeStep = 1f / fadeSamples;
+        for (int i = 0; i < fadeSamples; i++) {
+            buffer[start + i] *= fadeAmp;
+            fadeAmp += fadeStep;
+        }
+    }
+
+    private int findZeroCrossing(int index, int direction) {
+        int limit = Math.min(buffer.length - 2, Math.max(1, index));
+        int step = (direction >= 0) ? 1 : -1;
+        float prev = buffer[limit];
+        for (int i = 0; i < 256 && limit + i * step > 1 && limit + i * step < buffer.length - 1; i++) {
+            int pos = limit + i * step;
+            float next = buffer[pos];
+            if ((prev <= 0 && next > 0) || (prev >= 0 && next < 0)) return pos;
+            prev = next;
+        }
+        return index;
+    }
+
+    public boolean isFindZeroCrossing() { return isFindZeroCrossing; }
+    public void setFindZeroCrossing(boolean val) { this.isFindZeroCrossing = val; }
+
+    public boolean isMicroFadeIn() { return isMicroFadeIn; }
+    public void setMicroFadeIn(boolean val) { this.isMicroFadeIn = val; }
+    
+    public void setPlaybackSampleRate(float newRate) {
+    	this.playbackSampleRate = newRate;
+    }
+    
+    // TODO consider a utility class for tailoring audio sample arrays with normalization, DC subtraction, etc.
+    /*
+     *   // worth considering for noise reduction, but the sum call is not supported in Java Arrays
+    public float[] subtractDC(float[] buffer) {
+    	float mean = Arrays.stream(buffer).sum() / buffer.length;
+    	for (int i = 0; i < buffer.length; i++) buffer[i] -= mean;
+    	return buffer;
+    }
+    */
+    
 }
