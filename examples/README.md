@@ -28,6 +28,8 @@ As of November 12, 2025, we have these examples, in the suggested order for lear
 
 The tutorial is designed to get you up and running with creating your own sampling audio synth, where you draw on an image to generate non-linear samples from an audio file. You can almost use the code out of the box, loading your own audio files instead of the ones in the examples. The ArgosyMixer and WaveSynthEditor can also be used without digging into the code. Each provides a GUI for exploring additive audio synthesis that also acts as a color organ (WaveSynth) and pattern generation that can produce both control pulses and audio (Argosy). ArgosyMixer and WaveSynthEditor can also output video animation files. If you want to capture audio and video from PixelAudio examples, I suggets OBS (Open Broadcast System) as one way to do this. 
 
+If you are interested in combining PixelAudio output with other applications, the AudioCapture sketch provides information about audio signal routing for MacOS, and TutorialOne_05_UDP provides some clues about communicating with other applications using UDP.  
+
 You can open library examples with the Processing File menu->Examples... command. 
 Look for PixelAudio in the Look for PixelAudio in the Contributed LIbraries in the Java Examples. 
 This is the recommended way to explore PixelAudio features. 
