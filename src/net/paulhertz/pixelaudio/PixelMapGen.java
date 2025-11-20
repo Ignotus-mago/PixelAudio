@@ -34,7 +34,7 @@ import java.util.Random;
  * completely arbitrary as far as the mapping goes. The mapping was given its own class precisely because it is generalizable, though
  * PixelMapGen does assume that the cardinality of its arrays can be factored by width and height.</p>
  * 
- * <p>The following short program shows the typical initialization of PixelAudio classes in Processing:
+ * <p>The following short program shows the typical initialization of PixelAudio classes in Processing:</p>
  *   <pre>
  *   import net.paulhertz.pixelaudio.*;
  *   

@@ -34,11 +34,25 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 /**
  * @author Paul Hertz
+ * 
+ * PixelAudio library for Processing.
+ * 
+ * Typical usage in Processing is to declare a global:
+ * 
+ *   PixelAudio pixelaudio;
+ * 
+ * and then initialize it in the setup method:
+ * 
+ *    public void setup() {
+ *      // ... 
+ *      pixelaudio = new PixelAudio(this);
+ *      // ... more setup code
+ *    }
+ *  
+ * The host PApplet can be obtained from PixelAudio by other classes. A number of useful static 
+ * variables and methods are also included. 
  *
- * (the tag example followed by the name of an example included in folder 'examples' will
- * automatically include the example in the javadoc.)
- *
- * @example Hello
+ * 
  */
 
 public class PixelAudio {

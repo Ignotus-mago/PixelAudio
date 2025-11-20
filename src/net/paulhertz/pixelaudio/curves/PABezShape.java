@@ -70,8 +70,8 @@ public class PABezShape {
 	/**
 	 * <p>
 	 * In the approximation of a circle by Bezier curves, <br>
-	 * KAPPA = (distance between Bezier anchor and its associated control point) /
-	 * (circle radius),</br> when a circle is divided into 4 sectors of 90 degrees.</br>
+	 * KAPPA = (distance between Bezier anchor and its associated control point) / (circle radius),<br> 
+	 * when a circle is divided into 4 sectors of 90 degrees.<br>
 	 * KAPPA = 4 * (√2 - 1) / 3 = 0.5522847498</p>
 	 * @see <a href="http://www.whizkidtech.redprince.net/bezier/circle/kappa/">http://www.whizkidtech.redprince.net/bezier/circle/kappa/</a>
 	 */

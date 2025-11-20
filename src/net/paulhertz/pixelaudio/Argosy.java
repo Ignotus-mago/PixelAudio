@@ -462,7 +462,7 @@ public class Argosy {
 	}
 	/**
 	 * Set the animStep, with no side effects (but animation calls will use the new value)
-	 * @param animStep
+	 * @param argoStep
 	 */
 	public void setArgosyStep(int argoStep) {
 		this.argosyStep = argoStep;
@@ -587,7 +587,7 @@ public class Argosy {
 	}
 	/**
 	 * Sets a new argosy pattern and triggers a call to argosyFill() to reset the pattern in bigArray.
-	 * @param argosyPattern
+	 * @param pattern
 	 */
 	public void setArgosyPattern(int[] pattern) {
 		this.argosyPattern = new int[pattern.length];

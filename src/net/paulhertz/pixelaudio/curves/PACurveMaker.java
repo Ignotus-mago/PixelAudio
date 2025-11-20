@@ -24,12 +24,12 @@ import processing.core.PVector;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
-//TODO provide multiple ways that eventPoints and brushPoly can work in PACurveMaker and in apps that use PACurveMaker instances:
-//sometimes we'll want dense eventPoints, but leave brushPoly low-res. We'll consider how to vary events over playback.
-//we can also consider how the time interval of a PACurveMaker instance could affect its playback.
-//TODO JSON I/O: essential variables are dragPoints, epsilon, dragTimes. It's useful to save bezierBias and eventSteps. 
-//One might also save curve data, but that is proper to PABezShape. When planting audio, the data used for the plant is critical. 
-//That would seem to include the curve, reconstructed, and the curve points. Finally, one might consider the drawing properties. 
+// TODO provide multiple ways that eventPoints and brushPoly can work in PACurveMaker and in apps that use PACurveMaker instances:
+// sometimes we'll want dense eventPoints, but leave brushPoly low-res. We'll consider how to vary events over playback.
+// we can also consider how the time interval of a PACurveMaker instance could affect its playback.
+// TODO JSON I/O: essential variables are dragPoints, epsilon, dragTimes. It's useful to save bezierBias and eventSteps. 
+// One might also save curve data, but that is proper to PABezShape. When planting audio, the data used for the plant is critical. 
+// That would seem to include the curve, reconstructed, and the curve points. Finally, one might consider the drawing properties. 
 
 
 /**
@@ -87,11 +87,11 @@ import processing.core.PGraphics;
  * There are several calls to generate weighted Bezier curves. They do not set local variables, but can be useful
  * for exploring the variations created by different values of bezierBias. PACurveUtility can also create 
  * weighted curves. 
- * <pre>
+ * </p>
  * 	
  * 
- * </pre>
- * </p>
+ * 
+ * 
  * 
  */
 public class PACurveMaker {
