@@ -331,7 +331,7 @@ public class HilbertGen extends PixelMapGen {
 	 * 
 	 * @param genW    width of each HilbertGen 
 	 * @param genH    height of each HilbertGen
-	 * @return
+	 * @return a Multigen composed of 6 HilbertGens on a 3 x 2 grid
 	 */
 	public static MultiGen hilbertLoop3x2(int genW, int genH) {
 	    // list of PixelMapGens that create a path through an image using PixelAudioMapper

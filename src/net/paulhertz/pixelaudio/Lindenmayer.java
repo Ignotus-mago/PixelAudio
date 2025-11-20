@@ -88,6 +88,7 @@ public class Lindenmayer extends Object {
 	 * Encode strings representing a Hilbert curve to supplied depth. To draw the
 	 * actual curve, ignore the R and L symbols + : 90 degrees CW - : 90 degrees CCW
 	 * F : forward (n) units
+	 * @param depth   number of recursive iterations of the L-system 
 	 */
 	public ArrayList<String> hilbert(int depth) {
 		Lindenmayer lind = new Lindenmayer();

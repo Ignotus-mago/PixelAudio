@@ -20,6 +20,7 @@ public void fileSelectedOpen(File selection) {
     currentFileName = selection.getAbsolutePath();
     json = loadJSONObject(currentFileName);
     setWaveSynthFromJSON(json, wavesynth);
+    isBufferStale = true;
     surface.setTitle(currentFileName);
     isAnimating = oldIsAnimating;
 }

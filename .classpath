@@ -13,7 +13,11 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="libs/jl1.0.1.jar"/>
 	<classpathentry kind="lib" path="libs/jsminim.jar"/>
-	<classpathentry kind="lib" path="libs/minim.jar"/>
+	<classpathentry kind="lib" path="libs/minim.jar" sourcepath="libs/minim.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/Users/paulhz/Documents/Processing/libraries/minim/documentation/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="libs/mp3spi1.9.5.jar"/>
 	<classpathentry kind="lib" path="libs/tritonus_aos.jar"/>
 	<classpathentry kind="lib" path="libs/tritonus_share.jar"/>

@@ -22,7 +22,7 @@ import processing.core.PConstants;
 import java.util.ArrayList;
 
 /**
- * 
+ * Data storage for WaveSynth operator data.
  */
 public class WaveData {
 	public enum WaveState {
@@ -103,7 +103,6 @@ public class WaveData {
 	 * @param dc		DC component added to wave values
 	 * @param cycles	number of cyles over one animation period
 	 * @param c			color associated with this WaveData object
-	 * @param steps		number of frames for animation
 	 */
 	public WaveData(float f, float a, float p, float dc, float cycles, int c) {
 		this(f, a, p, dc, cycles, c, WaveData.defaultAnimSteps, WaveData.phaseScalesTwoPI);

@@ -38,7 +38,7 @@ import java.util.ArrayList;
  * a w * h bitmap in signal path order. BuildFromPathGen makes it easy to create arbitrary
  * signal paths that do not depend on numerical calculations. 
  * 
- * @example BuildFromPathGenDemo
+ * See Processing example sketch BuildFromPathGenDemo.
  * 
  * 
  */
