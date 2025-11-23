@@ -101,18 +101,31 @@ public class PACurveMaker {
 	private ArrayList<PVector> rdpPoints;
 	/** list of indices of points in dragPoints captured for rdpPoints */
 	private ArrayList<Integer> rdpIndices;
+	/** A parameter to control the amount of reduction in the RDP algorithm */
+	public float epsilon = 8.0f;
 	/** An ArrayList of PABezShapes representing a continuous curved line */
 	private PABezShape curveShape;
-	/** A simulated brush stroke */
+	/** List of points where events such as audio samples can be triggered, from polygon representation of curveShape */
+	private ArrayList<PVector> eventPoints;
+	/** number of steps along a polygonized curve, used to produce eventPoints from curveShape */
+	public int eventSteps = 8;
+	/** A simulated brush stroke derived from curveShape */
 	private PABezShape brushShape;
 	/** polygon representation of brushShape, for point testing, etc. */
 	private ArrayList<PVector> brushPoly;
 	/** number of steps along a polygonized curve, used to produce brushPoly */
 	public int polySteps = 8;
+	/** Time when CurveMaker instance was initialized by mousePressed event, 
+	 * in milliseconds since application startup */
+	public int timeStamp;
+	/** Time of mouseReleased event, in milliseconds elapsed since timeStamp */
+	public int timeOffset;
+	/** List of time data: first element is time in millis when event occurred, 
+	 *  the remaining elements are offsets in millis from the first element  */
+	ArrayList<Integer> dragTimes;
+
 	/** The distance in pixels of the edges of the brush stroke from the central generating curve  */
 	public float brushSize = 24.0f;
-	/** A parameter to control the amount of reduction in the RDP algorithm */
-	public float epsilon = 8.0f;
 	/** boolean value that determines whether curve  and brush shapes are weighted */
 	public boolean isDrawWeighted = false;
 	/** A weight applied to calculations of the control points for Bezier curves */
@@ -135,10 +148,6 @@ public class PACurveMaker {
 	public int activeBrushColor = PABezShape.composeColor(199, 89, 55, 192);   // transparent brick red
 	/** weight of stroke for brushStroke, set to 0 for no stroke */
 	public float brushWeight = 0;
-	/** List of points where events such as audio samples can be triggered */
-	private ArrayList<PVector> eventPoints;
-	/** number of steps along a polygonized curve, used to produce eventPoints from curveShape */
-	public int eventSteps = 8;
 	/** color of eventPoints markers */
 	public int eventPointsColor = PABezShape.composeColor(233, 199, 144, 192);	// yellow
 	/** size of eventPoints markers */
@@ -146,14 +155,6 @@ public class PACurveMaker {
 	
 	/** Flag to indicate that allPoints, drawPoints, bezPoints, and brushShape have been initialized */
 	private boolean isReady = false;
-	/** Time when CurveMaker instance was initialized by mousePressed event, 
-	 * in milliseconds since application startup */
-	public int timeStamp;
-	/** Time of mouseReleased event, in milliseconds elapsed since timeStamp */
-	public int timeOffset;
-	/** List of time data: first element is time in millis when event occurred, 
-	 *  the remaining elements are offsets in millis from the first element  */
-	ArrayList<Integer> dragTimes;
 		
 	
 	/**
