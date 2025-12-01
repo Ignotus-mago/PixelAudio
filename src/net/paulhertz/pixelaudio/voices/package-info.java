@@ -13,7 +13,7 @@ for implementing digital audio sampling synthesis with support from the Minim li
 
 <li>{@link net.paulhertz.pixelaudio.voices.SimpleADSR SimpleADSR} provides an executable ADSR envelope for PASamplerVoice.</li>
 
-<li>{@link net.paulhertz.pixelaudio.voices.TimedLocation TimedLocation} handles event scheduling.</li>
+<li>{@link net.paulhertz.pixelaudio.schedule.TimedLocation TimedLocation} handles event scheduling.</li>
 
 <li>{@link net.paulhertz.pixelaudio.voices.PAPlayable PAPlayable} is the root interface for things that can play or render audio.</li>
 

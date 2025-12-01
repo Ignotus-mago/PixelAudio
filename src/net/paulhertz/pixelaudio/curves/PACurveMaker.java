@@ -641,6 +641,11 @@ public class PACurveMaker {
 		return times;
 	}
 
+	public int[] getDragOffsetsAsInts() {
+		int[] times = dragTimes.subList(1, dragTimes.size()).stream().mapToInt(Integer::intValue).toArray();
+		return times;
+	}
+
 	public void setDragTimes(ArrayList<Integer> dragTimes) {
 		this.dragTimes = dragTimes;
 	}

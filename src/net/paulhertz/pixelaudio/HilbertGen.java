@@ -432,4 +432,37 @@ public class HilbertGen extends PixelMapGen {
 
 	// public static hilbertVerticalStackPathBou(int stacks, int rows, int units, int genW, int genH);
 	
+	/**
+	 * This method creates rows of HilbertGens, starting each row from the left
+	 * and adding gens. The odd rows are flipped vertically and the even rows are
+	 * unchanged. The unchanged HilbertGen starts at upper left corner and ends at 
+	 * upper right corner, so this provides some possibilities of symmetry between rows.
+	 * The path is not continuous. 
+	 * 
+	 * @param cols    number of columns of gens wide
+	 * @param rows    number of rows of gens high
+	 * @param genW    width of each gen (same as genH and a power of 2)
+	 * @param genH    height of each gen 
+	 * @return        a MultiGen composed of cols * rows PixelMapGens
+	 */
+	public static MultiGen hilbertRowOrtho(int cols, int rows, int genW, int genH) {
+	    // list of PixelMapGens
+	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+	    // list of x,y coordinates for placing gens from genList
+	    ArrayList<int[]> offsetList = new ArrayList<int[]>();
+		for (int y = 0; y < rows; y++) {
+			for (int x = 0; x < cols; x++) {
+				if (y % 2 == 0) {
+					genList.add(new HilbertGen(genW, genH, nada));
+				}
+				else {
+					genList.add(new HilbertGen(genW, genH, flipy));
+				}
+				offsetList.add(new int[] {x * genW, y * genH});
+			}
+		}
+		return new MultiGen(cols * genW, rows * genH, offsetList, genList);
+	}
+
+	
 }

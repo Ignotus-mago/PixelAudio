@@ -99,4 +99,14 @@ public final class GranularSettings {
         }
  	}
     
+    public GranularSettings clone() {
+    	GranularSettings settings = new GranularSettings(this.windowFunction, this.defaultGrainLength, this.hopSamples);
+    	settings.transposeSemitones = this.transposeSemitones;
+    	settings.grainJitter = this.grainJitter;
+    	settings.normalizeByWindowSum = this.normalizeByWindowSum;
+    	settings.respectPerGrainPan = this.respectPerGrainPan;
+    	settings.perGrainPitchOverrides = this.perGrainPitchOverrides;
+    	return settings;
+    }
+    
 }
