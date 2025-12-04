@@ -21,6 +21,9 @@ import net.paulhertz.pixelaudio.voices.PASource;
  *   - Thread-safe play() methods
  *
  * Does NOT manage MultiChannelBuffer. PASource encapsulates its data.
+ * 
+ * Now also exposes helpers to schedule playback at sample-accurate times
+ * via the underlying PAGranularSampler.
  */
 public class PAGranularInstrument {
 
@@ -56,7 +59,7 @@ public class PAGranularInstrument {
     }
 
     // ------------------------------------------------------------------------
-    // Playback API
+    // Immediate Playback API
     // ------------------------------------------------------------------------
 
     /**
@@ -103,6 +106,77 @@ public class PAGranularInstrument {
     /** Convenience: looping version. */
     public synchronized long playLooping(PASource src, float amp, float pan) {
         return play(src, amp, pan, defaultEnv, true);
+    }
+
+    // ------------------------------------------------------------------------
+    // Scheduled Playback API (NEW)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Schedule playback of a PASource at an absolute sample time.
+     *
+     * @param src         PASource
+     * @param amp         amplitude
+     * @param pan         stereo pan
+     * @param env         envelope (or null → default)
+     * @param looping     loop flag
+     * @param startSample absolute sample index at which to start
+     */
+    public synchronized void schedulePlayAtSample(PASource src,
+    		float amp,
+    		float pan,
+    		ADSRParams env,
+    		boolean looping,
+    		long startSample) {
+    	if (src == null || sampler == null || isClosed) return;
+
+    	float finalGain = amp * globalGain;
+    	float finalPan = clampPan(globalPan + pan);
+    	ADSRParams useEnv = (env != null) ? env : defaultEnv;
+
+    	sampler.schedulePlayAtSample(src, useEnv, finalGain, finalPan, looping, startSample);
+    }
+
+    /**
+     * Schedule playback after a delay in samples relative to "now".
+     *
+     * @param src          PASource
+     * @param amp          amplitude
+     * @param pan          stereo pan
+     * @param env          envelope (or null → default)
+     * @param looping      loop flag
+     * @param delaySamples how many samples from "now"
+     */
+    public synchronized void schedulePlayInSamples(PASource src,
+    		float amp,
+    		float pan,
+    		ADSRParams env,
+    		boolean looping,
+    		long delaySamples) {
+    	if (src == null || sampler == null || isClosed) return;
+
+    	float finalGain = amp * globalGain;
+    	float finalPan = clampPan(globalPan + pan);
+    	ADSRParams useEnv = (env != null) ? env : defaultEnv;
+
+    	sampler.schedulePlayInSamples(src, useEnv, finalGain, finalPan, looping, delaySamples);
+    }
+
+    /**
+     * Convenience: schedule using current sampler cursor as "now".
+     *
+     * @param src         PASource
+     * @param amp         amplitude
+     * @param pan         pan
+     * @param env         envelope (or null → default)
+     * @param looping     loop flag
+     */
+    public synchronized void schedulePlayNow(PASource src,
+    		float amp,
+    		float pan,
+    		ADSRParams env,
+    		boolean looping) {
+    	schedulePlayInSamples(src, amp, pan, env, looping, 0L);
     }
 
     // ------------------------------------------------------------------------

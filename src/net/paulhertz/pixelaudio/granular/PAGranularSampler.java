@@ -5,6 +5,8 @@ import ddf.minim.AudioOutput;
 
 import net.paulhertz.pixelaudio.voices.ADSRParams;
 import net.paulhertz.pixelaudio.voices.PASource;
+import net.paulhertz.pixelaudio.schedule.SampleAccurateScheduler;
+
 
 import java.util.*;
 
@@ -19,9 +21,38 @@ import java.util.*;
  *  - Optional looping of the grain path
  *  - Thread-safe play() method
  *  - Per-sample mixing (like PASharedBufferSampler)
+ *  
+ * Now also supports sample-accurate scheduling of new voices
+ * via SampleAccurateScheduler.
+ * 
  */
 public class PAGranularSampler extends UGen {
+    // ------------------------------------------------------------------------
+    // Internal scheduled-play payload
+    // ------------------------------------------------------------------------
+    private static final class ScheduledPlay {
+        final PASource src;
+        final ADSRParams env;
+        final float gain;
+        final float pan;
+        final boolean looping;
 
+        ScheduledPlay(PASource src,
+                      ADSRParams env,
+                      float gain,
+                      float pan,
+                      boolean looping) {
+            this.src = src;
+            this.env = env;
+            this.gain = gain;
+            this.pan = pan;
+            this.looping = looping;
+        }
+    }	
+
+    // ------------------------------------------------------------------------
+    // Core fields
+    // ------------------------------------------------------------------------
     private final AudioOutput out;
 
     private final List<PAGranularVoice> voices = new ArrayList<>();
@@ -29,6 +60,13 @@ public class PAGranularSampler extends UGen {
     private int blockSize;
 
     private boolean smoothSteal = true;
+    
+    // Sample-accurate scheduler for launching new voices
+    private final SampleAccurateScheduler<ScheduledPlay> scheduler =
+            new SampleAccurateScheduler<>();
+
+    // Absolute sample counter (across the life of this UGen)
+    private long sampleCursor = 0L;
 
     public PAGranularSampler(AudioOutput out, int maxVoices) {
         this.out = out;
@@ -94,40 +132,99 @@ public class PAGranularSampler extends UGen {
      * @return voiceId or -1
      */
     public synchronized long play(PASource src,
-                                  ADSRParams env,
-                                  float gain,
-                                  float pan,
-                                  boolean looping) {
-        if (src == null) return -1;
+    		ADSRParams env,
+    		float gain,
+    		float pan,
+    		boolean looping) {
+    	if (src == null) return -1;
 
-        PAGranularVoice v = getAvailableVoice(src, env, gain, pan, looping);
-        if (v == null) return -1;
+    	PAGranularVoice v = getAvailableVoice(src, env, gain, pan, looping);
+    	if (v == null) return -1;
 
-        return v.getVoiceId();
+    	return v.getVoiceId();
     }
 
     // Overload (no looping)
     public synchronized long play(PASource src,
-                                  ADSRParams env,
-                                  float gain,
-                                  float pan) {
-        return play(src, env, gain, pan, false);
+    		ADSRParams env,
+    		float gain,
+    		float pan) {
+    	return play(src, env, gain, pan, false);
     }
 
     // Convenience: default envelope supplied by instrument
     public synchronized long play(PASource src,
-                                  float gain,
-                                  float pan,
-                                  ADSRParams defaultEnv,
-                                  boolean looping) {
-        return play(src, defaultEnv, gain, pan, looping);
+    		float gain,
+    		float pan,
+    		ADSRParams defaultEnv,
+    		boolean looping) {
+    	return play(src, defaultEnv, gain, pan, looping);
     }
 
     // ------------------------------------------------------------------------
-    // uGenerate — per-sample mixing
+    // Scheduled play interface (NEW)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Schedule a new voice to start at an absolute sample time.
+     *
+     * @param src         PASource
+     * @param env         ADSR (already resolved: either custom or default)
+     * @param gain        final gain
+     * @param pan         final pan
+     * @param looping     loop flag
+     * @param startSample absolute sample index at which to start the voice
+     */
+    public synchronized void schedulePlayAtSample(PASource src,
+    		ADSRParams env,
+    		float gain,
+    		float pan,
+    		boolean looping,
+    		long startSample) {
+    	if (src == null) return;
+    	ScheduledPlay timeEvent = new ScheduledPlay(src, env, gain, pan, looping);
+    	scheduler.schedule(startSample, timeEvent);
+    }
+
+    /**
+     * Schedule a new voice to start after a given delay in samples.
+     *
+     * @param src          PASource
+     * @param env          ADSR
+     * @param gain         final gain
+     * @param pan          final pan
+     * @param looping      loop flag
+     * @param delaySamples how many samples from "now" to start
+     */
+    public synchronized void schedulePlayInSamples(PASource src,
+    		ADSRParams env,
+    		float gain,
+    		float pan,
+    		boolean looping,
+    		long delaySamples) {
+    	long startSample = this.sampleCursor + Math.max(0, delaySamples);
+    	schedulePlayAtSample(src, env, gain, pan, looping, startSample);
+    }
+
+    /**
+     * Expose the current absolute sample cursor (for higher-level scheduling).
+     */
+    public synchronized long getSampleCursor() {
+    	return sampleCursor;
+    }
+
+    // ------------------------------------------------------------------------
+    // uGenerate — per-sample mixing + scheduler tick
     // ------------------------------------------------------------------------
     @Override
     protected synchronized void uGenerate(float[] channels) {
+        // sampleCursor is absolute sample across the life of this UGen
+        scheduler.tick(sampleCursor, scheduled -> {
+            ScheduledPlay sp = scheduled.timeEvent;
+            // Launch a new voice exactly at this sample
+            getAvailableVoice(sp.src, sp.env, sp.gain, sp.pan, sp.looping);
+        });
+
         Arrays.fill(channels, 0f);
 
         float[] tmp = new float[2]; // left, right
@@ -150,6 +247,9 @@ public class PAGranularSampler extends UGen {
                 // recyclable; nothing else needed
             }
         }
+
+        // Advance global sample cursor by one sample frame
+        sampleCursor++;
     }
 
     // ------------------------------------------------------------------------

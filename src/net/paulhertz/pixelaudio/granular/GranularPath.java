@@ -41,20 +41,20 @@ public final class GranularPath {
          */
         public final float pan;
         /**  */
-        public final int timeOffsetMS;
+        public final int timeOffsetMs;
 
         public GrainSpec(long sourceSampleIndex,
                          int grainLengthSamples,
                          float pitchHint,
                          float gain,
                          float pan,
-                         int timeOffsetMS) {
+                         int timeOffsetMs) {
             this.sourceSampleIndex = sourceSampleIndex;
             this.grainLengthSamples = grainLengthSamples;
             this.pitchHint = pitchHint;
             this.gain = gain;
             this.pan = pan;
-            this.timeOffsetMS = timeOffsetMS;
+            this.timeOffsetMs = timeOffsetMs;
         }
     }
 

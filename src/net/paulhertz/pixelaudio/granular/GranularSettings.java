@@ -63,6 +63,14 @@ public final class GranularSettings {
 	 *    should be cached (see WindowCache) to avoid recomputation.
 	 */
 	public WindowFunction windowFunction = new HannWindow();
+	
+	public enum TimingMode {
+	    FIXED_HOP,
+	    GESTURE_TIMED
+	}
+
+	private TimingMode timingMode = TimingMode.FIXED_HOP;
+	private float timeScale = 1.0f; // stretch/compress gesture duration
 
 
 	public GranularSettings() {
@@ -99,6 +107,13 @@ public final class GranularSettings {
         }
  	}
     
+    public TimingMode getTimingMode() { return timingMode; }
+    public void setTimingMode(TimingMode mode) { this.timingMode = mode; }
+
+    public float getTimeScale() { return timeScale; }
+    public void setTimeScale(float timeScale) { this.timeScale = timeScale; }
+    
+    
     public GranularSettings clone() {
     	GranularSettings settings = new GranularSettings(this.windowFunction, this.defaultGrainLength, this.hopSamples);
     	settings.transposeSemitones = this.transposeSemitones;
@@ -106,6 +121,8 @@ public final class GranularSettings {
     	settings.normalizeByWindowSum = this.normalizeByWindowSum;
     	settings.respectPerGrainPan = this.respectPerGrainPan;
     	settings.perGrainPitchOverrides = this.perGrainPitchOverrides;
+    	settings.timingMode = this.timingMode;
+    	settings.timeScale = this.timeScale;
     	return settings;
     }
     

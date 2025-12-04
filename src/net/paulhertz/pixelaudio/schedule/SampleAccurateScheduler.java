@@ -13,17 +13,18 @@ import java.util.Comparator;
  *  - schedule(...) from UI / control thread
  *  - tick(currentSample, consumer) from the audio thread (once per sample or per block)
  *
- * T is the event payload, e.g., a GrainEvent, a UI trigger, etc.
+ * T is the event payload, e.g., a GrainEvent, a UI trigger, etc. Renamed to timeEvent here, 
+ * since we are primarily concerned with musical or animation events. 
  */
 public final class SampleAccurateScheduler<T> {
 
     public static final class ScheduledEvent<T> {
         public final long startSample; // absolute sample index in the audio stream
-        public final T payload;
+        public final T timeEvent;
 
-        public ScheduledEvent(long startSample, T payload) {
+        public ScheduledEvent(long startSample, T timeEvent) {
             this.startSample = startSample;
-            this.payload = payload;
+            this.timeEvent = timeEvent;
         }
     }
 
@@ -36,10 +37,10 @@ public final class SampleAccurateScheduler<T> {
             new PriorityQueue<>(Comparator.comparingLong(e -> e.startSample));
 
     /**
-     * Schedule a payload at an absolute sample index.
+     * Schedule a timeEvent at an absolute sample index.
      */
-    public synchronized void schedule(long startSample, T payload) {
-        queue.offer(new ScheduledEvent<>(startSample, payload));
+    public synchronized void schedule(long startSample, T timeEvent) {
+        queue.offer(new ScheduledEvent<>(startSample, timeEvent));
     }
 
     /**

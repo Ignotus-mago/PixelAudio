@@ -11,18 +11,17 @@ import net.paulhertz.pixelaudio.voices.PitchPolicy;
  *  - reads from a mono float[] source buffer,
  *  - uses a GranularPath for where/how to place grains,
  *  - applies per-grain gain and pan,
- *  - plays grains in order with fixed hop (density from GranularSettings.hopSamples),
+ *  - can either:
+ *      * play grains on a fixed hop grid (hopSamples), or
+ *      * use per-grain timeOffsetMs to approximate the original gesture timing,
  *  - uses a Minim WindowFunction.
- *
- * Timing:
- *   Grain g starts at absolute sample:
- *       noteStartSample + g * hopSamples
  */
 public class PathGranularSource implements PASource {
 
 	private final float[] source;
 	private final GranularPath path;
 	private final GranularSettings settings;
+	private final float sampleRate;
 	private final WindowCache windowCache = WindowCache.INSTANCE;
 
 	private final int hopSamples;
@@ -35,7 +34,8 @@ public class PathGranularSource implements PASource {
 
 	public PathGranularSource(float[] source,
 			GranularPath path,
-			GranularSettings settings) {
+			GranularSettings settings,
+			float sampleRate) {
 		if (source == null) throw new IllegalArgumentException("source buffer must not be null");
 		if (path == null) throw new IllegalArgumentException("path must not be null");
 		if (settings == null) throw new IllegalArgumentException("settings must not be null");
@@ -43,6 +43,7 @@ public class PathGranularSource implements PASource {
 		this.source = source;
 		this.path = path;
 		this.settings = settings;
+		this.sampleRate = sampleRate;
 
 		this.hopSamples = settings.hopSamples;
 		this.defaultGrainLength = settings.defaultGrainLength;
@@ -76,8 +77,21 @@ public class PathGranularSource implements PASource {
 					? spec.grainLengthSamples
 					: defaultGrainLength;
 
-			long grainStartAbs = noteStartSample + (long) g * hopSamples;
-			long grainEndAbs   = grainStartAbs + grainLen;
+			long grainStartAbs;
+			
+			if (settings.getTimingMode() == GranularSettings.TimingMode.GESTURE_TIMED) {
+				// timeOffsetMs is gesture-relative time for this grain
+				int tMs = spec.timeOffsetMs;    // new field in GrainSpec
+				float scaledMs = tMs * settings.getTimeScale(); // stretch/compress gesture
+				long offsetSamples = (long) Math.round((scaledMs / 1000.0f) * sampleRate);
+				grainStartAbs = noteStartSample + Math.max(0, offsetSamples);
+			} 
+			else {
+				// Original fixed-hop behavior
+				grainStartAbs = noteStartSample + (long) g * hopSamples;
+			}
+			
+			long grainEndAbs = grainStartAbs + grainLen;
 
 			// Skip if no overlap
 			if (grainEndAbs <= blockStart || grainStartAbs >= blockEnd) {
@@ -133,12 +147,26 @@ public class PathGranularSource implements PASource {
 		}
 	}
 
-	@Override
-	public long lengthSamples() {
-		if (numGrains == 0) return 0;
-		long relativeLen = (long) (numGrains - 1) * hopSamples + defaultGrainLength;
-		return relativeLen;
-	}
+    @Override
+    public long lengthSamples() {
+        if (numGrains == 0) return 0;
+
+        if (settings.getTimingMode() == GranularSettings.TimingMode.GESTURE_TIMED) {
+            // Optional: define length based on last grain's timeOffsetMs + length
+            GranularPath.GrainSpec last = path.getGrains().get(numGrains - 1);
+            float scaledMs = last.timeOffsetMs * settings.getTimeScale();
+            long offsetSamples = (long) Math.round((scaledMs / 1000.0f) * sampleRate);
+            int grainLen = (last.grainLengthSamples > 0)
+                    ? last.grainLengthSamples
+                    : defaultGrainLength;
+            return offsetSamples + grainLen;
+        } 
+        else {
+            // Original fixed-hop behavior
+            long relativeLen = (long) (numGrains - 1) * hopSamples + defaultGrainLength;
+            return relativeLen;
+        }
+    }
 
 	@Override
 	public PitchPolicy pitchPolicy() {
