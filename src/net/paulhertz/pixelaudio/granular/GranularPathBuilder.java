@@ -264,10 +264,252 @@ public final class GranularPathBuilder {
 		return new GranularPath(grains);
 	}
 
+    // ------------------------------------------------------------------------
+    // NEW: Gesture resampling helpers
+    // ------------------------------------------------------------------------
+
+    /** Simple container for resampled gesture. */
+    public static final class ResampledGesture {
+        public final List<PVector> points;
+        public final int[] timesMs;
+
+        public ResampledGesture(List<PVector> points, int[] timesMs) {
+            this.points = points;
+            this.timesMs = timesMs;
+        }
+    }
+
+    /**
+     * Resample a gesture (points + timesMs) to exactly targetCount samples,
+     * preserving the original duration and using linear interpolation in time.
+     */
+    private static ResampledGesture resampleGesture(List<PVector> points,
+                                                    int[] timesMs,
+                                                    int targetCount) {
+        if (points == null || timesMs == null) {
+            throw new IllegalArgumentException("points and timesMs must not be null");
+        }
+        if (points.size() != timesMs.length) {
+            throw new IllegalArgumentException("points.size() must equal timesMs.length");
+        }
+        if (points.isEmpty() || targetCount <= 0) {
+            return new ResampledGesture(new ArrayList<>(), new int[0]);
+        }
+
+        int originalCount = points.size();
+        if (targetCount == originalCount) {
+            return new ResampledGesture(new ArrayList<>(points), timesMs.clone());
+        }
+
+        int originalDurationMs = timesMs[originalCount - 1];
+        if (originalDurationMs <= 0) {
+            // Degenerate case: all times same; copy first point
+            List<PVector> outPts = new ArrayList<>(targetCount);
+            int[] outTimes = new int[targetCount];
+            for (int k = 0; k < targetCount; k++) {
+                outPts.add(points.get(0).copy());
+                outTimes[k] = 0;
+            }
+            return new ResampledGesture(outPts, outTimes);
+        }
+
+        List<PVector> outPoints = new ArrayList<>(targetCount);
+        int[] outTimes = new int[targetCount];
+
+        int segIndex = 0;
+        for (int k = 0; k < targetCount; k++) {
+            float alpha = (targetCount == 1) ? 0f : (float) k / (targetCount - 1);
+            float targetTimeF = alpha * originalDurationMs;
+            int targetTime = Math.round(targetTimeF);
+
+            // advance segment index until timesMs[segIndex+1] >= targetTime
+            while (segIndex < originalCount - 2 && timesMs[segIndex + 1] < targetTime) {
+                segIndex++;
+            }
+
+            int t0 = timesMs[segIndex];
+            int t1 = timesMs[Math.min(segIndex + 1, originalCount - 1)];
+            PVector p0 = points.get(segIndex);
+            PVector p1 = points.get(Math.min(segIndex + 1, originalCount - 1));
+
+            float u;
+            if (t1 == t0) {
+                u = 0f;
+            } else {
+                u = (targetTime - t0) / (float) (t1 - t0);
+                if (u < 0f) u = 0f;
+                if (u > 1f) u = 1f;
+            }
+
+            float x = lerp(p0.x, p1.x, u);
+            float y = lerp(p0.y, p1.y, u);
+
+            outPoints.add(new PVector(x, y));
+            outTimes[k] = targetTime;
+        }
+
+        return new ResampledGesture(outPoints, outTimes);
+    }
+    
+    /**
+     * Resample to targetCount samples (preserving original duration),
+     * then scale the gesture to a new total duration targetDurationMs.
+     */
+    private static ResampledGesture resampleGestureToCountAndDuration(List<PVector> points,
+                                                                      int[] timesMs,
+                                                                      int targetCount,
+                                                                      int targetDurationMs) {
+        ResampledGesture base = resampleGesture(points, timesMs, targetCount);
+        if (base.points.isEmpty() || targetDurationMs <= 0) {
+            return base;
+        }
+
+        int originalDurationMs = base.timesMs[base.timesMs.length - 1];
+        if (originalDurationMs <= 0) {
+            return base;
+        }
+
+        float scale = targetDurationMs / (float) originalDurationMs;
+        int[] scaledTimes = new int[base.timesMs.length];
+        for (int i = 0; i < scaledTimes.length; i++) {
+            scaledTimes[i] = Math.round(base.timesMs[i] * scale);
+        }
+
+        return new ResampledGesture(base.points, scaledTimes);
+    }
+
+
+    /**
+     * Build a timed GranularPath from the drag points, but first resample the
+     * gesture (time + location) to targetCount samples.
+     *
+     * This lets you:
+     *  - reduce or increase the point count
+     *  - preserve the original gesture duration and coarse timing structure
+     */
+    public static GranularPath fromTimedDragPointsResampled(PACurveMaker curve,
+                                                            PixelAudioMapper mapper,
+                                                            int canvasWidth,
+                                                            int canvasHeight,
+                                                            int grainLength,
+                                                            int targetCount) {
+        List<GranularPath.GrainSpec> grains = new ArrayList<>();
+        if (curve == null || mapper == null) return new GranularPath(grains);
+
+        List<PVector> dragPoints = curve.getDragPoints();
+        if (dragPoints == null || dragPoints.isEmpty()) return new GranularPath(grains);
+
+        int[] dragTimes = getDragTimes(curve);
+        if (dragTimes.length != dragPoints.size()) return new GranularPath(grains);
+
+        ResampledGesture rg = resampleGesture(dragPoints, dragTimes, targetCount);
+        if (rg.points.isEmpty()) return new GranularPath(grains);
+
+        for (int i = 0; i < rg.points.size(); i++) {
+            PVector p = rg.points.get(i);
+            int tMs = rg.timesMs[i];
+
+            int x = clampToCanvas(Math.round(p.x), canvasWidth);
+            int y = clampToCanvas(Math.round(p.y), canvasHeight);
+            int sampleIndex = mapper.lookupSample(x, y);
+
+            float pan = mapXToPan(p.x, canvasWidth);
+            float gain = 1.0f;
+            float pitchHint = 0.0f;
+            int timeOffsetMs = tMs;
+
+            grains.add(new GranularPath.GrainSpec(
+                    sampleIndex,
+                    grainLength,
+                    pitchHint,
+                    gain,
+                    pan,
+                    timeOffsetMs
+            ));
+        }
+
+        return new GranularPath(grains);
+    }
+
+    
+    /**
+     * Build a timed GranularPath from drag points, resampling the gesture
+     * to targetCount samples and scaling it to a total duration of
+     * targetDurationMs milliseconds.
+     *
+     * This lets you say:
+     *   "Give me N grains over D ms, following the same gesture."
+     */
+    public static GranularPath fromTimedDragPointsResampledToDuration(PACurveMaker curve,
+                                                                      PixelAudioMapper mapper,
+                                                                      int canvasWidth,
+                                                                      int canvasHeight,
+                                                                      int grainLength,
+                                                                      int targetCount,
+                                                                      int targetDurationMs) {
+        List<GranularPath.GrainSpec> grains = new ArrayList<>();
+        if (curve == null || mapper == null) return new GranularPath(grains);
+
+        List<PVector> dragPoints = curve.getDragPoints();
+        if (dragPoints == null || dragPoints.isEmpty()) return new GranularPath(grains);
+
+        int[] dragTimes = getDragTimes(curve);
+        if (dragTimes.length != dragPoints.size()) return new GranularPath(grains);
+
+        ResampledGesture rg = resampleGestureToCountAndDuration(
+                dragPoints,
+                dragTimes,
+                targetCount,
+                targetDurationMs
+        );
+        if (rg.points.isEmpty()) return new GranularPath(grains);
+
+        for (int i = 0; i < rg.points.size(); i++) {
+            PVector p = rg.points.get(i);
+            int tMs = rg.timesMs[i];
+
+            int x = clampToCanvas(Math.round(p.x), canvasWidth);
+            int y = clampToCanvas(Math.round(p.y), canvasHeight);
+            int sampleIndex = mapper.lookupSample(x, y);
+
+            float pan = mapXToPan(p.x, canvasWidth);
+            float gain = 1.0f;
+            float pitchHint = 0.0f;
+            int timeOffsetMs = tMs;
+
+            grains.add(new GranularPath.GrainSpec(
+                    sampleIndex,
+                    grainLength,
+                    pitchHint,
+                    gain,
+                    pan,
+                    timeOffsetMs
+            ));
+        }
+
+        return new GranularPath(grains);
+    }
+
 	
-	private static float mapXToPan(float x, int width) {
+    // ------------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------------
+
+    private static float mapXToPan(float x, int width) {
 		if (width <= 1) return 0f;
 		float norm = x / (float) (width - 1); // 0..1
 		return norm * 2f - 1f;                // -1..+1
 	}
+	
+    private static int clampToCanvas(int v, int max) {
+        if (max <= 0) return 0;
+        if (v < 0) return 0;
+        if (v >= max) return max - 1;
+        return v;
+    }
+
+    private static float lerp(float a, float b, float u) {
+        return a + (b - a) * u;
+    }
+
 }
