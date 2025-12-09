@@ -515,6 +515,69 @@ public final class GranularPathBuilder {
     	}
     	return new GranularPath(grains);
     }
+    
+    /**
+     * Build a linear path from a point, equivalent to "classic" granular synthesis.
+     * 
+     * @param x                x-coordinate on where user clicked display
+     * @param y                y-coordinate
+     * @param mapper           PixelAudioMapper for pixel to signal mapping
+     * @param canvasWidth      display image width
+     * @param canvasHeight     display image height
+     * @param grainLength      length of grains in samples
+     * @param hopLength        distance to advance from on grain to the next
+     * @param numGrains        total number of grains
+     * @return                 a GranularPath 
+     */
+    public static GranularPath fromPointToLinearPath(int x, int y, PixelAudioMapper mapper,
+    		int canvasWidth, int canvasHeight,
+    		int grainLength, int hopLength, int numGrains,
+    		float sampleRate) {
+    	List<GranularPath.GrainSpec> grains = new ArrayList<>();
+    	if (mapper == null) return new GranularPath(grains);
+    	
+    	int startSampleIndex = mapper.lookupSample(x, y);
+    	int maxSampleIndex = mapper.getSize() - grainLength;
+    	int i = 0;
+    	int sampleIndex = startSampleIndex;
+    	int hopMs = Math.round((hopLength / sampleRate) * 1000);
+    	while (sampleIndex <= maxSampleIndex && i < numGrains) {
+    		float pan = mapXToPan(x, canvasWidth);
+    		float gain = 1.0f;
+    		float pitchHint = 0.0f;
+			grains.add(new GranularPath.GrainSpec(
+					sampleIndex,
+					grainLength,
+					pitchHint,
+					gain,
+					pan,
+					i * hopMs));
+    		i++;
+    		sampleIndex += hopLength;
+    	}   	
+    	return new GranularPath(grains);
+    }
+    
+    public static GranularPath fromPointToLinearPathDuration(int x, int y,
+            PixelAudioMapper mapper,
+            int canvasWidth, int canvasHeight,
+            int grainLength, int hopLength,
+            float durationMs, float sampleRate) {
+
+        int maxGrains = (int) Math.ceil(
+            (durationMs * 0.001f * sampleRate - grainLength) / hopLength
+        );
+        if (maxGrains < 1) maxGrains = 1;
+
+        return fromPointToLinearPath(
+            x, y, mapper,
+            canvasWidth, canvasHeight,
+            grainLength, hopLength, maxGrains,
+            sampleRate
+        );
+    }
+
+
 
     // ------------------------------------------------------------------------
     // Helpers
@@ -528,52 +591,64 @@ public final class GranularPathBuilder {
     		int targetCount,
     		int targetDurationMs,
     		DoubleUnaryOperator warp) {
-    	List<GranularPath.GrainSpec> grains = new ArrayList<>();
-    	if (curve == null || mapper == null) return new GranularPath(grains);
-
-    	List<PVector> dragPoints = curve.getDragPoints();
-    	if (dragPoints == null || dragPoints.isEmpty()) return new GranularPath(grains);
-
-    	int[] dragTimes = getDragTimes(curve);
-    	if (dragTimes.length != dragPoints.size()) return new GranularPath(grains);
-
-    	PAGestureParametric gp = new PAGestureParametric(dragPoints, dragTimes);
-    	float originalDurMs = gp.getTotalDurationMs();
-    	if (originalDurMs <= 0 || targetCount <= 0) return new GranularPath(grains);
-
-    	float timeScale = 1f;
-    	if (targetDurationMs > 0) {
-    		timeScale = targetDurationMs / originalDurMs;
-    	}
-
-    	for (int k = 0; k < targetCount; k++) {
-    		float u = (targetCount == 1) ? 0f : (float) k / (targetCount - 1);
-    		PAGestureParametric.Sample s =
-    				(warp != null) ? gp.sample(u, warp) : gp.sample(u);
-
-    		float tScaled = s.tMs * timeScale;
-    		int tMs = Math.round(tScaled);
-
-    		int x = clampToCanvas(Math.round(s.x), canvasWidth);
-    		int y = clampToCanvas(Math.round(s.y), canvasHeight);
-    		int sampleIndex = mapper.lookupSample(x, y);
-
-    		float pan = mapXToPan(s.x, canvasWidth);
-    		float gain = 1.0f;
-    		float pitchHint = 0.0f;
-
-    		grains.add(new GranularPath.GrainSpec(
-    				sampleIndex,
-    				grainLength,
-    				pitchHint,
-    				gain,
-    				pan,
-    				tMs
-    				));
-    	}
-
-    	return new GranularPath(grains);
+        	return fromTimedDragParametric(curve.getDragPoints(), getDragTimes(curve),
+    			                mapper, canvasWidth, canvasHeight,
+    			                grainLength, targetCount, targetDurationMs, warp);
     }
+    
+    public static GranularPath fromTimedDragParametric(ArrayList<PVector> dragPoints,
+    	    int[] dragTimes,
+    	    PixelAudioMapper mapper,
+    	    int canvasWidth,
+    	    int canvasHeight,
+    	    int grainLength,
+    	    int targetCount,
+    	    int targetDurationMs,
+    	    DoubleUnaryOperator warp) {
+    	
+    	  List<GranularPath.GrainSpec> grains = new ArrayList<>();
+    	  if (mapper == null) return new GranularPath(grains);
+    	  if (dragPoints == null || dragPoints.isEmpty()) return new GranularPath(grains);
+    	  if (dragTimes.length != dragPoints.size()) return new GranularPath(grains);
+
+    	  PAGestureParametric gp = new PAGestureParametric(dragPoints, dragTimes);
+    	  float originalDurMs = gp.getTotalDurationMs();
+    	  if (originalDurMs <= 0 || targetCount <= 0) return new GranularPath(grains);
+
+    	  float timeScale = 1f;
+    	  if (targetDurationMs > 0) {
+    	    timeScale = targetDurationMs / originalDurMs;
+    	  }
+
+    	  for (int k = 0; k < targetCount; k++) {
+    	    float u = (targetCount == 1) ? 0f : (float) k / (targetCount - 1);
+    	    PAGestureParametric.Sample s =
+    	        (warp != null) ? gp.sample(u, warp) : gp.sample(u);
+
+    	    float tScaled = s.tMs * timeScale;
+    	    int tMs = Math.round(tScaled);
+
+    	    int x = clampToCanvas(Math.round(s.x), canvasWidth);
+    	    int y = clampToCanvas(Math.round(s.y), canvasHeight);
+    	    int sampleIndex = mapper.lookupSample(x, y);
+
+    	    float pan = mapXToPan(s.x, canvasWidth);
+    	    float gain = 1.0f;
+    	    float pitchHint = 0.0f;
+
+    	    grains.add(new GranularPath.GrainSpec(
+    	        sampleIndex,
+    	        grainLength,
+    	        pitchHint,
+    	        gain,
+    	        pan,
+    	        tMs
+    	        ));
+    	  }
+
+    	  return new GranularPath(grains);
+    	}
+
 
     
     private static float mapXToPan(float x, int width) {

@@ -29,6 +29,11 @@ public final class GranularSettings {
 	public boolean respectPerGrainPan = true;
 	/** Whether per-grain pitch (in GranularPath) overrides stream-level transpose. */
 	public boolean perGrainPitchOverrides = false;
+	
+	/** default gain setting */
+	public float gain = 1.0f;
+	/** default pan setting */
+	public float pan = 0.0f;
 
 	/** How to handle grains near buffer edges: wrap, clamp, reflect, etc. */
 	public enum EdgeMode {
@@ -113,8 +118,13 @@ public final class GranularSettings {
     public float getTimeScale() { return timeScale; }
     public void setTimeScale(float timeScale) { this.timeScale = timeScale; }
     
-    
-    public GranularSettings clone() {
+    public float getGain() { return gain; }
+	public void setGain(float gain) { this.gain = gain; }
+
+	public float getPan() { return pan; }
+	public void setPan(float pan) { this.pan = pan; }
+
+	public GranularSettings clone() {
     	GranularSettings settings = new GranularSettings(this.windowFunction, this.defaultGrainLength, this.hopSamples);
     	settings.transposeSemitones = this.transposeSemitones;
     	settings.grainJitter = this.grainJitter;
@@ -123,6 +133,8 @@ public final class GranularSettings {
     	settings.perGrainPitchOverrides = this.perGrainPitchOverrides;
     	settings.timingMode = this.timingMode;
     	settings.timeScale = this.timeScale;
+    	settings.gain = this.gain;
+    	settings.pan = this.pan;
     	return settings;
     }
     
