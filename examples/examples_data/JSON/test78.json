@@ -153,17 +153,35 @@
       "index": 10,
       "cycles": 1,
       "dc": 0
+    },
+    {
+      "phase": 0.5305562019348145,
+      "color": {
+        "r": 55,
+        "b": 178,
+        "g": 123
+      },
+      "amp": 0.625,
+      "phaseInc": 0.008726646192371845,
+      "freq": 24666,
+      "index": 11,
+      "cycles": 1,
+      "dc": 0
     }
   ],
   "blendFactor": 0.38999998569488525,
-  "contrastFactor": 1,
   "comments": "Diagonal nets, nuber 2 in series. ",
   "filename": "motion_study_117a.mp4",
+  "stop": 720,
   "dataFormat": 2,
-  "scanner": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
-  "histoHigh": 233,
-  "histoLow": 8,
+  "histoHigh": 254,
+  "histoLow": 1,
   "steps": 720,
   "gamma": 1.399999976158142
 }
