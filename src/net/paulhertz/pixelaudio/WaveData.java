@@ -61,6 +61,22 @@ public class WaveData {
 	 */
 	public static final boolean phaseScalesTwoPI = true;
 	
+    // --------------------------------------------------------------------
+    // Per-frame oscillator state for fast recurrence
+    // --------------------------------------------------------------------
+    private float s;   // sin(currentPhase)
+    private float c;   // cos(currentPhase)
+    private float cs;  // cos(deltaPhasePerPos)
+    private float sn;  // sin(deltaPhasePerPos)
+
+    private int preparedFrame = Integer.MIN_VALUE;
+    private boolean framePrepared = false;
+
+    // optional: for occasional renormalization to fight drift
+    private int stepsSinceRenorm = 0;
+    private static final int RENORM_PERIOD = 1024;
+
+	
 
 	public WaveData(float f, float a, float p, float dc, float cycles, int c, int animSteps, boolean phaseScalesTwoPi) {
 		this.freq = f;
@@ -208,6 +224,103 @@ public class WaveData {
 		return (float) Math.sin(this.phaseTwoPi - frame * this.phaseInc + this.freq * pos * mapInc);
 	}
 	
+	
+	
+	
+    // --------------------------------------------------------------------
+    // NEW: fast oscillator-based API
+    // --------------------------------------------------------------------
+
+    /**
+     * Prepare oscillator state for this frame, assuming a constant freq
+     * and a constant mapInc for pos stepping.
+     *
+     * Call once per frame (per WaveData) before stepping pos with nextValue().
+     */
+    public void prepareFrame(int frame, float mapInc) {
+        // Optional micro-optimization: if same frame, skip recompute
+        if (framePrepared && frame == preparedFrame) return;
+
+        // Initial phase at pos = 0 (your existing formula)
+        float phi0 = this.phaseTwoPi - frame * this.phaseInc;
+        this.s = (float) Math.sin(phi0);
+        this.c = (float) Math.cos(phi0);
+
+        // Phase increment per pos step
+        float delta = this.freq * mapInc;
+        this.cs = (float) Math.cos(delta);
+        this.sn = (float) Math.sin(delta);
+
+        this.preparedFrame = frame;
+        this.framePrepared = true;
+        this.stepsSinceRenorm = 0;
+    }
+
+    /**
+     * Variant that includes a per-frame freqShift.
+     * Use when you want global detune / modulation per frame, not per pixel.
+     */
+    public void prepareFrame(int frame, float mapInc, float freqShift) {
+        float phi0 = this.phaseTwoPi - frame * this.phaseInc;
+        this.s = (float) Math.sin(phi0);
+        this.c = (float) Math.cos(phi0);
+
+        float delta = this.freq * freqShift * mapInc;
+        this.cs = (float) Math.cos(delta);
+        this.sn = (float) Math.sin(delta);
+
+        this.preparedFrame = frame;
+        this.framePrepared = true;
+        this.stepsSinceRenorm = 0;
+    }
+
+    /**
+     * Get the next value along the path, using oscillator recurrence.
+     * Must be called AFTER prepareFrame(...), and then repeatedly
+     * for pos = 0,1,2,... in order.
+     */
+    public float nextValue() {
+        if (!framePrepared) {
+            throw new IllegalStateException(
+                "WaveData.nextValue() called before prepareFrame()."
+            );
+        }
+
+        float val = this.s; // current sin(phase)
+
+        // Step to next phase:
+        float sNext = this.s * this.cs + this.c * this.sn;
+        float cNext = this.c * this.cs - this.s * this.sn;
+        this.s = sNext;
+        this.c = cNext;
+
+        // Optional renormalization to fight FP drift
+        if (++stepsSinceRenorm >= RENORM_PERIOD) {
+            float mag2 = this.s * this.s + this.c * this.c;
+            if (mag2 != 0f) {
+                float invMag = 1.0f / (float) Math.sqrt(mag2);
+                this.s *= invMag;
+                this.c *= invMag;
+            }
+            stepsSinceRenorm = 0;
+        }
+
+        return val;
+    }
+
+    /**
+     * If you ever need to force this oscillator to be rebuilt next frame.
+     */
+    public void invalidateFrameState() {
+        this.framePrepared = false;
+        this.preparedFrame = Integer.MIN_VALUE;
+    }
+
+	
+   
+    
+    
+    
 	
 	public float rawPhaseAtFrame(int frame) {
 		return this.phaseTwoPi - frame * this.phaseInc;

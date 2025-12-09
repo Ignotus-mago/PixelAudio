@@ -45,7 +45,11 @@ import java.util.ArrayList;
  * WaveData objects. Experimenting with it to get an idea of what WaveSynth can do to 
  * produce patterns. 
  * 
- * 
+ * Gamma and histogram scaling are intended primarily for still-image
+ * grading and offline rendering. For realtime animation, prefer adjusting
+ * operator amplitudes and DC offsets to control brightness/contrast,
+ * and leave gamma = 1.0 and isScaleHisto = false for best performance.
+ *
  */
 public class WaveSynth {
 	// WaveSynth data objects
@@ -104,6 +108,21 @@ public class WaveSynth {
 	// ----- may be extraneous, but it appears in JSON data ----- //
 	public int videoFrameRate = 24;
 	public String videoFilename = "motion_study.mp4";
+	
+    // ------ Optimized rendering state ------ //
+
+    /** Active (unmuted, non-suspended) waves for current frame. */
+    private WaveData[] activeWaves;
+    private int activeCount = 0;
+
+    /** Weights just for active waves (first activeCount entries valid). */
+    private float[] activeWeights;
+
+    /** Pre-split color channels for active waves (first activeCount entries valid). */
+    private float[] activeColorR;
+    private float[] activeColorG;
+    private float[] activeColorB;
+	
 
 
 	public WaveSynth(PixelAudioMapper mapper, ArrayList<WaveData> wdList) {
@@ -134,6 +153,18 @@ public class WaveSynth {
 			waveColors[j] = waveDataList.get(j).waveColor;
 		}
 		this.weights = new float[dataLength];
+        // ***** NEW: allocate optimized arrays ***** //
+        if (this.activeWaves == null || this.activeWaves.length != dataLength) {
+            this.activeWaves = new WaveData[dataLength];
+        }
+        if (this.activeWeights == null || this.activeWeights.length != dataLength) {
+            this.activeWeights = new float[dataLength];
+        }
+        if (this.activeColorR == null || this.activeColorR.length != dataLength) {
+            this.activeColorR = new float[dataLength];
+            this.activeColorG = new float[dataLength];
+            this.activeColorB = new float[dataLength];
+        }		
 	}
 	
 	public void updateWaveColors() {
@@ -141,10 +172,44 @@ public class WaveSynth {
 		if (this.waveColors == null || this.waveColors.length != this.dataLength) {
 			this.waveColors = new int[dataLength];
 			this.weights = new float[dataLength];
+			// ***** Also resize optimized arrays if needed ***** //
+            this.activeWaves    = new WaveData[dataLength];
+            this.activeWeights  = new float[dataLength];
+            this.activeColorR   = new float[dataLength];
+            this.activeColorG   = new float[dataLength];
+            this.activeColorB   = new float[dataLength];
 		}
 		for (int j = 0; j < dataLength; j++) {
 			waveColors[j] = waveDataList.get(j).waveColor;
 		}
+	}
+	
+	// ***** NEW optimized synthesis ***** //
+	/**
+	 * Rebuilds the list of active (unmuted, non-suspended) waves
+	 * and pre-splits their colors into RGB channels.
+	 */
+	private void rebuildActiveWaves() {
+	    if (waveDataList == null) {
+	        activeCount = 0;
+	        return;
+	    }
+	    int idx = 0;
+	    for (int j = 0; j < waveDataList.size(); j++) {
+	        WaveData wd = waveDataList.get(j);
+	        if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED) {
+	            continue;
+	        }
+	        activeWaves[idx] = wd;
+	        // Pre-split color into RGB for this active index
+	        int c = wd.waveColor;
+	        int[] comp = PixelAudioMapper.rgbComponents(c);
+	        activeColorR[idx] = comp[0];
+	        activeColorG[idx] = comp[1];
+	        activeColorB[idx] = comp[2];
+	        idx++;
+	    }
+	    activeCount = idx;
 	}
 	
 	/**
@@ -396,6 +461,7 @@ public class WaveSynth {
 		*/
 	}
 	
+	/*
 	// loop to render all the pixels in a frame
 	// We want it to complete a frame before any changes to the WaveSynth, so it's synchronized.
 	public synchronized void renderFrame(int frame) {
@@ -415,6 +481,99 @@ public class WaveSynth {
 		// set our internal step variable, just a tracker for now
 		this.setStep(frame);
 	}
+	*/
+	
+	// loop to render all the pixels in a frame
+	// We want it to complete a frame before any changes to the WaveSynth, so it's synchronized.
+	public synchronized void renderFrame(int frame) {
+		// load variables with prepareAnimation() at start of animation loop
+		if (frame == 0) {
+			prepareAnimation();
+		}
+		// NEW: build active wave list and pre-split their colors
+		rebuildActiveWaves();
+		// NEW: per-frame oscillator preparation for each active wave
+		for (int j = 0; j < activeCount; j++) {
+			WaveData wd = activeWaves[j];
+			wd.prepareFrame(frame, mapInc);   // uses the new WaveData API
+		}
+		// Main path along the mapper's signal
+		for (int pos = 0; pos < this.mapSize; pos++) {
+			float weightSum = 0.0f;
+			// accumulate weights for active waves, and optionally audio sum
+			for (int j = 0; j < activeCount; j++) {
+				WaveData wd = activeWaves[j];
+				// Fast oscillator recurrence: no trig here
+				float base = wd.nextValue();
+				float val  = (base + woff) * wscale + wd.dc;
+				float w    = val * wd.amp * this.gain;
+				activeWeights[j] = w;
+				if (isRenderAudio) {
+					weightSum += w;
+				}
+			}
+			if (isRenderAudio) {
+				this.renderSignal[pos] = weightSum;
+			}
+			// Optimized color blend for active waves
+			this.colorSignal[pos] = weightedColorActive(activeWeights, activeCount);
+		}
+		// write scanSignal's pixel color values to scanImage pixels
+		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, mapSize);
+		this.mapImage.updatePixels();
+		if (isRenderAudio) {
+			audioSignal = renderSignal;
+		}
+		// set our internal step variable, just a tracker for now
+		this.setStep(frame);
+	}
+	
+    /**
+     * Optimized weighted color for the current active waves.
+     * Uses pre-split RGB and only the first activeCount entries.
+     * Gamma and Histogram settings are primarily intended for still frame rendering. 
+     * You can probably tweak operator amplitudes and perhaps DC offset to obtain the 
+     * brightness and contrast you want for animation. Leave gamma = 1.0 and 
+     * isScaleHisto = false for best performance.
+     */
+    private int weightedColorActive(float[] weights, int count) {
+        float r = 0, g = 0, b = 0;
+
+        for (int i = 0; i < count; i++) {
+            float w = weights[i];
+            r += activeColorR[i] * w;
+            g += activeColorG[i] * w;
+            b += activeColorB[i] * w;
+        }
+
+        // gamma correction
+        if (this.gamma != 1.0) {
+            if (useGammaTable && gammaTable != null) {
+                r = PixelAudio.constrain(r, 0, 255);
+                g = PixelAudio.constrain(g, 0, 255);
+                b = PixelAudio.constrain(b, 0, 255);
+
+                r = gammaTable[(int) r];
+                g = gammaTable[(int) g];
+                b = gammaTable[(int) b];
+            } else {
+                r = (float) Math.pow((r / 255.0f), this.gamma) * 255.0f;
+                g = (float) Math.pow((g / 255.0f), this.gamma) * 255.0f;
+                b = (float) Math.pow((b / 255.0f), this.gamma) * 255.0f;
+            }
+        }
+
+        // linear stretch, if you want it, adjust hi and lo to suit
+        if (this.isScaleHisto) {
+            r = PixelAudio.constrain(PixelAudio.map(r, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+            g = PixelAudio.constrain(PixelAudio.map(g, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+            b = PixelAudio.constrain(PixelAudio.map(b, this.histoLow, this.histoHigh, 1, 254), 0, 255);
+        }
+
+        return PixelAudioMapper.composeColor((int) r, (int) g, (int) b, 255);
+    }
+
+
 	
 	/**
 	 * 	Render one pixel, return its RGB value.
@@ -496,40 +655,32 @@ public class WaveSynth {
 	}
 	
 	public float[] renderAudioRaw(int frame) {
-		for (int pos = 0; pos < this.mapSize; pos++) {
-			for (int j = 0; j < dataLength; j++) {
-				WaveData wd = waveDataList.get(j);
-				if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED)
-					continue;
-				float val = (wd.waveValue(frame, pos, 1.0f, mapInc) + woff) * wscale + wd.dc;
-				weights[j] = val * wd.amp * this.gain;
-			}
-			float weightSum = 0.0f;
-			for (int i = 0; i < weights.length; i++) {
-				weightSum += weights[i];
-			}
-			this.audioSignal[pos] = weightSum;
-		}
-		return audioSignal;
+	    // Build active list and prepare oscillators for this frame
+	    rebuildActiveWaves();
+	    for (int j = 0; j < activeCount; j++) {
+	        WaveData wd = activeWaves[j];
+	        wd.prepareFrame(frame, mapInc);
+	    }
+	    // Walk the path, sum active waves into audioSignal
+	    for (int pos = 0; pos < this.mapSize; pos++) {
+	        float weightSum = 0.0f;
+	        for (int j = 0; j < activeCount; j++) {
+	            WaveData wd = activeWaves[j];
+	            float base = wd.nextValue();
+	            float val  = (base + woff) * wscale + wd.dc;
+	            float w    = val * wd.amp * this.gain;
+	            weightSum += w;
+	        }
+	        this.audioSignal[pos] = weightSum;
+	    }
+	    return audioSignal;
 	}
+
 	
-	public float[] renderAudio(int frame, float limit) {
-		for (int pos = 0; pos < this.mapSize; pos++) {
-			for (int j = 0; j < dataLength; j++) {
-				WaveData wd = waveDataList.get(j);
-				if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED)
-					continue;
-				float val = (wd.waveValue(frame, pos, 1.0f, mapInc) + woff) * wscale + wd.dc;
-				weights[j] = val * wd.amp * this.gain;
-			}
-			float weightSum = 0.0f;
-			for (int i = 0; i < weights.length; i++) {
-				weightSum += weights[i];
-			}
-			this.audioSignal[pos] = weightSum;
-		}
-		return WaveSynth.normalize(audioSignal, limit);
-	}
+    public float[] renderAudio(int frame, float limit) {
+        renderAudioRaw(frame);
+        return WaveSynth.normalize(audioSignal, limit);
+    }
 	
 	public float noiseAt(int x, int y) {
 		float scale = 0.001f;
