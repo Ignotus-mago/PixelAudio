@@ -41,23 +41,34 @@ public final class GranularPath {
          */
         public final float pan;
         /**  */
-        public final int timeOffsetMs;
+        public final long offsetSamples;
 
         public GrainSpec(long sourceSampleIndex,
                          int grainLengthSamples,
                          float pitchHint,
                          float gain,
                          float pan,
-                         int timeOffsetMs) {
+                         long offsetSamples) {
             this.sourceSampleIndex = sourceSampleIndex;
             this.grainLengthSamples = grainLengthSamples;
             this.pitchHint = pitchHint;
             this.gain = gain;
             this.pan = pan;
-            this.timeOffsetMs = timeOffsetMs;
+            this.offsetSamples = offsetSamples;
         }
+        
+        /** Convenience for FIXED_HOP paths that don't care about offsets. */
+        public GrainSpec(long sourceSampleIndex,
+                         int grainLengthSamples,
+                         float pitchHint,
+                         float gain,
+                         float pan) {
+            this(sourceSampleIndex, grainLengthSamples, pitchHint, gain, pan, 0L);
+        }
+
     }
 
+    
     private final List<GrainSpec> grains;
 
     public GranularPath(List<GrainSpec> grains) {
