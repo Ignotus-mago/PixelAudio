@@ -64,9 +64,9 @@ public class PathGranularSource implements PASource {
 			float[] outL,
 			float[] outR) {
 
-		if (!noteStarted || numGrains == 0) {
-			return;
-		}
+        if (!noteStarted || numGrains == 0) return;
+        if (outL == null || blockSize <= 0) return;
+
 
 		long blockEnd = blockStart + blockSize;
 
@@ -76,20 +76,24 @@ public class PathGranularSource implements PASource {
 			int grainLen = (spec.grainLengthSamples > 0)
 					? spec.grainLengthSamples
 					: defaultGrainLength;
-
-			long grainStartAbs;
 			
-			if (settings.getTimingMode() == GranularSettings.TimingMode.GESTURE_TIMED) {
-				// timeOffsetMs is gesture-relative time for this grain
-				int tMs = spec.timeOffsetMs;    // new field in GrainSpec
-				float scaledMs = tMs * settings.getTimeScale(); // stretch/compress gesture
-				long offsetSamples = (long) Math.round((scaledMs / 1000.0f) * sampleRate);
-				grainStartAbs = noteStartSample + Math.max(0, offsetSamples);
-			} 
-			else {
-				// Original fixed-hop behavior
-				grainStartAbs = noteStartSample + (long) g * hopSamples;
+			// Determine grain start in samples according to timing mode
+			long grainStartAbs;
+			switch(settings.getTimingMode()) {
+			case FIXED_HOP: {
+				long hop = settings.hopSamples;
+				grainStartAbs = noteStartSample + (long) g * hop;
+				break;
 			}
+			case GESTURE_TIMED:
+			default: {
+				long rel = spec.offsetSamples;    // in samples
+				long scaled = (long) Math.round(rel * settings.getTimeScale());
+				grainStartAbs = noteStartSample + scaled;
+				break;
+			}
+				
+			}			
 			
 			long grainEndAbs = grainStartAbs + grainLen;
 
@@ -111,8 +115,8 @@ public class PathGranularSource implements PASource {
 			float[] window = windowCache.getWindowCurve(windowFunction, grainLen);
 
 			// Per-grain gain and pan
-			float gain = spec.gain;
-			float pan = spec.pan; // [-1..+1]
+			float gain = spec.gain * settings.gain;
+			float pan = clampPan(spec.pan + settings.pan); // [-1..+1]
 
 			// Equal-power pan
 			float panAngle = (pan + 1.0f) * 0.25f * (float) Math.PI; // -1..+1 → 0..π/2
@@ -150,16 +154,19 @@ public class PathGranularSource implements PASource {
     @Override
     public long lengthSamples() {
         if (numGrains == 0) return 0;
-
         if (settings.getTimingMode() == GranularSettings.TimingMode.GESTURE_TIMED) {
-            // Optional: define length based on last grain's timeOffsetMs + length
-            GranularPath.GrainSpec last = path.getGrains().get(numGrains - 1);
-            float scaledMs = last.timeOffsetMs * settings.getTimeScale();
-            long offsetSamples = (long) Math.round((scaledMs / 1000.0f) * sampleRate);
-            int grainLen = (last.grainLengthSamples > 0)
-                    ? last.grainLengthSamples
-                    : defaultGrainLength;
-            return offsetSamples + grainLen;
+            // compute max(offsetSamples + grainLen)
+        	long maxEnd = 0L;
+            for (GranularPath.GrainSpec spec : path.getGrains()) {
+                int grainLen = (spec.grainLengthSamples > 0)
+                        ? spec.grainLengthSamples
+                        : settings.defaultGrainLength;
+                long rel = spec.offsetSamples;
+                long scaled = (long) Math.round(rel * settings.getTimeScale());
+                long end = scaled + grainLen;
+                if (end > maxEnd) maxEnd = end;
+            }
+            return maxEnd;
         } 
         else {
             // Original fixed-hop behavior
@@ -185,4 +192,11 @@ public class PathGranularSource implements PASource {
 	public GranularSettings getSettings() {
 		return settings;
 	}
+	
+    private static float clampPan(float p) {
+        if (p < -1f) return -1f;
+        if (p > 1f) return 1f;
+        return p;
+    }
+
 }
