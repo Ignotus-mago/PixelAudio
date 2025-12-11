@@ -16,8 +16,12 @@ import processing.core.PVector;
  *
  * Utility to convert a PACurveMaker path + PixelAudioMapper into a GranularPath.
  *
- * Uses the reduced point set (RDP) for now.
- * Later we can add variants that use interpolated Bezier points or drag points.
+ * Uses the reduced point set (RDP). PACurveMaker can change the amount of reduction
+ * by varying PACurveMaker.epsilon and calling PACurveMaker.calculateDerivedPoints()
+ * to redraw curves.
+ * 
+ * TODO Pitch and other parameters can be modulated based on gesture dynamics.
+ * 
  */
 public final class GranularPathBuilder {
 
@@ -25,6 +29,8 @@ public final class GranularPathBuilder {
 
 	/**
 	 * Build a GranularPath from the RDP points of a PACurveMaker.
+	 * Use GranularSettings.TimingMode.FIXED_HOP when you play samples. 
+	 * If you use GESTURE_TIMED all samples will play at once. 
 	 *
 	 * @param curve          PACurveMaker holding gesture data
 	 * @param mapper         PixelAudioMapper to convert (x,y) → sample index
@@ -75,6 +81,8 @@ public final class GranularPathBuilder {
 
 	/**
 	 * Build a GranularPath from the polygonized Bezier points of a PACurveMaker.
+	 * Use GranularSettings.TimingMode.FIXED_HOP when you play samples. 
+	 * If you use GESTURE_TIMED all samples will play at once. 
 	 *
 	 * @param curve          PACurveMaker holding gesture data
 	 * @param mapper         PixelAudioMapper to convert (x,y) → sample index
@@ -131,6 +139,8 @@ public final class GranularPathBuilder {
 	/**
 	 * Build a GranularPath from the drag points of a PACurveMaker, i.e., the 
 	 * unique points input by dragging the mouse. 
+	 * Use GranularSettings.TimingMode.FIXED_HOP when you play samples. 
+	 * If you use GESTURE_TIMED all samples will play at once. 
 	 *
 	 * @param curve          PACurveMaker holding gesture data
 	 * @param mapper         PixelAudioMapper to convert (x,y) → sample index
@@ -211,11 +221,12 @@ public final class GranularPathBuilder {
 			PixelAudioMapper mapper,
 			int canvasWidth,
 			int canvasHeight,
-			int grainLength) 
+			int grainLength,
+			float sampleRate) 
 	{
 		List<GranularPath.GrainSpec> grains = new ArrayList<>();
 
-		if (curve == null || mapper == null) {
+		if (curve == null || mapper == null || sampleRate < 0f) {
 			return new GranularPath(grains);
 		}
 
@@ -225,16 +236,13 @@ public final class GranularPathBuilder {
 			return new GranularPath(grains);
 		}
 
-		// Offsets are already relative to gesture start:
-		// offsets[0] == 0, offsets[i] == millis since gesture start
-		int[] offsets = getDragTimes(curve);
-
-		if (offsets.length == 0) {
-			return new GranularPath(grains);
-		}
+		// dragTimes are already relative to gesture start:
+		// dragTimes[0] == 0, dragTimes[i] == millis since gesture start
+		int[] dragTimes = getDragTimes(curve);
+		if (dragTimes.length == 0) {return new GranularPath(grains);}
 
 		// Defensive: use the min length in case something is mismatched
-		int count = Math.min(dragPoints.size(), offsets.length);
+		int count = Math.min(dragPoints.size(), dragTimes.length);
 
 		for (int i = 0; i < count; i++) {
 			PVector p = dragPoints.get(i);
@@ -251,7 +259,8 @@ public final class GranularPathBuilder {
 			float gain = 1.0f;      // hook for y/speed mapping later
 			float pitchHint = 0.0f; // reserved for future use
 
-			int timeOffsetMs = offsets[i]; // direct 1:1 mapping
+			int timeOffsetMs = dragTimes[i]; // direct 1:1 mapping
+			long offsetSamples = msToSamples(timeOffsetMs, sampleRate); 
 
 			grains.add(new GranularPath.GrainSpec(
 					sampleIndex,
@@ -259,7 +268,7 @@ public final class GranularPathBuilder {
 					pitchHint,
 					gain,
 					pan,
-					timeOffsetMs
+					offsetSamples
 					));
 		}
 	    // FWIW: total gesture duration = offsets[count - 1]
@@ -281,10 +290,11 @@ public final class GranularPathBuilder {
     		int canvasWidth,
     		int canvasHeight,
     		int grainLength,
-    		int targetCount) {
+    		int targetCount,
+    		float sampleRate) {
     	// -1 => keep original duration; null => linear warp f(u) = u
     	return fromTimedDragParametric(curve, mapper, canvasWidth, canvasHeight, 
-    			                       grainLength, targetCount, -1, null);
+    			                       grainLength, targetCount, -1, sampleRate, null);
     }
 
     /**
@@ -301,10 +311,11 @@ public final class GranularPathBuilder {
     		int canvasHeight,
     		int grainLength,
     		int targetCount,
-    		int targetDurationMs) {
+    		int targetDurationMs,
+    		float sampleRate) {
     	// null => linear warp f(u) = u
     	return fromTimedDragParametric(curve, mapper, canvasWidth, canvasHeight, 
-    			                       grainLength, targetCount, targetDurationMs, null);
+    			                       grainLength, targetCount, targetDurationMs, sampleRate, null);
 
     }
     
@@ -333,10 +344,11 @@ public final class GranularPathBuilder {
                                                     int grainLength,
                                                     int curveSteps,
                                                     int targetCount,
-                                                    int totalDurationMs) {
+                                                    int totalDurationMs,
+                                                    float sampleRate) {
     	 // linear time mapping u → u, pass null for warp function
         return fromBezierParametricWarped(curve, mapper, canvasWidth, canvasHeight,
-                grainLength, curveSteps, targetCount, totalDurationMs, null);
+                grainLength, curveSteps, targetCount, totalDurationMs, sampleRate, null);
     }
 
     /**
@@ -356,9 +368,10 @@ public final class GranularPathBuilder {
                                                           int curveSteps,
                                                           int targetCount,
                                                           int totalDurationMs,
+                                                          float sampleRate,
                                                           DoubleUnaryOperator warp) {
         List<GranularPath.GrainSpec> grains = new ArrayList<>();
-        if (curve == null || mapper == null) return new GranularPath(grains);
+        if (curve == null || mapper == null || sampleRate <= 0f) return new GranularPath(grains);
         if (targetCount <= 0 || totalDurationMs <= 0) return new GranularPath(grains);
 
         List<PVector> bezPoints = curve.getEventPoints(curveSteps);
@@ -376,7 +389,9 @@ public final class GranularPathBuilder {
             double s = (warp != null) ? warp.applyAsDouble(u) : u;
             if (s < 0.0) s = 0.0;
             if (s > 1.0) s = 1.0;
-            int timeOffsetMs = (int) Math.round(s * totalDurationMs);
+            int tMs = (int) Math.round(s * totalDurationMs);
+    	    long offsetSamples = msToSamples(tMs, sampleRate);
+
 
             int x = clampToCanvas(Math.round(p.x), canvasWidth);
             int y = clampToCanvas(Math.round(p.y), canvasHeight);
@@ -392,7 +407,7 @@ public final class GranularPathBuilder {
                     pitchHint,
                     gain,
                     pan,
-                    timeOffsetMs
+                    offsetSamples
             ));
         }
         return new GranularPath(grains);
@@ -415,9 +430,10 @@ public final class GranularPathBuilder {
     		int canvasWidth,
     		int canvasHeight,
     		int grainLength,
-    		int curveSteps) {
+    		int curveSteps,
+    		float sampleRate) {
     	List<GranularPath.GrainSpec> grains = new ArrayList<>();
-    	if (curve == null || mapper == null) return new GranularPath(grains);
+    	if (curve == null || mapper == null || sampleRate <= 0f) return new GranularPath(grains);
 
     	// Gesture timing
     	int[] dragTimes = curve.getDragOffsetsAsInts();
@@ -448,7 +464,8 @@ public final class GranularPathBuilder {
     		float pan = mapXToPan(p.x, canvasWidth);
     		float gain = 1.0f;
     		float pitchHint = 0.0f;
-    		int timeOffsetMs = tMs; // keep original gesture timing
+
+    		long offsetSamples = msToSamples(tMs, sampleRate);
 
     		grains.add(new GranularPath.GrainSpec(
     				sampleIndex,
@@ -456,7 +473,7 @@ public final class GranularPathBuilder {
     				pitchHint,
     				gain,
     				pan,
-    				timeOffsetMs
+    				offsetSamples
     				));
     	}
     	return new GranularPath(grains);
@@ -468,9 +485,10 @@ public final class GranularPathBuilder {
     		int canvasHeight,
     		int grainLength,
     		int curveSteps,
-    		int targetDurationMs) {
+    		int targetDurationMs,
+    		float sampleRate) {
     	List<GranularPath.GrainSpec> grains = new ArrayList<>();
-    	if (curve == null || mapper == null) return new GranularPath(grains);
+    	if (curve == null || mapper == null || sampleRate <= 0f) return new GranularPath(grains);
 
     	int[] dragTimes = curve.getDragOffsetsAsInts();
     	if (dragTimes == null || dragTimes.length == 0) return new GranularPath(grains);
@@ -479,7 +497,7 @@ public final class GranularPathBuilder {
     	int originalDurationMs = dragTimes[countTimes - 1];
     	if (originalDurationMs <= 0 || targetDurationMs <= 0) {
     		// fall back to unscaled
-    		return fromBezierWithGestureTiming(curve, mapper, canvasWidth, canvasHeight, grainLength, curveSteps);
+    		return fromBezierWithGestureTiming(curve, mapper, canvasWidth, canvasHeight, grainLength, curveSteps, sampleRate);
     	}
 
     	float timeScale = targetDurationMs / (float) originalDurationMs;
@@ -492,7 +510,8 @@ public final class GranularPathBuilder {
     	for (int i = 0; i < countTimes; i++) {
     		int tOrig = dragTimes[i];
     		float u = tOrig / (float) originalDurationMs;
-    		int tScaled = Math.round(tOrig * timeScale);
+    		int tScaled = Math.round(tOrig * timeScale); 
+    		long offsetSamples = msToSamples(tScaled, sampleRate);
 
     		PVector p = pathParam.sample(u);
 
@@ -510,7 +529,7 @@ public final class GranularPathBuilder {
     				pitchHint,
     				gain,
     				pan,
-    				tScaled
+    				offsetSamples
     				));
     	}
     	return new GranularPath(grains);
@@ -535,23 +554,28 @@ public final class GranularPathBuilder {
     		float sampleRate) {
     	List<GranularPath.GrainSpec> grains = new ArrayList<>();
     	if (mapper == null) return new GranularPath(grains);
-    	
+ 
+        x = clampToCanvas(x, canvasWidth);
+        y = clampToCanvas(y, canvasHeight);
     	int startSampleIndex = mapper.lookupSample(x, y);
-    	int maxSampleIndex = mapper.getSize() - grainLength;
-    	int i = 0;
+    	int maxSampleIndex = mapper.getSize() - grainLength;    	
+        if (maxSampleIndex <= 0 || numGrains <= 0) return new GranularPath(grains);
+
+        int i = 0;
     	int sampleIndex = startSampleIndex;
-    	int hopMs = Math.round((hopLength / sampleRate) * 1000);
+    	int hopSamples = hopLength;
     	while (sampleIndex <= maxSampleIndex && i < numGrains) {
     		float pan = mapXToPan(x, canvasWidth);
     		float gain = 1.0f;
     		float pitchHint = 0.0f;
+    		long offsetSamples = (long) i * (long) hopSamples;
 			grains.add(new GranularPath.GrainSpec(
 					sampleIndex,
 					grainLength,
 					pitchHint,
 					gain,
 					pan,
-					i * hopMs));
+					offsetSamples));
     		i++;
     		sampleIndex += hopLength;
     	}   	
@@ -563,12 +587,10 @@ public final class GranularPathBuilder {
             int canvasWidth, int canvasHeight,
             int grainLength, int hopLength,
             float durationMs, float sampleRate) {
-
         int maxGrains = (int) Math.ceil(
             (durationMs * 0.001f * sampleRate - grainLength) / hopLength
         );
         if (maxGrains < 1) maxGrains = 1;
-
         return fromPointToLinearPath(
             x, y, mapper,
             canvasWidth, canvasHeight,
@@ -577,6 +599,90 @@ public final class GranularPathBuilder {
         );
     }
 
+    
+    /**
+     * Build a linear path from a point, classic granular synthesis with
+     * optional time-stretch and pitch-shift.
+     *
+     * All timing is in samples; no ms inside the builder.
+     *
+     * @param x                x-coordinate where user clicked display
+     * @param y                y-coordinate
+     * @param mapper           PixelAudioMapper for pixel to signal mapping
+     * @param canvasWidth      display image width
+     * @param canvasHeight     display image height
+     * @param grainLength      length of grains in samples
+     * @param hopLength        base hop in samples (reference hop)
+     * @param numGrains        total number of grains
+     * @param sampleRate       playback sample rate (e.g. 44100) — only used to sanity-check, not required for math
+     * @param timeStretch      factor for overall duration (1.0 = original,
+     *                         2.0 = twice as long, 0.5 = twice as fast)
+     * @param pitchRatio       factor for how fast we walk the buffer
+     *                         (1.0 = original, 2.0 = up an octave-ish, 0.5 = down)
+     */
+    public static GranularPath fromPointToLinearPathTimedAndPitched(
+            int x, int y,
+            PixelAudioMapper mapper,
+            int canvasWidth, int canvasHeight,
+            int grainLength, int hopLength, int numGrains,
+            float sampleRate,   // kept for consistency, but not strictly needed
+            float timeStretch,
+            float pitchRatio) {
+
+        List<GranularPath.GrainSpec> grains = new ArrayList<>();
+        if (mapper == null || numGrains <= 0) {
+            return new GranularPath(grains);
+        }
+
+        // Clamp coordinates to canvas
+        x = clampToCanvas(x, canvasWidth);
+        y = clampToCanvas(y, canvasHeight);
+
+        int startSampleIndex = mapper.lookupSample(x, y);
+        int maxSampleIndex   = mapper.getSize() - grainLength;
+        if (maxSampleIndex <= 0) {
+            return new GranularPath(grains);
+        }
+
+        if (timeStretch <= 0f) timeStretch = 1f;
+        if (pitchRatio  <= 0f) pitchRatio  = 1f;
+
+        // Temporal hop in samples (for offsetSamples)
+        float hopSamplesF = hopLength * timeStretch;
+        if (hopSamplesF <= 0f) hopSamplesF = hopLength;
+        // Source hop in samples for buffer traversal
+        float sourceHop = hopLength * pitchRatio;
+
+        float currentIndexF   = startSampleIndex;
+        float currentOffsetF  = 0f;
+
+        for (int i = 0; i < numGrains; i++) {
+            int sampleIndex = Math.round(currentIndexF);
+            if (sampleIndex < 0 || sampleIndex > maxSampleIndex) {
+                break; // stop if we run out of buffer
+            }
+
+            long offsetSamples = Math.round(currentOffsetF);
+
+            float pan       = mapXToPan(x, canvasWidth);
+            float gain      = 1.0f;
+            float pitchHint = 0.0f;
+
+            grains.add(new GranularPath.GrainSpec(
+                    sampleIndex,
+                    grainLength,
+                    pitchHint,
+                    gain,
+                    pan,
+                    offsetSamples
+            ));
+
+            currentIndexF  += sourceHop;
+            currentOffsetF += hopSamplesF;
+        }
+
+        return new GranularPath(grains);
+    }
 
 
     // ------------------------------------------------------------------------
@@ -590,10 +696,11 @@ public final class GranularPathBuilder {
     		int grainLength,
     		int targetCount,
     		int targetDurationMs,
+    		float sampleRate,
     		DoubleUnaryOperator warp) {
         	return fromTimedDragParametric(curve.getDragPoints(), getDragTimes(curve),
     			                mapper, canvasWidth, canvasHeight,
-    			                grainLength, targetCount, targetDurationMs, warp);
+    			                grainLength, targetCount, targetDurationMs, sampleRate, warp);
     }
     
     public static GranularPath fromTimedDragParametric(ArrayList<PVector> dragPoints,
@@ -604,10 +711,11 @@ public final class GranularPathBuilder {
     	    int grainLength,
     	    int targetCount,
     	    int targetDurationMs,
+    	    float sampleRate,
     	    DoubleUnaryOperator warp) {
     	
     	  List<GranularPath.GrainSpec> grains = new ArrayList<>();
-    	  if (mapper == null) return new GranularPath(grains);
+    	  if (mapper == null || sampleRate <= 0f) return new GranularPath(grains);
     	  if (dragPoints == null || dragPoints.isEmpty()) return new GranularPath(grains);
     	  if (dragTimes.length != dragPoints.size()) return new GranularPath(grains);
 
@@ -627,6 +735,7 @@ public final class GranularPathBuilder {
 
     	    float tScaled = s.tMs * timeScale;
     	    int tMs = Math.round(tScaled);
+    	    long offsetSamples = msToSamples(tMs, sampleRate);
 
     	    int x = clampToCanvas(Math.round(s.x), canvasWidth);
     	    int y = clampToCanvas(Math.round(s.y), canvasHeight);
@@ -642,7 +751,7 @@ public final class GranularPathBuilder {
     	        pitchHint,
     	        gain,
     	        pan,
-    	        tMs
+    	        offsetSamples
     	        ));
     	  }
 
@@ -651,6 +760,11 @@ public final class GranularPathBuilder {
 
 
     
+    private static long msToSamples(int tMs, float sampleRate) {
+        if (sampleRate <= 0f) return 0L;
+        return Math.round((tMs / 1000f) * sampleRate);
+    }
+
     private static float mapXToPan(float x, int width) {
 		if (width <= 1) return 0f;
 		float norm = x / (float) (width - 1); // 0..1
