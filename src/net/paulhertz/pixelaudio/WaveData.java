@@ -23,6 +23,7 @@ import java.util.ArrayList;
 
 /**
  * Data storage for WaveSynth operator data.
+ * NEW (as of 
  */
 public class WaveData {
 	public enum WaveState {

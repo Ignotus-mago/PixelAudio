@@ -95,9 +95,9 @@ import processing.core.PGraphics;
  * 
  */
 public class PACurveMaker {
-	/** List of all the points that need to be reduced */
+	/** List of non-repeating points that need to be reduced, typically from a UI gesture */
 	public ArrayList<PVector> dragPoints;
-	/** The reduced points delivered by the RDP algorithm */
+	/** The reduced points returned by the RDP algorithm */
 	private ArrayList<PVector> rdpPoints;
 	/** list of indices of points in dragPoints captured for rdpPoints */
 	private ArrayList<Integer> rdpIndices;
