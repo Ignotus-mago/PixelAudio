@@ -11,6 +11,8 @@ import ddf.minim.analysis.WindowFunction;
  *
  * Common configuration for granular processing, whether pre-rendered
  * or streaming. Uses Minim's WindowFunction for window generation.
+ * TODO further optimization for the next library version could include parallel processing.
+ * TODO optimization when operator frequencies are identical could have a small but measurable effect.
  */
 public final class GranularSettings {
 	// -------- Core granular parameters --------
@@ -112,11 +114,35 @@ public final class GranularSettings {
         }
  	}
     
+    // --------------------------------------------------------------------
+    // Convenience ms-based setters
+    // --------------------------------------------------------------------
+
+    /** Set hopSamples from milliseconds + sampleRate. */
+    public void setHopMs(float hopMs, float sampleRate) {
+        if (sampleRate <= 0f) return;
+        this.hopSamples = Math.max(1, Math.round(hopMs * 0.001f * sampleRate));
+    }
+
+    /** For callers that think in ms but we store grain length in samples. */
+    public void setDefaultGrainLengthMs(float grainMs, float sampleRate) {
+        if (sampleRate <= 0f) return;
+        this.defaultGrainLength = Math.max(1, Math.round(grainMs * 0.001f * sampleRate));
+    }
+        
+    // --------------------------------------------------------------------
+    // Getters and Setters
+    // --------------------------------------------------------------------
+
     public TimingMode getTimingMode() { return timingMode; }
-    public void setTimingMode(TimingMode mode) { this.timingMode = mode; }
+    public void setTimingMode(TimingMode mode) {
+        if (mode != null) this.timingMode = mode;
+    }
 
     public float getTimeScale() { return timeScale; }
-    public void setTimeScale(float timeScale) { this.timeScale = timeScale; }
+    public void setTimeScale(float timeScale) {
+        this.timeScale = (timeScale > 0f) ? timeScale : 1.0f;
+    }
     
     public float getGain() { return gain; }
 	public void setGain(float gain) { this.gain = gain; }
@@ -124,6 +150,7 @@ public final class GranularSettings {
 	public float getPan() { return pan; }
 	public void setPan(float pan) { this.pan = pan; }
 
+	
 	public GranularSettings clone() {
     	GranularSettings settings = new GranularSettings(this.windowFunction, this.defaultGrainLength, this.hopSamples);
     	settings.transposeSemitones = this.transposeSemitones;
