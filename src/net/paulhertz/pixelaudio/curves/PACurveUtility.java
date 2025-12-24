@@ -25,6 +25,8 @@ import processing.core.PVector;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
+import net.paulhertz.pixelaudio.schedule.GestureSchedule;
+
 /**
  *  <p>A class to maintain static versions of point reduction and curve-modeling methods.
  *  Called by PACurveMaker and other curve-modeling applications. Includes an implementation
@@ -45,6 +47,8 @@ import processing.core.PGraphics;
  *  @see <a href="https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm">https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm</a>
  */
 public class PACurveUtility {
+	
+	private PACurveUtility() {}
 	
 	/* ------------- BEGIN CODE FROM CODING TRAIN ------------- */
 	
@@ -366,7 +370,7 @@ public class PACurveUtility {
 	  // append points in bezLeft to bezRight
 	  ListIterator<PAVertex2DINF> it = bezLeft.curveIterator();
 	  while (it.hasNext()) {
-	    bezRight.append(it.next());
+	    bezRight.append(it.next().clone());
 	  }
 	  bezRight.setIsClosed(true);
 	  // return the brushstroke shape in bezRight
@@ -440,6 +444,170 @@ public class PACurveUtility {
 	  }
 	}	
 	
+	
+	
+	/************************************************
+	 *                                              *
+	 * ----------- GESTURE SCHEDULING ------------  *
+	 *                                              *
+	 ************************************************/
+
+	
+	/**
+	 * Schedules times along a gestural curve, typically stored as a PACurveMaker instance. A calling sequence might be:
+	 * <code>
+	 *   PABezShape curve = curveMaker.getCurve();
+	 *   float rdpTimes = intsToFloats(curveMaker.getReducedTimes());
+	 *   GestureSchedule curveSchedule = PACurveUtility.buildScheduleFromBezShape(curve, cfg.bezierCurveSteps, rdpTimes, true);
+	 * </code>
+	 * 
+	 * @param shape
+	 * @param steps
+	 * @param anchorTimesMs
+	 * @param arcLengthTime
+	 * @return
+	 */
+	public static GestureSchedule buildScheduleFromBezShape(PABezShape shape, 
+			int steps, float[] anchorTimesMs, boolean arcLengthTime) {
+		// there is one more anchor than the number of segments
+		int segCount = shape.size();
+		System.out.println("-- segCount = "+ segCount);
+		System.out.println("-- anchorTimesMs.length = "+ anchorTimesMs.length);
+		int anchorCount = segCount + 1;
+		if (anchorTimesMs == null || anchorTimesMs.length != anchorCount) {
+			throw new IllegalArgumentException(
+				    "anchorTimesMs length (" + anchorTimesMs.length +
+				    ") does not match curve anchors (" + anchorCount +
+				    "). This usually means epsilon changed and a cached curve is stale."
+				);
+		}
+		
+		// Count points (same counting rule as getPointList)
+		int ct = 1;
+		ListIterator<PAVertex2DINF> it = shape.curveIterator();
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			if (vt.segmentType() == PABezShape.CURVE_SEGMENT) ct += Math.max(1, steps);
+			else if (vt.segmentType() == PABezShape.LINE_SEGMENT) ct += 1;
+		}
+
+		ArrayList<PVector> pts = new ArrayList<>(ct);
+		float[] times = new float[ct];
+		int idx = 0;
+		float currentX = shape.x();
+		float currentY = shape.y();
+		pts.add(new PVector(currentX, currentY));
+		times[idx++] = anchorTimesMs[0];
+		it = shape.curveIterator();
+		int anchorK = 0;
+		int safeSteps = Math.max(1, steps);
+
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			int segType = vt.segmentType();
+
+			float t0 = anchorTimesMs[anchorK];
+			float t1 = anchorTimesMs[anchorK + 1];
+
+			if (segType == PABezShape.CURVE_SEGMENT) {
+				float[] knots = vt.coords();
+				float cx1 = knots[0], cy1 = knots[1];
+				float cx2 = knots[2], cy2 = knots[3];
+				float ax  = knots[4], ay  = knots[5];
+				
+				if (!arcLengthTime) {
+					for (int j = 1; j <= safeSteps; j++) {
+						float u = j / (float) safeSteps;
+						float x = shape.bezierPoint(currentX, cx1, cx2, ax, u);
+						float y = shape.bezierPoint(currentY, cy1, cy2, ay, u);
+						pts.add(new PVector(x, y));
+						times[idx++] = lerp(t0, t1, u);
+					}
+				} 
+				
+				else { // arcLengthTime == true
+					// sample points
+					float[] xs = new float[safeSteps + 1];
+					float[] ys = new float[safeSteps + 1];
+					xs[0] = currentX; ys[0] = currentY;
+					for (int j = 1; j <= safeSteps; j++) {
+						float u = j / (float) safeSteps;
+						xs[j] = shape.bezierPoint(currentX, cx1, cx2, ax, u);
+						ys[j] = shape.bezierPoint(currentY, cy1, cy2, ay, u);
+					}
+					// cumulative distance
+					float[] cum = new float[safeSteps + 1];
+					cum[0] = 0;
+					float total = 0;
+					for (int j = 1; j <= safeSteps; j++) {
+						float dx = xs[j] - xs[j - 1];
+						float dy = ys[j] - ys[j - 1];
+						total += (float) Math.sqrt(dx * dx + dy * dy);
+						cum[j] = total;
+					}
+					if (total < 1e-6f) total = 1e-6f;
+					for (int j = 1; j <= safeSteps; j++) {
+						float frac = cum[j] / total;
+						pts.add(new PVector(xs[j], ys[j]));
+						times[idx++] = lerp(t0, t1, frac);
+					}
+				}
+				currentX = ax;
+				currentY = ay;
+			} 
+			
+			else if (segType == PABezShape.LINE_SEGMENT) {
+				float nx = vt.x();
+				float ny = vt.y();
+				pts.add(new PVector(nx, ny));
+				times[idx++] = t1;
+				currentX = nx;
+				currentY = ny;
+			}
+			anchorK++;
+		}
+
+		// Defensive trim if counts drift
+		if (idx != ct) {
+			while (pts.size() > idx) pts.remove(pts.size() - 1);
+			float[] trimmed = new float[idx];
+			System.arraycopy(times, 0, trimmed, 0, idx);
+			times = trimmed;
+		}
+
+		return new GestureSchedule(pts, times);
+	}
+
+	private static float lerp(float a, float b, float u) {
+		return a + u * (b - a);
+	}
+	
+    /**
+     * @param src    an array of int
+     * @return array src converted to float values
+     */
+    public static float[] intsToFloats(int[] src) {
+        if (src == null) return null;
+        float[] out = new float[src.length];
+        for (int i = 0; i < src.length; i++) out[i] = src[i];
+        return out;
+    }
+    
+    /**
+     * @param src          an array of int
+     * @param targetLen    desired length of array of float to consruct
+     * @return             an array of targetLen float values derived from src 
+     */
+    public static float[] intsToFloats(int[] src, int targetLen) {
+        float[] out = new float[Math.max(0, targetLen)];
+        if (src == null || src.length == 0 || out.length == 0) return out;
+        int n = Math.min(src.length, out.length);
+        for (int i = 0; i < n; i++) out[i] = src[i];
+        // if src shorter, extend flat (or you can extrapolate)
+        for (int i = n; i < out.length; i++) out[i] = out[n - 1];
+        return out;
+    }
+
 
 	/************************************************
 	 *                                              *

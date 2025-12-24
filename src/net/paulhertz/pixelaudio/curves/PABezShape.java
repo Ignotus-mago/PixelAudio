@@ -34,7 +34,6 @@ import java.util.ListIterator;
  * https://paulhertz.net/ignocodelib/ and https://github.com/Ignotus-mago/IgnoCodeLib3
  * 
  * TODO add write methods to save curves to a (JSON) file, create (JSON) file reader.
- * TODO consider refactoring so that PApplet only need be passed in as an argument.
  *
  */
 public class PABezShape {
@@ -50,7 +49,7 @@ public class PABezShape {
   boolean isMarked = false;
   /** flag for line segment type, associated with LineVertex */
   public final static int LINE_SEGMENT = 1;
-  /** flag for curve segment type, associated with PauBezVertex */
+  /** flag for curve segment type, associated with PABezVertex */
   public final static int CURVE_SEGMENT = 2;
   /* ----- COLOR FILL AND STROKE PROPERTIES ----- */
   /** flags if shape is filled or not */
@@ -93,7 +92,6 @@ public class PABezShape {
    * to the instance variable <code>ctm</code>, but no transform is performed.  Note that drawing
    * is affected by the current Processing transform.
    *  
-   * @param parent   PApplet used for calls to the Processing environment, notably for drawing
    * @param x    x-coordinate of initial point
    * @param y    y-coordinate of initial point
    * @param isClosed   true if shape is closed, false if it is open
@@ -138,7 +136,7 @@ public class PABezShape {
 
 
   /**
-   * @return   a PauLineVertex with start point coordinates of this shape 
+   * @return   a PALineVertex with start point coordinates of this shape 
    */
   public PALineVertex startVertex() {
     return new PALineVertex(this.x, this.y);
@@ -411,11 +409,10 @@ public class PABezShape {
 
   /*-------------------------------------------------------------------------*/
   /*                                                                         */
-  /*         METHODS TO APPEND POINTS AND ITERATE THROUGH THIS SHAPE         */ 
+  /*          METHODS TO APPEND, ACCESS AND ITERATE THROUGH CURVES           */ 
   /*                                                                         */
   /*-------------------------------------------------------------------------*/
 
-  
   /**
    * Appends a Vertex2DINF to this BezShape
    * @param vt   a PauVertex2DINF (line segment or curve segment)
@@ -425,7 +422,7 @@ public class PABezShape {
   }
 
   /**
-   * Appends a PauBezVertex (cubic Bezier segment) to this BezShape.
+   * Appends a PABezVertex (cubic Bezier segment) to this BezShape.
    * @param cx1   x-coordinate of first control point 
    * @param cy1   y-coordinate of first control point
    * @param cx2   x-coordinate of second control point
@@ -450,14 +447,14 @@ public class PABezShape {
   /**
    * Returns an iterator over the geometry of this shape. Preferred method for accessing geometry.
    * Does not include the initial point, call x() and y() or  startVertex() for that. 
-   * @return an iterator over the PauVertex2DINF segments that comprise the geometry of this shape
+   * @return an iterator over the PAVertex2DINF segments that comprise the geometry of this shape
    */
   public ListIterator <PAVertex2DINF> curveIterator() {
     return curves.listIterator();
   }
   
   /**
-   * Returns size of number of vertices (PauBezVertex and LineVertex) in curves.
+   * Returns size of number of vertices (PABezVertex and LineVertex) in curves.
    * @return size of curves ArrayList.
    */
   public int size() {
@@ -466,8 +463,8 @@ public class PABezShape {
   
   /**
    * Returns number of points (anchor points and control points) in curves.
-   * Dosn't count the start point.
-   * @return total numbr of points in curves ArrayList data.
+   * Doesn't count the start point.
+   * @return total number of points in curves ArrayList data.
    */
   public int pointCount() {
     int count = 0;
@@ -487,19 +484,29 @@ public class PABezShape {
     return count;
   }
   
+  
+  /**
+   * Provides access to the list of vertices maintained by PABezShape.
+   * 
+   * @return the list of vertices maintained by PABezShape
+   */
+  public ArrayList<PAVertex2DINF> getCurves() {
+	  return this.curves;
+  }
+
   /**
    * Creates a deep copy of this BezShape.
    * @see java.lang.Object#clone
    */
   public PABezShape clone() {
-    PABezShape copyThis = new PABezShape(this.x, this.y, false);
-    copyThis.setIsClosed(this.isClosed());
+    PABezShape cloneShape = new PABezShape(this.x, this.y, false);
+    cloneShape.setIsClosed(this.isClosed());
     ListIterator<PAVertex2DINF> it = curveIterator();
     while (it.hasNext()) {
       PAVertex2DINF bez = it.next();
-      copyThis.append(bez.clone());
+      cloneShape.append(bez.clone());
     }
-    return copyThis;
+    return cloneShape;
   }
 
 
@@ -1096,7 +1103,6 @@ public class PABezShape {
 	/**
 	 * Decides if a point is inside a polygon, returns true if it is.
 	 * 
-	 * @param npol   number of points in polygon
      * @param poly   an array of PVectors representing a polygon
 	 * @param x      x-coordinate of point
 	 * @param y      y-coordinate of point
@@ -1117,5 +1123,6 @@ public class PABezShape {
 		return inside;
 	}
 
-
 }
+
+
