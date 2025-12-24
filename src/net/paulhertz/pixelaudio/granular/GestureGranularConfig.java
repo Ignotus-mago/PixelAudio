@@ -6,57 +6,70 @@ import net.paulhertz.pixelaudio.voices.ADSRParams;
 
 public final class GestureGranularConfig {
 	// ----- CORE ENUMS ----- //	
-	// Which geometric/gesture source to use for the path
+	// We typically use PACurveMaker as a source for point lists, 
+	// it acquires them from GUI user gestures.
 	public enum PathMode {
-	    ALL_POINTS,      // all drag points
-	    REDUCED_POINTS,  // RDP / epsilon
-	    CURVE_POINTS     // polygonized Bezier
+	    ALL_POINTS,             // all points that compose the gesture
+	    REDUCED_POINTS,         // RDP reduced points derived from all points, varies with epsilon
+	    CURVE_POINTS            // Bezier path derived from reduced points, varies with epsilon and curveSteps
 	}
 
 	// How grain *positions* are derived
 	public enum HopMode {
-	    GESTURE, // use gesture timing (dragTimes or parametric) for offsets
-	    FIXED    // use a fixed hop in samples for offsets
+	    GESTURE,                // use gesture timing (dragTimes or parametric) for offsets
+	    FIXED                   // use a fixed hop in samples for offsets
 	}
 
 	// How gesture timing is transformed
 	public enum TimeTransform {
-		RAW_GESTURE,         // no resampling, duration change, or warp
-	    RESAMPLED_COUNT,    // resample to targetCount
-	    DURATION_SCALED,    // scale to targetDurationMs
-	    WARPED              // apply warp f(u) (exp, sqrt, etc.)
+		RAW_GESTURE,            // no resampling, duration change, or warp
+	    RESAMPLED_COUNT,        // resample to targetCount
+	    DURATION_SCALED,        // scale to targetDurationMs
+	    WARPED                  // apply warp f(u) (exp, sqrt, etc.)
 	}
 	
 	// Warp curve selection
 	public enum WarpShape {
-	    LINEAR, EXP, SQRT, CUSTOM
+	    LINEAR, 
+	    EXP, 
+	    SQRT, 
+	    CUSTOM
 	}
 	
 	// Path selection
 	public PathMode pathMode = PathMode.ALL_POINTS;
 	public float rdpEpsilon = 2.0f;   // used for REDUCED_POINTS
-	public int bezierCurveSteps = 8;  // used for CURVE_POINTS
+	public int curveSteps = 8;        // number of divisions in each segment in polygonized Bezier path
+	public float curveBias;           // for future use
 	// Hop / timing selection
 	public HopMode hopMode = HopMode.GESTURE;
-	// if none of the next three booleans are true, 
-	// we are using data points direct from the curve
+	// default settings: we are using data points direct from the curve
 	// with no resampling, duration change, or warping
 	public boolean useResampled = false;
 	public boolean useNewDuration = false;
 	public boolean useWarp = false;
-	// parameters for resampling, duration, warp 
+	// parameters for resampling, duration, warp:
+	// settings may require knowledge of how many points are in the curve
+	// or how long a time is required to play the gesture as audio (duration)
+	public TimeTransform timingMode;
 	public int targetCount = 64;            // RESAMPLED_COUNT
 	public int targetDurationMs = 2000;     // DURATION_SCALED / WARPED
 	public WarpShape warpShape = WarpShape.LINEAR; // default if useWarp is false
 	public float warpExponent = 2.0f;      // for EXP / SQRT variants
 	// Grain / synthesis controls
-	public int grainLengthSamples = 2048;
-	public int hopLengthSamples   = 512;
-	// Envelope: max amplitude, attack, decay, sustain, release
-	public ADSRParams env = new ADSRParams(1.0f, 1.0f, 0.5f, 0.8f, 1.0f); // example ms
+	public int grainLengthSamples = 2048;     // length in samples of a grain
+	public int hopLengthSamples   = 512;      // number of samples in a fixed-length hop 
+	// Envelope: max amplitude, attack, decay, sustain, release in decimal seconds
+	public ADSRParams env = new ADSRParams(1.0f, 0.02f, 0.06f, 0.9f, 0.10f); 
 	// Gain & pitch
 	public float gainDb = -6.0f;       // UI in dB
 	public float pitchSemitones = 0f;  // up/down in semitones
+	// scheduled grain event modeling
+	public int burstGrains = 1;
+	// scale gain as number of grains increases, default off
+	public boolean autoBurstGainComp = false;
+	// calculate curve points and times using arc length
+	public boolean useArcLengthTime = false;
 	
 	// Convenience: compute linear gain from dB
 	public float gainLinear() {
@@ -84,7 +97,7 @@ public final class GestureGranularConfig {
 			sb.append(" (rdpEpsilon=").append(rdpEpsilon).append(")");
 			break;
 		case CURVE_POINTS:
-			sb.append(" (bezierCurveSteps=").append(bezierCurveSteps).append(")");
+			sb.append(" (bezierCurveSteps=").append(curveSteps).append(")");
 			break;
 		default:
 			// ALL_POINTS → no extra params
