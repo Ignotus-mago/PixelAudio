@@ -22,6 +22,8 @@ import net.paulhertz.pixelaudio.voices.PitchPolicy;
  *
  * For now, indexHopSamples == timeHopSamples gives 1x pitch.
  * Later you can decouple them for time-stretch/pitch-shift.
+ * 
+ * TODO remove pan from IndexGranularSource entirely and make it mono.
  */
 public class IndexGranularSource implements PASource {
 

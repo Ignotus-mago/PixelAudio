@@ -10,97 +10,85 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig.HopMode;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig.WarpShape;
 
-
 public final class GestureScheduleBuilder {
 
     /**
      * Build a GestureSchedule from a PACurveMaker and GestureGranularConfig.
      *
-     * @param curveMaker      source of gesture points and gesture times
-     * @param cfg             user-configured granular settings
+     * Pipeline:
+     *   1) Get base schedule from PACurveMaker (points + matching gesture times).
+     *   2) Optionally replace times with FIXED hop times.
+     *   3) Apply transforms: resample, duration scaling, warp.
+     *   4) Normalize times to start at 0 and enforce non-decreasing.
+     *
+     * @param curveMaker       source of gesture points and gesture times
+     * @param cfg              user-configured granular settings
      * @param outputSampleRate sample rate of the audio context (for fixed hops)
      */
     public GestureSchedule build(PACurveMaker curveMaker,
                                  GestureGranularConfig cfg,
                                  float outputSampleRate) {
 
-        // 1) Select base point list
-        List<PVector> basePoints = selectPoints(curveMaker, cfg);
+        if (curveMaker == null) throw new IllegalArgumentException("curveMaker must not be null");
+        if (cfg == null) throw new IllegalArgumentException("cfg must not be null");
 
-        if (basePoints.isEmpty()) {
-            return new GestureSchedule(basePoints, new float[0]);
+        GestureSchedule base = baseScheduleFromCurve(curveMaker, cfg);
+        if (base == null || base.isEmpty()) {
+            // keep invariant: points.size == times.length
+            return new GestureSchedule((base != null) ? base.points : new ArrayList<>(), new float[0]);
         }
 
-        // 2) Build base time list (gesture vs fixed hop)
-        float[] baseTimesMs = buildBaseTimes(curveMaker, cfg, basePoints.size(), outputSampleRate);
+        // Optional: normalize base times immediately so downstream math is consistent.
+        float[] baseTimes = GestureSchedule.normalizeTimesToStartAtZero(base.timesMs);
+        GestureSchedule.enforceNonDecreasing(baseTimes);
+        base = new GestureSchedule(base.points, baseTimes);
 
-        // 3) Apply resampling / duration / warp
-        return applyTimingTransforms(basePoints, baseTimesMs, cfg);
+        // Step 2: timing selection override
+        if (cfg.hopMode == HopMode.FIXED) {
+            float[] fixed = generateFixedHopTimes(base.size(), cfg.hopLengthSamples, outputSampleRate);
+            base = new GestureSchedule(base.points, fixed);
+        }
+
+        // Step 3: transforms (may replace points/times)
+        GestureSchedule out = applyTimingTransforms(base.points, base.timesMs, cfg);
+
+        // Final sanitation (esp. after warp / duration scale)
+        float[] t = GestureSchedule.normalizeTimesToStartAtZero(out.timesMs);
+        GestureSchedule.enforceNonDecreasing(t);
+        return new GestureSchedule(out.points, t);
     }
 
     // ---------------------------------------------------------------------
-    // Step 1: point selection
+    // Base schedule selection (delegates to PACurveMaker)
     // ---------------------------------------------------------------------
-    private List<PVector> selectPoints(PACurveMaker curveMaker,
-                                       GestureGranularConfig cfg) {
+
+    private GestureSchedule baseScheduleFromCurve(PACurveMaker curveMaker, GestureGranularConfig cfg) {
         switch (cfg.pathMode) {
             case ALL_POINTS:
-                return curveMaker.getDragPoints();           // adjust to your API
+                return curveMaker.getAllPointsSchedule();
             case REDUCED_POINTS:
-                return curveMaker.getReducedPoints(cfg.rdpEpsilon);
+                return curveMaker.getReducedSchedule(cfg.rdpEpsilon);
             case CURVE_POINTS:
-                return curveMaker.getEventPoints(cfg.bezierCurveSteps);
             default:
-                // fallback to all points
-                return curveMaker.getDragPoints();
+                // cfg.useArcLengthTime should exist in your config
+                return curveMaker.getCurveSchedule(cfg.rdpEpsilon, cfg.curveSteps, cfg.useArcLengthTime);
         }
     }
 
     // ---------------------------------------------------------------------
-    // Step 2: timing selection
+    // Fixed timing
     // ---------------------------------------------------------------------
-    
-    private float[] buildBaseTimes(PACurveMaker curveMaker,
-                                   GestureGranularConfig cfg,
-                                   int pointCount,
-                                   float sampleRate) {
-        if (cfg.hopMode == HopMode.GESTURE) {
-            // assumes curveMaker.dragTimes is already in ms or easily converted
-            return copyOrNormalizeGestureTimes(curveMaker, pointCount);
-        } 
-        else {
-            return generateFixedHopTimes(pointCount, cfg.hopLengthSamples, sampleRate);
-        }
-    }
-
-    /**
-     * Copy or adapt gesture times from PACurveMaker.
-     * Adjust as needed to match your actual dragTimes structure.
-     */
-    private float[] copyOrNormalizeGestureTimes(PACurveMaker curveMaker, int pointCount) {
-    	//get curveMaker.dragTimes offsets only, starting at 0, time stamp omitted
-        int[] src = curveMaker.getDragOffsetsAsInts(); 
-        // Ensure we trim or pad to match pointCount
-        float[] times = new float[pointCount];
-        int n = Math.min(pointCount, src.length);
-        System.arraycopy(src, 0, times, 0, n);
-        // If src shorter than points, linearly extend based on last delta
-        if (n < pointCount && n > 1) {
-            float last = src[n - 1];
-            float prev = src[n - 2];
-            float step = last - prev;
-            for (int i = n; i < pointCount; i++) {
-                times[i] = last + step * (i - (n - 1));
-            }
-        }
-        return times;
-    }
 
     /**
      * Generate fixed-hop times from a hop length (in samples) and output sample rate.
+     * Returns a float[] in milliseconds starting at 0.
      */
     private float[] generateFixedHopTimes(int count, int hopLengthSamples, float sampleRate) {
-        float hopMs = 1000.0f * hopLengthSamples / sampleRate;
+        if (count <= 0) return new float[0];
+        if (sampleRate <= 0f) throw new IllegalArgumentException("sampleRate must be > 0");
+        int hop = Math.max(1, hopLengthSamples);
+
+        float hopMs = 1000.0f * hop / sampleRate;
         float[] times = new float[count];
         for (int i = 0; i < count; i++) {
             times[i] = i * hopMs;
@@ -109,12 +97,13 @@ public final class GestureScheduleBuilder {
     }
 
     // ---------------------------------------------------------------------
-    // Step 3: resample / duration / warp
+    // Transforms: resample / duration / warp
     // ---------------------------------------------------------------------
-    
+
     private GestureSchedule applyTimingTransforms(List<PVector> basePoints,
                                                   float[] baseTimesMs,
                                                   GestureGranularConfig cfg) {
+
         List<PVector> pts = basePoints;
         float[] times = baseTimesMs;
 
@@ -126,7 +115,8 @@ public final class GestureScheduleBuilder {
                 times = resampleTimes(times, targetCount);
             }
         }
-        // 3b) Duration scaling + warp
+
+        // 3b) Duration scaling and/or warp
         if (cfg.useNewDuration || cfg.useWarp) {
             float[] unitTimes = normalizeTimesToUnit(times);
             if (cfg.useWarp) {
@@ -134,16 +124,18 @@ public final class GestureScheduleBuilder {
             }
             times = scaleUnitTimesToMs(unitTimes, cfg.targetDurationMs);
         }
+
         return new GestureSchedule(pts, times);
     }
 
     // ---- Resampling utilities -------------------------------------------
-    
+
     private List<PVector> resamplePoints(List<PVector> src, int targetCount) {
         List<PVector> out = new ArrayList<>(targetCount);
         int n = src.size();
+
         for (int i = 0; i < targetCount; i++) {
-            float t = (targetCount == 1) ? 0 : (float) i / (targetCount - 1);
+            float t = (targetCount == 1) ? 0f : (float) i / (targetCount - 1);
             float fIndex = t * (n - 1);
             int i0 = (int) Math.floor(fIndex);
             int i1 = Math.min(i0 + 1, n - 1);
@@ -151,18 +143,24 @@ public final class GestureScheduleBuilder {
 
             PVector p0 = src.get(i0);
             PVector p1 = src.get(i1);
-            float x = lerp(p0.x, p1.x, frac);
-            float y = lerp(p0.y, p1.y, frac);
-            out.add(new PVector(x, y));
+
+            out.add(new PVector(
+                    lerp(p0.x, p1.x, frac),
+                    lerp(p0.y, p1.y, frac)
+            ));
         }
         return out;
     }
 
     private float[] resampleTimes(float[] src, int targetCount) {
+        if (targetCount <= 0) return new float[0];
+        if (src == null || src.length == 0) return new float[targetCount];
+
         float[] out = new float[targetCount];
         int n = src.length;
+
         for (int i = 0; i < targetCount; i++) {
-            float t = (targetCount == 1) ? 0 : (float) i / (targetCount - 1);
+            float t = (targetCount == 1) ? 0f : (float) i / (targetCount - 1);
             float fIndex = t * (n - 1);
             int i0 = (int) Math.floor(fIndex);
             int i1 = Math.min(i0 + 1, n - 1);
@@ -173,9 +171,9 @@ public final class GestureScheduleBuilder {
     }
 
     // ---- Normalize, warp, scale -----------------------------------------
-    
+
     private float[] normalizeTimesToUnit(float[] timesMs) {
-        int n = timesMs.length;
+        int n = (timesMs == null) ? 0 : timesMs.length;
         float[] out = new float[n];
         if (n == 0) return out;
 
@@ -189,25 +187,26 @@ public final class GestureScheduleBuilder {
         return out;
     }
 
-    private float[] applyWarp(float[] tUnit,
-                              WarpShape shape,
-                              float exponent) {
+    private float[] applyWarp(float[] tUnit, WarpShape shape, float exponent) {
         float[] out = new float[tUnit.length];
+        float e = (exponent <= 0f) ? 1f : exponent;
+
         for (int i = 0; i < tUnit.length; i++) {
             float t = tUnit[i];
+
             switch (shape) {
                 case LINEAR:
                     out[i] = t;
                     break;
                 case EXP:
-                    out[i] = (float) Math.pow(t, exponent);
+                    out[i] = (float) Math.pow(t, e);
                     break;
                 case SQRT:
-                    out[i] = (float) Math.pow(t, 1.0f / exponent);
+                    out[i] = (float) Math.pow(t, 1.0f / e);
                     break;
                 case CUSTOM:
-                    // plug in whatever custom curve you like
-                    out[i] = (float) Math.pow(t, exponent);
+                    // same as EXP for now; plug in a custom curve later
+                    out[i] = (float) Math.pow(t, e);
                     break;
                 default:
                     out[i] = t;
@@ -218,22 +217,22 @@ public final class GestureScheduleBuilder {
 
     private float[] scaleUnitTimesToMs(float[] unitTimes, int targetDurationMs) {
         float[] out = new float[unitTimes.length];
-        float duration = (float) targetDurationMs;
+        float duration = Math.max(0f, (float) targetDurationMs);
+
         for (int i = 0; i < unitTimes.length; i++) {
             out[i] = unitTimes[i] * duration;
         }
         return out;
     }
-    
-	/**
-	 * Good old lerp.
-	 * @param a		first bound, typically a minimum value
-	 * @param b		second bound, typically a maximum value
-	 * @param f		scaling value, from 0..1 to interpolate between a and b, but can go over or under
-	 * @return		a value between a and b, scaled by f (if 0 <= f >= 1).
-	 */
-	public final static float lerp(float a, float b, float f) {
-	    return a + f * (b - a);
-	}
 
+    /**
+     * Good old lerp.
+     *
+     * @param a first bound, typically minimum
+     * @param b second bound, typically maximum
+     * @param f scaling value (0..1 typical, but can go outside)
+     */
+    public static float lerp(float a, float b, float f) {
+        return a + f * (b - a);
+    }
 }

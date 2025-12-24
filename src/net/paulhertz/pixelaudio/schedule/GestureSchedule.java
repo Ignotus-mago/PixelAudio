@@ -31,4 +31,19 @@ public final class GestureSchedule {
     public boolean isEmpty() {
         return points.isEmpty();
     }
+    
+    public static float[] normalizeTimesToStartAtZero(float[] timesMs) {
+        float[] out = timesMs.clone();
+        if (out.length == 0) return out;
+        float t0 = out[0];
+        for (int i = 0; i < out.length; i++) out[i] -= t0;
+        return out;
+    }
+
+    public static void enforceNonDecreasing(float[] t) {
+        for (int i = 1; i < t.length; i++) {
+            if (t[i] < t[i-1]) t[i] = t[i-1];
+        }
+    }
+    
 }

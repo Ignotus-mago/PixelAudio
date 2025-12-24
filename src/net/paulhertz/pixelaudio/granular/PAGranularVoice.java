@@ -50,6 +50,11 @@ public class PAGranularVoice {
 
     // Envelope
     private SimpleADSR envelope;
+    
+    // pan gain
+    private float panGainL = 1f;
+    private float panGainR = 1f;
+
 
     // Constructor
     public PAGranularVoice(PASource source, int blockSize, float playbackSampleRate) {
@@ -74,6 +79,7 @@ public class PAGranularVoice {
         this.voiceId = NEXT_VOICE_ID++;
         this.gain = gain;
         this.pan = clampPan(pan);
+        updatePanGains();
         this.looping = looping;
 
         this.released = false;
@@ -83,7 +89,7 @@ public class PAGranularVoice {
         // Reset block state
         this.cursor = 0;
         this.absSample = 0;
-
+        
         // Start granular engine at absSample = 0
         if (this.source != null) {
             this.source.seekTo(0);
@@ -125,17 +131,18 @@ public class PAGranularVoice {
         cursor++;
 
         float envValue = (envelope != null ? envelope.tick() : 1f);
-        l *= gain * envValue;
-        r *= gain * envValue;
+        float amp = gain * envValue;
+
+        // Apply cached voice pan gains (equal-power)
+        l *= amp * panGainL;
+        r *= amp * panGainR;
 
         outLR[0] = l;
         outLR[1] = r;
 
-        if (released) {
-            if (envelope == null || envelope.isFinished()) {
-                active = false;
-                finished = true;
-            }
+        if (released && (envelope == null || envelope.isFinished())) {
+            active = false;
+            finished = true;
         }
     }
 
@@ -144,28 +151,24 @@ public class PAGranularVoice {
     // ------------------------------------------------------------------------
     
     public float nextSample() {
-        if (!active) return 0f;
-        if (finished) return 0f;
+        if (!active || finished) return 0f;
 
-        // Refill block if needed
         if (cursor >= blockSize) {
             refillBlock();
         }
 
-        float left = blockL[cursor];
-        float right = blockR[cursor];
-        cursor++;
+        float l = blockL[cursor] * panGainL;
+        float r = blockR[cursor] * panGainR;
+        cursor++; // advance exactly once
 
-        // Envelope tick
         float envValue = (envelope != null ? envelope.tick() : 1f);
-        float mono = ((left + right) * 0.5f) * gain * envValue;
+        float amp = gain * envValue;
 
-        // Check for finishing conditions
-        if (released) {
-            if (envelope == null || envelope.isFinished()) {
-                active = false;
-                finished = true;
-            }
+        float mono = 0.5f * (l + r) * amp;
+
+        if (released && (envelope == null || envelope.isFinished())) {
+            active = false;
+            finished = true;
         }
 
         return mono;
@@ -192,6 +195,18 @@ public class PAGranularVoice {
             source.seekTo(0);
         }
     }
+    
+    // ------------------------------------------------------------------------
+    // Utility methods
+    // ------------------------------------------------------------------------
+    
+     private void updatePanGains() {
+    	float p = clampPan(pan);
+    	float angle = (p + 1.0f) * 0.25f * (float) Math.PI;
+    	panGainL = (float) Math.cos(angle);
+    	panGainR = (float) Math.sin(angle);
+    }
+
 
     // ------------------------------------------------------------------------
     // Lifecycle control
