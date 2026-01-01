@@ -202,7 +202,7 @@ public final class GranularPathBuilder {
 	 */
 	public static int[] getDragTimes(PACurveMaker curve) {
 		if (curve == null) return new int[0];
-		return curve.getDragOffsetsAsInts();
+		return curve.getDragTimes();
 	}
 	
 	/**
@@ -436,7 +436,7 @@ public final class GranularPathBuilder {
     	if (curve == null || mapper == null || sampleRate <= 0f) return new GranularPath(grains);
 
     	// Gesture timing
-    	int[] dragTimes = curve.getDragOffsetsAsInts();
+    	int[] dragTimes = curve.getDragTimes();
     	if (dragTimes == null || dragTimes.length == 0) return new GranularPath(grains);
 
     	int countTimes = dragTimes.length;
@@ -490,7 +490,7 @@ public final class GranularPathBuilder {
     	List<GranularPath.GrainSpec> grains = new ArrayList<>();
     	if (curve == null || mapper == null || sampleRate <= 0f) return new GranularPath(grains);
 
-    	int[] dragTimes = curve.getDragOffsetsAsInts();
+    	int[] dragTimes = curve.getDragTimes();
     	if (dragTimes == null || dragTimes.length == 0) return new GranularPath(grains);
 
     	int countTimes = dragTimes.length;

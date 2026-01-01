@@ -19,6 +19,7 @@
 package net.paulhertz.pixelaudio.curves;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import processing.core.PVector;
 import processing.core.PApplet;
@@ -43,42 +44,43 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 
 
 /**
- * <p>PACurveMaker is a utility and storage class for gestures with point reduction,
- * curve modeling, and drawing to on-screen PApplets or off-screen PGraphics. It implements
+ * <p>PACurveMaker is a utility and storage class for gestures and curve modeling, with
+ * point reduction and drawing to on-screen PApplets or off-screen PGraphics. It implements
  * PAGesture and provides a pair of data structures, <code>dragPoints</code> and <code>dragTimes</code>, 
- * that together capture gestures made with a mouse or similar input device. 
- * You can use it for data storage in interactive drawing applications, or 
+ * that together capture gestures made with a mouse or similar input device.
+ * Each point in dragPoints is associated with a corresponding time in dragTimes. 
+ * You can use PACurveMaker for data storage in interactive drawing applications, or 
  * implement your own storage with just the features you require. It is a key
- * data structure for granular synthesis and sampling digital audio instruments 
+ * data structure for playing digital audio instruments using granular synthesis and sampling 
  * in the net.paulhertz.pixelaudio.granular and net.paulhertz.pixelaudio.voices packages. 
  * </p><p>
  * PACUrveMaker makes extensive use of PACurveUtility's static methods and provides
  * a wide range of graphic objects and properties for dense point arrays, 
  * reduced point arrays, derived Bezier curves (weighted and not weighted), 
- * brushstroke Bezier shapes, and brushstroke polygons. It provides some basic timing
+ * brushstroke Bezier shapes for drawing to the display, and brushstroke polygons
+ * for point testing with PABezShape.pointInPoly(). It provides some basic timing
  * data associated with drawing to the screen. You can use PACurveUtility 
  * for drawing all PACurveMaker data formats or you can use the built-in
  * commands if you use PACurveMaker as a storage class.
  * </p><p>
- * PACurveMaker's factory methods take as their principal argument an array of PVectors.
- * The array is typically derived from a line drawn by dragging the mouse across the application
- * window. This line is stored in <code>dragPoints</code>. When <code>reducePoints()</code> or <code>calculateDerivedPoints()</code>
- * is called, <code>dragPoints</code> is reduced using the RDP algorithm and the result is stored in 
- * <code>rdpPoints</code>. <code>PACurveUtility.calculateCurve(ArrayList<PVector>))</code> takes rdpPoints as an argument
- * and creates a Bezier path, <code>curveShape</code>, using PixelAudio library's <code>PABezShape</code> class. 
- * Points in the supplied argument will be anchor points in the returned curve. For user interaction, a
- * brushstroke shape, <code>brushShape</code>, is created from the curve. An array of PVectors, 
- * <code>eventPoints</code>, is created from curveShape to facilitate timed event-staging along the curve. 
- * Another array of Pvectors, <code>brushPoly</code>, can be used to test points with <code>PABezShape.pointInPoly()</code>.
- * The values of all other fields are up to the caller. In particular, you may want to set <code>timeStamp</code>, 
- * <code>timeOffset</code>, and the <code>dragTimes</code> array, if the timing of drawing events is of interest. 
+ * PACurveMaker's factory methods take as their principal argument a list of PVectors, dragPoints,
+ * a list of time offsets in milliseconds, dragTimes, and an absolute time in milliseconds, startTimeMs.
+ * The list of points is typically derived from a line drawn by dragging the mouse across the application
+ * window. This line is stored in <code>dragPoints</code> and can be accessed with getDragPoints() or getAllPoints().
+ * dragPoints can be mutated with mutateAllPoints, preserving its cardinality.
  * </p><p>
- * Be very cautious about changing dragPoints or dragTimes. The size of the two arrays must always be such that
- * dragTimes.size() - dragPoints.size = 1, because dragTimes has as its first element the absolute time 
- * in the host application when a gesture began, followed by a 0 value element and then time offsets from 
- * the first point. 
- * TODO since the absolute time is in timeStamp, dragTimes can be refactored to only contain offsets, starting at 0.
- * As a side effect, we'd need to consider constructors that include a startTime argument. 
+ * The dense point set in dragPoints can be processed by the Ramer-Douglas-Peucker algorithm to derive a 
+ * a reduced point set, rdpPoints. The algorithm is implemented in PACUrveUtilities. The reduced points 
+ * can be turned into a Bezier path, curveShape, where each point in rdpPoints becomes an anchor point
+ * in curveShape. Bezier paths are modeled using PixelAudio's PABezShape class, which includes methods
+ * for drawing attributes, affine transforms, and point testing. For display and interaction, a brushstroke 
+ * shape, <code>brushShape</code>, can be created from the curve. An array of PVectors, 
+ * <code>eventPoints</code>, can be created from curveShape to facilitate timed event-staging along the curve. 
+ * Another array of Pvectors, <code>brushPoly</code>, can be used to test points with <code>PABezShape.pointInPoly()</code>.
+ * <br><br>
+ * ---- TODO continue to revise documentation ----
+ * 
+ * 
  * </p><p>
  * Each of the geometric data objects--dragPoints, rdpPoints, curveShape, and brushShape--has 
  * method for drawing to the screen in a PApplet or drawing offscreen in a PGraphic. DragPoints and 
@@ -211,10 +213,11 @@ public class PACurveMaker implements PAGesture {
 	/** list of indices of points in dragPoints captured for rdpPoints */
 	private ArrayList<Integer> rdpIndices;
 	/** A parameter to control the amount of reduction in the RDP algorithm */
-	public float epsilon = 8.0f;
+	private float epsilon = 8.0f;
 	/** A path composed of Bezier curves and lines, a continuous curved line derived from rdpPoints */
 	private PABezShape curveShape;
-	/** List of points where events such as audio samples can be triggered, from polygon representation of curveShape */
+	/** List of points where events such as audio samples can be triggered, derived from the polygon representation 
+	 * of curveShape, accessed with getEventPoints() or getCurvePoints() */
 	private ArrayList<PVector> eventPoints;
 	/** number of steps along a polygonized curve, used to produce eventPoints from curveShape */
 	public int eventSteps = 8;
@@ -231,7 +234,7 @@ public class PACurveMaker implements PAGesture {
 	public int timeOffset;
 	/** List of time data: first element is expected to be 0 and
 	 *  the remaining elements are non-decreasing offsets in millis from the first element. */
-	ArrayList<Integer> dragTimes;
+	private int[] dragTimes;
 	/** Cache for float[] version of dragTimes */
 	float[] dragTimesFloat;
 	/** boolean to determine if bezierBias, "weight", is applied to curve calculations */
@@ -269,6 +272,8 @@ public class PACurveMaker implements PAGesture {
 	public int eventPointsColor = PABezShape.composeColor(233, 199, 144, 192);	// yellow
 	/** size of eventPoints markers */
 	public float eventPointsSize = 8;
+	/** using a custom brush shape */
+	public boolean brushIsCustom = false;
 	
 	
 	/* ---------------------------------------------------------- */
@@ -291,15 +296,150 @@ public class PACurveMaker implements PAGesture {
 		
 	
 	/**
-	 * Constructor called by all factory methods, initializes dragPoints, rdpPoints and rdpIndices.
+	 * Constructor for PACurveMaker, called by all factory methods. 
 	 * 
-	 * @param points    the array of points to be reduced, stored in dragPoints
+	 * @param dragPoints     a list of points (PVector) where no two successive points are identical
+	 * @param dragTimes      a list of times in milliseconds, successively offset from first entry of 0
+	 * @param startTimeMs    an absolute time in milliseconds, determined by the application, for the gesture to begin
 	 */
-	private PACurveMaker(ArrayList<PVector> points) {
-		this.dragPoints = new ArrayList<PVector>(points);
-		this.rdpPoints = new ArrayList<PVector>();
-		this.rdpIndices = new ArrayList<Integer>();
+	private PACurveMaker(List<PVector> dragPoints, List<Integer> dragTimes, int startTimeMs) {
+	    if (dragPoints == null || dragTimes == null) throw new IllegalArgumentException();
+	    if (dragPoints.size() != dragTimes.size()) throw new IllegalArgumentException("points/times mismatch");
+	    this.dragPoints = new ArrayList<>(dragPoints);
+	    this.dragTimes = normalizeOffsets(dragTimes.stream().mapToInt(Integer::intValue).toArray());
+	    this.timeStamp = startTimeMs;
+	    this.timeOffset = (this.dragTimes.length == 0) ? 0 : this.dragTimes[this.dragTimes.length - 1];
+	    // leave for lazy initialization
+	    this.rdpPoints = new ArrayList<>();
+	    this.rdpIndices = new ArrayList<>();
+	    markDirtyAll(); // or initialize dirty flags true
 	}
+	
+	/**
+	 * @param dragPoints     a list of points (PVector) where no two successive points are identical
+	 * @param dragTimes      a list of times in milliseconds, successively offset from first entry of 0
+	 * @param startTimeMs    an absolute time in milliseconds, determined by the application, for the gesture to begin
+	 * @return a PACurveMaker instance, set up for lazy initialization
+	 */
+	public static PACurveMaker buildCurveMaker(List<PVector> dragPoints, List<Integer> dragTimes, int startTimeMs) {
+	    return new PACurveMaker(dragPoints, dragTimes, startTimeMs);
+	}
+	
+	/**
+	 * @param dragPoints     a list of points (PVector) where no two successive points are identical
+	 * @param dragTimes      a list of times in milliseconds, successively offset from first entry of 0
+	 * @param startTimeMs    an absolute time in milliseconds, determined by the application, for the gesture to begin
+	 * @param epsilon        the expected distance between reduced points, lower values typically produce more points
+	 * @return a PACurveMaker instance, set up for lazy initialization
+	 */
+	public static PACurveMaker buildCurveMaker(List<PVector> dragPoints, List<Integer> dragTimes, int startTimeMs, float epsilon) {
+		PACurveMaker cm = new PACurveMaker(dragPoints, dragTimes, startTimeMs);
+		cm.setEpsilon(epsilon);
+		return cm;
+	}
+	
+	/**
+	 * @param dragPoints     a list of points (PVector) where no two successive points are identical
+	 * @param dragTimes      a list of times in milliseconds, successively offset from first entry of 0
+	 * @param startTimeMs    an absolute time in milliseconds, determined by the application, for the gesture to begin
+	 * @param epsilon        the expected distance between reduced points, lower values typically produce more points
+	 * @param brushSize      the width in pixels of a simulated brushstroke created from the Bezier path derived from rdpPoints
+	 * @param brushColor     the color assigned to the brushstroke
+	 * @return a PACurveMaker instance, set up for lazy initialization
+	 */
+	public static PACurveMaker buildCurveMaker(List<PVector> dragPoints, 
+			List<Integer> dragTimes, int startTimeMs, float epsilon,
+			float brushSize, int brushColor) {
+		PACurveMaker cm = new PACurveMaker(dragPoints, dragTimes, startTimeMs);
+		cm.setEpsilon(epsilon);
+		cm.setBrushSize(brushSize);
+		cm.setBrushColor(brushColor);   // or setter if you add one
+		return cm;
+	}
+
+		
+	/**
+	 * This factory method can be used when you are only using the curve modeling features of PACurveMaker. 
+	 * Entries in the time offsets list dragTimes will be set to 0 and startTimesMs will be set to 0. If you 
+	 * set values for dragTimes and startTimeMs later, dragTimes and dragPoints must be the same size.
+	 * 
+	 * @param dragPoints    a list of points (PVector) where no two successive points are identical
+	 * @return a PACUrveMaker instance
+	 */
+	public static PACurveMaker buildCurveMaker(ArrayList<PVector> dragPoints) {
+		if (dragPoints == null) throw new IllegalArgumentException();
+	    ArrayList<Integer> times = new ArrayList<>(dragPoints.size());
+	    for (int i = 0; i < dragPoints.size(); i++) times.add(0);
+		return new PACurveMaker(dragPoints, times, 0);
+	}
+	
+	/**
+	 * This factory method can be used when you are only using the curve modeling features of PACurveMaker. 
+	 * Entries in the time offsets list dragTimes will be set to 0 and startTimesMs will be set to 0. If you 
+	 * set values for dragTimes and startTimeMs later, dragTimes and dragPoints must be the same size.
+	 * 
+	 * @param dragPoints     a list of points (PVector), where no two successive points are identical
+	 * @param epsilon        controls amount of thinning of points to derive the reduced point set rdpPoints from dragPoints
+	 * @return a PACurveMaker instance
+	 */
+	public static PACurveMaker buildCurveMaker(ArrayList<PVector> dragPoints, float epsilon) {
+		PACurveMaker curveMaker = buildCurveMaker(dragPoints);
+		curveMaker.setEpsilon(epsilon);
+		return curveMaker;
+	}
+	
+	/**
+	 * This factory method can be used when you are only using the curve modeling features of PACurveMaker. 
+	 * Entries in the time offsets list dragTimes will be set to 0 and startTimesMs will be set to 0. If you 
+	 * set values for dragTimes and startTimeMs later, dragTimes and dragPoints must be the same size.
+	 * 
+	 * @param dragPoints     a list of points (PVector), where no two successive points are identical
+	 * @param epsilon        controls amount of thinning of points to derive the reduced point set rdpPoints from dragPoints
+	 * @param brushSize      the width in pixels of a simulated brushstroke created from the Bezier path derived from rdpPoints
+	 * @param brushColor     the color assigned to the brushstroke
+	 * @return a PACurveMaker instance
+	 */
+	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points,
+			float epsilon,
+			float brushSize,
+			int brushColor) {
+		PACurveMaker curveMaker = buildCurveMaker(points);
+		curveMaker.setEpsilon(epsilon);
+		curveMaker.setBrushSize(brushSize);
+		curveMaker.setBrushColor(brushColor);   // or setter if you add one
+		return curveMaker;
+	}
+
+	
+	/**
+	 * Creates a PACurveMaker instance set up for lazy initialization.
+	 * Sets various properties used for drawing PACurveMaker graphics. 
+	 * 
+	 * @param dragPoints
+	 * @param dragTimes
+	 * @param startTimeMs
+	 * @param epsilon
+	 * @param dragColor
+	 * @param dragWeight
+	 * @param rdpColor
+	 * @param rdpWeight
+	 * @param curveColor
+	 * @param curveWeight
+	 * @param brushColor
+	 * @param brushWeight
+	 * @param activeBrushColor
+	 * @return
+	 */
+	public static PACurveMaker buildCurveMaker(List<PVector> dragPoints, List<Integer> dragTimes, int startTimeMs, 
+			float epsilon, int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
+			int curveColor, float curveWeight, int brushColor, float brushWeight, int activeBrushColor) {
+		PACurveMaker curveMaker = new PACurveMaker(dragPoints, dragTimes, startTimeMs);
+		curveMaker.setEpsilon(epsilon);
+		curveMaker.setDrawingProperties(dragColor, dragWeight, rdpColor, rdpWeight, curveColor, curveWeight, brushColor, brushWeight, activeBrushColor);
+		return curveMaker;
+	}
+	
+	/* ------------- thar beez methoddes inna dis madnesse ------------- */
 	
 	/**
 	 * Sets various properties used for drawing PACurveMaker graphics.
@@ -326,70 +466,25 @@ public class PACurveMaker implements PAGesture {
 		this.brushWeight = brushWeight;
 		this.activeBrushColor = activeBrushColor;
 	}
-	
-	/**
-	 * Creates a PACurveMaker from supplied points, caller must complete construction with 
-	 * a call to calculateDerivedPoints() to generate rdpPoints and other instance variables. 
-	 * 
-	 * @param points    a dense point set
-	 * @return a partially initialized PACurveMaker instance, requires a later call to calculateDeriverPoints()
-	 */
-	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points) {
-		PACurveMaker curveMaker = new PACurveMaker(points);
-		return curveMaker;
-	}
-	
-	/**
-	 * @param points     a dense point set
-	 * @param epsilon    controls amount of thinning of 0points to derive rdpPoints
-	 * @return a partially initialized PACurveMaker instance, requires a later call to calculateDeriverPoints()
-	 */
-	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points, float epsilon) {
-		PACurveMaker curveMaker = new PACurveMaker(points);
-		curveMaker.setEpsilon(epsilon);
-		return curveMaker;
-	}
-	
-	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points,
-			float epsilon,
-			float brushSize,
-			int brushColor) {
-		PACurveMaker curveMaker = new PACurveMaker(points);
-		curveMaker.setEpsilon(epsilon);
-		curveMaker.setBrushSize(brushSize);
-		curveMaker.setBrushColor(brushColor);   // or setter if you add one
-		return curveMaker;
+
+	private static int[] normalizeOffsets(int[] t) {
+	    if (t == null) throw new IllegalArgumentException("dragTimes is null");
+	    if (t.length == 0) return t;
+	    int[] out = t.clone();
+	    // shift so start is 0
+	    int t0 = out[0];
+	    if (t0 != 0) {
+	        for (int i = 0; i < out.length; i++) out[i] -= t0;
+	    }
+	    // enforce non-decreasing
+	    for (int i = 1; i < out.length; i++) {
+	        if (out[i] < out[i - 1]) out[i] = out[i - 1];
+	    }
+	    // ensure first is exactly 0
+	    out[0] = 0;
+	    return out;
 	}
 
-	
-	/**
-	 * Creates a PACurveMaker from supplied points, caller must complete construction with 
-	 * a call to calculateDerivedPoints() to generate rdpPoints and other instance variables. 
-	 * Sets various properties used for drawing PACurveMaker graphics. 
-	 * 
-	 * @param points          a dense point set
-	 * @param epsilon         controls amount of thinning of points to derive rdpPoints
-	 * @param dragColor
-	 * @param dragWeight
-	 * @param rdpColor
-	 * @param rdpWeight
-	 * @param curveColor
-	 * @param curveWeight
-	 * @param brushColor
-	 * @param brushWeight
-	 * @param activeBrushColor
-	 * @return a partially initialized PACurveMaker instance, requires a later call to calculateDeriverPoints()
-	 */
-	public static PACurveMaker buildCurveMaker(ArrayList<PVector> points, float epsilon, int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
-            								   int curveColor, float curveWeight, int brushColor, float brushWeight, int activeBrushColor) {
-		PACurveMaker curveMaker = new PACurveMaker(points);
-		curveMaker.setEpsilon(epsilon);
-		curveMaker.setDrawingProperties(dragColor, dragWeight, rdpColor, rdpWeight, curveColor, curveWeight, brushColor, brushWeight, activeBrushColor);
-		return curveMaker;
-	}
-	
-	/* ------------- thar beez methoddes inna dis madnesse ------------- */
-	
 	/**
 	 * Takes the list of points in allPoints and generates a reduced list in drawPoints.
 	 * 
@@ -459,7 +554,13 @@ public class PACurveMaker implements PAGesture {
 	/* ------------- allPoints / dragPoints ------------- */
 
 	public ArrayList<PVector> getDragPoints() {
-		return this.dragPoints;
+		return copyAllPoints();
+	}
+	
+	public ArrayList<PVector> copyAllPoints() {
+	    ArrayList<PVector> out = new ArrayList<>(dragPoints.size());
+	    for (PVector p : dragPoints) out.add(p.copy());
+	    return out;
 	}
 	
 	/**
@@ -471,12 +572,15 @@ public class PACurveMaker implements PAGesture {
 		return this.getDragPoints();
 	}
 
+	
 	/**
+	 * TODO remove: use mutateAllPoints() to change points.
 	 * Changes the value of dragPoints and immediately calls calculateDerivedPoints() 
 	 * to refresh all drawing objects. 
 	 * 
 	 * @param dragPoints	ArrayList<PVector>, a dense set of points for drawing a line
 	 */
+	@Deprecated
 	public void setDragPoints(ArrayList<PVector> dragPoints) {
 		this.dragPoints = dragPoints;
 		calculateDerivedPoints();
@@ -761,15 +865,6 @@ public class PACurveMaker implements PAGesture {
 	public PABezShape getWeightedCurveShape() {
 		return PACurveUtility.calculateWeightedCurve(this.getRdpPoints(), this.bezierBias);
 	}
-
-	/**
-	 * Replace the Bezier path derived from the reduced point set with one of your own choosing.
-	 * 
-	 * @param curveShape    A PABezShape
-	 */
-	public void setCurveShape(PABezShape curveShape) {
-		this.curveShape = curveShape;
-	}
 	
 	
 	/* ------------- weighted Bezier settings ------------- */
@@ -839,6 +934,14 @@ public class PACurveMaker implements PAGesture {
 	
 	private void ensureBrush() {
 		ensureReduced();
+		// for custom brush, don't rebuild
+		if (brushIsCustom) {
+			if (brushShape != null) {
+				// do we want to set attributes from PACurveMaker local vars?
+			}
+			dirtyBrush = false;
+			return;
+		}
 		if (!dirtyBrush) return;
 		if (rdpPoints == null || rdpPoints.size() < 2) { brushShape = null; dirtyBrush = false; return; }
 		brushShape = buildBrushShape(rdpPoints);
@@ -890,13 +993,24 @@ public class PACurveMaker implements PAGesture {
 	 * Useful to provide a point of interaction. Rely on dragPoints or curveShape
 	 * and dragTimes for gestures and timing. 
 	 * 
-	 * @param brushShape
+	 * @param customBrushShape
 	 */
-	public void setBrushShape(PABezShape brushShape) {
-		this.brushShape = brushShape;
+	public void setCustomBrushShape(PABezShape customBrushShape) {
+		this.brushShape = customBrushShape;
+		dirtyBrush = false;        // brush has been set
+		dirtyBrushPoly = true;     // polygon will be built from brushShape
+		brushIsCustom = (customBrushShape != null);
 	}
 
-	
+	/**
+	 * Sets brushIsCustom to false, prepares rebuild of brush from curveShape
+	 */
+	public void clearCustomBrushShape() {
+		this.brushIsCustom = false;
+		dirtyBrush = true;         // rebuild from reduced points
+		dirtyBrushPoly = true;
+	}
+
 	/**
 	 * @return    a list of points that comprise a closed polygonal shape that closely folllows the brushstroke.
 	 *            Useful for point in polygon testing for interaction. If you replaced the brush with your own
@@ -964,19 +1078,10 @@ public class PACurveMaker implements PAGesture {
 	 */
 	public float[] getTimeOffsetsMs() {
 		if (dragTimesFloat == null) 
-			dragTimesFloat = PACurveUtility.intsToFloats(getDragOffsetsAsInts());
+			dragTimesFloat = PACurveUtility.intsToFloats(getDragTimes());
 		return dragTimesFloat;
 	}
-	
-	/**
-	 * @return the list of time data for the gesture captured by dragPoints: 
-	 *         The first offset is expected to be 0 and the remaining elements
-	 *         are offsets in milliseconds. 
-	 */
-	public ArrayList<Integer> getDragTimes() {
-		return dragTimes;
-	}
-	
+		
 	/**
 	 * @return the list of time data for the gesture captured by dragPoints: 
 	 *         The first offset is expected to be 0 and the remaining elements
@@ -984,33 +1089,33 @@ public class PACurveMaker implements PAGesture {
 	 *         
 	 * @return    a list of time offsets, the first one equal to zero
 	 */
-	public int[] getDragTimesAsInts() {
-		int[] times = dragTimes.stream().mapToInt(Integer::intValue).toArray();
-		return times;
-	}
-
-	/**
-	 * The first value in dragTimes is 0, all following numbers are offsets; 
-	 * dragPoints.size() == dragTimes.size().
-	 * 
-	 * @return    a list of time offsets, the first one equal to zero
-	 */
-	public int[] getDragOffsetsAsInts() {
-		int[] times = dragTimes.subList(0, dragTimes.size()).stream().mapToInt(Integer::intValue).toArray();
-		return times;
+	public int[] getDragTimes() {
+		return dragTimes;
 	}
 	
 	/**
-	 * getAllTimes() is a convenient alias for getDragOffsetsAsInts()
+	 * getAllTimes() is a convenient alias for getDragTimes()
 	 * 
 	 * @return a list of time offsets, the first one equal to zero 
 	 */
 	public int[] getAllTimes() {
-		return getDragOffsetsAsInts();
+		return getDragTimes();
 	}
 
-	public void setDragTimes(ArrayList<Integer> dragTimes) {
-		this.dragTimes = dragTimes;
+	/**
+	 * @param dragTimes
+	 */
+	public void setDragTimes(int[] dragTimes) {
+		if (dragTimes == null) throw new IllegalArgumentException();
+		if (dragPoints.size() != dragTimes.length) throw new IllegalArgumentException("points/times mismatch");
+		this.dragTimes = normalizeOffsets(dragTimes);
+		dragTimesFloat = null;
+	}
+	
+	public void setDragTimes(List<Integer> dragTimes) {
+		if (dragTimes == null) throw new IllegalArgumentException();
+		if (dragPoints.size() != dragTimes.size()) throw new IllegalArgumentException("points/times mismatch");
+	    this.dragTimes = dragTimes.stream().mapToInt(Integer::intValue).toArray();
 		dragTimesFloat = null;
 	}
 
@@ -1020,7 +1125,7 @@ public class PACurveMaker implements PAGesture {
 		int[] rdpTimes = new int[timeIndices.length];
 		// the first value in dragTimes is a time stamp, all following numbers are offsets
 		// one for each point in dragPoints. We only need the offsets. 
-		int[] allTimes = this.getDragOffsetsAsInts();
+		int[] allTimes = this.getDragTimes();
 		for (int i = 0; i < timeIndices.length; i++) {
 			rdpTimes[i] = allTimes[timeIndices[i]];
 		}
@@ -1034,7 +1139,7 @@ public class PACurveMaker implements PAGesture {
 
 	public GestureSchedule getAllPointsSchedule() {
         ArrayList<PVector> pts = getAllPoints(); // alias to getDragPoints()
-        float[] times = PACurveUtility.intsToFloats(getDragOffsetsAsInts(), pts.size());
+        float[] times = PACurveUtility.intsToFloats(getDragTimes(), pts.size());
         return new GestureSchedule(pts, times);
     }
 
@@ -1047,13 +1152,14 @@ public class PACurveMaker implements PAGesture {
     public GestureSchedule getCurveSchedule(float epsilon, int curveSteps, boolean arcLengthTime) {
         // Ensure reduced points/times are up-to-date for this epsilon
         ArrayList<PVector> reduced = getReducedPoints(epsilon);
-        PABezShape curve = getCurve();
+        if (reduced == null || reduced.size() == 0) {
+            return new GestureSchedule(new ArrayList<>(), new float[0]);
+        }
         float[] reducedTimes = PACurveUtility.intsToFloats(getReducedTimes(), reduced.size());;
-        // Here, anchorTimes length must be segments+1, which equals reduced.size()
-        System.out.println("* reduced.size = " + reduced.size());
-        System.out.println("* reducedTimes.length = " + reducedTimes.length);
-        System.out.println("* curve.size (segments) = " + curve.size());
-        System.out.println("* curve anchors = " + (curve.size() + 1));
+        PABezShape curve = getCurve();
+        if (curve == null) {
+        	return new GestureSchedule(reduced, reducedTimes);
+        }
         return PACurveUtility.buildScheduleFromBezShape(curve, curveSteps, reducedTimes, arcLengthTime);
     }
 
