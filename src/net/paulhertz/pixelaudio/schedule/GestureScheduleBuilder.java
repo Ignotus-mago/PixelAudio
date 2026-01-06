@@ -199,12 +199,27 @@ public final class GestureScheduleBuilder {
 	      case SQRT:
 	        return (float) Math.pow(u, 1.0 / e);
 	      case CUSTOM:
-	        // hook for user-defined easing curve later
-	        return u;
+	        return easeInOutPow(u, exponent);
 	      case LINEAR:
 	      default:
 	        return u;
 	    }
 	  }
+	  
+	  static float easeInOutPow(float u, float exp) {
+		  u = constrain01(u);
+		  float e = Math.max(1e-6f, exp);
+
+		  if (u < 0.5f) {
+			  return 0.5f * (float)Math.pow(2f * u, e);
+		  } else {
+			  return 1f - 0.5f * (float)Math.pow(2f * (1f - u), e);
+		  }
+	  }
+
+	  static float constrain01(float u) {
+		  return (u < 0f) ? 0f : (u > 1f ? 1f : u);
+	  }
+
 	  
 	}

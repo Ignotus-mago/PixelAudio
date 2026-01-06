@@ -794,5 +794,47 @@ public class PACurveUtility {
 		}
 	}
 
+	/**
+	 * Draws circular points in a PApplet context using the PVector data and supplied color and diameter.
+	 * 
+	 * @param parent		a PApplet where drawing takes place on screen
+	 * @param points		ArrayList of 2D PVector objects, typically a 
+	 * 						point set without successive identical points
+	 * @param pointColor	color for the circle that is drawn
+	 * @param diameter	    diameter of circle that is drawn
+	 */
+	public static void pointsDraw(PApplet parent, ArrayList<PVector> points, int pointColor, float diameter) {
+		if (points.size() > 1) {
+			parent.pushStyle();
+			parent.noStroke();
+			parent.fill(pointColor);
+			for (PVector vec : points) {
+				parent.circle(vec.x, vec.y, diameter);
+			}
+			parent.popStyle();
+		}
+	}
+
+	/**
+	 * Draws circular points in a PGraphics context using the PVector data and supplied color and diameter.
+	 * 
+	 * @param pg			a PGraphics where drawing takes place off screen
+	 * @param points		ArrayList of 2D PVector objects, typically a 
+	 * 						point set without successive identical points
+	 * @param pointColor	color for the circle that is drawn
+	 * @param diameter	    diameter of circle that is drawn
+	 */
+	public static void pointsDraw(PGraphics pg, ArrayList<PVector> points, int pointColor, float diameter) {
+		if (points.size() > 1) {
+			pg.pushStyle();
+			pg.noStroke();
+			pg.fill(pointColor);
+			for (PVector vec : points) {
+				pg.circle(vec.x, vec.y, diameter);
+			}
+			pg.popStyle();
+		}
+	}
+
 	
 }

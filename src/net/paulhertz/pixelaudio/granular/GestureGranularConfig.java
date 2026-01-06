@@ -182,9 +182,35 @@ public final class GestureGranularConfig {
     	b.useArcLengthTime = this.useArcLengthTime;
     	return b;
     }
+    
+    public void copyFrom(GestureGranularConfig.Builder src) {
+    	this.pathMode = src.pathMode;
+    	this.rdpEpsilon = src.rdpEpsilon;
+    	this.curveSteps = src.curveSteps;
+    	this.curveBias = src.curveBias;
+
+    	this.hopMode = src.hopMode;
+    	this.hopLengthSamples = src.hopLengthSamples;
+
+    	this.resampleCount = src.resampleCount;
+    	this.targetDurationMs = src.targetDurationMs;
+    	this.warpShape = src.warpShape;
+    	this.warpExponent = src.warpExponent;
+
+    	this.grainLengthSamples = src.grainLengthSamples;
+    	this.env = src.env; // presets ok
+    	this.gainDb = src.gainDb;
+    	this.pitchSemitones = src.pitchSemitones;
+
+    	this.burstGrains = src.burstGrains;
+    	this.autoBurstGainComp = src.autoBurstGainComp;
+    	this.useArcLengthTime = src.useArcLengthTime;
+    }
+
 
   }
 
+  
   // ----- UTILITY METHODS (from your class) ----- //
 
   public float gainLinear() {
