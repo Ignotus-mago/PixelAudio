@@ -119,13 +119,13 @@ public final class GestureGranularRenderer {
 	 *  - Stream-level pitch is NOT applied here (IndexGranularSource uses SOURCE_GRANULAR policy).
 	 *    If you later want transpose, you can implement it by decoupling timeHop vs indexHop.
 	 *
-	 * @param buf         mono source buffer
-	 * @param schedule    GestureSchedule (points + timesMs; lengths should match)
-	 * @param cfg         GestureGranularConfig (grain length, hop length, gain, env...)
-	 * @param gSynth      PAGranularInstrument (sample-accurate scheduling)
-	 * @param sampleRate  output sample rate (audioOut.sampleRate())
-	 * @param mapping     maps points to (sampleIndex, pan)
-	 * @param burstGrains grains per burst (>=1). 1 approximates old “one grain per event.”
+	 * @param buf           mono source buffer
+	 * @param schedule      GestureSchedule (points + timesMs; lengths should match)
+	 * @param cfg           GestureGranularConfig (grain length, hop length, gain, env...)
+	 * @param gSynth        PAGranularInstrument (sample-accurate scheduling)
+	 * @param sampleRate    output sample rate (audioOut.sampleRate())
+	 * @param mapping       maps points to (sampleIndex, pan)
+	 * @param burstGrains   grains per burst (>=1). 1 approximates old “one grain per event.”
 	 * @return number of events scheduled
 	 */
 	public static int playBursts(float[] buf,
@@ -185,15 +185,22 @@ public final class GestureGranularRenderer {
 			if (startIndex >= buf.length) startIndex = buf.length - 1;
 
 			float pan = clampPan(mapping.pan(p));
+			
+			float pitchRatio = cfg.pitchRatio();    // pitch shifting
+			// time hop stays as-is (so schedule timing doesn't change)
+			int timeHop = hop;                      
+			// source hop scaled by pitch ratio (whole-gesture pitch behavior)
+			int indexHop = Math.max(1, Math.round(hop * pitchRatio));
 
 			PASource src = new IndexGranularSource(
 					buf,
 					settings,
 					startIndex,
 					grainLen,
-					hop,  // timeHopSamples
-					hop,  // indexHopSamples (forward scan)
-					numGrains
+					timeHop,  // timeHopSamples
+					indexHop,  // indexHopSamples (forward scan)
+					numGrains,
+					pitchRatio
 					);
 
 			gSynth.schedulePlayInSamples(src, amp, pan, env, false, delaySamples);

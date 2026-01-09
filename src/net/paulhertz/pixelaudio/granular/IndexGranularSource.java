@@ -37,6 +37,7 @@ public class IndexGranularSource implements PASource {
     private final int timeHopSamples;
     private final int indexHopSamples;
     private final int numGrains;
+    private final float pitchRatio;    // new
 
     private final WindowFunction windowFunction;
 
@@ -47,6 +48,7 @@ public class IndexGranularSource implements PASource {
     private long noteStartSample = Long.MIN_VALUE;
     private boolean noteStarted = false;
 
+    
     /**
      * Construct by explicit grain count.
      *
@@ -57,7 +59,37 @@ public class IndexGranularSource implements PASource {
      * @param timeHopSamples   hop in output time (samples between grain starts)
      * @param indexHopSamples  hop in source index (samples between grain starts in source)
      * @param numGrains        number of grains to play (>= 1)
+     * @param pitchRatio       proportional change in pitch
      */
+    public IndexGranularSource(float[] source,
+    		GranularSettings settings,
+    		int startSampleIndex,
+    		int grainLength,
+    		int timeHopSamples,
+    		int indexHopSamples,
+    		int numGrains,
+    		float pitchRatio) {
+    	if (source == null) throw new IllegalArgumentException("source must not be null");
+    	if (settings == null) throw new IllegalArgumentException("settings must not be null");
+    	if (numGrains <= 0) throw new IllegalArgumentException("numGrains must be >= 1");
+
+    	this.source = source;
+    	this.settings = settings;
+    	this.startSampleIndex = Math.max(0, startSampleIndex);
+    	this.grainLength = (grainLength > 0) ? grainLength : settings.defaultGrainLength;
+    	this.timeHopSamples = (timeHopSamples > 0) ? timeHopSamples : settings.hopSamples;
+
+    	this.indexHopSamples = (indexHopSamples > 0) ? indexHopSamples : this.timeHopSamples;
+    	this.numGrains = numGrains;
+
+    	this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
+
+    	this.windowFunction = settings.windowFunction;
+
+    	this.totalLengthSamples =
+    			(long) (numGrains - 1) * (long) this.timeHopSamples + (long) this.grainLength;
+    }
+
     public IndexGranularSource(float[] source,
                                     GranularSettings settings,
                                     int startSampleIndex,
@@ -65,34 +97,7 @@ public class IndexGranularSource implements PASource {
                                     int timeHopSamples,
                                     int indexHopSamples,
                                     int numGrains) {
-        if (source == null) throw new IllegalArgumentException("source must not be null");
-        if (settings == null) throw new IllegalArgumentException("settings must not be null");
-        if (numGrains <= 0) throw new IllegalArgumentException("numGrains must be >= 1");
-
-        this.source = source;
-        this.settings = settings;
-
-        this.startSampleIndex = Math.max(0, startSampleIndex);
-
-        this.grainLength = (grainLength > 0)
-                ? grainLength
-                : settings.defaultGrainLength;
-
-        this.timeHopSamples = (timeHopSamples > 0)
-                ? timeHopSamples
-                : settings.hopSamples;
-
-        this.indexHopSamples = (indexHopSamples > 0)
-                ? indexHopSamples
-                : this.timeHopSamples; // default: no pitch-shift
-
-        this.numGrains = numGrains;
-
-        this.windowFunction = settings.windowFunction;
-
-        // Total output length = last grain start + grainLength
-        this.totalLengthSamples =
-                (long) (numGrains - 1) * (long) this.timeHopSamples + (long) this.grainLength;
+        this(source, settings, startSampleIndex, grainLength, timeHopSamples, indexHopSamples, numGrains, 1.0f);
     }
 
     /**
@@ -104,13 +109,8 @@ public class IndexGranularSource implements PASource {
                                     int grainLength,
                                     int hopSamples,
                                     int numGrains) {
-        this(source,
-             settings,
-             startSampleIndex,
-             grainLength,
-             hopSamples,
-             hopSamples, // indexHop == timeHop
-             numGrains);
+        this(source, settings, startSampleIndex, grainLength,
+             hopSamples, hopSamples, numGrains);    // indexHop == timeHop
     }
 
     /**
@@ -257,27 +257,28 @@ public class IndexGranularSource implements PASource {
             long grainSourceStart = (long) startSampleIndex + (long) g * (long) indexHopSamples;
 
             for (int i = i0; i < i1; i++) {
-                long globalSample = blockStart + i;
-                int offsetInGrain = (int) (globalSample - grainStartAbs);
-                if (offsetInGrain < 0 || offsetInGrain >= grainLength) {
-                    continue;
-                }
+            	long globalSample = blockStart + i;
+            	int offsetInGrain = (int) (globalSample - grainStartAbs);
+            	if (offsetInGrain < 0 || offsetInGrain >= grainLength) {
+            		continue;
+            	}
 
-                int srcIndex = (int) (grainSourceStart + offsetInGrain);
-                if (srcIndex < 0 || srcIndex >= source.length) {
-                    continue;
-                }
+            	float srcPos = (float) grainSourceStart + (float) offsetInGrain * pitchRatio;
 
-                float w = window[offsetInGrain];
-                float s = source[srcIndex] * w * gain;
+            	// Need i0 and i0+1 valid for interpolation:
+            	if (srcPos < 0f || srcPos >= (source.length - 1)) {
+            		continue;
+            	}
 
-                float sL = s * panL;
-                float sR = s * panR;
+            	float w = window[offsetInGrain];
+            	float s = readLinear(source, srcPos) * w * gain;
+            	float sL = s * panL;
+            	float sR = s * panR;
 
-                outL[i] += sL;
-                if (outR != null && outR != outL) {
-                    outR[i] += sR;
-                }
+            	outL[i] += sL;
+            	if (outR != null && outR != outL) {
+            		outR[i] += sR;
+            	}
             }
         }
     }
@@ -324,4 +325,22 @@ public class IndexGranularSource implements PASource {
     public int getNumGrains() {
         return numGrains;
     }
+    
+    
+    // ------------------------------------------------------------------------
+    // Utilities
+    // ------------------------------------------------------------------------
+
+    private static float readLinear(float[] buf, float pos) {
+        int i0 = (int) pos;
+        float frac = pos - i0;
+
+        if (i0 < 0) return buf[0];
+        if (i0 >= buf.length - 1) return buf[buf.length - 1];
+
+        float a = buf[i0];
+        float b = buf[i0 + 1];
+        return a + frac * (b - a);
+    }
+
 }

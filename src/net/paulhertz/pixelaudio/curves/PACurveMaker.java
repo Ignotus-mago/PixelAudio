@@ -103,7 +103,7 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * 	
  * NOTES 2025.12.14
  * 
- * <code>eventPoints</code> is a List<PVector> derived from the gestural points captured during user interaction.
+ * <code>eventPoints</code> is a <code>List<PVector></code> derived from the gestural points captured during user interaction.
  * <code>dragPoints</code> is reduced to <code>rdpPoints</code>. <code>rdpPoints</code> is used to derive the 
  * Bezier path (PABezShape) <code>curveShape</code>. The polyline representation of curveShape is <code>eventPoints</code>, 
  * where display events tied to the curve can be located. 
