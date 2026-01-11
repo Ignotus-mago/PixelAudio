@@ -89,6 +89,7 @@ public final class GestureGranularConfig {
     this.autoBurstGainComp = b.autoBurstGainComp;
     this.useArcLengthTime = b.useArcLengthTime;
   }
+  
 
   // ----- BUILDER (GUI MUTATES THIS) ----- //
   public static final class Builder {
@@ -141,24 +142,24 @@ public final class GestureGranularConfig {
 
     /** Optional: throw early if GUI creates impossible states. */
     public void validate() {
-      if (rdpEpsilon <= 0f) throw new IllegalArgumentException("rdpEpsilon must be > 0");
-      if (curveSteps < 1) throw new IllegalArgumentException("curveSteps must be >= 1");
-      if (grainLengthSamples < 1) throw new IllegalArgumentException("grainLengthSamples must be >= 1");
-      if (hopLengthSamples < 1) throw new IllegalArgumentException("hopLengthSamples must be >= 1");
-      if (burstGrains < 1) throw new IllegalArgumentException("burstGrains must be >= 1");
+    	if (rdpEpsilon <= 0f) throw new IllegalArgumentException("rdpEpsilon must be > 0");
+    	if (curveSteps < 1) throw new IllegalArgumentException("curveSteps must be >= 1");
+    	if (grainLengthSamples < 1) throw new IllegalArgumentException("grainLengthSamples must be >= 1");
+    	if (hopLengthSamples < 1) throw new IllegalArgumentException("hopLengthSamples must be >= 1");
+    	if (burstGrains < 1) throw new IllegalArgumentException("burstGrains must be >= 1");
 
-      switch (timingMode) {
-        case RESAMPLED_COUNT:
-          if (resampleCount < 2) throw new IllegalArgumentException("targetCount must be >= 2");
-          break;
-        case DURATION_SCALED:
-        case WARPED:
-          if (targetDurationMs < 1) throw new IllegalArgumentException("targetDurationMs must be >= 1");
-          break;
-        case RAW_GESTURE:
-        default:
-          break;
-      }
+    	switch (timingMode) {
+    	case RESAMPLED_COUNT:
+    		if (resampleCount < 2) throw new IllegalArgumentException("targetCount must be >= 2");
+    		break;
+    	case DURATION_SCALED:
+    	case WARPED:
+    		if (targetDurationMs < 1) throw new IllegalArgumentException("targetDurationMs must be >= 1");
+    		break;
+    	case RAW_GESTURE:
+    	default:
+    		break;
+    	}
     }
     
     public Builder copy() {
@@ -209,7 +210,10 @@ public final class GestureGranularConfig {
 
 
   }
-
+  
+  public static GestureGranularConfig defaultConfig() {
+      return new Builder().build();
+  }
   
   // ----- UTILITY METHODS (from your class) ----- //
 

@@ -17,11 +17,11 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
  *   - a mutable or snapshot-based config for rendering both image and audio
  * 
  */
-public abstract class PAAbstractBrush {
+public abstract class AudioBrush {
 	private final PACurveMaker curve;
 	private final GestureGranularConfig.Builder cfg;
 
-	protected PAAbstractBrush(PACurveMaker curve, GestureGranularConfig.Builder cfg) {
+	protected AudioBrush(PACurveMaker curve, GestureGranularConfig.Builder cfg) {
 		this.curve = Objects.requireNonNull(curve, "curve");
 		this.cfg = Objects.requireNonNull(cfg, "cfg");
 	}

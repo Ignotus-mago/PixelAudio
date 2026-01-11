@@ -20,12 +20,14 @@ import processing.core.PVector;
  * by varying PACurveMaker.epsilon and calling PACurveMaker.calculateDerivedPoints()
  * to redraw curves.
  * 
- * TODO Pitch and other parameters can be modulated based on gesture dynamics.
+ * TODO Pitch and other parameters can be modulated based on gesture dynamics, 
+ * for example from a pressure-sensitive tablet.
  * 
  */
-public final class GranularPathBuilder {
+@Deprecated(since="9.5", forRemoval=false)
+public final class LegacyGranularPathBuilder {
 
-	private GranularPathBuilder() {}
+	private LegacyGranularPathBuilder() {}
 
 	/**
 	 * Build a GranularPath from the RDP points of a PACurveMaker.

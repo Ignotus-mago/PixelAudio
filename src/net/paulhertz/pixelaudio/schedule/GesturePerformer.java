@@ -7,5 +7,6 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 // future SamplerPerformer wraps your TimedLocation-based playback
 
 interface GesturePerformer {
+		
     void play(PACurveMaker curve, GestureGranularConfig config);
 }
