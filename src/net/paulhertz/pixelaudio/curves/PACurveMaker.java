@@ -1155,7 +1155,7 @@ public class PACurveMaker implements PAGesture {
         if (reduced == null || reduced.size() == 0) {
             return new GestureSchedule(new ArrayList<>(), new float[0]);
         }
-        float[] reducedTimes = PACurveUtility.intsToFloats(getReducedTimes(), reduced.size());;
+        float[] reducedTimes = PACurveUtility.intsToFloats(getReducedTimes(), reduced.size());
         PABezShape curve = getCurve();
         if (curve == null) {
         	return new GestureSchedule(reduced, reducedTimes);

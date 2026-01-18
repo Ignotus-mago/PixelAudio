@@ -83,7 +83,10 @@ public final class GestureScheduleBuilder {
 	    for (int i = 1; i < n; i++) {
 	      tMs[i] = tMs[i - 1] + hopMs;
 	    }
-
+	    
+	    // DEBUG
+	    System.out.println("-- Fixed schedule final hop time (ms) = "+ tMs[tMs.length - 1] +", hopMS = "+ hopMs);
+	    
 	    return new GestureSchedule(in.points, tMs);
 	  }
 
