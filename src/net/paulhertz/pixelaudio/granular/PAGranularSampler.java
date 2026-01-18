@@ -5,7 +5,7 @@ import ddf.minim.AudioOutput;
 
 import net.paulhertz.pixelaudio.voices.ADSRParams;
 import net.paulhertz.pixelaudio.voices.PASource;
-import net.paulhertz.pixelaudio.schedule.SampleAccurateScheduler;
+import net.paulhertz.pixelaudio.schedule.AudioScheduler;
 
 
 import java.util.*;
@@ -62,11 +62,15 @@ public class PAGranularSampler extends UGen {
     private boolean smoothSteal = true;
     
     // Sample-accurate scheduler for launching new voices
-    private final SampleAccurateScheduler<ScheduledPlay> scheduler =
-            new SampleAccurateScheduler<>();
+    private final AudioScheduler<ScheduledPlay> scheduler = new AudioScheduler<>();
 
     // Absolute sample counter (across the life of this UGen)
     private long sampleCursor = 0L;
+    
+    private final float[] tmpStereo = new float[2];
+
+    
+	// private long blockStartSample = 0;    // NEW, for revised AudioScheduler
 
     public PAGranularSampler(AudioOutput out, int maxVoices) {
         this.out = out;
@@ -176,14 +180,14 @@ public class PAGranularSampler extends UGen {
      * @param startSample absolute sample index at which to start the voice
      */
     public synchronized void schedulePlayAtSample(PASource src,
-    		ADSRParams env,
-    		float gain,
-    		float pan,
-    		boolean looping,
-    		long startSample) {
-    	if (src == null) return;
-    	ScheduledPlay timeEvent = new ScheduledPlay(src, env, gain, pan, looping);
-    	scheduler.schedule(startSample, timeEvent);
+            ADSRParams env,
+            float gain,
+            float pan,
+            boolean looping,
+            long startSample) {
+        if (src == null) return;
+        ScheduledPlay happening = new ScheduledPlay(src, env, gain, pan, looping);
+        scheduler.schedulePoint(startSample, happening);
     }
 
     /**
@@ -214,44 +218,51 @@ public class PAGranularSampler extends UGen {
     }
 
     // ------------------------------------------------------------------------
-    // uGenerate — per-sample mixing + scheduler tick
+    // uGenerate — per-sample frame processing with AudioScheduler
     // ------------------------------------------------------------------------
     @Override
     protected synchronized void uGenerate(float[] channels) {
-        // sampleCursor is absolute sample across the life of this UGen
-        scheduler.tick(sampleCursor, scheduled -> {
-            ScheduledPlay sp = scheduled.timeEvent;
-            // Launch a new voice exactly at this sample
-            getAvailableVoice(sp.src, sp.env, sp.gain, sp.pan, sp.looping);
-        });
+    	// 1) Fire point events at this exact sample (blockSize = 1 frame)
+    	scheduler.processBlock(
+    			sampleCursor,
+    			1,
+    			(ScheduledPlay sp, int offsetInBlock) -> {
+    				// offsetInBlock will always be 0 here
+    				getAvailableVoice(sp.src, sp.env, sp.gain, sp.pan, sp.looping);
+    			},
+    			null
+    			);
 
-        Arrays.fill(channels, 0f);
+    	// 2) Clear this sample frame
+    	Arrays.fill(channels, 0f);
 
-        float[] tmp = new float[2]; // left, right
+    	// 3) Mix one sample frame from all voices
+    	float leftMix = 0f;
+    	float rightMix = 0f;
 
-        for (PAGranularVoice v : voices) {
+    	for (PAGranularVoice v : voices) {
+    		v.nextSampleStereo(tmpStereo);
+    		float left  = tmpStereo[0];
+    		float right = tmpStereo[1];
+    		if (v.isActive() || v.isReleasing()) {
+    			// Keep stereo internally; write mono if only one output channel
+    			leftMix  += left;
+    			rightMix += right;
+    		}
+    		// v.isFinished() => recyclable; nothing else needed
+    	}
 
-            v.nextSampleStereo(tmp);
-            float left  = tmp[0];
-            float right = tmp[1];
+    	// 4) Write output for this frame
+    	channels[0] = (channels.length > 0) ? leftMix : 0f;
+    	if (channels.length > 1) {
+    		channels[1] = rightMix;
+    	}
 
-            if (v.isActive() || v.isReleasing()) {
-                // For now, *ignore voice-level pan* and trust the per-grain pan
-                channels[0] += left;
-                if (channels.length > 1) {
-                    channels[1] += right;
-                }
-            }
-
-            if (v.isFinished()) {
-                // recyclable; nothing else needed
-            }
-        }
-
-        // Advance global sample cursor by one sample frame
-        sampleCursor++;
+    	// 5) Advance global sample cursor by one sample frame
+    	sampleCursor++;
     }
 
+    
     // ------------------------------------------------------------------------
     // Controls
     // ------------------------------------------------------------------------
