@@ -43,6 +43,13 @@ public class ADSRParams {
     public float getSustain(){ return sustain; }
     public float getRelease(){ return release; }
 
+    /**
+     * @return a copy of this ADSRParams object
+     */
+    public ADSRParams copy() {
+        return new ADSRParams(maxAmp, attack, decay, sustain, release);
+    }
+
     /** 
      * Build a fresh Minim ADSR from these parameters. 
      * @return a Minim ADSR constructed with the instance variable stored in ADSRParams

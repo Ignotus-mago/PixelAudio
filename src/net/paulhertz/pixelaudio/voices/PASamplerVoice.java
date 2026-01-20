@@ -117,14 +117,10 @@ public class PASamplerVoice {
             if (envelope != null) envelope.noteOff();
         }
 
-        // --- 2. Clamp buffer index safely ---
-        if (idx >= buffer.length) {
-            // We've run off the end of the buffer — output silence but keep fading envelope
-            idx = buffer.length - 1;   // clamp to last valid sample
-        }
-
-        // --- 3. Read sample and advance ---
+        // --- 2. Read sample safely ---
         float base = (idx >= 0 && idx < buffer.length) ? buffer[idx] : 0f;
+
+        // --- 3. Advance ---
         position += rate;
 
         // --- 4. Envelope always ticks ---

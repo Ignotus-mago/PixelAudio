@@ -85,7 +85,7 @@ public final class GestureScheduleBuilder {
 	    }
 	    
 	    // DEBUG
-	    System.out.println("-- Fixed schedule final hop time (ms) = "+ tMs[tMs.length - 1] +", hopMS = "+ hopMs);
+	    // System.out.println("-- Fixed schedule final hop time (ms) = "+ tMs[tMs.length - 1] +", hopMS = "+ hopMs);
 	    
 	    return new GestureSchedule(in.points, tMs);
 	  }
