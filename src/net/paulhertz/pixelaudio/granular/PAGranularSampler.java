@@ -179,7 +179,7 @@ public class PAGranularSampler extends UGen {
      * @param looping     loop flag
      * @param startSample absolute sample index at which to start the voice
      */
-    public synchronized void schedulePlayAtSample(PASource src,
+    public synchronized void startAtSampleTime(PASource src,
             ADSRParams env,
             float gain,
             float pan,
@@ -200,20 +200,20 @@ public class PAGranularSampler extends UGen {
      * @param looping      loop flag
      * @param delaySamples how many samples from "now" to start
      */
-    public synchronized void schedulePlayInSamples(PASource src,
+    public synchronized void startAfterDelaySamples(PASource src,
     		ADSRParams env,
     		float gain,
     		float pan,
     		boolean looping,
     		long delaySamples) {
     	long startSample = this.sampleCursor + Math.max(0, delaySamples);
-    	schedulePlayAtSample(src, env, gain, pan, looping, startSample);
+    	startAtSampleTime(src, env, gain, pan, looping, startSample);
     }
 
     /**
      * Expose the current absolute sample cursor (for higher-level scheduling).
      */
-    public synchronized long getSampleCursor() {
+    public synchronized long getCurrentSampleTime() {
     	return sampleCursor;
     }
 

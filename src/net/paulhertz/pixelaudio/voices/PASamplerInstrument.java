@@ -11,6 +11,12 @@ import ddf.minim.MultiChannelBuffer;
  * Represents a playable instrument that uses a PASampler instantiated as a PASharedBufferSampler
  * to trigger audio playback from a shared buffer that is (currently) a Minim MultiChannelBuffer. 
  * TODO decide if MultiChannelBuffer or float[] is the appropriate structure for storing the buffer. 
+ *     float[] is preferred for the general style of PixelAudio, but MultiChannelBuffer support 
+ *     is a useful consideration for the future. 
+ * TODO sample accurate start for sampler events to unify timing API with PAGranularInstrument.
+ * Currently sampler play() is block-time accurate only.
+ * In the future, add sample-time scheduling (startAtSampleTime / startAfterDelaySamples)
+ * using AudioScheduler so sampler and granular share a transport model.
  *
  * Supports:
  *  - Global pitch scaling

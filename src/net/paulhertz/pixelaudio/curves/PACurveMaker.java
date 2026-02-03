@@ -33,10 +33,12 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 // but this class is designed to let you alter settings on the fly, if you want to. Just be *really* careful when it comes
 // to altering dragPoints or dragTimes. They must follow the rules set out in PAGesture, repeated below.
 //
-// TODO provide multiple ways that eventPoints and brushPoly can work in PACurveMaker and in apps that use PACurveMaker instances:
+// TODO = DONE: provide multiple ways that eventPoints and brushPoly can work in PACurveMaker and in apps that use PACurveMaker instances:
 // sometimes we'll want dense eventPoints, but leave brushPoly low-res. We'll consider how to vary events over playback.
 // we can also consider how the time interval of a PACurveMaker instance could affect its playback,
-// DONE partly with classes PAGestureParametric and PAIndexParametric.  
+// DONE partly with classes PAGestureParametric and PAIndexParametric, currently with no sample code. 
+// The GesturePlayground demo applet uses GestureScheduleBuilder to modify the number of samples and 
+// the duration of gestures modeled by PACurveMaker.
 //
 // TODO JSON I/O: essential variables are dragPoints, epsilon, dragTimes. It's useful to save bezierBias and eventSteps. 
 // One might also save curve data, but that is proper to PABezShape. When planting audio, the data used for the plant is critical. 

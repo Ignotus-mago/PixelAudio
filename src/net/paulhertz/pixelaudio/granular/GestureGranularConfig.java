@@ -55,6 +55,7 @@ public final class GestureGranularConfig {
   // Grain / synthesis
   public final int grainLengthSamples;
   public final ADSRParams env;         // consider copying if ADSRParams is mutable
+  // TODO note duration, particularl for Sampler instrument
   public final float gainDb;
   public final float pitchSemitones;
 

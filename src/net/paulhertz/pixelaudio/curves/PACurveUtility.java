@@ -19,6 +19,7 @@
 package net.paulhertz.pixelaudio.curves;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.ListIterator;
 
 import processing.core.PVector;
@@ -578,6 +579,13 @@ public class PACurveUtility {
 		return new GestureSchedule(pts, times);
 	}
 
+	
+	/************************************************
+	 *                                              *
+	 * ---------------- UTILITY ------------------  *
+	 *                                              *
+	 ************************************************/
+	
 	private static float lerp(float a, float b, float u) {
 		return a + u * (b - a);
 	}
@@ -607,6 +615,22 @@ public class PACurveUtility {
         for (int i = n; i < out.length; i++) out[i] = out[n - 1];
         return out;
     }
+    
+	/**
+	 * @param points    a List of PVector
+	 * @return length of the path between the points
+	 */
+	public static float pathLength(List<PVector> points) {
+		float pathLength = 0f;
+		for (int i = 1; i < points.size(); i++) {
+			PVector a = points.get(i - 1);
+			PVector b = points.get(i);
+			float dx = b.x - a.x, dy = b.y - a.y;
+			pathLength += (float)Math.sqrt(dx*dx + dy*dy);
+		}
+		return pathLength;
+	}
+
 
 
 	/************************************************

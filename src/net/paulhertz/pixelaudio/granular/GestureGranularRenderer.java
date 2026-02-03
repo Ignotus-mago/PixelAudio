@@ -203,7 +203,7 @@ public final class GestureGranularRenderer {
 					pitchRatio
 					);
 
-			gSynth.schedulePlayInSamples(src, amp, pan, env, false, delaySamples);
+			gSynth.startAfterDelaySamples(src, amp, pan, env, false, delaySamples);
 
 			scheduled++;
 			

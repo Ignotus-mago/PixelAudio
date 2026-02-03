@@ -122,7 +122,7 @@ public class PAGranularInstrument {
      * @param looping     loop flag
      * @param startSample absolute sample index at which to start
      */
-    public synchronized void schedulePlayAtSample(PASource src,
+    public synchronized void startAtSampleTime(PASource src,
     		float amp,
     		float pan,
     		ADSRParams env,
@@ -134,7 +134,7 @@ public class PAGranularInstrument {
     	float finalPan = clampPan(globalPan + pan);
     	ADSRParams useEnv = (env != null) ? env : defaultEnv;
 
-    	sampler.schedulePlayAtSample(src, useEnv, finalGain, finalPan, looping, startSample);
+    	sampler.startAtSampleTime(src, useEnv, finalGain, finalPan, looping, startSample);
     }
 
     /**
@@ -147,7 +147,7 @@ public class PAGranularInstrument {
      * @param looping      loop flag
      * @param delaySamples how many samples from "now"
      */
-    public synchronized void schedulePlayInSamples(PASource src,
+    public synchronized void startAfterDelaySamples(PASource src,
     		float amp,
     		float pan,
     		ADSRParams env,
@@ -159,11 +159,11 @@ public class PAGranularInstrument {
     	float finalPan = clampPan(globalPan + pan);
     	ADSRParams useEnv = (env != null) ? env : defaultEnv;
 
-    	sampler.schedulePlayInSamples(src, useEnv, finalGain, finalPan, looping, delaySamples);
+    	sampler.startAfterDelaySamples(src, useEnv, finalGain, finalPan, looping, delaySamples);
     }
 
     /**
-     * Convenience: schedule using current sampler cursor as "now".
+     * Convenience: schedule using current instrument cursor as "now".
      *
      * @param src         PASource
      * @param amp         amplitude
@@ -171,12 +171,12 @@ public class PAGranularInstrument {
      * @param env         envelope (or null → default)
      * @param looping     loop flag
      */
-    public synchronized void schedulePlayNow(PASource src,
+    public synchronized void startNow(PASource src,
     		float amp,
     		float pan,
     		ADSRParams env,
     		boolean looping) {
-    	schedulePlayInSamples(src, amp, pan, env, looping, 0L);
+    	startAfterDelaySamples(src, amp, pan, env, looping, 0L);
     }
 
     // ------------------------------------------------------------------------
@@ -200,6 +200,8 @@ public class PAGranularInstrument {
     public void setGlobalGain(float g) { this.globalGain = g; }
 
     public float getGlobalGain() { return globalGain; }
+    
+    public float getSampleRate() { return this.out.sampleRate(); }
 
     public PAGranularSampler getSampler() { return sampler; }
 
