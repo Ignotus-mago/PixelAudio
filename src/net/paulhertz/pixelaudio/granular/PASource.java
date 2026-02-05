@@ -1,6 +1,7 @@
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.MultiChannelBuffer;
+import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
@@ -28,6 +29,8 @@ public interface PASource extends PAFloatSource {
     default void seekTo(long absoluteSample) {
         // no-op by default
     }
+    
+    default void setGrainWindow(WindowFunction wf, int grainLenSamples) { /* no-op */ }
 
     /**
      * Optional access to an underlying MultiChannelBuffer, if this source is

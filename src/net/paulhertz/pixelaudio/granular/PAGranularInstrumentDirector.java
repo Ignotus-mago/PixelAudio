@@ -142,8 +142,8 @@ public final class PAGranularInstrumentDirector {
                         /*env*/ texture.env,
                         /*looping*/ texture.looping,
                         /*startSample*/ when,
-                        wf,
-                        grainLen
+                        /*window function*/ wf,
+                        /*number of samples in one grain*/ grainLen
                 );
             }
         }

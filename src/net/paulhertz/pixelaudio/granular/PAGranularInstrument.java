@@ -145,8 +145,9 @@ public class PAGranularInstrument {
      * @param pan            stereo pan
      * @param env            envelope (or null → default)
      * @param looping        loop flag
-     * @param grainWindow    a WindowFunction
      * @param startSample    absolute sample index at which to start
+     * @param grainWindow    a WindowFunction
+     * @param grainLenSamples    number of samples in one grain
      */
     public synchronized void startAtSampleTime(PASource src,
             float amp,

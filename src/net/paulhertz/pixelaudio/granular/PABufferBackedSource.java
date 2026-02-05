@@ -1,8 +1,10 @@
 package net.paulhertz.pixelaudio.granular;
 
 import java.util.Objects;
+
 import ddf.minim.MultiChannelBuffer;
 import net.paulhertz.pixelaudio.voices.PitchPolicy;
+import ddf.minim.analysis.WindowFunction;
 
 public final class PABufferBackedSource implements PASource {
 
@@ -10,6 +12,8 @@ public final class PABufferBackedSource implements PASource {
     private final float sampleRate;
     private final MultiChannelBuffer mcb;
     private final PitchPolicy pitchPolicy;
+    private WindowFunction grainWindow = null;
+    private int grainLenSamples = 1024;
 
     /**
      * Base offset applied to blockStart in {@link #renderBlock}.
@@ -101,47 +105,102 @@ public final class PABufferBackedSource implements PASource {
         // MultiChannelBuffer stores frames-per-channel.
         return mcb.getBufferSize();
     }
+    
+    @Override
+    public void setGrainWindow(WindowFunction wf, int grainLenSamples) {
+        this.grainWindow = wf;
+        this.grainLenSamples = Math.max(1, grainLenSamples);
+
+        // Prewarm here if this is called from UI/scheduler thread (safe).
+        if (wf != null) {
+            WindowCache.INSTANCE.prewarm(wf, this.grainLenSamples);
+        }
+    }
+
 
     @Override
     public void renderBlock(long blockStart, int blockSize, float[] outL, float[] outR) {
-        if (blockSize <= 0) return;
+    	if (blockSize <= 0) return;
 
-        final int frames = mcb.getBufferSize();
-        final int chCount = mcb.getChannelCount();
-        if (chCount <= 0) return;
+    	final int frames = mcb.getBufferSize();
+    	final int chCount = mcb.getChannelCount();
+    	if (chCount <= 0) return;
 
-        // blockStart is interpreted in *source* sample space.
-        long start = blockStart - baseOffset;
+    	// blockStart is interpreted in *source* sample space.
+    	long start = blockStart - baseOffset;
 
-        // Clamp negative starts to 0.
-        if (start < 0L) {
-            start = 0L;
-        }
+    	// Clamp negative starts to 0.
+    	if (start < 0L) {
+    		start = 0L;
+    	}
 
-        // If we're already beyond the buffer, nothing to add.
-        if (start >= frames) return;
+    	// If we're already beyond the buffer, nothing to add.
+    	if (start >= frames) return;
 
-        final int iStart = (int) start;
-        final int n = Math.min(blockSize, frames - iStart);
+    	final int iStart = (int) start;
+    	final int n = Math.min(blockSize, frames - iStart);
 
-        if (chCount == 1) {
-            // Mono: copy to L and R, but avoid double-add if outL == outR.
-            final boolean same = (outL == outR);
-            final float[] s0 = mcb.getChannel(0);
-            for (int i = 0; i < n; i++) {
-                float v = s0[iStart + i];
-                outL[i] += v;
-                if (!same) outR[i] += v;
-            }
-        } else {
-            // Policy: first two channels are treated as L/R; extra channels are ignored.
-            final float[] sL = mcb.getChannel(0);
-            final float[] sR = mcb.getChannel(1);
-            for (int i = 0; i < n; i++) {
-                outL[i] += sL[iStart + i];
-                outR[i] += sR[iStart + i];
-            }
-        }
+    	// Optional grain windowing (taper) — this is NOT per-grain overlap-add,
+    	// but it correctly applies a WindowFunction in voice time.
+    	final WindowFunction wf = this.grainWindow;          // assume you added these fields
+    	final int wLen = this.grainLenSamples;               // >= 1 when enabled
+    	final float[] wCurve;
+    	final int phase0;
+
+    	if (wf != null && wLen > 1) {
+    		wCurve = WindowCache.INSTANCE.getWindowCurve(wf, wLen);
+    		// Phase in VOICE time (blockStart is the voice's absolute sample cursor).
+    		// Ensure non-negative modulo.
+    		long m = blockStart % (long) wLen;
+    		if (m < 0) m += wLen;
+    		phase0 = (int) m;
+    	} else {
+    		wCurve = null;
+    		phase0 = 0;
+    	}
+
+    	if (chCount == 1) {
+    		// Mono: copy to L and R, but avoid double-add if outL == outR.
+    		final boolean same = (outL == outR);
+    		final float[] s0 = mcb.getChannel(0);
+
+    		if (wCurve == null) {
+    			for (int i = 0; i < n; i++) {
+    				float v = s0[iStart + i];
+    				outL[i] += v;
+    				if (!same) outR[i] += v;
+    			}
+    		} else {
+    			for (int i = 0; i < n; i++) {
+    				int wi = phase0 + i;
+    				if (wi >= wLen) wi -= (wi / wLen) * wLen; // fast-ish wrap without %
+    				float v = s0[iStart + i] * wCurve[wi];
+    				outL[i] += v;
+    				if (!same) outR[i] += v;
+    			}
+    		}
+
+    	} 
+    	else {
+    		// Policy: first two channels are treated as L/R; extra channels are ignored.
+    		final float[] sL = mcb.getChannel(0);
+    		final float[] sR = mcb.getChannel(1);
+
+    		if (wCurve == null) {
+    			for (int i = 0; i < n; i++) {
+    				outL[i] += sL[iStart + i];
+    				outR[i] += sR[iStart + i];
+    			}
+    		} else {
+    			for (int i = 0; i < n; i++) {
+    				int wi = phase0 + i;
+    				if (wi >= wLen) wi -= (wi / wLen) * wLen;
+    				float w = wCurve[wi];
+    				outL[i] += sL[iStart + i] * w;
+    				outR[i] += sR[iStart + i] * w;
+    			}
+    		}
+    	}
     }
 
     @Override

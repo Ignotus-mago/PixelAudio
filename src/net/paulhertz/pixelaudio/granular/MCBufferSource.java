@@ -1,6 +1,7 @@
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.MultiChannelBuffer;
+import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
@@ -21,6 +22,8 @@ public class MCBufferSource implements PASource {
 
     private final MultiChannelBuffer buffer;
     private final long lengthSamples;
+    private WindowFunction grainWindow = null;
+    private int grainLenSamples = 1024;
 
     public MCBufferSource(MultiChannelBuffer buffer) {
         if (buffer == null) {
@@ -76,4 +79,16 @@ public class MCBufferSource implements PASource {
         // Classic sample playback: instrument-level pitch applies.
         return PitchPolicy.INSTRUMENT_RATE;
     }
+    
+    @Override
+    public void setGrainWindow(WindowFunction wf, int grainLenSamples) {
+        this.grainWindow = wf;
+        this.grainLenSamples = Math.max(1, grainLenSamples);
+
+        // Prewarm here if this is called from UI/scheduler thread (safe).
+        if (wf != null) {
+            WindowCache.INSTANCE.prewarm(wf, this.grainLenSamples);
+        }
+    }
+
 }

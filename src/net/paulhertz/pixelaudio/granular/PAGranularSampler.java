@@ -88,6 +88,13 @@ public class PAGranularSampler extends UGen {
     
 	// private long blockStartSample = 0;    // NEW, for revised AudioScheduler
 
+    /**
+     * Initializes this PAGranularSampler, which extends UGen and gets patched to an AudioOutput, 
+     * with the result that its uGenerate method is called on each audio block.
+     * 
+     * @param out          a Minim AudioOutput that this PAGranularSampler will patch to
+     * @param maxVoices    maximum number of voices to allocate
+     */
     public PAGranularSampler(AudioOutput out, int maxVoices) {
         this.out = out;
         this.maxVoices = Math.max(1, maxVoices);
@@ -104,6 +111,18 @@ public class PAGranularSampler extends UGen {
     // Voice allocation
     // ------------------------------------------------------------------------
  
+    /**
+     * Allocate a PAGranularVoice instance. Called from play() and uGenerate() methods.
+     *  
+     * @param src                A PASource
+     * @param env                ADSRParams envelope, could be null
+     * @param gain               gain as a decimal value scaling amplitude
+     * @param pan                pan in stereo space, but grains can set individually
+     * @param looping            looping flag, best be false
+     * @param grainWindow        a Minim WindowFunction
+     * @param grainLenSamples    number of samples in one grain
+     * @return
+     */
     private PAGranularVoice getAvailableVoice(PASource src, ADSRParams env,
     		float gain, float pan, boolean looping,
     		WindowFunction grainWindow, int grainLenSamples) {
@@ -149,6 +168,7 @@ public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
     // Play interface
     // ------------------------------------------------------------------------
+    
     /**
      * Play a granular source as a voice.
      *
@@ -190,7 +210,7 @@ public class PAGranularSampler extends UGen {
     }
 
     // ------------------------------------------------------------------------
-    // Scheduled play interface (NEW)
+    // Scheduled play interface, the preferred method of triggering audio
     // ------------------------------------------------------------------------
 
     /**
@@ -213,23 +233,17 @@ public class PAGranularSampler extends UGen {
         ScheduledPlay happening = new ScheduledPlay(src, env, gain, pan, looping);
         scheduler.schedulePoint(startSample, happening);
     }
-    
-//    public void startAtSampleTime(PASource src,
-//            ADSRParams env,
-//            float gain,
-//            float pan,
-//            boolean looping,
-//            long startSample,
-//            WindowFunction grainWindow,
-//            int grainLenSamples) {
-//
-//        // Store into your ScheduledPlay / VoiceStart / whatever you already enqueue.
-//        // For example:
-//        // queue.add(new ScheduledPlay(src, env, gain, pan, looping, startSample, grainWindow, grainLenSamples));
-//
-//        startAtSampleTime(src, env, gain, pan, looping, startSample); // fallback for now if needed
-//    }
-    
+        
+    /**
+     * @param src                PASource
+     * @param env                ADSR (already resolved: either custom or default)
+     * @param gain               final gain
+     * @param pan                final pan
+     * @param looping            loop flag
+     * @param startSample        absolute sample index at which to start the voice
+     * @param grainWindow        a window function for shaping grain amplitude
+     * @param grainLenSamples    number of samples in one grain
+     */
     public synchronized void startAtSampleTime(PASource src,
     		ADSRParams env,
     		float gain,
@@ -269,9 +283,11 @@ public class PAGranularSampler extends UGen {
     public synchronized long getCurrentSampleTime() {
     	return sampleCursor;
     }
+    
 
     // ------------------------------------------------------------------------
     // uGenerate — per-sample frame processing with AudioScheduler
+    // Called through Minim 
     // ------------------------------------------------------------------------
     @Override
     protected synchronized void uGenerate(float[] channels) {
