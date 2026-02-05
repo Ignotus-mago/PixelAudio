@@ -1,9 +1,9 @@
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.AudioOutput;
+import ddf.minim.analysis.WindowFunction;
 
 import net.paulhertz.pixelaudio.voices.ADSRParams;
-import net.paulhertz.pixelaudio.voices.PASource;
 
 /**
  * PAGranularInstrument
@@ -136,6 +136,45 @@ public class PAGranularInstrument {
 
     	sampler.startAtSampleTime(src, useEnv, finalGain, finalPan, looping, startSample);
     }
+    
+    /**
+     * Schedule playback of a PASource at an absolute sample time.
+     *
+     * @param src            PASource
+     * @param amp            amplitude
+     * @param pan            stereo pan
+     * @param env            envelope (or null → default)
+     * @param looping        loop flag
+     * @param grainWindow    a WindowFunction
+     * @param startSample    absolute sample index at which to start
+     */
+    public synchronized void startAtSampleTime(PASource src,
+            float amp,
+            float pan,
+            ADSRParams env,
+            boolean looping,
+            long startSample,
+            WindowFunction grainWindow,
+            int grainLenSamples) {
+
+        if (src == null || sampler == null || isClosed) return;
+
+        float finalGain = amp * globalGain;
+        float finalPan  = clampPan(globalPan + pan);
+        ADSRParams useEnv = (env != null) ? env : defaultEnv;
+
+        // Delegate — sampler must carry these into the scheduled play / voice params.
+        sampler.startAtSampleTime(
+                src,
+                useEnv,
+                finalGain,
+                finalPan,
+                looping,
+                startSample,
+                grainWindow,
+                Math.max(1, grainLenSamples)
+        );
+    }    
 
     /**
      * Schedule playback after a delay in samples relative to "now".

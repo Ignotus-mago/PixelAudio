@@ -3,7 +3,6 @@ package net.paulhertz.pixelaudio.granular;
 import ddf.minim.UGen;
 import net.paulhertz.pixelaudio.voices.ADSRParams;
 import net.paulhertz.pixelaudio.voices.SimpleADSR;
-import net.paulhertz.pixelaudio.voices.PASource;
 
 /**
  * PAGranularVoice

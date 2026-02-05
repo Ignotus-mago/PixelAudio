@@ -1,6 +1,7 @@
-package net.paulhertz.pixelaudio.voices;
+package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.MultiChannelBuffer;
+import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
  * MCBufferSource

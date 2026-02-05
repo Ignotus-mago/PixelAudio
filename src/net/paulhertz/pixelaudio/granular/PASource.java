@@ -1,15 +1,13 @@
-package net.paulhertz.pixelaudio.voices;
+package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.MultiChannelBuffer;
+import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
  * PASource
  *
- * A PAFloatSource with an additional pitch policy hint for PASamplerInstrument
- * and related voices.
+ * A PAFloatSource with an additional pitch policy hint.
  *
- * Lives in the voices package because it's meant to plug directly into
- * PASamplerInstrument / PASamplerVoice. Minim dependency is allowed here.
  */
 public interface PASource extends PAFloatSource {
 

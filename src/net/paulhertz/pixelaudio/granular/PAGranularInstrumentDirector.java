@@ -3,9 +3,11 @@ package net.paulhertz.pixelaudio.granular;
 import java.util.Arrays;
 import java.util.Objects;
 
+import ddf.minim.analysis.WindowFunction;
+import ddf.minim.analysis.HannWindow;
+
 import net.paulhertz.pixelaudio.curves.GestureMapping;
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
-import net.paulhertz.pixelaudio.voices.PASource;
 import processing.core.PVector;
 
 /**
@@ -32,6 +34,7 @@ public final class PAGranularInstrumentDirector {
     private final float sampleRate;
     private final GestureMapping mapping;
     private final MappingConsumer mappingConsumer;
+    
 
     // --- cache
     private int lastScheduleSize = -1;
@@ -41,6 +44,17 @@ public final class PAGranularInstrumentDirector {
 
     private long[] cachedEventOffsetsSamples = new long[0];
     private int[] cachedSourceIndices = new int[0]; // optional: per-event source index (if you need it)
+    
+    // Default grain window (grain-level envelope).
+    // Static is fine; Minim window functions are stateless in typical usage.
+    private static final WindowFunction DEFAULT_GRAIN_WINDOW = new HannWindow();
+
+    private static WindowFunction resolveGrainWindow(GestureGranularTexture texture) {
+        if (texture == null) return DEFAULT_GRAIN_WINDOW;
+        WindowFunction wf = texture.grainWindow; // or texture.grainWindow() if you add accessor
+        return (wf != null) ? wf : DEFAULT_GRAIN_WINDOW;
+    }
+
 
     /**
      * @param instrument already constructed and patched (or patch outside)
@@ -75,6 +89,9 @@ public final class PAGranularInstrumentDirector {
     		long startSampleTime) {
     	if (schedule == null || texture == null) return;
     	if (mappingSnapshot == null || mappingSnapshot.length == 0) return;
+    	
+        // Resolve grain window once (don’t do it per grain)
+        final WindowFunction grainWf = resolveGrainWindow(texture);
 
     	// 0) Push mapping snapshot into the source/signal if needed (no copies)
     	if (mappingConsumer != null) {
@@ -88,16 +105,20 @@ public final class PAGranularInstrumentDirector {
         ensureCache(sched, texture, mappingSnapshot);
 
         // 3) Schedule events
-        scheduleEvents(src, sched, texture, startSampleTime);
+        scheduleEvents(src, sched, texture, grainWf, startSampleTime);
     }
 
     private void scheduleEvents(PASource src,
     		GestureSchedule sched,
-                                GestureGranularTexture texture,
-                                long startSampleTime) {
+    		GestureGranularTexture texture,
+    		WindowFunction wf,
+    		long startSampleTime) {
         final int n = sched.size();
         if (n <= 0) return;
 
+        final int grainLen = Math.max(1, texture.grainLengthSamples);
+        WindowCache.INSTANCE.prewarm(wf, grainLen);
+        
         // Choose cadence rule
         final boolean fixedHop = (texture.hopMode == GestureGranularTexture.HopMode.FIXED);
 
@@ -120,7 +141,9 @@ public final class PAGranularInstrumentDirector {
                         /*pan*/ texture.pan,
                         /*env*/ texture.env,
                         /*looping*/ texture.looping,
-                        /*startSample*/ when
+                        /*startSample*/ when,
+                        wf,
+                        grainLen
                 );
             }
         }

@@ -356,13 +356,15 @@ public class PixelAudioMapper {
 
 	//------------- LUTs -------------//
 
-	/** @return the lookup table that maps an index in the signal to the corresponding pixel index in the image. */
+	/** @return a copy of the lookup table that maps an index in the signal to the corresponding pixel index in the image.
+	 * TODO possibly change the name of this method to getSignalToImageLUTSnapshot */
 	public int[] getSignalToImageLUT() {
-		return this.signalToImageLUT;
+		// return this.signalToImageLUT;    // not a copy
+		return generator.getPixelMapCopy();
 	}
 
 	/**
-	 * Sets a new lookup table for mapping signal to image.
+	 * Sets a new lookup table for mapping signal to image. Probably something to avoid: plug in a new PixelMapGen instead.
 	 * Warning: The size of sigLUT must conform to the size the current image and signal arrays.
 	 * @param sigLUT
 	 */
@@ -372,13 +374,15 @@ public class PixelAudioMapper {
 		this.signalToImageLUT = sigLUT;
 	}
 
-	/** @return the lookup table that maps pixel values in the image to the corresponding entry in the signal. */
+	/** @return a copy of the lookup table that maps pixel values in the image to the corresponding entry in the signal.
+	 * TODO possibly change the name of this method to getImageToSignalLUTSnapshot */
 	public int[] getImageToSignalLUT() {
-		return this.imageToSignalLUT;
+		// return this.imageToSignalLUT;    // not a copy
+		return generator.getSampleMapCopy();
 	}
 
 	/**
-	 * Sets a new lookup table for mapping image to signal.
+	 * Sets a new lookup table for mapping image to signal. Probably something to avoid: plug in a new PixelMapGen instead.
 	 * Warning: the size of imgLUT must conform to the size the current image and signal arrays.
 	 * @param imgLUT
 	 */

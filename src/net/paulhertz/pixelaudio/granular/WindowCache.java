@@ -45,14 +45,14 @@ public final class WindowCache {
         }
     }
 
-    private final Map<Key, float[]> curves = new ConcurrentHashMap<>();
+    private final Map<Key, float[]> windowCurves = new ConcurrentHashMap<>();
 
     /**
      * Precompute and cache a window curve. Call this during setup, not from the audio thread.
      */
     public float[] prewarm(WindowFunction wf, int length) {
         Key key = new Key(wf, length);
-        return curves.computeIfAbsent(key, k -> wf.generateCurve(length));
+        return windowCurves.computeIfAbsent(key, k -> wf.generateCurve(length));
     }
 
     /**
@@ -63,6 +63,6 @@ public final class WindowCache {
      */
     public float[] getWindowCurve(WindowFunction wf, int length) {
         Key key = new Key(wf, length);
-        return curves.computeIfAbsent(key, k -> wf.generateCurve(length));
+        return windowCurves.computeIfAbsent(key, k -> wf.generateCurve(length));
     }
 }
