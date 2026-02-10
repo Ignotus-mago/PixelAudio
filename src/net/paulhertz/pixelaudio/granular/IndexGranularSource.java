@@ -40,9 +40,6 @@ public class IndexGranularSource implements PASource {
 
     private final WindowFunction windowFunction;
 
-    // Derived length
-    private final long totalLengthSamples;
-
     // Note-level state
     private long noteStartSample = Long.MIN_VALUE;
     private boolean noteStarted = false;
@@ -88,8 +85,6 @@ public class IndexGranularSource implements PASource {
     	this.numGrains = numGrains;
     	this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
     	this.windowFunction = settings.windowFunction;
-    	this.totalLengthSamples =
-    			(long) (numGrains - 1) * (long) this.timeHopSamples + (long) this.grainLength;
     }
 
     public IndexGranularSource(
@@ -283,7 +278,7 @@ public class IndexGranularSource implements PASource {
 
     @Override
     public long lengthSamples() {
-        return totalLengthSamples;
+        return (long)(numGrains - 1) * (long) timeHopSamples + (long) grainLength;
     }
 
     @Override
@@ -302,7 +297,7 @@ public class IndexGranularSource implements PASource {
         else {
             this.windowCurve = null;
         }
-    }
+     }
 
 
     // ------------------------------------------------------------------------
