@@ -1,3 +1,4 @@
+
 package net.paulhertz.pixelaudio.granular;
 
 import java.util.Arrays;
@@ -6,173 +7,163 @@ import java.util.Objects;
 import ddf.minim.analysis.WindowFunction;
 import ddf.minim.analysis.HannWindow;
 
-import net.paulhertz.pixelaudio.curves.GestureMapping;
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 import processing.core.PVector;
 
 /**
  * High-level facade: play a gesture schedule using a {@link PAGranularInstrument}.
- *
- * Provides:
- *   playGestureAtSampleTime(schedule, texture, mappingSnapshot, startSampleTime)
- *   playGestureNow(schedule, texture, mappingSnapshot)
- *
- * Caches derived arrays for fast retriggering.
- */
+ */ 
 public final class PAGranularInstrumentDirector {
-
-    /**
-     * Optional hook: apply mappingSnapshot to the underlying audio source/signal.
-     * For example: granSignal.setMappingSnapshot(mappingSnapshot)
-     */
-    @FunctionalInterface
-    public interface MappingConsumer {
-        void accept(int[] mappingSnapshot);
-    }
-
-    private final PAGranularInstrument instrument;   
+    private final PAGranularInstrument instrument;
     private final float sampleRate;
-    private final GestureMapping mapping;
-    private final MappingConsumer mappingConsumer;
-    
 
-    // --- cache
+    // --- cache (offsets only)
     private int lastScheduleSize = -1;
     private float lastScheduleEndMs = Float.NaN;
     private GestureGranularTexture lastTexture = null;
-    private int lastMappingIdentity = 0; // identityHashCode of mapping snapshot
-
     private long[] cachedEventOffsetsSamples = new long[0];
-    private int[] cachedSourceIndices = new int[0]; // optional: per-event source index (if you need it)
-    
-    // Default grain window (grain-level envelope).
-    // Static is fine; Minim window functions are stateless in typical usage.
+
     private static final WindowFunction DEFAULT_GRAIN_WINDOW = new HannWindow();
 
     private static WindowFunction resolveGrainWindow(GestureGranularTexture texture) {
         if (texture == null) return DEFAULT_GRAIN_WINDOW;
-        WindowFunction wf = texture.grainWindow; // or texture.grainWindow() if you add accessor
+        WindowFunction wf = texture.grainWindow;
         return (wf != null) ? wf : DEFAULT_GRAIN_WINDOW;
     }
 
-
-    /**
-     * @param instrument already constructed and patched (or patch outside)
-     * @param mapping point->snapshot index mapping
-     * @param mappingConsumer optional hook to push mappingSnapshot into your gran signal/source
-     */
-    public PAGranularInstrumentDirector(PAGranularInstrument instrument,
-                                       GestureMapping mapping,
-                                       MappingConsumer mappingConsumer) {
+    public PAGranularInstrumentDirector(PAGranularInstrument instrument) {
         this.instrument = Objects.requireNonNull(instrument, "instrument");
-        this.sampleRate = instrument.getSampleRate(); // get sample rate from instrument's reference to AudioOutput
-        this.mapping = Objects.requireNonNull(mapping, "mapping");
-        this.mappingConsumer = mappingConsumer;
+        this.sampleRate = instrument.getSampleRate();
     }
 
-    /** Convenience: schedule relative to the instrument's current sample time. */
-    public void playGestureNow(PASource src,
-    		GestureSchedule schedule,
-    		GestureGranularTexture texture,
-    		int[] mappingSnapshot) {
-    	// long now = instrument.getSampleCursor(); // or instrument.nowSampleTime()
-    	long now = 0L;
-    	// Optional lead-in if you want safety from UI jitter:
-    	now += Math.max(0, (long)(0.005f * sampleRate)); // 5ms
-    	playGestureAtSampleTime(src, schedule, texture, mappingSnapshot, now);
+    public void playGestureNow(float[] monoBuf, GestureSchedule schedule, 
+		GestureGranularTexture texture, int[] startIndices) {
+        long now = instrument.getSampleCursor();
+        now += (long)(0.005f * sampleRate); // optional lead-in (once)
+        playGestureAtSampleTime(monoBuf, schedule, texture, startIndices, now);
     }
 
-    public void playGestureAtSampleTime(PASource src,
-    		GestureSchedule schedule,
-    		GestureGranularTexture texture,
-    		int[] mappingSnapshot,
-    		long startSampleTime) {
-    	if (schedule == null || texture == null) return;
-    	if (mappingSnapshot == null || mappingSnapshot.length == 0) return;
-    	
-        // Resolve grain window once (don’t do it per grain)
+    public void playGestureAtSampleTime(float[] monoBuf, GestureSchedule schedule,
+            GestureGranularTexture texture, int[] startIndices, long startSampleTime) {
+        if (monoBuf == null || monoBuf.length == 0) return;
+        if (schedule == null || texture == null) return;
+        if (startIndices == null || startIndices.length == 0) return;
+
         final WindowFunction grainWf = resolveGrainWindow(texture);
-
-    	// 0) Push mapping snapshot into the source/signal if needed (no copies)
-    	if (mappingConsumer != null) {
-    		mappingConsumer.accept(mappingSnapshot);
-    	}
 
         // 1) Transform schedule times (ms domain) according to texture
         GestureSchedule sched = applyTimeTransform(schedule, texture);
-
-        // 2) Build/reuse cached event sample offsets and optionally indices
-        ensureCache(sched, texture, mappingSnapshot);
-
-        // 3) Schedule events
-        scheduleEvents(src, sched, texture, grainWf, startSampleTime);
-    }
-
-    private void scheduleEvents(PASource src,
-    		GestureSchedule sched,
-    		GestureGranularTexture texture,
-    		WindowFunction wf,
-    		long startSampleTime) {
         final int n = sched.size();
         if (n <= 0) return;
+        if (startIndices.length < n) return; // or clamp n to min(n, startIndices.length)
 
+        // 2) Cache offsets
+        ensureCache(sched, texture);
+
+        // 3) Schedule Model-A events (Director creates sources)
+        scheduleEvents(monoBuf, startIndices, sched, texture, grainWf, null, startSampleTime);
+    }    
+    
+    // include a per-grain pan array
+    public void playGestureNow(float[] monoBuf, GestureSchedule schedule, 
+		GestureGranularTexture texture, int[] startIndices, float[] panValues) {
+        long now = instrument.getSampleCursor();
+        now += (long)(0.005f * sampleRate); // optional lead-in (once)
+        playGestureAtSampleTime(monoBuf, schedule, texture, startIndices, panValues, now);
+    }
+
+    // include a per-grain pan array
+    public void playGestureAtSampleTime(float[] monoBuf, GestureSchedule schedule,
+            GestureGranularTexture texture, int[] startIndices, float[] panValues, long startSampleTime) {
+        if (monoBuf == null || monoBuf.length == 0) return;
+        if (schedule == null || texture == null) return;
+        if (startIndices == null || startIndices.length == 0) return;
+
+        final WindowFunction grainWf = resolveGrainWindow(texture);
+
+        // 1) Transform schedule times (ms domain) according to texture
+        GestureSchedule sched = applyTimeTransform(schedule, texture);
+        final int n = sched.size();
+        if (n <= 0) return;
+        if (startIndices.length < n) return; // or clamp n to min(n, startIndices.length)
+
+        // 2) Cache offsets
+        ensureCache(sched, texture);
+
+        // 3) Schedule Model-A events (Director creates sources)
+        scheduleEvents(monoBuf, startIndices, sched, texture, grainWf, panValues, startSampleTime);
+    }
+
+    private void scheduleEvents(float[] monoBuf, int[] startIndices, GestureSchedule sched,
+            GestureGranularTexture texture, WindowFunction wf, float[] panValues, long startSampleTime) {
+        final int n = sched.size();
+        if (n <= 0) return;
         final int grainLen = Math.max(1, texture.grainLengthSamples);
-        WindowCache.INSTANCE.prewarm(wf, grainLen);
-        
-        // Choose cadence rule
+        final int hop = Math.max(1, texture.hopLengthSamples);
+
+        // semantics (Model A):
+        // - Each schedule event i becomes one *burst event* starting at:
+        //   - GESTURE: event time from sched.timesMs (after timeTransform), converted to samples
+        //   - FIXED:   event time = i * hop samples
+        // - Within each burst: grains are spaced by hop in time (timeHop) and scanned by hop in index (indexHop).
+        final int burstGrains = Math.max(1, texture.burstGrains);
+        final int timeHop = hop;
+        final int indexHop = hop;
+        final float pitchRatio = (texture.pitchRatio > 0f) ? texture.pitchRatio : 1.0f;
+		// prewarm window curve (avoid first-hit allocation)
+        if (wf != null && grainLen > 1) {
+            WindowCache.INSTANCE.prewarm(wf, grainLen);
+        }
         final boolean fixedHop = (texture.hopMode == GestureGranularTexture.HopMode.FIXED);
 
+		// step through the schedule, scheduling a burst event for each gesture event time
         for (int i = 0; i < n; i++) {
-            long tEvent = fixedHop
-                    ? (long)i * (long)Math.max(1, texture.hopLengthSamples)
-                    : cachedEventOffsetsSamples[i];
-
-            // burst grains: 1 == one grain per event
-            for (int g = 0; g < texture.burstGrains; g++) {
-                long intra = (texture.burstGrains <= 1) ? 0L : (long)g * (long)Math.max(1, texture.hopLengthSamples);
-                long when = startSampleTime + tEvent + intra;
-
-                // NOTE: this currently schedules "start a voice" only.
-                // If/when you extend ScheduledPlay to include per-grain start index, you can pass it here.
-                instrument.startAtSampleTime(
-                        // /*src*/ instrument.getDefaultSource(), // TODO: adapt to your PASource usage
-                		src,
-                        /*amp*/ texture.gainLinear,
-                        /*pan*/ texture.pan,
-                        /*env*/ texture.env,
-                        /*looping*/ texture.looping,
-                        /*startSample*/ when,
-                        /*window function*/ wf,
-                        /*number of samples in one grain*/ grainLen
-                );
+            final long tEvent = fixedHop ? (long)i * (long)hop : cachedEventOffsetsSamples[i];
+            final long when = startSampleTime + tEvent;
+            int idx = startIndices[i];
+            if (idx < 0) idx = 0;
+            if (idx >= monoBuf.length) idx = monoBuf.length - 1;
+            float pan = texture.pan;
+            if (panValues != null && panValues.length > i) {
+                pan = clampPan(panValues[i]);
             }
+			// create a burst granular source for this event
+            PASource src = new PABurstGranularSource(
+                    monoBuf,
+                    idx,
+                    grainLen,
+                    burstGrains,
+                    timeHop,
+                    indexHop,
+                    pitchRatio
+            );
+			// call PAGranularInstrument to schedule the event at the computed sample time
+            instrument.startAtSampleTime(
+                    src,
+                    texture.gainLinear,
+                    pan,
+                    texture.env,
+                    false,    // Model A: one-shot event/burst
+                    when,
+                    wf,
+                    grainLen
+            );
         }
     }
 
-    /**
-     * Ensures cachedEventOffsetsSamples[] is computed for the schedule+texture+mappingSnapshot combination.
-     * Offsets are relative to the gesture start (0 at first event time).
-     */
-    private void ensureCache(GestureSchedule sched,
-                             GestureGranularTexture texture,
-                             int[] mappingSnapshot) {
-
-        int ident = System.identityHashCode(mappingSnapshot);
+    private void ensureCache(GestureSchedule sched, GestureGranularTexture texture) {
         float endMs = (sched.timesMs.length > 0) ? sched.timesMs[sched.timesMs.length - 1] : 0f;
 
         boolean same =
                 lastScheduleSize == sched.size()
                 && Float.compare(lastScheduleEndMs, endMs) == 0
-                && lastTexture == texture // simple identity compare; you can replace with a hash/signature
-                && lastMappingIdentity == ident;
+                && lastTexture == texture;
 
         if (same) return;
 
-        // recompute offsets in samples
         int n = sched.size();
         if (cachedEventOffsetsSamples.length != n) {
             cachedEventOffsetsSamples = new long[n];
-            cachedSourceIndices = new int[n];
         }
 
         float t0 = (n > 0) ? sched.timesMs[0] : 0f;
@@ -180,17 +171,11 @@ public final class PAGranularInstrumentDirector {
             float relMs = sched.timesMs[i] - t0;
             if (relMs < 0f) relMs = 0f;
             cachedEventOffsetsSamples[i] = msToSamples(relMs, sampleRate);
-
-            // Optional: precompute a per-event mapping index (if useful later)
-            PVector p = sched.points.get(i);
-            int snapIdx = mapping.pointToSnapshotIndex(p, mappingSnapshot);
-            cachedSourceIndices[i] = snapIdx; // NOTE: this is snapshot-index, not sample index value
         }
 
         lastScheduleSize = n;
         lastScheduleEndMs = endMs;
         lastTexture = texture;
-        lastMappingIdentity = ident;
     }
 
     // --------------------------
@@ -329,4 +314,11 @@ public final class PAGranularInstrumentDirector {
     private static float lerp(float a, float b, float u) {
         return a + (b - a) * u;
     }
+    
+	private static float clampPan(float p) {
+		if (p < -1f) return -1f;
+		if (p >  1f) return  1f;
+		return p;
+	}
+
 }

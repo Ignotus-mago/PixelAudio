@@ -28,7 +28,7 @@ public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
     // Internal scheduled-play payload
     // ------------------------------------------------------------------------
-	// TODO include "final long srcSampleIndex;  // <-- the mapped read position" in ScheduledPlay
+	// TODO include "final long srcSampleIndex;  // <-- the mapped read position in ScheduledPlay
     private static final class ScheduledPlay {
         final PASource src;
         final ADSRParams env;

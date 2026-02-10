@@ -60,6 +60,7 @@ public class PAGranularVoice {
     private WindowFunction grainWindow; // may be null; source/director defaults
     private int grainLenSamples = 1024;
 
+    private boolean endTriggered = false;
 
 
     // Constructor
@@ -119,9 +120,11 @@ public class PAGranularVoice {
     	// this is the critical first step to open the PASource for audio processing
     	if (this.source != null) {
     		this.source.seekTo(0);
-    		// NEW: inform the source about grain shaping (if it supports it)
-    		// This requires adding a default method to PASource
-    		this.source.setGrainWindow(grainWindow, this.grainLenSamples);
+    		// Only push grain window config when explicitly provided.
+    		// This preserves legacy sources' internally-configured grainLength.
+    		if (grainWindow != null) {
+    			this.source.setGrainWindow(grainWindow, this.grainLenSamples);
+    		}    	
     	}
 
     	// Envelope setup (macro envelope over a gesture)
@@ -220,7 +223,23 @@ public class PAGranularVoice {
         long sourceLen = source.lengthSamples();
         if (looping && absSample >= sourceLen) {
             absSample = 0;
+            endTriggered = false;
             source.seekTo(0);
+            return;
+        }
+        
+        // non-looping end of source => release/stop the voice
+        if (!looping && absSample >= sourceLen) {
+            if (!endTriggered) {
+                endTriggered = true;
+                // If we have an ADSR, let it release naturally.
+                // If no ADSR, stop immediately.
+                if (envelope != null) {
+                    release();            // calls noteOff()
+                } else {
+                    stop();
+                }
+            }
         }
     }
     

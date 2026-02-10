@@ -244,6 +244,10 @@ public class PAGranularInstrument {
     public float getSampleRate() { return this.out.sampleRate(); }
 
     public PAGranularSampler getSampler() { return sampler; }
+    
+    public long getSampleCursor() {
+        return sampler.getCurrentSampleTime();
+    }
 
     // ------------------------------------------------------------------------
     // Lifecycle
