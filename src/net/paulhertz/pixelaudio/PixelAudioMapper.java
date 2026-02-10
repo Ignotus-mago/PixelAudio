@@ -22,6 +22,9 @@ package net.paulhertz.pixelaudio;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
+import processing.core.PVector;
 
 
 /**
@@ -548,6 +551,30 @@ public class PixelAudioMapper {
 	 */
 	public int lookupSample(int imagePos) {
 		return this.imageToSignalLUT[imagePos];
+	}
+	
+	public int[] lookupSampleArray(List<PVector> points) {
+		if (points == null || points.isEmpty()) 
+			throw new IllegalArgumentException("Points list must be non-null and non-empty");
+		int[] indices = new int[points.size()];
+		int i = 0;
+		for (PVector vec : points) {
+			indices[i++] = lookupSample((int)vec.x, (int)vec.y);
+		}
+		return indices;
+	}
+	
+	public int[] lookupSampleArray(List<PVector> points, int offset, int wrapLen) {
+		if (points == null || points.isEmpty()) 
+			throw new IllegalArgumentException("Points list must be non-null and non-empty");
+		int[] indices = new int[points.size()];
+		int i = 0;
+		for (PVector vec : points) {
+			// adjust Java remainder op % for negative offsets
+			int base = lookupSample((int)vec.x, (int)vec.y) + offset;
+			indices[i++] = ((base % wrapLen) + wrapLen) % wrapLen;
+		}
+		return indices;
 	}
 	
 	/**
