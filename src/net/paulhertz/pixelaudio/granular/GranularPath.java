@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ * TODO candidate for removal
+ * 
  * GranularPath
  *
  * A fixed sequence of GrainSpecs that describe how to traverse a source buffer.

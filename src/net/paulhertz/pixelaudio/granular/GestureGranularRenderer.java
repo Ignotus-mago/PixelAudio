@@ -9,6 +9,8 @@ import processing.core.PVector;
 import java.util.List;
 
 /**
+ * TODO candidate for removal
+ * 
  * GestureGranularRenderer
  *
  * Renders a GestureSchedule into audio by triggering a granular "burst"

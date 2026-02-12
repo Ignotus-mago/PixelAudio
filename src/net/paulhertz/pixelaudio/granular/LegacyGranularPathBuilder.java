@@ -12,6 +12,8 @@ import net.paulhertz.pixelaudio.curves.PAPathParametric;
 import processing.core.PVector;
 
 /**
+ * TODO Candidate for removal
+ * 
  * GranularPathBuilder
  *
  * Utility to convert a PACurveMaker path + PixelAudioMapper into a GranularPath.

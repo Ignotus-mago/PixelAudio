@@ -229,6 +229,73 @@ public final class GestureGranularConfig {
   public boolean isRawGestureTiming() {
     return timingMode == TimeTransform.RAW_GESTURE;
   }
+  
+  public GestureGranularParams toParams() {
+
+	  return GestureGranularParams.builder()
+
+			  // -------------------------
+			  // Core grain synthesis
+			  // -------------------------
+			  .grainLengthSamples(grainLengthSamples)
+			  .hopLengthSamples(hopLengthSamples)
+			  .burstGrains(burstGrains)
+			  .autoBurstGainComp(autoBurstGainComp)
+
+			  // -------------------------
+			  // Gain / pitch
+			  // -------------------------
+			  .gainLinear(gainLinear())          // convert dB → linear once
+			  .pitchRatio(pitchRatio())          // convert semitones → ratio once
+			  .pan(0f)                           // default pan (can be overridden per-grain)
+
+			  // -------------------------
+			  // Envelope / looping
+			  // -------------------------
+			  .env(env)
+			  .looping(false)                    // granular bursts are one-shot by default
+
+			  // -------------------------
+			  // Hop semantics
+			  // -------------------------
+			  .hopMode(
+					  (hopMode == HopMode.GESTURE)
+					  ? GestureGranularParams.HopMode.GESTURE
+							  : GestureGranularParams.HopMode.FIXED
+					  )
+
+			  // -------------------------
+			  // Time transform
+			  // -------------------------
+			  .timeTransform(
+					  switch (timingMode) {
+					  case RAW_GESTURE      -> GestureGranularParams.TimeTransform.RAW_GESTURE;
+					  case RESAMPLED_COUNT  -> GestureGranularParams.TimeTransform.RESAMPLED_COUNT;
+					  case DURATION_SCALED  -> GestureGranularParams.TimeTransform.DURATION_SCALED;
+					  case WARPED           -> GestureGranularParams.TimeTransform.WARPED;
+					  }
+					  )
+			  .targetCount(resampleCount)
+			  .targetDurationMs(targetDurationMs)
+			  .warpShape(
+					  switch (warpShape) {
+					  case LINEAR -> GestureGranularParams.WarpShape.LINEAR;
+					  case EXP    -> GestureGranularParams.WarpShape.EXP;
+					  case SQRT   -> GestureGranularParams.WarpShape.SQRT;
+					  case CUSTOM -> GestureGranularParams.WarpShape.CUSTOM;
+					  }
+					  )
+			  .warpExponent(warpExponent)
+
+			  // -------------------------
+			  // Grain window (optional)
+			  // -------------------------
+			  .grainWindow(null) // or pass a default if you store one in config
+
+			  .build();
+  }
+
+  
 
   @Override
   public String toString() {

@@ -176,4 +176,24 @@ public final class GestureGranularTexture {
     private static float clampPan(float p) {
         return (p < -1f) ? -1f : (p > 1f ? 1f : p);
     }
+    
+    /*
+    public static GestureGranularTexture fromConfig(GestureGranularConfig cfg) {
+        if (cfg == null) throw new IllegalArgumentException("cfg must not be null");
+        return GestureGranularTexture.builder()
+                .grainLengthSamples(cfg.grainLengthSamples)
+                .hopLengthSamples(cfg.hopLengthSamples)
+                .burstGrains(cfg.burstGrains)
+                .gainLinear(cfg.gainLinear())
+                // .pan(cfg.pan)               // if present; otherwise omit
+                .pitchRatio(cfg.pitchRatio())
+                .env(cfg.env)
+                // .looping(cfg.)
+                .hopMode(cfg.hopMode)       // if present; else omit
+                .build();
+    }
+    */
+
+    
+    
 }

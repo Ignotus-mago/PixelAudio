@@ -4,6 +4,9 @@ import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
+ * TODO Candidate for removal
+ * May still prove useful
+ * 
  * IndexGranularSource
  *
  * "Standard" linear granular source that:
