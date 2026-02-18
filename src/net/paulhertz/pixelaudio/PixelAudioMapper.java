@@ -188,8 +188,8 @@ import processing.core.PVector;
  * <p>
  * Standard operations we can perform with the signal array:</p>
  * <pre>
- *   shiftLeft()		an array rotation where index values decrease and wrap around at the beginning
- *   shiftRight()		an array rotation where index values increase and wrap around at the end
+ *   shiftLeft()    an array rotation where array values move left, arr[0] = arr[1], arr[1] = arr[2] ... arr[n-1] = arr[0], etc.
+ *   shiftRight()   an array rotation array values move right, arr[0] = arr[n-1], arr[1] = arr[0] ... arr[n-1] = arr[n - 2], etc.
  * </pre><p>
  * Shifting has proved so useful for animation that I am including it in the class. The shift methods also demonstrate
  * how to update the signal and pixel arrays. The <code>WaveSynth</code> class provides other methods for animation.
@@ -522,85 +522,162 @@ public class PixelAudioMapper {
 	}	
 	
 
-	// ------------- PIXEL AND SAMPLE INDEX LOOKUP ------------- //
+	// ------------------------------------------------------------
+	// Utility
+	// ------------------------------------------------------------
 
-	/* 
-	 * Note that these methods are not returning pixel or sample values, but index values.
-	 * Given an index or coordinate pair, they use the lookup tables imageToSignalLUT 
-	 * and signalToImageLUT to obtain the corresponding index in the signal or image array.
-	 */
-	
+	/** Wrap idx into [0, n). Handles negative idx too. */
+	public static int wrap(int idx, int n) {
+	    if (n <= 0) return 0;
+	    idx %= n;
+	    if (idx < 0) idx += n;
+	    return idx;
+	}
+
+	// ------------------------------------------------------------
+	// Canonical lookup (NO shift)
+	// ------------------------------------------------------------
+
 	/**
-	 * Given a coordinate pair (x,y) in an image, returns its index in a signal path
-	 * over the image using the lookup table imageToSignalLUT.
-	 * 
-	 * @param x
-	 * @param y
-	 * @return     index into signal array
+	 * Given image coordinates (x,y), returns the corresponding signal-path index
+	 * using imageToSignalLUT. Returns an index in [0, getSize()).
 	 */
-	public int lookupSample(int x, int y) {
-		return this.imageToSignalLUT[x + y * this.width];
-	}
-	
-	/**
-	 * Given an index imagePos into the pixel array of an image, returns its index in a signal path
-	 * over the image using the lookup table imageToSignalLUT.
-	 * 
-	 * @param imagePos
-	 * @return            index into signal array
-	 */
-	public int lookupSample(int imagePos) {
-		return this.imageToSignalLUT[imagePos];
-	}
-	
-	public int[] lookupSampleArray(List<PVector> points) {
-		if (points == null || points.isEmpty()) 
-			throw new IllegalArgumentException("Points list must be non-null and non-empty");
-		int[] indices = new int[points.size()];
-		int i = 0;
-		for (PVector vec : points) {
-			indices[i++] = lookupSample((int)vec.x, (int)vec.y);
-		}
-		return indices;
-	}
-	
-	public int[] lookupSampleArray(List<PVector> points, int offset, int wrapLen) {
-		if (points == null || points.isEmpty()) 
-			throw new IllegalArgumentException("Points list must be non-null and non-empty");
-		int[] indices = new int[points.size()];
-		int i = 0;
-		for (PVector vec : points) {
-			// adjust Java remainder op % for negative offsets
-			int base = lookupSample((int)vec.x, (int)vec.y) + offset;
-			indices[i++] = ((base % wrapLen) + wrapLen) % wrapLen;
-		}
-		return indices;
-	}
-	
-	/**
-	 * Given an index into a signal array mapped to an image, returns the corresponding index into 
-	 * the image pixel array using the lookup table signalToImageLUT.
-	 * 
-	 * @param signalPos
-	 * @return
-	 */
-	public int lookupPixel(int signalPos) {
-		return this.signalToImageLUT[signalPos];
+	public int lookupSignalPos(int x, int y) {
+	    // (Optional safety, if you want)
+	    // if (x < 0 || x >= width || y < 0 || y >= height) throw new IndexOutOfBoundsException(...);
+	    return this.imageToSignalLUT[x + y * this.width];
 	}
 
 	/**
-	 * Given an index into a signal array mapped to an image, returns the pixel coordinates (x,y)
-	 * in the image using the lookup table signalToImageLUT.
-	 * 
-	 * @param signalPos
-	 * @return             an array of two coordinates {x, y}
+	 * Given imagePos (index into img.pixels), returns the corresponding signal-path index
+	 * using imageToSignalLUT. Returns an index in [0, getSize()).
 	 */
-	public int[] lookupCoordinate(int signalPos) {
-		int imagePos = this.signalToImageLUT[signalPos];
-		int x =  imagePos % this.width;
-		int y = imagePos / this.width;
-		return new int[] {x, y};
+	public int lookupSignalPos(int imagePos) {
+	    return this.imageToSignalLUT[imagePos];
 	}
+
+	/**
+	 * Given a list of image-space points (x,y), returns corresponding signal-path indices.
+	 */
+	public int[] lookupSignalPosArray(List<PVector> points) {
+	    if (points == null || points.isEmpty())
+	        throw new IllegalArgumentException("Points list must be non-null and non-empty");
+
+	    int[] indices = new int[points.size()];
+	    int i = 0;
+	    for (PVector vec : points) {
+	        indices[i++] = lookupSignalPos((int) vec.x, (int) vec.y);
+	    }
+	    return indices;
+	}
+
+	/**
+	 * Same as lookupSignalPosArray(points), but also applies a caller-provided offset and
+	 * wraps to wrapLen (often wrapLen == getSize()).
+	 *
+	 * This method is intentionally "application-ish" (you already had it) and does NOT
+	 * assume wrapLen == getSize().
+	 */
+	public int[] lookupSignalPosArray(List<PVector> points, int offset, int wrapLen) {
+	    if (points == null || points.isEmpty())
+	        throw new IllegalArgumentException("Points list must be non-null and non-empty");
+	    if (wrapLen <= 0)
+	        throw new IllegalArgumentException("wrapLen must be > 0");
+
+	    int[] indices = new int[points.size()];
+	    int i = 0;
+	    for (PVector vec : points) {
+	        int base = lookupSignalPos((int) vec.x, (int) vec.y) + offset;
+	        indices[i++] = wrap(base, wrapLen);
+	    }
+	    return indices;
+	}
+
+	/**
+	 * Given a signal-path index (NOT a sample value), returns the corresponding imagePos
+	 * using signalToImageLUT. Expects signalPos in [0, getSize()).
+	 */
+	public int lookupImagePos(int signalPos) {
+	    return this.signalToImageLUT[signalPos];
+	}
+
+	/**
+	 * Given a signal-path index (NOT a sample value), returns image coordinates (x,y).
+	 */
+	public int[] lookupImageCoord(int signalPos) {
+	    int imagePos = this.signalToImageLUT[signalPos];
+	    int x = imagePos % this.width;
+	    int y = imagePos / this.width;
+	    return new int[] { x, y };
+	}
+
+	// ------------------------------------------------------------
+	// Shifted lookup (signal-path rotation by totalShift)
+	// ------------------------------------------------------------
+
+	/**
+	 * Display pixel (x,y) -> BUFFER signal index, assuming the display was generated
+	 * by reading samples at (pathIndex + totalShift).
+	 *
+	 * That is: display at path position i shows sample index wrap(i + totalShift, N).
+	 *
+	 * Therefore click inversion is: bufferIndex = wrap(displayPathIndex + totalShift, N).
+	 */
+	public int lookupSignalPosShifted(int x, int y, int totalShift) {
+	    final int n = getSize();
+	    final int dispPathIndex = lookupSignalPos(x, y);            // i
+	    return wrap(dispPathIndex + totalShift, n);                 // i + shift
+	}
+
+	public int lookupSignalPosShifted(int imagePos, int totalShift) {
+	    final int n = getSize();
+	    final int dispPathIndex = lookupSignalPos(imagePos);
+	    return wrap(dispPathIndex + totalShift, n);
+	}
+
+	public int[] lookupSignalPosArrayShifted(List<PVector> points, int totalShift) {
+	    int[] disp = lookupSignalPosArray(points);                  // path indices i
+	    final int n = getSize();
+	    final int s = wrap(totalShift, n);
+	    for (int i = 0; i < disp.length; i++) {
+	        disp[i] = wrap(disp[i] + s, n);
+	    }
+	    return disp;
+	}
+
+	/**
+	 * Shifted version of lookupSignalPosArray(points, offset, wrapLen).
+	 * Preserves your existing offset/wrapLen semantics, then applies totalShift
+	 * as an additional rotation along the path, wrapping in the same wrapLen.
+	 */
+	public int[] lookupSignalPosArrayShifted(List<PVector> points, int offset, int wrapLen, int totalShift) {
+	    int[] disp = lookupSignalPosArray(points, offset, wrapLen);
+	    final int s = wrap(totalShift, wrapLen);
+	    for (int i = 0; i < disp.length; i++) {
+	        disp[i] = wrap(disp[i] + s, wrapLen);
+	    }
+	    return disp;
+	}
+
+	/**
+	 * BUFFER signal index -> display imagePos, inverse of lookupSignalPosShifted(...).
+	 *
+	 * Since display uses sampleIndex = wrap(pathIndex + shift),
+	 * the sample at BUFFER index k appears at pathIndex wrap(k - shift).
+	 */
+	public int lookupImagePosShifted(int signalPos, int totalShift) {
+	    final int n = getSize();
+	    final int dispPathIndex = wrap(signalPos - totalShift, n);
+	    return lookupImagePos(dispPathIndex);
+	}
+
+	public int[] lookupImageCoordShifted(int signalPos, int totalShift) {
+	    int imagePos = lookupImagePosShifted(signalPos, totalShift);
+	    int x = imagePos % this.width;
+	    int y = imagePos / this.width;
+	    return new int[] { x, y };
+	}
+
 
 
 	//------------- MAPPING -------------//
@@ -672,11 +749,29 @@ public class PixelAudioMapper {
 	 * @throw IllegalArgumentException if sig.length != img.length
 	 */
 	public int[] mapSigToImg(float[] sig, int[] img, ChannelNames toChannel) {
-		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
-		if (sig.length != this.getSize()) throw new IllegalArgumentException("sig and img array lengths must equal mapper.getSize()");
-		return PixelAudioMapper.pushAudioToChannel(sig, img, this.signalToImageLUT, toChannel);    // call our utility method with toChannel
+	    if (sig == null) throw new IllegalArgumentException("sig cannot be null");
+	    if (img == null) throw new IllegalArgumentException("img cannot be null");
+	    if (sig.length != img.length)
+	        throw new IllegalArgumentException("sig and img arrays must be the same size");
+	    if (sig.length != this.getSize())
+	        throw new IllegalArgumentException("sig and img array lengths must equal mapper.getSize()");
+	    return PixelAudioMapper.pushAudioToChannel(sig, img, this.signalToImageLUT, toChannel);
 	}
 
+	/**
+	 * Shifted version: rotates along the signal path by totalShift without rotating
+	 * the audio buffer or raster pixel array.
+	 */
+	public int[] mapSigToImgShifted(float[] sig, int[] img, ChannelNames toChannel, int totalShift) {
+	    if (sig == null) throw new IllegalArgumentException("sig cannot be null");
+	    if (img == null) throw new IllegalArgumentException("img cannot be null");
+	    if (sig.length != img.length)
+	        throw new IllegalArgumentException("sig and img arrays must be the same size");
+	    if (sig.length != this.getSize())
+	        throw new IllegalArgumentException("sig and img array lengths must equal mapper.getSize()");
+	    return PixelAudioMapper.pushAudioToChannelShifted(sig, img, this.signalToImageLUT, toChannel, totalShift);
+	}	
+	
 	/**
 	 * Map current image pixel values to the signal, updating the signal array.
 	 * There are several ways to derive an audio value from the image: we use
@@ -713,7 +808,18 @@ public class PixelAudioMapper {
 		return PixelAudioMapper.pullPixelAsAudio(img, sig, this.signalToImageLUT, fromChannel, hsbPixel);
 	 }
 	
-	
+	public float[] mapImgToSigShifted(int[] img, float[] sig, int totalShift) {
+	    if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
+	    if (sig.length != this.getSize()) throw new IllegalArgumentException("sig and img array lengths must equal mapper.getSize()");
+	    float[] hsbPixel = new float[3];
+	    return PixelAudioMapper.pullPixelAsAudioShifted(img, sig, this.signalToImageLUT, ChannelNames.L, hsbPixel, totalShift);
+	}
+
+	public float[] mapImgToSigShifted(int[] img, float[] sig, ChannelNames fromChannel, int totalShift) {
+	    if (img.length != sig.length) throw new IllegalArgumentException("img and sig arrays must be the same size");
+	    float[] hsbPixel = new float[3];
+	    return PixelAudioMapper.pullPixelAsAudioShifted(img, sig, this.signalToImageLUT, fromChannel, hsbPixel, totalShift);
+	}	
 
 	/**
 	 * Writes transcoded pixel values directly to the signal, without using a LUT to redirect.
@@ -761,6 +867,52 @@ public class PixelAudioMapper {
 		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
 		 PixelAudioMapper.pushAudioToPixel(sig, img, toChannel);
 	 }
+
+		
+	/**
+	 * Copies pixels from srcPixels to dstPixels along the signal path with a path shift.
+	 * At path index i, dst gets src from path index wrap(i + totalShift, N). 
+	 * If used as an animation repeatedly adding a short shift > 0, each destination path position i 
+	 * reads from a later path position i+shift. Visually, content appears to move “backward” 
+	 * along the path (because you’re pulling future content into current positions). 
+	 *
+	 * srcPixels and dstPixels are raster-order arrays (e.g. PImage.pixels).
+	 */
+	public void copyPixelsAlongPathShifted(int[] srcPixels, int[] dstPixels, int totalShift) {
+	    if (srcPixels == null || dstPixels == null)
+	        throw new IllegalArgumentException("srcPixels and dstPixels must be non-null");
+	    int n = getSize();
+	    if (srcPixels.length != n || dstPixels.length != n)
+	        throw new IllegalArgumentException("srcPixels and dstPixels must have length mapper.getSize()");
+	    final int shift = wrap(totalShift, n);
+	    final int[] lut = this.signalToImageLUT;
+	    for (int i = 0; i < n; i++) {
+	        int si = i + shift;
+	        if (si >= n) si -= n;
+	        dstPixels[lut[i]] = srcPixels[lut[si]];
+	    }
+	}
+
+	
+	public void copyPixelsAlongPathShifted(int[] srcPixels, int[] dstPixels, int signalPos, int length, int totalShift) {
+	    if (srcPixels == null || dstPixels == null)
+	        throw new IllegalArgumentException("srcPixels and dstPixels must be non-null");
+	    int n = getSize();
+	    if (srcPixels.length != n || dstPixels.length != n)
+	        throw new IllegalArgumentException("srcPixels and dstPixels must have length mapper.getSize()");
+	    if (signalPos < 0 || signalPos >= n) throw new IndexOutOfBoundsException("signalPos out of bounds");
+	    if (length < 0 || signalPos + length > n) throw new IllegalArgumentException("Invalid length");
+	    final int shift = wrap(totalShift, n);
+	    final int[] lut = this.signalToImageLUT;
+	    for (int j = 0; j < length; j++) {
+	        int i = signalPos + j;
+	        int si = i + shift;
+	        if (si >= n) si -= n;
+	        dstPixels[lut[i]] = srcPixels[lut[si]];
+	    }
+	}
+
+	
 
 	
 	//------------- SUBARRAYS -------------//
@@ -1631,6 +1783,30 @@ public class PixelAudioMapper {
 		return samples;
 	}
 		
+	public static float[] pullPixelAsAudioShifted(
+			int[] rgbPixels, float[] samples, int[] lut, ChannelNames chan,
+			float[] hsbPixel, int totalShift) {
+		if (lut == null || lut.length != rgbPixels.length) {
+			throw new IllegalArgumentException(
+					"Input array lut cannot be null and must be the same length as rgbPixels"
+					);
+		}
+		if (samples == null || samples.length != rgbPixels.length) {
+			samples = new float[rgbPixels.length];
+		}
+
+		final int n = samples.length;
+		final int shift = PixelAudioMapper.wrap(totalShift, n);
+
+		for (int i = 0; i < n; i++) {
+			int dispPathIndex = i - shift;
+			if (dispPathIndex < 0) dispPathIndex += n; // fast wrap; shift in [0,n)
+			samples[i] = extractColorAsAudio(rgbPixels[lut[dispPathIndex]], chan, hsbPixel);
+		}
+		return samples;
+	}
+
+	
 	public static int[] pullAudioAsColor(float[] samples, int[] rgbPixels, int signalPos, int length) {
 		if (samples == null)
 			throw new IllegalArgumentException("samples array cannot be null");
@@ -1716,19 +1892,60 @@ public class PixelAudioMapper {
 	 * @return			   rgbPixels with selected channel values modified by the buf values
 	 */
 	public static int[] pushAudioToChannel(float[] samples, int[] rgbPixels, int[] lut, ChannelNames chan) {
-	   	if (lut == null || lut.length != samples.length) {
-	    	throw new IllegalArgumentException("Input array lut cannot be null and must be the same length as signal.");
-    	}
-		// if rgbPixels is null or the wrong size, create an array and fill it with middle gray color
-		if (rgbPixels == null || rgbPixels.length != samples.length) {
-			rgbPixels = new int[samples.length];
-			Arrays.fill(rgbPixels, PixelAudioMapper.composeColor(127, 127, 127));
-		}
-		float[] hsbPixel = new float[3];
-		for (int i = 0; i < rgbPixels.length; i++) {
-			rgbPixels[lut[i]] = PixelAudioMapper.applyAudioToColor(samples[i], rgbPixels[lut[i]], chan, hsbPixel);
-		}
-		return rgbPixels;
+	    if (samples == null) throw new IllegalArgumentException("samples cannot be null");
+	    if (lut == null || lut.length != samples.length) {
+	        throw new IllegalArgumentException("Input array lut cannot be null and must be the same length as signal.");
+	    }
+
+	    final int n = samples.length;
+
+	    // if rgbPixels is null or the wrong size, create an array and fill it with middle gray color
+	    if (rgbPixels == null || rgbPixels.length != n) {
+	        rgbPixels = new int[n];
+	        Arrays.fill(rgbPixels, PixelAudioMapper.composeColor(127, 127, 127));
+	    }
+
+	    float[] hsbPixel = new float[3];
+
+	    // Canonical mapping: path position i reads samples[i] and writes to pixel lut[i]
+	    for (int i = 0; i < n; i++) {
+	        int px = lut[i];
+	        rgbPixels[px] = PixelAudioMapper.applyAudioToColor(samples[i], rgbPixels[px], chan, hsbPixel);
+	    }
+	    return rgbPixels;
+	}
+
+	/**
+	 * Shifted mapping: path position i reads samples[wrap(i + totalShift, n)]
+	 * and writes to pixel lut[i]. This implements "rotation along the signal path"
+	 * without rotating arrays.
+	 */
+	public static int[] pushAudioToChannelShifted(
+	    float[] samples, int[] rgbPixels, int[] lut, ChannelNames chan, int totalShift
+	) {
+	    if (samples == null) throw new IllegalArgumentException("samples cannot be null");
+	    if (lut == null || lut.length != samples.length) {
+	        throw new IllegalArgumentException("Input array lut cannot be null and must be the same length as signal.");
+	    }
+
+	    final int n = samples.length;
+	    final int shift = PixelAudioMapper.wrap(totalShift, n);
+
+	    if (rgbPixels == null || rgbPixels.length != n) {
+	        rgbPixels = new int[n];
+	        Arrays.fill(rgbPixels, PixelAudioMapper.composeColor(127, 127, 127));
+	    }
+
+	    float[] hsbPixel = new float[3];
+
+	    // Shifted mapping: samples are read from i+shift; pixels are written to lut[i]
+	    for (int i = 0; i < n; i++) {
+	        int si = i + shift;
+	        if (si >= n) si -= n; // fast wrap for common case; shift already in [0,n)
+	        int px = lut[i];
+	        rgbPixels[px] = PixelAudioMapper.applyAudioToColor(samples[si], rgbPixels[px], chan, hsbPixel);
+	    }
+	    return rgbPixels;
 	}
 	
 	/**
@@ -1799,7 +2016,7 @@ public class PixelAudioMapper {
 	// ------------- ARRAY ROTATION ------------- //
 
 	/**
-	 * Rotates an array of ints left by d values. Uses efficient "Three Rotation" algorithm.
+	 * Rotates an array of ints left by d values. Uses efficient "Three Reverse" algorithm.
 	 *
 	 * @param arr array of ints to rotate
 	 * @param d   number of elements to shift, positive for shift left, negative for shift right
