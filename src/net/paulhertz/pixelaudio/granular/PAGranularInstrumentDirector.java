@@ -263,7 +263,6 @@ public final class PAGranularInstrumentDirector {
         final boolean doResample =
                 targetCount > 1
                 && targetCount != schedule.size();
-
         if (doResample) {
             schedule = resampleToCount(schedule, targetCount);
         }
@@ -274,7 +273,6 @@ public final class PAGranularInstrumentDirector {
                 targetDur > 0f
                 && schedule.size() > 1
                 && schedule.timesMs[schedule.size() - 1] > 0f;
-
         if (doScale) {
             schedule = scaleToDuration(schedule, targetDur);
         }
@@ -286,7 +284,6 @@ public final class PAGranularInstrumentDirector {
                 && shape != GestureGranularParams.WarpShape.LINEAR
                 && schedule.size() > 1
                 && schedule.timesMs[schedule.size() - 1] > 0f;
-
         if (doWarp) {
             schedule = warpScheduleTimesMs(schedule, shape, ggParams.warpExponent);
         }

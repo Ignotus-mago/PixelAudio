@@ -79,7 +79,7 @@ public final class GestureGranularRenderer {
 		public int sampleIndex(PVector p) {
 			int x = Math.round(p.x);
 			int y = Math.round(p.y);
-			int base = mapper.lookupSample(x, y);
+			int base = mapper.lookupSignalPos(x, y);
 			int idx = base + totalShift;
 			if (mapSize > 0) {
 				idx %= mapSize;

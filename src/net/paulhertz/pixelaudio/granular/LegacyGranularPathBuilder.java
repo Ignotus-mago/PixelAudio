@@ -65,7 +65,7 @@ public final class LegacyGranularPathBuilder {
 			int x = Math.round(p.x);
 			int y = Math.round(p.y);
 
-			int sampleIndex = mapper.lookupSample(x, y);
+			int sampleIndex = mapper.lookupSignalPos(x, y);
 
 			float pan = mapXToPan(p.x, canvasWidth);
 			float gain = 1.0f;      // placeholder; later we can map from y or speed
@@ -122,7 +122,7 @@ public final class LegacyGranularPathBuilder {
 			x = Math.min(Math.max(0, x), canvasWidth - 1);
 			y = Math.min(Math.max(0, y), canvasHeight - 1);
 			// get the audio sample index from the mapper
-			int sampleIndex = mapper.lookupSample(x, y);
+			int sampleIndex = mapper.lookupSignalPos(x, y);
 
 			float pan = mapXToPan(p.x, canvasWidth);
 			float gain = 1.0f;      // placeholder; later we can map from y or speed
@@ -179,7 +179,7 @@ public final class LegacyGranularPathBuilder {
 			x = Math.min(Math.max(0, x), canvasWidth - 1);
 			y = Math.min(Math.max(0, y), canvasHeight - 1);
 			// get the audio sample index from the mapper
-			int sampleIndex = mapper.lookupSample(x, y);
+			int sampleIndex = mapper.lookupSignalPos(x, y);
 
 			float pan = mapXToPan(p.x, canvasWidth);
 			float gain = 1.0f;      // placeholder; later we can map from y or speed
@@ -257,7 +257,7 @@ public final class LegacyGranularPathBuilder {
 			x = Math.min(Math.max(0, x), canvasWidth - 1);
 			y = Math.min(Math.max(0, y), canvasHeight - 1);
 
-			int sampleIndex = mapper.lookupSample(x, y);
+			int sampleIndex = mapper.lookupSignalPos(x, y);
 
 			float pan = mapXToPan(p.x, canvasWidth);
 			float gain = 1.0f;      // hook for y/speed mapping later
@@ -399,7 +399,7 @@ public final class LegacyGranularPathBuilder {
 
             int x = clampToCanvas(Math.round(p.x), canvasWidth);
             int y = clampToCanvas(Math.round(p.y), canvasHeight);
-            int sampleIndex = mapper.lookupSample(x, y);
+            int sampleIndex = mapper.lookupSignalPos(x, y);
 
             float pan = mapXToPan(p.x, canvasWidth);
             float gain = 1.0f;
@@ -463,7 +463,7 @@ public final class LegacyGranularPathBuilder {
 
     		int x = clampToCanvas(Math.round(p.x), canvasWidth);
     		int y = clampToCanvas(Math.round(p.y), canvasHeight);
-    		int sampleIndex = mapper.lookupSample(x, y);
+    		int sampleIndex = mapper.lookupSignalPos(x, y);
 
     		float pan = mapXToPan(p.x, canvasWidth);
     		float gain = 1.0f;
@@ -521,7 +521,7 @@ public final class LegacyGranularPathBuilder {
 
     		int x = clampToCanvas(Math.round(p.x), canvasWidth);
     		int y = clampToCanvas(Math.round(p.y), canvasHeight);
-    		int sampleIndex = mapper.lookupSample(x, y);
+    		int sampleIndex = mapper.lookupSignalPos(x, y);
 
     		float pan = mapXToPan(p.x, canvasWidth);
     		float gain = 1.0f;
@@ -561,7 +561,7 @@ public final class LegacyGranularPathBuilder {
  
         x = clampToCanvas(x, canvasWidth);
         y = clampToCanvas(y, canvasHeight);
-    	int startSampleIndex = mapper.lookupSample(x, y);
+    	int startSampleIndex = mapper.lookupSignalPos(x, y);
     	int maxSampleIndex = mapper.getSize() - grainLength;    	
         if (maxSampleIndex <= 0 || numGrains <= 0) return new GranularPath(grains);
 
@@ -642,7 +642,7 @@ public final class LegacyGranularPathBuilder {
         x = clampToCanvas(x, canvasWidth);
         y = clampToCanvas(y, canvasHeight);
 
-        int startSampleIndex = mapper.lookupSample(x, y);
+        int startSampleIndex = mapper.lookupSignalPos(x, y);
         int maxSampleIndex   = mapper.getSize() - grainLength;
         if (maxSampleIndex <= 0) {
             return new GranularPath(grains);
@@ -743,7 +743,7 @@ public final class LegacyGranularPathBuilder {
 
     	    int x = clampToCanvas(Math.round(s.x), canvasWidth);
     	    int y = clampToCanvas(Math.round(s.y), canvasHeight);
-    	    int sampleIndex = mapper.lookupSample(x, y);
+    	    int sampleIndex = mapper.lookupSignalPos(x, y);
 
     	    float pan = mapXToPan(s.x, canvasWidth);
     	    float gain = 1.0f;

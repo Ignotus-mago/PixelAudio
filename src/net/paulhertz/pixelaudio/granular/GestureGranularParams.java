@@ -72,6 +72,7 @@ public final class GestureGranularParams {
         this.env        = b.env;
         this.looping    = b.looping;
 
+        this.timingMode       = TimeTransform.RAW_GESTURE;
         this.timeTransform    = b.timeTransform;
         this.targetCount      = b.targetCount;
         this.targetDurationMs = b.targetDurationMs;
