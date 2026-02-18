@@ -7,6 +7,8 @@ import ddf.minim.analysis.RectangularWindow;
 import ddf.minim.analysis.WindowFunction;
 
 /**
+ * TODO Candidate for removal
+ * 
  * GranularSettings
  *
  * Common configuration for granular processing, whether pre-rendered

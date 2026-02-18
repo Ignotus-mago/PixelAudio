@@ -472,8 +472,8 @@ public class PACurveUtility {
 			int steps, float[] anchorTimesMs, boolean arcLengthTime) {
 		// there is one more anchor than the number of segments
 		int segCount = shape.size();
-		System.out.println("-- segCount = "+ segCount);
-		System.out.println("-- anchorTimesMs.length = "+ anchorTimesMs.length);
+		// System.out.println("-- segCount = "+ segCount);
+		// System.out.println("-- anchorTimesMs.length = "+ anchorTimesMs.length);
 		int anchorCount = segCount + 1;
 		if (anchorTimesMs == null || anchorTimesMs.length != anchorCount) {
 			throw new IllegalArgumentException(

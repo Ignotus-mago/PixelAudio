@@ -1,7 +1,6 @@
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.analysis.WindowFunction;
-import net.paulhertz.pixelaudio.voices.PASource;
 import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
@@ -21,7 +20,7 @@ import net.paulhertz.pixelaudio.voices.PitchPolicy;
  *  - Grain k starts at: noteStart + k * hopSamples, lasts grainLengthSamples.
  *
  * This class ignores per-grain pan for now; it writes mono into both outL and outR.
- * Pan and envelope can be applied by PASamplerVoice / PASamplerInstrument.
+ * 
  */
 public class BasicIndexGranularSource implements PASource {
 

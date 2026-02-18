@@ -1,14 +1,16 @@
 package net.paulhertz.pixelaudio.granular;
 
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
+
 import net.paulhertz.pixelaudio.voices.ADSRParams;
-import net.paulhertz.pixelaudio.voices.PASource;
 import net.paulhertz.pixelaudio.PixelAudioMapper;
 import processing.core.PVector;
 
 import java.util.List;
 
 /**
+ * TODO candidate for removal
+ * 
  * GestureGranularRenderer
  *
  * Renders a GestureSchedule into audio by triggering a granular "burst"
@@ -77,7 +79,7 @@ public final class GestureGranularRenderer {
 		public int sampleIndex(PVector p) {
 			int x = Math.round(p.x);
 			int y = Math.round(p.y);
-			int base = mapper.lookupSample(x, y);
+			int base = mapper.lookupSignalPos(x, y);
 			int idx = base + totalShift;
 			if (mapSize > 0) {
 				idx %= mapSize;

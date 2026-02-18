@@ -3,6 +3,9 @@ package net.paulhertz.pixelaudio.granular;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * TODO Candidate for removal
+ */
 public final class GranularPaths {
 
 	public enum EdgeMode { WRAP, CLAMP, BOUNCE }

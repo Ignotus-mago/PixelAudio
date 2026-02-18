@@ -3,7 +3,8 @@ package net.paulhertz.pixelaudio.granular;
 import ddf.minim.UGen;
 import net.paulhertz.pixelaudio.voices.ADSRParams;
 import net.paulhertz.pixelaudio.voices.SimpleADSR;
-import net.paulhertz.pixelaudio.voices.PASource;
+import ddf.minim.analysis.WindowFunction;
+
 
 /**
  * PAGranularVoice
@@ -54,6 +55,12 @@ public class PAGranularVoice {
     // pan gain
     private float panGainL = 1f;
     private float panGainR = 1f;
+    
+    // granular window function
+    private WindowFunction grainWindow; // may be null; source/director defaults
+    private int grainLenSamples = 1024;
+
+    private boolean endTriggered = false;
 
 
     // Constructor
@@ -73,42 +80,66 @@ public class PAGranularVoice {
     // ------------------------------------------------------------------------
     // Activation
     // ------------------------------------------------------------------------
-    public void activate(PASource source, ADSRParams envParams, float gain, float pan, boolean looping) {
+    
+    public void activate(PASource source,
+    		ADSRParams envParams,
+    		float gain,
+    		float pan,
+    		boolean looping) {
+    	activate(source, envParams, gain, pan, looping, null, 1024);
+    }
+
+    public void activate(PASource source,
+    		ADSRParams envParams,
+    		float gain,
+    		float pan,
+    		boolean looping,
+    		WindowFunction grainWindow,
+    		int grainLenSamples) {
+
     	this.source = source;
-    	
-        this.voiceId = NEXT_VOICE_ID++;
-        this.gain = gain;
-        this.pan = clampPan(pan);
-        updatePanGains();
-        this.looping = looping;
 
-        this.released = false;
-        this.finished = false;
-        this.active = true;
+    	this.voiceId = NEXT_VOICE_ID++;
+    	this.gain = gain;
+    	this.pan = clampPan(pan);
+    	updatePanGains();
+    	this.looping = looping;
 
-        // Reset block state
-        this.cursor = 0;
-        this.absSample = 0;
-        
-        // Start granular engine at absSample = 0
-        if (this.source != null) {
-            this.source.seekTo(0);
-        }
-        
-        // Envelope setup
-        if (envParams != null) {
-            envelope = new SimpleADSR(
-                    envParams.getAttack(),
-                    envParams.getDecay(),
-                    envParams.getSustain(),
-                    envParams.getRelease()
-            );
-            envelope.setSampleRate(playbackSampleRate);
-            envelope.noteOn();
-        } 
-        else {
-            envelope = null;
-        }
+    	this.grainWindow = grainWindow;
+    	this.grainLenSamples = Math.max(1, grainLenSamples);
+
+    	this.released = false;
+    	this.finished = false;
+    	this.active = true;
+
+    	// Reset block state
+    	this.cursor = 0;
+    	this.absSample = 0;
+
+    	// Start granular engine at absSample = 0
+    	// this is the critical first step to open the PASource for audio processing
+    	if (this.source != null) {
+    		this.source.seekTo(0);
+    		// Only push grain window config when explicitly provided.
+    		// This preserves legacy sources' internally-configured grainLength.
+    		if (grainWindow != null) {
+    			this.source.setGrainWindow(grainWindow, this.grainLenSamples);
+    		}    	
+    	}
+
+    	// Envelope setup (macro envelope over a gesture)
+    	if (envParams != null) {
+    		envelope = new SimpleADSR(
+    				envParams.getAttack(),
+    				envParams.getDecay(),
+    				envParams.getSustain(),
+    				envParams.getRelease()
+    				);
+    		envelope.setSampleRate(playbackSampleRate);
+    		envelope.noteOn();
+    	} else {
+    		envelope = null;
+    	}
     }
 
     // ------------------------------------------------------------------------
@@ -192,7 +223,23 @@ public class PAGranularVoice {
         long sourceLen = source.lengthSamples();
         if (looping && absSample >= sourceLen) {
             absSample = 0;
+            endTriggered = false;
             source.seekTo(0);
+            return;
+        }
+        
+        // non-looping end of source => release/stop the voice
+        if (!looping && absSample >= sourceLen) {
+            if (!endTriggered) {
+                endTriggered = true;
+                // If we have an ADSR, let it release naturally.
+                // If no ADSR, stop immediately.
+                if (envelope != null) {
+                    release();            // calls noteOff()
+                } else {
+                    stop();
+                }
+            }
         }
     }
     

@@ -2,9 +2,9 @@ package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.UGen;
 import ddf.minim.AudioOutput;
+import ddf.minim.analysis.WindowFunction;
 
 import net.paulhertz.pixelaudio.voices.ADSRParams;
-import net.paulhertz.pixelaudio.voices.PASource;
 import net.paulhertz.pixelaudio.schedule.AudioScheduler;
 
 
@@ -22,32 +22,48 @@ import java.util.*;
  *  - Thread-safe play() method
  *  - Per-sample mixing (like PASharedBufferSampler)
  *  
- * Now also supports sample-accurate scheduling of new voices
- * via SampleAccurateScheduler.
  * 
  */
 public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
     // Internal scheduled-play payload
     // ------------------------------------------------------------------------
+	// TODO include "final long srcSampleIndex;  // <-- the mapped read position in ScheduledPlay
     private static final class ScheduledPlay {
         final PASource src;
         final ADSRParams env;
         final float gain;
         final float pan;
         final boolean looping;
+        final WindowFunction grainWindow; // may be null -> voice should default
+        final int grainLenSamples;        // >= 1
+
 
         ScheduledPlay(PASource src,
-                      ADSRParams env,
-                      float gain,
-                      float pan,
-                      boolean looping) {
-            this.src = src;
-            this.env = env;
-            this.gain = gain;
-            this.pan = pan;
-            this.looping = looping;
+        		ADSRParams env,
+        		float gain,
+        		float pan,
+        		boolean looping,
+        		WindowFunction grainWindow,
+        		int grainLenSamples) {
+        	this.src = src;
+        	this.env = env;
+        	this.gain = gain;
+        	this.pan = pan;
+        	this.looping = looping;
+        	this.grainWindow = grainWindow;
+        	this.grainLenSamples = Math.max(1, grainLenSamples);
         }
+        
+        // Backward-friendly convenience if you still enqueue without window data
+        ScheduledPlay(PASource src,
+        		ADSRParams env,
+        		float gain,
+        		float pan,
+        		boolean looping) {
+        	this(src, env, gain, pan, looping, null, 1);
+        }
+
     }	
 
     // ------------------------------------------------------------------------
@@ -72,59 +88,87 @@ public class PAGranularSampler extends UGen {
     
 	// private long blockStartSample = 0;    // NEW, for revised AudioScheduler
 
+    /**
+     * Initializes this PAGranularSampler, which extends UGen and gets patched to an AudioOutput, 
+     * with the result that its uGenerate method is called on each audio block.
+     * 
+     * @param out          a Minim AudioOutput that this PAGranularSampler will patch to
+     * @param maxVoices    maximum number of voices to allocate
+     */
     public PAGranularSampler(AudioOutput out, int maxVoices) {
         this.out = out;
         this.maxVoices = Math.max(1, maxVoices);
         this.blockSize = out.bufferSize();
-        this.patch(out);
+        this.patch(out);             // UGen connected to AudioOutput
     }
 
     // Convenience
     public PAGranularSampler(AudioOutput out) {
-        this(out, 16);
+        this(out, 32);
     }
 
     // ------------------------------------------------------------------------
     // Voice allocation
     // ------------------------------------------------------------------------
+ 
+    /**
+     * Allocate a PAGranularVoice instance. Called from play() and uGenerate() methods.
+     *  
+     * @param src                A PASource
+     * @param env                ADSRParams envelope, could be null
+     * @param gain               gain as a decimal value scaling amplitude
+     * @param pan                pan in stereo space, but grains can set individually
+     * @param looping            looping flag, best be false
+     * @param grainWindow        a Minim WindowFunction
+     * @param grainLenSamples    number of samples in one grain
+     * @return
+     */
     private PAGranularVoice getAvailableVoice(PASource src, ADSRParams env,
-                                              float gain, float pan, boolean looping) {
-        // 1. find free voice
-        for (PAGranularVoice v : voices) {
-            if (!v.isActive() && !v.isReleasing()) {
-                v.activate(src, env, gain, pan, looping);
-                return v;
-            }
-        }
+    		float gain, float pan, boolean looping,
+    		WindowFunction grainWindow, int grainLenSamples) {
+    	// 1. find free voice
+    	for (PAGranularVoice v : voices) {
+    		if (!v.isActive() && !v.isReleasing()) {
+    			v.activate(src, env, gain, pan, looping, grainWindow, Math.max(1, grainLenSamples));
+    			return v;
+    		}
+    	}
 
-        // 2. expand pool if allowed
-        if (voices.size() < maxVoices) {
-            PAGranularVoice v = new PAGranularVoice(src, blockSize, out.sampleRate());
-            voices.add(v);
-            v.activate(src, env, gain, pan, looping);
-            return v;
-        }
+    	// 2. expand pool if allowed
+    	if (voices.size() < maxVoices) {
+    		PAGranularVoice v = new PAGranularVoice(src, blockSize, out.sampleRate());
+    		voices.add(v);
+    		v.activate(src, env, gain, pan, looping, grainWindow, Math.max(1, grainLenSamples));
+    		return v;
+    	}
 
-        // 3. recycle oldest active voice
-        PAGranularVoice oldest = null;
-        for (PAGranularVoice v : voices) {
-            if (v.isActive() && (oldest == null || v.getVoiceId() < oldest.getVoiceId())) {
-                oldest = v;
-            }
-        }
-        if (oldest != null) {
-            if (smoothSteal) oldest.release();
-            else oldest.stop();
-            oldest.activate(src, env, gain, pan, looping);
-            return oldest;
-        }
+    	// 3. recycle oldest active voice
+    	PAGranularVoice oldest = null;
+    	for (PAGranularVoice v : voices) {
+    		if (v.isActive() && (oldest == null || v.getVoiceId() < oldest.getVoiceId())) {
+    			oldest = v;
+    		}
+    	}
+    	if (oldest != null) {
+    		if (smoothSteal) oldest.release();
+    		else oldest.stop();
+    		oldest.activate(src, env, gain, pan, looping, grainWindow, Math.max(1, grainLenSamples));
+    		return oldest;
+    	}
 
-        return null; // should not occur
+    	return null; // should not occur
+    }
+
+    // Preserve old internal helper signature (calls new one with null window)
+    private PAGranularVoice getAvailableVoice(PASource src, ADSRParams env,
+    		float gain, float pan, boolean looping) {
+    	return getAvailableVoice(src, env, gain, pan, looping, null, 1);
     }
 
     // ------------------------------------------------------------------------
     // Play interface
     // ------------------------------------------------------------------------
+    
     /**
      * Play a granular source as a voice.
      *
@@ -166,7 +210,7 @@ public class PAGranularSampler extends UGen {
     }
 
     // ------------------------------------------------------------------------
-    // Scheduled play interface (NEW)
+    // Scheduled play interface, the preferred method of triggering audio
     // ------------------------------------------------------------------------
 
     /**
@@ -189,7 +233,30 @@ public class PAGranularSampler extends UGen {
         ScheduledPlay happening = new ScheduledPlay(src, env, gain, pan, looping);
         scheduler.schedulePoint(startSample, happening);
     }
-
+        
+    /**
+     * @param src                PASource
+     * @param env                ADSR (already resolved: either custom or default)
+     * @param gain               final gain
+     * @param pan                final pan
+     * @param looping            loop flag
+     * @param startSample        absolute sample index at which to start the voice
+     * @param grainWindow        a window function for shaping grain amplitude
+     * @param grainLenSamples    number of samples in one grain
+     */
+    public synchronized void startAtSampleTime(PASource src,
+    		ADSRParams env,
+    		float gain,
+    		float pan,
+    		boolean looping,
+    		long startSample,
+    		WindowFunction grainWindow,
+    		int grainLenSamples) {
+    	if (src == null) return;
+    	ScheduledPlay happening = new ScheduledPlay(src, env, gain, pan, looping, grainWindow, grainLenSamples);
+    	scheduler.schedulePoint(startSample, happening);
+    }
+    
     /**
      * Schedule a new voice to start after a given delay in samples.
      *
@@ -216,52 +283,54 @@ public class PAGranularSampler extends UGen {
     public synchronized long getCurrentSampleTime() {
     	return sampleCursor;
     }
+    
 
     // ------------------------------------------------------------------------
     // uGenerate — per-sample frame processing with AudioScheduler
+    // Called through Minim 
     // ------------------------------------------------------------------------
     @Override
     protected synchronized void uGenerate(float[] channels) {
-    	// 1) Fire point events at this exact sample (blockSize = 1 frame)
-    	scheduler.processBlock(
-    			sampleCursor,
-    			1,
-    			(ScheduledPlay sp, int offsetInBlock) -> {
-    				// offsetInBlock will always be 0 here
-    				getAvailableVoice(sp.src, sp.env, sp.gain, sp.pan, sp.looping);
-    			},
-    			null
-    			);
+        // 1) Fire point events at this exact sample (blockSize = 1 frame)
+        scheduler.processBlock(
+                sampleCursor,
+                1,
+                (ScheduledPlay sp, int offsetInBlock) -> {
+                    // offsetInBlock will always be 0 here
+                    getAvailableVoice(
+                            sp.src, sp.env, sp.gain, sp.pan, sp.looping,
+                            sp.grainWindow, sp.grainLenSamples
+                    );
+                },
+                null
+        );
 
-    	// 2) Clear this sample frame
-    	Arrays.fill(channels, 0f);
+        // 2) Clear this sample frame
+        Arrays.fill(channels, 0f);
 
-    	// 3) Mix one sample frame from all voices
-    	float leftMix = 0f;
-    	float rightMix = 0f;
+        // 3) Mix one sample frame from all voices
+        float leftMix = 0f;
+        float rightMix = 0f;
 
-    	for (PAGranularVoice v : voices) {
-    		v.nextSampleStereo(tmpStereo);
-    		float left  = tmpStereo[0];
-    		float right = tmpStereo[1];
-    		if (v.isActive() || v.isReleasing()) {
-    			// Keep stereo internally; write mono if only one output channel
-    			leftMix  += left;
-    			rightMix += right;
-    		}
-    		// v.isFinished() => recyclable; nothing else needed
-    	}
+        for (PAGranularVoice v : voices) {
+            v.nextSampleStereo(tmpStereo);
+            float left  = tmpStereo[0];
+            float right = tmpStereo[1];
+            if (v.isActive() || v.isReleasing()) {
+                leftMix  += left;
+                rightMix += right;
+            }
+        }
 
-    	// 4) Write output for this frame
-    	channels[0] = (channels.length > 0) ? leftMix : 0f;
-    	if (channels.length > 1) {
-    		channels[1] = rightMix;
-    	}
+        // 4) Write output for this frame
+        channels[0] = (channels.length > 0) ? leftMix : 0f;
+        if (channels.length > 1) {
+            channels[1] = rightMix;
+        }
 
-    	// 5) Advance global sample cursor by one sample frame
-    	sampleCursor++;
+        // 5) Advance global sample cursor by one sample frame
+        sampleCursor++;
     }
-
     
     // ------------------------------------------------------------------------
     // Controls

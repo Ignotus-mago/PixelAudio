@@ -10,12 +10,18 @@ public class TimedLocation implements Comparable<TimedLocation> {
 	private int y;
 	private int eventTime;
 	private boolean isStale;
+	private int durationMs = 0;
 
-	public TimedLocation(int x, int y, int eventTime) {
+	public TimedLocation(int x, int y, int eventTime, int durationMs) {
 		this.x = x;
 		this.y = y;
 		this.eventTime = eventTime;
+		this.durationMs = durationMs;
 		this.isStale = false;
+	}
+
+	public TimedLocation(int x, int y, int eventTime) {
+		this(x, y, eventTime, 0);
 	}
 
 	public int getX() {
@@ -38,6 +44,14 @@ public class TimedLocation implements Comparable<TimedLocation> {
 		this.isStale = stale;
 	}
 		
+	public int getDurationMs() {
+		return durationMs;
+	}
+
+	public void setDurationMs(int durationMs) {
+		this.durationMs = durationMs;
+	}
+
 	public int compareTo(TimedLocation tl) {
 		if (eventTime() > tl.eventTime()) return 1;
 		else {

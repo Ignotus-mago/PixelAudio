@@ -1,10 +1,12 @@
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.analysis.WindowFunction;
-import net.paulhertz.pixelaudio.voices.PASource;
 import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
+ * TODO Candidate for removal
+ * May still prove useful
+ * 
  * IndexGranularSource
  *
  * "Standard" linear granular source that:
@@ -33,7 +35,7 @@ public class IndexGranularSource implements PASource {
 
     // Core granular params
     private final int startSampleIndex;
-    private final int grainLength;
+    private int grainLength = 1024;
     private final int timeHopSamples;
     private final int indexHopSamples;
     private final int numGrains;
@@ -41,12 +43,14 @@ public class IndexGranularSource implements PASource {
 
     private final WindowFunction windowFunction;
 
-    // Derived length
-    private final long totalLengthSamples;
-
     // Note-level state
     private long noteStartSample = Long.MIN_VALUE;
     private boolean noteStarted = false;
+    
+    // grain window function
+    private WindowFunction grainWindow = null;
+    private float[] windowCurve = null;
+
 
     
     /**
@@ -61,7 +65,8 @@ public class IndexGranularSource implements PASource {
      * @param numGrains        number of grains to play (>= 1)
      * @param pitchRatio       proportional change in pitch
      */
-    public IndexGranularSource(float[] source,
+    public IndexGranularSource(
+    		float[] source,
     		GranularSettings settings,
     		int startSampleIndex,
     		int grainLength,
@@ -69,6 +74,7 @@ public class IndexGranularSource implements PASource {
     		int indexHopSamples,
     		int numGrains,
     		float pitchRatio) {
+    	
     	if (source == null) throw new IllegalArgumentException("source must not be null");
     	if (settings == null) throw new IllegalArgumentException("settings must not be null");
     	if (numGrains <= 0) throw new IllegalArgumentException("numGrains must be >= 1");
@@ -78,39 +84,35 @@ public class IndexGranularSource implements PASource {
     	this.startSampleIndex = Math.max(0, startSampleIndex);
     	this.grainLength = (grainLength > 0) ? grainLength : settings.defaultGrainLength;
     	this.timeHopSamples = (timeHopSamples > 0) ? timeHopSamples : settings.hopSamples;
-
     	this.indexHopSamples = (indexHopSamples > 0) ? indexHopSamples : this.timeHopSamples;
     	this.numGrains = numGrains;
-
     	this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
-
     	this.windowFunction = settings.windowFunction;
-
-    	this.totalLengthSamples =
-    			(long) (numGrains - 1) * (long) this.timeHopSamples + (long) this.grainLength;
     }
 
-    public IndexGranularSource(float[] source,
-                                    GranularSettings settings,
-                                    int startSampleIndex,
-                                    int grainLength,
-                                    int timeHopSamples,
-                                    int indexHopSamples,
-                                    int numGrains) {
-        this(source, settings, startSampleIndex, grainLength, timeHopSamples, indexHopSamples, numGrains, 1.0f);
+    public IndexGranularSource(
+    		float[] source,
+    		GranularSettings settings,
+    		int startSampleIndex,
+    		int grainLength,
+    		int timeHopSamples,
+    		int indexHopSamples,
+    		int numGrains) {
+    	this(source, settings, startSampleIndex, grainLength, timeHopSamples, indexHopSamples, numGrains, 1.0f);
     }
 
     /**
      * Convenience constructor: no pitch-shift yet, use timeHop for source hop.
      */
-    public IndexGranularSource(float[] source,
-                                    GranularSettings settings,
-                                    int startSampleIndex,
-                                    int grainLength,
-                                    int hopSamples,
-                                    int numGrains) {
-        this(source, settings, startSampleIndex, grainLength,
-             hopSamples, hopSamples, numGrains);    // indexHop == timeHop
+    public IndexGranularSource(
+    		float[] source,
+    		GranularSettings settings,
+    		int startSampleIndex,
+    		int grainLength,
+    		int hopSamples,
+    		int numGrains) {
+    	this(source, settings, startSampleIndex, grainLength,
+    			hopSamples, hopSamples, numGrains);    // indexHop == timeHop
     }
 
     /**
@@ -124,78 +126,74 @@ public class IndexGranularSource implements PASource {
      * @param durationMs       total output duration in ms
      * @param sampleRate       playback sample rate (e.g., 44100)
      */
-    public static IndexGranularSource fromDurationMs(float[] source,
-                                                          GranularSettings settings,
-                                                          int startSampleIndex,
-                                                          int grainLength,
-                                                          int hopSamples,
-                                                          float durationMs,
-                                                          float sampleRate) {
-        if (durationMs <= 0f) {
-            throw new IllegalArgumentException("durationMs must be > 0");
-        }
-        if (sampleRate <= 0f) {
-            throw new IllegalArgumentException("sampleRate must be > 0");
-        }
+    public static IndexGranularSource fromDurationMs(
+    		float[] source,
+    		GranularSettings settings,
+    		int startSampleIndex,
+    		int grainLength,
+    		int hopSamples,
+    		float durationMs,
+    		float sampleRate) {
+    	if (durationMs <= 0f) {
+    		throw new IllegalArgumentException("durationMs must be > 0");
+    	}
+    	if (sampleRate <= 0f) {
+    		throw new IllegalArgumentException("sampleRate must be > 0");
+    	}
 
-        int effectiveGrainLen = (grainLength > 0)
-                ? grainLength
-                : settings.defaultGrainLength;
+    	int effectiveGrainLen = (grainLength > 0) ? grainLength : settings.defaultGrainLength;
+    	int effectiveHop = (hopSamples > 0) ? hopSamples : settings.hopSamples;
+    	long totalOutSamples = Math.round(durationMs * 0.001f * sampleRate);
 
-        int effectiveHop = (hopSamples > 0)
-                ? hopSamples
-                : settings.hopSamples;
+    	if (totalOutSamples <= effectiveGrainLen) {
+    		// Single grain fits the whole duration
+    		return new IndexGranularSource(
+    				source,
+    				settings,
+    				startSampleIndex,
+    				effectiveGrainLen,
+    				effectiveHop,
+    				1
+    				);
+    	}
 
-        long totalOutSamples = Math.round(durationMs * 0.001f * sampleRate);
+    	// g-th grain start = g * hop
+    	// last grain start must be < totalOutSamples
+    	// last grain end = g * hop + grainLen <= totalOutSamples
+    	long maxStart = totalOutSamples - effectiveGrainLen;
+    	int numGrains = (int) (maxStart / effectiveHop) + 1;
+    	if (numGrains < 1) numGrains = 1;
 
-        if (totalOutSamples <= effectiveGrainLen) {
-            // Single grain fits the whole duration
-            return new IndexGranularSource(
-                    source,
-                    settings,
-                    startSampleIndex,
-                    effectiveGrainLen,
-                    effectiveHop,
-                    1
-            );
-        }
-
-        // g-th grain start = g * hop
-        // last grain start must be < totalOutSamples
-        // last grain end = g * hop + grainLen <= totalOutSamples
-        long maxStart = totalOutSamples - effectiveGrainLen;
-        int numGrains = (int) (maxStart / effectiveHop) + 1;
-        if (numGrains < 1) numGrains = 1;
-
-        return new IndexGranularSource(
-                source,
-                settings,
-                startSampleIndex,
-                effectiveGrainLen,
-                effectiveHop,
-                numGrains
-        );
+    	return new IndexGranularSource(
+    			source,
+    			settings,
+    			startSampleIndex,
+    			effectiveGrainLen,
+    			effectiveHop,
+    			numGrains
+    			);
     }
 
     /**
      * Factory: build by duration in seconds.
      */
-    public static IndexGranularSource fromDurationSeconds(float[] source,
-                                                               GranularSettings settings,
-                                                               int startSampleIndex,
-                                                               int grainLength,
-                                                               int hopSamples,
-                                                               float durationSeconds,
-                                                               float sampleRate) {
-        return fromDurationMs(
-                source,
-                settings,
-                startSampleIndex,
-                grainLength,
-                hopSamples,
-                durationSeconds * 1000f,
-                sampleRate
-        );
+    public static IndexGranularSource fromDurationSeconds(
+    		float[] source,
+    		GranularSettings settings,
+    		int startSampleIndex,
+    		int grainLength,
+    		int hopSamples,
+    		float durationSeconds,
+    		float sampleRate) {
+    	return fromDurationMs(
+    			source,
+    			settings,
+    			startSampleIndex,
+    			grainLength,
+    			hopSamples,
+    			durationSeconds * 1000f,
+    			sampleRate
+    			);
     }
 
     // ------------------------------------------------------------------------
@@ -210,82 +208,80 @@ public class IndexGranularSource implements PASource {
 
     @Override
     public void renderBlock(long blockStart,
-                            int blockSize,
-                            float[] outL,
-                            float[] outR) {
+    		int blockSize,
+    		float[] outL,
+    		float[] outR) {
 
-        if (!noteStarted || numGrains == 0) {
-            return;
-        }
-        if (outL == null || blockSize <= 0) {
-            return;
-        }
+    	if (!noteStarted || numGrains == 0) return;
+    	if (outL == null || blockSize <= 0) return;
 
-        long blockEnd = blockStart + blockSize;
+    	final long blockEnd = blockStart + (long) blockSize;
 
-        for (int g = 0; g < numGrains; g++) {
-            long grainStartAbs = noteStartSample + (long) g * (long) timeHopSamples;
-            long grainEndAbs   = grainStartAbs + (long) grainLength;
+    	// ---- Resolve window curve ONCE (rectangular fallback)
+    	// Prefer pre-resolved cached curve if it matches the current grain length
+    	final float[] window = (windowCurve != null && windowCurve.length == grainLength)
+    	        ? windowCurve
+    	        : (grainWindow != null && grainLength > 1)
+    	            ? WindowCache.INSTANCE.getWindowCurve(grainWindow, grainLength)
+    	            : null;
 
-            // Skip if no overlap
-            if (grainEndAbs <= blockStart || grainStartAbs >= blockEnd) {
-                continue;
-            }
+    	// ---- Per-block pan constants (equal-power)
+    	final float gain = settings.gain;
+    	final float pan = settings.pan; // [-1..+1]
+    	final float panAngle = (pan + 1.0f) * 0.25f * (float) Math.PI;
+    	final float panL = (float) Math.cos(panAngle);
+    	final float panR = (float) Math.sin(panAngle);
 
-            OverlapUtil.Slice slice = OverlapUtil.computeBlockSlice(
-                    blockStart, blockSize, grainStartAbs, grainEndAbs);
-            if (!slice.hasOverlap) {
-                continue;
-            }
+    	// ---- OutR handling
+    	final boolean doR = (outR != null && outR != outL);
 
-            int i0 = slice.startIndex;
-            int i1 = slice.endIndex;
+    	for (int g = 0; g < numGrains; g++) {
+    		final long grainStartAbs = noteStartSample + (long) g * (long) timeHopSamples;
+    		final long grainEndAbs   = grainStartAbs + (long) grainLength;
 
-            // Window curve for this grain length
-            float[] window = windowCache.getWindowCurve(windowFunction, grainLength);
+    		// Skip if no overlap
+    		if (grainEndAbs <= blockStart || grainStartAbs >= blockEnd) continue;
 
-            // Per-grain gain & pan: for now use GranularSettings global gain/pan,
-            // or you could add per-grain modulation later.
-            float gain = settings.gain;
-            float pan = settings.pan; // assume [-1..+1]
+    		OverlapUtil.Slice slice = OverlapUtil.computeBlockSlice(
+    				blockStart, blockSize, grainStartAbs, grainEndAbs);
 
-            // Equal-power pan
-            float panAngle = (pan + 1.0f) * 0.25f * (float) Math.PI; // -1..+1 → 0..π/2
-            float panL = (float) Math.cos(panAngle);
-            float panR = (float) Math.sin(panAngle);
+    		if (!slice.hasOverlap) continue;
 
-            long grainSourceStart = (long) startSampleIndex + (long) g * (long) indexHopSamples;
+    		final int i0 = slice.startIndex;
+    		final int i1 = slice.endIndex;
 
-            for (int i = i0; i < i1; i++) {
-            	long globalSample = blockStart + i;
-            	int offsetInGrain = (int) (globalSample - grainStartAbs);
-            	if (offsetInGrain < 0 || offsetInGrain >= grainLength) {
-            		continue;
-            	}
+    		final long grainSourceStart = (long) startSampleIndex + (long) g * (long) indexHopSamples;
 
-            	float srcPos = (float) grainSourceStart + (float) offsetInGrain * pitchRatio;
+    		for (int i = i0; i < i1; i++) {
+    			final long globalSample = blockStart + (long) i;
+    			final int offsetInGrain = (int) (globalSample - grainStartAbs);
 
-            	// Need i0 and i0+1 valid for interpolation:
-            	if (srcPos < 0f || srcPos >= (source.length - 1)) {
-            		continue;
-            	}
+    			// offsetInGrain will usually be in-range given the slice, but keep it safe:
+    			if (offsetInGrain < 0 || offsetInGrain >= grainLength) continue;
 
-            	float w = window[offsetInGrain];
-            	float s = readLinear(source, srcPos) * w * gain;
-            	float sL = s * panL;
-            	float sR = s * panR;
+    			final float srcPos = (float) grainSourceStart + (float) offsetInGrain * pitchRatio;
 
-            	outL[i] += sL;
-            	if (outR != null && outR != outL) {
-            		outR[i] += sR;
-            	}
-            }
-        }
+    			// Need srcPos and srcPos+1 valid for interpolation:
+    			if (srcPos < 0f || srcPos >= (source.length - 1)) continue;
+
+    			final float w = (window != null) ? window[offsetInGrain] : 1.0f;
+
+    			final float s  = readLinear(source, srcPos) * w * gain;
+    			final float sL = s * panL;
+
+    			outL[i] += sL;
+
+    			if (doR) {
+    				final float sR = s * panR;
+    				outR[i] += sR;
+    			}
+    		}
+    	}
     }
 
     @Override
     public long lengthSamples() {
-        return totalLengthSamples;
+        return (long)(numGrains - 1) * (long) timeHopSamples + (long) grainLength;
     }
 
     @Override
@@ -293,6 +289,19 @@ public class IndexGranularSource implements PASource {
         // Time/pitch are determined by the granular config; instrument should not re-pitch.
         return PitchPolicy.SOURCE_GRANULAR;
     }
+    
+    @Override
+    public synchronized void setGrainWindow(WindowFunction wf, int grainLenSamples) {
+        this.grainWindow = wf;
+        this.grainLength = Math.max(1, grainLenSamples);
+        if (wf != null && this.grainLength > 1) {
+            this.windowCurve = WindowCache.INSTANCE.getWindowCurve(wf, this.grainLength);
+        } 
+        else {
+            this.windowCurve = null;
+        }
+     }
+
 
     // ------------------------------------------------------------------------
     // Accessors

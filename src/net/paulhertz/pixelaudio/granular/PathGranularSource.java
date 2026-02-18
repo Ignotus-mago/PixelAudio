@@ -1,7 +1,6 @@
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.analysis.WindowFunction;
-import net.paulhertz.pixelaudio.voices.PASource;
 import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 /**
