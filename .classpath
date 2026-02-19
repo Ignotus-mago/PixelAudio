@@ -21,5 +21,20 @@
 	<classpathentry kind="lib" path="libs/mp3spi1.9.5.jar"/>
 	<classpathentry kind="lib" path="libs/tritonus_aos.jar"/>
 	<classpathentry kind="lib" path="libs/tritonus_share.jar"/>
+	<classpathentry kind="lib" path="libs/VideoExport.jar" sourcepath="/Users/paulhz/Documents/Processing/libraries/VideoExport/src">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/Users/paulhz/Documents/Processing/libraries/VideoExport/reference/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="libs/G4P.jar" sourcepath="/Users/paulhz/Documents/Processing/libraries/G4P/src">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/Users/paulhz/Documents/Processing/libraries/G4P/reference/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="libs/oscP5.jar" sourcepath="/Users/paulhz/Documents/Processing/libraries/oscP5/src">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/Users/paulhz/Documents/Processing/libraries/oscP5/reference/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="resources/code"/>
 </classpath>
