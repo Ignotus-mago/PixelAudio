@@ -10,6 +10,8 @@ import ddf.minim.analysis.RectangularWindow;
 
 import net.paulhertz.pixelaudio.voices.ADSRParams;
 
+// TODO candidate for removal
+
 /**
  * Friendly, user-facing subset of {@link GestureGranularConfig}.
  * Covers the common/essential knobs for most gesture playback.

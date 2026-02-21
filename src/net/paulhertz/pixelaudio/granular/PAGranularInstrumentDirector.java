@@ -61,7 +61,6 @@ public final class PAGranularInstrumentDirector {
             GestureSchedule schedule,
             GestureGranularParams params,
             GestureEventParams evtParams) {
-
         long now = instrument.getSampleCursor();
         now += (long)(0.005f * sampleRate); // optional lead-in (once)
         playGestureAtSampleTime(monoBuf, schedule, params, evtParams, now);

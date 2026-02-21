@@ -163,6 +163,7 @@ public class HilbertGen extends PixelMapGen {
 	/* ------------------------------------------------------------------------------------ */
 	
 	
+	//  TODO overload Hilbert Multigens to accept just one dimension argument, hilbertWidth
 	
 	/* ------------------------------ HILBERT MULTIGEN FACTORIES ------------------------------
 	

@@ -2468,7 +2468,70 @@ public class PixelAudioMapper {
 		return graySource;
 	}
 	
+	
+	// ------------- NEW TEST METHODS applyColor() ------------- //
+	
+	public static int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
+	    if (colorSource == null || graySource == null || lut == null)
+	        throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
+	    if (colorSource.length != graySource.length || colorSource.length != lut.length)
+	        throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
+	    final int n = graySource.length;
+	    int s = shift % n;
+	    if (s < 0) s += n;
+	    float[] hsbPixel = new float[3];
+	    for (int i = 0; i < n; i++) {
+	        int idx = lut[i] + s;
+	        if (idx >= n) idx -= n;          // assumes s in [0, n)
+	        graySource[i] = applyColor(colorSource[idx], graySource[i], hsbPixel);
+	    }
+	    return graySource;
+	}
+	
+	public static int[] applyColorInto(int[] colorSource, int[] graySource, int[] lut, int[] out) {
+	    if (colorSource == null || graySource == null || lut == null || out == null)
+	        throw new IllegalArgumentException("Arguments cannot be null.");
+	    if (colorSource.length != graySource.length || colorSource.length != lut.length || out.length != graySource.length)
+	        throw new IllegalArgumentException("Arrays must all have the same length.");
 
+	    float[] hsbPixel = new float[3];
+	    for (int i = 0; i < graySource.length; i++) {
+	        out[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
+	    }
+	    return out;
+	}
+	
+	public static int[] applyColorShiftedInto(int[] colorSource, int[] graySource, int[] lut, int shift, int[] out) {
+	    if (colorSource == null || graySource == null || lut == null || out == null)
+	        throw new IllegalArgumentException("Arguments cannot be null.");
+	    if (colorSource.length != graySource.length || colorSource.length != lut.length || out.length != graySource.length)
+	        throw new IllegalArgumentException("Arrays must all have the same length.");
+	    final int n = graySource.length;
+	    int s = shift % n;
+	    if (s < 0) s += n;
+	    float[] hsbPixel = new float[3];
+	    for (int i = 0; i < n; i++) {
+	        int idx = lut[i] + s;
+	        if (idx >= n) idx -= n;
+	        out[i] = PixelAudioMapper.applyColor(colorSource[idx], graySource[i], hsbPixel);
+	    }
+	    return out;
+	}
+	
+	public static void precomputeHueSat(int[] colorSource, float[] hue, float[] sat) {
+	    if (colorSource == null || hue == null || sat == null)
+	        throw new IllegalArgumentException("Arguments cannot be null.");
+	    if (hue.length != colorSource.length || sat.length != colorSource.length)
+	        throw new IllegalArgumentException("hue/sat arrays must match colorSource length.");
+	    float[] hsb = new float[3];
+	    for (int i = 0; i < colorSource.length; i++) {
+	        int c = colorSource[i];
+	        Color.RGBtoHSB((c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff, hsb);
+	        hue[i] = hsb[0];
+	        sat[i] = hsb[1];
+	    }
+	}
+	
 }
 
 
