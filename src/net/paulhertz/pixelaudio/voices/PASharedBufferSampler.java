@@ -33,7 +33,10 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     private boolean globalLooping = false;
     private boolean smoothSteal = true;
     
+    private float mixNorm = 1f; // smoothed normalization gain (NEW)
+    
     protected boolean DEBUG = false;
+    
 
     /**
      * Construct a sampler over a shared MultiChannelBuffer.
@@ -145,43 +148,66 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     @Override
     protected synchronized void uGenerate(float[] channels) {
-        // --- 1. clear output frame (stereo or mono) ---
         Arrays.fill(channels, 0f);
 
-        // --- 2. iterate over active voices safely ---
+        int activeCount = 0;
+
         Iterator<PASamplerVoice> it = voices.iterator();
         while (it.hasNext()) {
             PASamplerVoice v = it.next();
 
-            float sample = 0f;
+            float sample;
             try {
                 sample = v.nextSample();
-            }
-            catch (ArrayIndexOutOfBoundsException e) {
-                // Defensive stop in case of runaway indexing
+            } catch (ArrayIndexOutOfBoundsException e) {
                 v.stop();
                 continue;
             }
 
-            // --- 3. Mix active or releasing voices ---
             if (v.isActive() || v.isReleasing()) {
-                float pan = v.getPan();
-                float leftGain  = (pan <= 0f) ? 1f : 1f - pan;
-                float rightGain = (pan >= 0f) ? 1f : 1f + pan;
+                activeCount++;
 
-                // Mix voice sample into output
+                float pan = v.getPan(); // [-1, +1]
+                // constant-power panning
+                float theta = (pan + 1f) * (float)(Math.PI * 0.25); // 0..pi/2
+                float leftGain  = (float)Math.cos(theta);
+                float rightGain = (float)Math.sin(theta);
+
                 channels[0] += sample * leftGain;
-                if (channels.length > 1)
-                    channels[1] += sample * rightGain;
+                if (channels.length > 1) channels[1] += sample * rightGain;
             }
-            // --- 4. Remove fully finished voices ---
+
             if (v.isFinished()) {
-                // optional: reset for reuse immediately
                 v.resetPosition();
+                // (optional) if you truly want to shrink the list:
+                // it.remove();
             }
         }
+
+        // --- Power norm by active voices, smoothed to avoid pumping ---
+        float targetNorm = (activeCount > 1)
+                ? 1f / (float)Math.sqrt(activeCount)
+                : 1f;
+
+        // smoothing: alpha 0.05..0.2
+        float alpha = 0.12f;
+        mixNorm += alpha * (targetNorm - mixNorm);
+
+        channels[0] *= mixNorm;
+        if (channels.length > 1) channels[1] *= mixNorm;
+
+
+        // soft limiter
+        final float drive = 2.0f; // try 1.5..3.0
+        channels[0] = softClipSoftsign(channels[0], drive);
+        if (channels.length > 1) channels[1] = softClipSoftsign(channels[1], drive);
     }
 
+    static float softClipSoftsign(float x, float drive) {
+        float y = drive * x;
+        return y / (1f + Math.abs(y));
+    }
+    
     // PASampler methods
 
     @Override
