@@ -51,7 +51,6 @@
  *        Pressing 'x' when you aren't hovering over a brushstroke will delete the oldest 
  *        brushstroke. Pressing 'X' will delete the most recent brushstroke. 
  *     
- *     8. Press'p' to play the brushstrokes one after another, in the order you drew them.
  *          
  *          
  *     -- We added several new methods, in the DRAWING METHODS section.
@@ -155,7 +154,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
@@ -249,29 +247,26 @@ public class TutorialOneDrawing extends PApplet {
 	// SampleInstrument setup
 	int noteDuration = 1000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
-	float synthGain = 0.875f;       // gain setting for audio playback instrument, decimal value 0..1
+	float synthGain = 0.8f;       // gain setting for audio playback instrument, decimal value 0..1
 	float outputGain = -6.0f;       // gain setting for audio output, decibels
 	boolean isMuted = false;
-	PASamplerInstrument synth;      // local class to wrap audioSampler
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
-	int maxVoices = 32;
+	int samplerMaxVoices = 64;
 	boolean isUseSynth = false;     // switch between pool and synth, pool is preferred
 
 	// ADSR and its parameters
-	ADSRParams defaultEnv;			// good old attack, decay, sustain, release
-	ADSRParams granularEnv;         // envelope for a granular-style series of samples
-	float maxAmplitude = 0.75f;     // 0..1
-	float attackTime = 0.2f;        // seconds
-	float decayTime = 0.0f;         // seconds
-	float sustainLevel = 0.75f;     // 0..1, same as maxAmplitude
-	float releaseTime = 0.5f;       // seconds, same as attack
+	float maxAmplitude = 0.75f;    // 0..1
+	// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
+	ADSRParams defaultEnv = new ADSRParams(maxAmplitude, 0.2f, 0.1f, maxAmplitude * 0.75f, 0.5f);
+	ADSRParams granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
 	float pitchScaling = 1.0f;      // factor for changing pitch
 	float defaultPitchScale = 1.0f; // pitch scaling factor
 	float lowPitchScaling = 0.5f;   // low pitch scaling, 0.5 => one octave down
 	float highPitchScaling = 2.0f;  // high pitch scaling, 2.0 => one octave up
+	boolean usePitchedGrains = false;
 	
     // toggle for sampler events with a "granular" envelope
-    boolean useGranularEnv = false; // sampler mode uses granularEnv + grainDuration spacing
+    boolean useGranularSynth = false; // sampler mode uses granularEnv + grainDuration spacing
     int granEnvDuration = 120;      // envelope duration in ms
 
     // ====== Granular Synth ====== //
@@ -280,15 +275,14 @@ public class TutorialOneDrawing extends PApplet {
     public PAGranularInstrument gSynth;         // granular synthesis instrument
     public PAGranularInstrumentDirector gDir;   // director of granular events
     // parameters for granular synthesis
-    GestureGranularParams gParams = GestureGranularParams.builder()
-            .grainLengthSamples(4096)
-            .hopLengthSamples(1024)
-            .gainLinear(0.9f)
-            .looping(false)
-            .env(null)
-            .hopMode(GestureGranularParams.HopMode.GESTURE)
-            .build();
-
+    boolean useShortGrain = true;
+    int longSample = 4096;
+    int shortSample = 1024;
+    int granSamples = useShortGrain ? shortSample : longSample;
+    int hopSamples = granSamples/4;
+    GestureGranularParams gParamsGesture;
+    GestureGranularParams gParamsFixed;
+                                                // TODO align these vars with granSamples
     public int curveSteps = 16;                 // number of steps in curve representation of a brushstroke path
     public int granLength = 4096;               // length of grain, in samples
     public int granHop = 1024;                  // distance between FIXED mode grains, in samples
@@ -380,7 +374,7 @@ public class TutorialOneDrawing extends PApplet {
 	/*                       INTERACTION VARIABLES                        */
 	/* ------------------------------------------------------------------ */
 
-    // ====== Minimal forward-compatible config model ====== //
+    // ====== Minimal gesture + audio synthesis configuration ====== //
     // GesturePlayground example provides a complete configuration model with the GestureGranularConfig class
     
     public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    // select model for brush shape in PACurveMaker
@@ -410,16 +404,20 @@ public class TutorialOneDrawing extends PApplet {
         private final PACurveMaker curve;
         private final BrushConfig cfg;
         private BrushOutput output;
+        private HopMode hopMode;
 
-        public AudioBrushLite(PACurveMaker curve, BrushConfig cfg, BrushOutput output) {
+        public AudioBrushLite(PACurveMaker curve, BrushConfig cfg, BrushOutput output, HopMode hopMode) {
             this.curve = curve;
             this.cfg = cfg;
             this.output = output;
+            this.hopMode = hopMode;
         }
         public PACurveMaker curve() { return curve; }
         public BrushConfig cfg() { return cfg; }
         public BrushOutput output() { return output; }
         public void setOutput(BrushOutput out) { this.output = out; }
+        public HopMode hopMode() { return hopMode; }
+        public void setHopMode(HopMode hop) { this.hopMode = hop; }
     }
 
     // Hit-test result, matching GesturePlayground’s style
@@ -431,7 +429,7 @@ public class TutorialOneDrawing extends PApplet {
             this.index = index;
         }
     }
-    	
+    
 	
 
     // ---------------- APPLICATION ---------------- //
@@ -447,15 +445,16 @@ public class TutorialOneDrawing extends PApplet {
 	public void setup() {
 		// a standard animation framerate
 		frameRate(24);
-		// initialize our library
+		// 1) Initialize our library.
 		pixelaudio = new PixelAudio(this);
-		// create a PixelMapGen subclass such as MultiGen, with dimensions equal to the display window
-		// the call to hilbertLoop3x2 produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
-		// genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
+		// 2) create a PixelMapGen subclass with dimensions equal to the display window.
+		//   the call to hilbertLoop3x2(genWidth, genHeight) produces a MultiGen that is 3 * genWidth x 2 * genHeight, 
+		//   where genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
 		// multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
-		// Here's an alternative multigen that is good for visualizing audio location within the image
-		multigen = HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
-		// create a PixelAudioMapper to handle the mapping of pixel colors to audio samples
+		//   Here's an alternative multigen that is good for visualizing audio location within the image
+		//   It reads left to right, top to bottom, like a musical score. 
+		multigen = HilbertGen.hilbertRowOrtho(12, 8, width/12, height/8);
+		// 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
 		mapper = new PixelAudioMapper(multigen);
 		// area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
 		mapSize = mapper.getSize();
@@ -473,7 +472,6 @@ public class TutorialOneDrawing extends PApplet {
 	 * turn off audio processing when we exit
 	 */
 	public void stop() {
-		if (synth != null) synth.close();
 		if (pool != null) pool.close();
 		if (minim != null) minim.stop();
 		super.stop();
@@ -602,7 +600,7 @@ public class TutorialOneDrawing extends PApplet {
 	    // 3) if in the process of drawing, accumulate points while mouse is held down
 	    if (isDrawMode) {
 	        if (mousePressed) {
-	            addPoint(clipToBounds(mouseX), clipToBounds(mouseY));
+	            addPoint(clipToWidth(mouseX), clipToHeight(mouseY));
 	        }
 	        if (allPoints != null && allPoints.size() > 2) {
 	            PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
@@ -738,31 +736,64 @@ public class TutorialOneDrawing extends PApplet {
 	 * @param keyCode
 	 */
 	public void parseKey(char key, int keyCode) {
+		String msg;
 		switch(key) {
-		case '1': // PathMode ALL_POINTS
+		case ' ': // trigger a brush if we're hovering over a brush
+			if (hoverBrush != null) {
+				if (hoverBrush.output() == BrushOutput.SAMPLER) {
+					scheduleSamplerBrushClick(hoverBrush);    // Sampler brush clicked event
+				} else {
+					scheduleGranularBrushClick(hoverBrush);   // Granular brush clicked event
+				}
+			}
+			else {
+				audioMousePressed(mouseX, mouseY);
+			}
+			break;
+		case '1': // set brushstroke under cursor to PathMode ALL_POINTS
 		    // if (activeBrush != null) activeBrush.cfg().pathMode = PathMode.ALL_POINTS;
 		    if (hoverBrush != null) hoverBrush.cfg().pathMode = PathMode.ALL_POINTS;
 	        println("-- hover brush path mode is now " + PathMode.ALL_POINTS);		    
 		    break;
-		case '2': // PathMode REDUCED_POINTS
+		case '2': // set brushstroke under cursor to PathMode REDUCED_POINTS
 		    if (hoverBrush != null) hoverBrush.cfg().pathMode = PathMode.REDUCED_POINTS;
 	        println("-- hover brush path mode is now " + PathMode.REDUCED_POINTS);		    
 		    break;
-		case '3': // PathMode CURVE_POINTS
+		case '3': // set brushstroke under cursor to PathMode CURVE_POINTS
 		    if (hoverBrush != null) hoverBrush.cfg().pathMode = PathMode.CURVE_POINTS;
 	        println("-- hover brush path mode is now " + PathMode.CURVE_POINTS);		    
 		    break;
-		case 't': // toggle brush output sampler/granular
+		case 't': // set brushstroke under cursor to use Sampler or Granular synth
 		    if (hoverBrush != null) {
 		    	hoverBrush.setOutput(hoverBrush.output() == BrushOutput.SAMPLER ? BrushOutput.GRANULAR : BrushOutput.SAMPLER);
 			    hoverBrush.cfg.pathMode = defaultPathModeFor(hoverBrush.output());
 		        println("-- hover brush output is now " + hoverBrush.output());
 		    }
 		    break;
-		case 'f':
-			if (hoverBrush != null) ;
+		case 'f': // set brushstroke under cursor to FIXED hop mode for granular events
+			if (hoverBrush != null) {
+				hoverBrush.hopMode = HopMode.FIXED;
+				println("-- hover brush hop mode is now " + hoverBrush.hopMode());
+			}
 			break;
-		case ' ': //  start or stop animation
+		case 'g': // set brushstroke under cursor to GESTURE hop mode for granular events
+			if (hoverBrush != null) {
+				hoverBrush.hopMode = HopMode.GESTURE;
+				println("-- hover brush hop mode is now " + hoverBrush.hopMode());
+			}
+			break;
+		case 'e': // select granular or sampler synth for click response
+			useGranularSynth = !useGranularSynth;
+			String synth = (useGranularSynth) ? "granular." : "sampler.";
+			println("-- default synth for click events is "+ synth);
+			break;
+		case 'r': // select long or short grain duration 
+			useShortGrain = !useShortGrain;
+			granSamples = useShortGrain ? shortSample : longSample;
+			hopSamples = granSamples/4;
+			initGranularParams();
+			break;
+		case 'a': //  start or stop animation
 			isAnimating = !isAnimating;
 			println("-- animation is " + isAnimating);
 			break;
@@ -775,33 +806,34 @@ public class TutorialOneDrawing extends PApplet {
 		case 'c': // apply color from image file to display image
 			chooseColorImage();
 			break;
-		case 'k': // apply the hue and saturation in the colors array to mapImage 
+		case 'k': // apply the hue and saturation in the colors array to mapImage (shifted when animating)
 			mapImage.loadPixels();
-			applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+			applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
 			mapImage.updatePixels();
+			break;
+		case 'K': // color display with spectrum and write to base image
+			break;
+		case 'p': // adjust pitch
+			usePitchedGrains = !usePitchedGrains;
+			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
+			println("-- Play granular synth with "+ msg);
 			break;
 		case 'j': // turn audio and image blending on or off
 			isBlending = !isBlending;
 			println("-- isBlending is "+ isBlending);
 			break;
-		case 'g': // turn "granular" envelope and timing (for drawing) on or off
-			useGranularEnv = !useGranularEnv;
-			println("-- useGranularEnv is "+ useGranularEnv);
-			break;
 		case 'n': // normalize the audio buffer to -6.0dB
 			audioSignal = playBuffer.getChannel(0);
 			normalize(audioSignal, -6.0f);
-		    synth.setBuffer(audioSignal, sampleRate);
-		    if (pool != null) pool.setBuffer(audioSignal, sampleRate);
-		    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, maxVoices, 1, audioOut, defaultEnv);		    
+			ensureSamplerReady();		    
 		    println("---- normalized");
 			break;
 		case 'L': case 'l': // determine whether to load a new file to both image and audio or not
 			isLoadToBoth = !isLoadToBoth;
-			String msg = isLoadToBoth ? "loads to both audio and image. " : "loads only to selected format. ";
+			msg = isLoadToBoth ? "loads to both audio and image. " : "loads only to selected format. ";
 			println("---- isLoadToBoth is "+ isLoadToBoth +", opening a file "+ msg);
 			break;
-		case 'o': case 'O': // open an audio or image file
+		case 'o': case 'O': // open an audio or image file and load to image or audio buffer or both
 			chooseFile();
 			break;
 		case 'w': // write the image colors to the audio buffer as transcoded values
@@ -810,7 +842,7 @@ public class TutorialOneDrawing extends PApplet {
 			// resize the buffer to mapSize, if necessary -- signal will not be overwritten
 			if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
 			audioSignal = playBuffer.getChannel(0);
-			// transcode mapImage brightness channel in HSB color space to audio sample values TODO totalShift = 0
+			// transcode mapImage brightness channel in HSB color space to audio sample values
 			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
 			commitMapImageToBaseImage();
 			// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
@@ -818,18 +850,17 @@ public class TutorialOneDrawing extends PApplet {
 			audioLength = audioSignal.length;
 			println("--->> Wrote image to audio as audio data.");
 		    // load the buffer of our PASamplerInstrument (it will use a copy)
-		    synth.setBuffer(playBuffer);
-		    if (pool != null) pool.setBuffer(playBuffer);
-		    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, maxVoices, 1, audioOut, defaultEnv);
-		    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
-		    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
+			ensureSamplerReady();
+		    // TODO if audioSignal is a the canonical audio source, we don't need copies, or do we?
+		    // because playBuffer is used the sampler instrument and should not change
+		    // we don't want playBuffer and audioSignal to point to the same array
 		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
 		    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
 		    granSignal = audioSignal;
 		    audioLength = audioSignal.length;
 			break;
 		case 'W': // write the audio buffer samples to the image as color values
-			renderAudioToMapImage(chan);
+			renderAudioToMapImage(chan, totalShift);
 			println("--->> Wrote audio to image as pixel data.");
 			break;
 		case 'x': // delete the current active brush shape or the oldest brush shape
@@ -839,11 +870,6 @@ public class TutorialOneDrawing extends PApplet {
 			break;
 		case 'X': // delete the most recent brush shape
 			removeNewestBrush();
-			break;
-		case '!': // switch pool and synth, secret toggle, not for the help message
-			isUseSynth = !isUseSynth;
-			msg = isUseSynth ? ", sound will play using synth." : ", sound will play using pool.";
-			println("---- isUseSynth = "+ isUseSynth + msg);
 			break;
 		case 'u': // mute audio
 			isMuted = !isMuted;
@@ -934,6 +960,23 @@ public class TutorialOneDrawing extends PApplet {
 		return graySource;
 	}
 
+	public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
+	    if (colorSource == null || graySource == null || lut == null)
+	        throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
+	    if (colorSource.length != graySource.length || colorSource.length != lut.length)
+	        throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
+	    int n = graySource.length;
+	    int s = ((shift % n) + n) % n; // wrap + allow negative shifts
+	    float[] hsbPixel = new float[3];
+	    for (int i = 0; i < n; i++) {
+	        int srcIdx = lut[i] + s;
+	        if (srcIdx >= n) srcIdx -= n; // faster than % in tight loop
+	        graySource[i] = PixelAudioMapper.applyColor(colorSource[srcIdx], graySource[i], hsbPixel);
+	    }
+	    return graySource;
+	}	
+
+	
 	/*----------------------------------------------------------------*/
 	/*                                                                */
 	/*                   BEGIN FILE I/O METHODS                       */
@@ -1096,9 +1139,7 @@ public class TutorialOneDrawing extends PApplet {
 				// load the buffer of our PASamplerInstrument (created in initAudio(), on starting the sketch)
 			}
 		}
-		synth.setBuffer(playBuffer, fileSampleRate);
-		if (pool != null) pool.setBuffer(playBuffer, fileSampleRate);
-		else pool = new PASamplerInstrumentPool(playBuffer, fileSampleRate, maxVoices, 1, audioOut, defaultEnv);
+		ensureSamplerReady();
 		// because playBuffer is used by synth and pool and should not change, while audioSignal changes
 		// when the image animates, we don't want playBuffer and audioSignal to point to the same array
 		// so we copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
@@ -1106,10 +1147,9 @@ public class TutorialOneDrawing extends PApplet {
 		granSignal = audioSignal;
 		audioLength = audioSignal.length;
 		if (isLoadToBoth) {
-			renderAudioToMapImage(chan);
+			renderAudioToMapImage(chan, 0);
 			commitMapImageToBaseImage();
 		}
-		totalShift = 0;    // reset animation shift when audio is reloaded
 	}
 	
 	/**
@@ -1173,9 +1213,9 @@ public class TutorialOneDrawing extends PApplet {
 	    }
 	}
 	
-	public void renderAudioToMapImage(PixelAudioMapper.ChannelNames chan) {
+	public void renderAudioToMapImage(PixelAudioMapper.ChannelNames chan, int shift) {
 	    // Render current audioSignal into mapImage using current mapper & current totalShift
-	    writeAudioToImage(audioSignal, mapper, mapImage, chan, totalShift);
+	    writeAudioToImage(audioSignal, mapper, mapImage, chan, shift);
 	}
 	
 	/**
@@ -1247,9 +1287,7 @@ public class TutorialOneDrawing extends PApplet {
 		    playBuffer.setChannel(0, audioSignal);
 		    audioLength = audioSignal.length;
 		    // load the buffer of our PASamplerInstrument (created in initAudio() on starting the sketch)
-		    synth.setBuffer(playBuffer);
-		    if (pool != null) pool.setBuffer(playBuffer);
-		    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, maxVoices, 1, audioOut, defaultEnv);
+		    ensureSamplerReady();
 		    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
 		    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
 		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
@@ -1414,44 +1452,62 @@ public class TutorialOneDrawing extends PApplet {
 		this.audioSignal = playBuffer.getChannel(0);
 		this.granSignal = audioSignal;
 		this.audioLength = audioSignal.length;
-		// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-		defaultEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-		granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
-		// create a PASamplerInstrument, though playBuffer is all 0s at the moment
-		// allocate plenty of voices, the drawing interface generates a lot of audio events
-		synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), maxVoices, audioOut, defaultEnv);
 		// initialize mouse event tracking array
 		pointTimeLocs = new ArrayList<TimedLocation>();
+		initGranularParams();
 	}
 	
-	/**
-	 * Typically called from mousePressed with mouseX and mouseY, generates audio events.
-	 * At the moment, plays the Sampler synth. TODO granular burst for point event. 
-	 * 
-	 * @param x    x-coordinate within a PixelAudioMapper's width
-	 * @param y    y-coordinate within a PixelAudioMapper's height
-	 */
-	public void audioMousePressed(int x, int y) {
-		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
-		// println("-- signalPos = "+ signalPos);
-		float panning = map(x, 0, width, -0.8f, 0.8f);		
-		if (pool == null || synth == null) {
-			println("You need to load an audio file before you can trigger audio events.");
-		}
-		else {
-			if (!useGranularEnv) {
-				int len = calcSampleLen();
-				samplelen = playSample(signalPos, len, synthGain, defaultEnv, panning);
-			}
-			else {
-				int len = (int)(abs((this.granEnvDuration) * sampleRate / 1000.0f));
-				samplelen = playSample(signalPos, len, synthGain, granularEnv, panning);
-			}
-		}
-		int durationMS = (int)(samplelen/sampleRate * 1000);
-		pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
+	public void initGranularParams() {
+	    gParamsGesture = GestureGranularParams.builder()
+	            .grainLengthSamples(granSamples)
+	            .hopLengthSamples(hopSamples)
+	            .gainLinear(0.9f)
+	            .looping(false)
+	            .env(null)
+	            .hopMode(GestureGranularParams.HopMode.GESTURE)
+	            .build();
+	   gParamsFixed = GestureGranularParams.builder()
+	            .grainLengthSamples(granSamples)
+	            .hopLengthSamples(hopSamples)
+	            .gainLinear(0.9f)
+	            .looping(false)
+	            .env(null)
+	            .hopMode(GestureGranularParams.HopMode.FIXED)
+	            .build();
 	}
-			
+		
+	public void audioMousePressed(int x, int y) {
+	    if (!useGranularSynth) {
+	    	// use Sampler synthesis instrument
+	    	ensureSamplerReady();
+	        int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
+	        float panning = map(x, 0, width, -0.8f, 0.8f);
+	        int len = calcSampleLen();
+	        samplelen = playSample(signalPos, len, synthGain, defaultEnv, panning);
+	        int durationMS = (int)(samplelen / sampleRate * 1000);
+	        pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
+	        return;
+	    }
+    	// use Granular synthesis instrument
+	    ensureGranularReady();
+	    float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+	    final int grainCount = (int) Math.round(noteDuration/hopMsF);
+	    println("-- granular point burst with grainCount = "+ grainCount);
+	    ArrayList<PVector> path = new ArrayList<>(grainCount);
+	    int[] timing = new int[grainCount];
+	    for (int i = 0; i < grainCount; i++) {
+	        path.add(this.jitterCoord(x, y, 3));
+	        timing[i] = Math.round(i * hopMsF);
+	    }
+	    int startTime = millis() + 10;
+	    PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+	    curve.setDragTimes(timing);
+	    curve.setTimeStamp(startTime);
+	    GestureSchedule sched = curve.getAllPointsSchedule();
+	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
+	    playGranularGesture(buf, sched, gParamsFixed);
+	    storeGranularCurveTL(sched, startTime, false);
+	}			
 	/**
 	 * Calculates the index of the image pixel within the signal path,
 	 * taking the shifting of pixels and audioSignal into account.
@@ -1494,7 +1550,7 @@ public class TutorialOneDrawing extends PApplet {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
-		return playSample(samplePos, samplelen, amplitude, defaultEnv, pitchScaling, pan);
+		return playSample(samplePos, samplelen, amplitude, defaultEnv, 1.0f, pan);
 	}
 
 	/**
@@ -1508,7 +1564,7 @@ public class TutorialOneDrawing extends PApplet {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
-		return synth.playSample(samplePos, samplelen, amplitude, env, pitchScaling, pan);
+		return playSample(samplePos, samplelen, amplitude, env, 1.0f, pan);
 	}
 
 	/**
@@ -1523,12 +1579,7 @@ public class TutorialOneDrawing extends PApplet {
 	 * @return
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-	  if (isUseSynth) {
-		  return synth.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-	  }
-	  else {
-		  return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-	  }
+		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
 	}
 	
 	
@@ -1549,9 +1600,14 @@ public class TutorialOneDrawing extends PApplet {
 	public PAGranularInstrument buildGranSynth(AudioOutput out, ADSRParams env, int numVoices) {
 	    return new PAGranularInstrument(out, env, numVoices);
 	}
-
+	
+	void ensureSamplerReady() {
+	    if (pool != null) pool.setBuffer(playBuffer);
+	    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 4, samplerMaxVoices, audioOut, defaultEnv);
+	}
+	
 	void ensureGranularReady() {
-		if (gParams == null) {
+		if (gParamsGesture == null) {
 			ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.75f, 0.025f);
 		}
 	    if (gSynth == null) {
@@ -1565,35 +1621,9 @@ public class TutorialOneDrawing extends PApplet {
 	    }
 	}
 
-	public GranularSettings buildGranSettings(int len, int hop, GranularSettings.WindowPreset win) {
-	    GranularSettings settings = new GranularSettings();
-	    settings.defaultGrainLength = len;
-	    settings.hopSamples = hop;
-	    settings.selectWindowPreset(win);
-	    return settings;
-	}
-
-	public PathGranularSource buildPathGranSource(float[] buf, GranularPath camino, GranularSettings settings) {
-	    return new PathGranularSource(buf, camino, settings, audioOut.sampleRate());
-	}
-
-	//  
-	public void playGranular(float[] buf, GranularPath camino, GranularSettings settings, boolean isBuildADSR) {
-	    ensureGranularReady();
-	    PathGranularSource granSource = buildPathGranSource(buf, camino, settings);
-	    if (isBuildADSR) {
-	        int steps = Math.max(1, camino.size() - 1);
-	        int totalSamples = steps * settings.hopSamples + settings.defaultGrainLength;
-	        ADSRParams env = calculateEnvelope(0.0f, totalSamples, audioOut.sampleRate()); // gainDb=0 for tutorial
-	        gSynth.play(granSource, 1.0f, 0.0f, env, false);
-	    } else {
-	        gSynth.play(granSource, 1.0f, 0.0f, null, false);
-	    }
-	}
-	
 	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
 		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
-		println("---> startIndices[0] = "+ startIndices[0] +" for "+ sched.points.get(0).x, sched.points.get(0).y, totalShift, mapper.getSize());
+		// println("---> startIndices[0] = "+ startIndices[0] +" for "+ sched.points.get(0).x, sched.points.get(0).y, totalShift, mapper.getSize());
 		float[] panPerGrain = new float[sched.size()];
 		for (int i = 0; i < sched.size(); i++) {
 		    PVector p = sched.points.get(i);
@@ -1604,6 +1634,15 @@ public class TutorialOneDrawing extends PApplet {
 		//debugIndexHeadroom(buf, startIndices, tx);
 		//debugTimesMs(sched);
 		//println("\n");
+		if (usePitchedGrains) {
+			GestureEventParams eventParams = GestureEventParams.ofStartIndices(startIndices);
+			eventParams.withPan(panPerGrain);
+			float[] pitch = generateJitterPitch(sched.size(), 6.0f);
+			eventParams.withPitchRatio(pitch);
+			gDir.playGestureNow(buf, sched, params, eventParams);
+			println("-- pitch jitter -- "+ pitch[0]);
+			return;
+		}
 		gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 	}
 
@@ -1711,16 +1750,38 @@ public class TutorialOneDrawing extends PApplet {
 	 */
 	public void addPoint(int x, int y) {
 	    if (x != currentPoint.x || y != currentPoint.y) {
-	        currentPoint = new PVector(clipToBounds(x), clipToBounds(y));
+	        currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
 	        allPoints.add(currentPoint);
 	        allTimes.add(millis() - startTime);
 	    }
 	}
 		
-	public int clipToBounds(int i) {
+	public int clipToWidth(int i) {
 		return min(max(0, i), width - 1);
-	}	
+	}
+	public int clipToHeight(int i) {
+		return min(max(0, i), height - 1);
+	}
 	
+	public PVector jitterCoord(int x, int y, int deviationPx) {
+	    double variance = deviationPx * deviationPx;
+	    int jx = (int)Math.round(PixelAudio.gauss(0, variance));
+	    int jy = (int)Math.round(PixelAudio.gauss(0, variance));
+	    int nx = clipToWidth(x + jx);
+	    int ny = clipToHeight(y + jy);
+	    return new PVector(nx, ny);
+	}
+	
+	
+	float[] generateJitterPitch(int length, float deviationPitch) {
+		float[] pitch = new float[length];
+		double variance = deviationPitch * deviationPitch;
+		for (int i = 0; i < pitch.length; i++) {
+			pitch[i] = (float) PixelAudio.gauss(1, variance);
+		}
+		return pitch;
+	}
+			
 	/**
 	 * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
 	 * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from 
@@ -1742,7 +1803,7 @@ public class TutorialOneDrawing extends PApplet {
 	    cfg.curveSteps = curveSteps;
 	    cfg.pathMode = PathMode.ALL_POINTS; // tutorial default
 	    // Default output for newly drawn strokes: SAMPLER (tutorial-centric)
-	    AudioBrushLite b = new AudioBrushLite(curveMaker, cfg, BrushOutput.SAMPLER);
+	    AudioBrushLite b = new AudioBrushLite(curveMaker, cfg, BrushOutput.SAMPLER, HopMode.GESTURE);
 	    b.cfg.pathMode = defaultPathModeFor(b.output());
 	    brushes.add(b);
 	    // Optionally auto-select the new brush
@@ -1843,9 +1904,14 @@ public class TutorialOneDrawing extends PApplet {
 	public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
 		if (this.samplerTimeLocs == null) samplerTimeLocs = new ArrayList<>();
 		int i = 0;
+		startTime = millis() + 5;
 		// we store the point and the current time + time offset, where timesMs[0] == 0
 		for (PVector loc : sched.points) {
-			this.samplerTimeLocs.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + Math.round(sched.timesMs[i++]), 200));
+			int x = Math.round(loc.x);
+			int y = Math.round(loc.y);
+			int t = startTime + Math.round(sched.timesMs[i++]);
+			int d = 200;
+			this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
 		}
 		Collections.sort(samplerTimeLocs);
 	}
@@ -1860,6 +1926,7 @@ public class TutorialOneDrawing extends PApplet {
 	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
 	            int pos = getSamplePos(sampleX, sampleY);
                 playSample(pos, calcSampleLen(), synthGain, panning);
+        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
 	            tl.setStale(true);
 	        } 
 	        else {
@@ -1875,17 +1942,25 @@ public class TutorialOneDrawing extends PApplet {
 	    if (pts == null || pts.size() < 2) return;
 	    ensureGranularReady();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-		GestureSchedule sched = getScheduleForBrush(b);
+	    boolean isGesture = (b.hopMode() == HopMode.GESTURE);
+		GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
+		GestureSchedule sched = getScheduleForBrush(b); 
 	    playGranularGesture(buf, sched, gParams);
-		storeGranularCurveTL(sched, millis() + 10);
+		storeGranularCurveTL(sched, millis() + 10, isGesture);
 	}	
 
-	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime) {
+	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
 		if (this.grainTimeLocs == null) grainTimeLocs = new ArrayList<>();
 		int i = 0;
+		int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+		int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
 		// we store the point and the current time + time offset, where timesMs[0] == 0
 		for (PVector loc : sched.points) {
-			this.grainTimeLocs.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + Math.round(sched.timesMs[i++]), 200));
+			int x = Math.round(loc.x);
+			int y = Math.round(loc.y);
+			int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
+			int d = (isGesture) ? 200 : durMsFixed;
+			this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
 		}
 		Collections.sort(grainTimeLocs);
 	}
