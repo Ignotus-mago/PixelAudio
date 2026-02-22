@@ -51,6 +51,7 @@ public class PAGranularVoice {
 
     // Envelope
     private SimpleADSR envelope;
+    ADSRParams defaultEnvParams = new ADSRParams(1.0f, 0.01f, 0.02f, 0.9375f, 0.125f);
     
     // pan gain
     private float panGainL = 1f;
@@ -127,19 +128,18 @@ public class PAGranularVoice {
     		}    	
     	}
 
+    	// Envelope setup (macro envelope over a gesture): always have an envelope
+    	ADSRParams useEnv = (envParams != null) ? envParams : defaultEnvParams;
+
     	// Envelope setup (macro envelope over a gesture)
-    	if (envParams != null) {
-    		envelope = new SimpleADSR(
-    				envParams.getAttack(),
-    				envParams.getDecay(),
-    				envParams.getSustain(),
-    				envParams.getRelease()
-    				);
-    		envelope.setSampleRate(playbackSampleRate);
-    		envelope.noteOn();
-    	} else {
-    		envelope = null;
-    	}
+    	envelope = new SimpleADSR(
+    			useEnv.getAttack(),
+    			useEnv.getDecay(),
+    			useEnv.getSustain(),
+    			useEnv.getRelease()
+    			);
+    	envelope.setSampleRate(playbackSampleRate);
+    	envelope.noteOn();
     }
 
     // ------------------------------------------------------------------------
