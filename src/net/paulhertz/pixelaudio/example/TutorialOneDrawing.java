@@ -224,8 +224,7 @@ public class TutorialOneDrawing extends PApplet {
 	
 	/*
 	 * Audio playback support is added with the audio variables and audio methods. 
-	 * You will also need the ADSRParams, PASamplerInstrument, PASamplerInstrumentPool
-	 * and TimedLocation classes. In setup(), call initAudio(), then add
+	 * You will also need the ADSRParams, PASamplerInstrument, PASamplerInstrumentPool5	 * and TimedLocation classes. In setup(), call initAudio(), then add
 	 * a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
 	 * and call runTimeArray() in your draw method. 
 	 */
@@ -247,7 +246,8 @@ public class TutorialOneDrawing extends PApplet {
 	// SampleInstrument setup
 	int noteDuration = 1000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
-	float synthGain = 0.8f;       // gain setting for audio playback instrument, decimal value 0..1
+	float synthGain = 0.5f;         // gain setting for gesture events with Sampler instrument, decimal value 0..1
+	float synthPointGain = 0.75f;   // gain for point events with the Sampler instrument
 	float outputGain = -6.0f;       // gain setting for audio output, decibels
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
@@ -274,6 +274,8 @@ public class TutorialOneDrawing extends PApplet {
     public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
     public PAGranularInstrument gSynth;         // granular synthesis instrument
     public PAGranularInstrumentDirector gDir;   // director of granular events
+    public float granularGain = 0.9f;
+    public float granularPointGain = 1.0f;
     // parameters for granular synthesis
     boolean useShortGrain = true;
     int longSample = 4096;
@@ -710,11 +712,11 @@ public class TutorialOneDrawing extends PApplet {
     		float g = audioOut.getGain();
 			if (keyCode == UP) {
 				setAudioGain(g + 3.0f);
-				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == DOWN) {
 				setAudioGain(g - 3.0f);
-				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == RIGHT) {
 
@@ -738,7 +740,7 @@ public class TutorialOneDrawing extends PApplet {
 	public void parseKey(char key, int keyCode) {
 		String msg;
 		switch(key) {
-		case ' ': // trigger a brush if we're hovering over a brush
+		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
 			if (hoverBrush != null) {
 				if (hoverBrush.output() == BrushOutput.SAMPLER) {
 					scheduleSamplerBrushClick(hoverBrush);    // Sampler brush clicked event
@@ -792,6 +794,7 @@ public class TutorialOneDrawing extends PApplet {
 			granSamples = useShortGrain ? shortSample : longSample;
 			hopSamples = granSamples/4;
 			initGranularParams();
+			println("-- Granular synth uses grain length = "+ granSamples +" samples");
 			break;
 		case 'a': //  start or stop animation
 			isAnimating = !isAnimating;
@@ -1458,20 +1461,21 @@ public class TutorialOneDrawing extends PApplet {
 	}
 	
 	public void initGranularParams() {
+		ADSRParams env = this.calculateEnvelope(granularGain, 1000);
 	    gParamsGesture = GestureGranularParams.builder()
 	            .grainLengthSamples(granSamples)
 	            .hopLengthSamples(hopSamples)
-	            .gainLinear(0.9f)
+	            .gainLinear(granularGain)
 	            .looping(false)
-	            .env(null)
+	            .env(env)
 	            .hopMode(GestureGranularParams.HopMode.GESTURE)
 	            .build();
 	   gParamsFixed = GestureGranularParams.builder()
 	            .grainLengthSamples(granSamples)
 	            .hopLengthSamples(hopSamples)
-	            .gainLinear(0.9f)
+	            .gainLinear(granularGain)
 	            .looping(false)
-	            .env(null)
+	            .env(env)
 	            .hopMode(GestureGranularParams.HopMode.FIXED)
 	            .build();
 	}
@@ -1483,7 +1487,7 @@ public class TutorialOneDrawing extends PApplet {
 	        int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
 	        float panning = map(x, 0, width, -0.8f, 0.8f);
 	        int len = calcSampleLen();
-	        samplelen = playSample(signalPos, len, synthGain, defaultEnv, panning);
+	        samplelen = playSample(signalPos, len, synthPointGain, defaultEnv, panning);
 	        int durationMS = (int)(samplelen / sampleRate * 1000);
 	        pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
 	        return;
@@ -1603,7 +1607,7 @@ public class TutorialOneDrawing extends PApplet {
 	
 	void ensureSamplerReady() {
 	    if (pool != null) pool.setBuffer(playBuffer);
-	    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 4, samplerMaxVoices, audioOut, defaultEnv);
+	    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 1, samplerMaxVoices, audioOut, defaultEnv);
 	}
 	
 	void ensureGranularReady() {
@@ -1635,10 +1639,12 @@ public class TutorialOneDrawing extends PApplet {
 		//debugTimesMs(sched);
 		//println("\n");
 		if (usePitchedGrains) {
-			GestureEventParams eventParams = GestureEventParams.ofStartIndices(startIndices);
-			eventParams.withPan(panPerGrain);
-			float[] pitch = generateJitterPitch(sched.size(), 6.0f);
-			eventParams.withPitchRatio(pitch);
+			float[] pitch = generateJitterPitch(sched.size(), 0.25f);
+            GestureEventParams eventParams = GestureEventParams.builder(sched.size())
+                .startIndices(startIndices)
+                .pan(panPerGrain)
+                .pitchRatio(pitch)
+                .build();
 			gDir.playGestureNow(buf, sched, params, eventParams);
 			println("-- pitch jitter -- "+ pitch[0]);
 			return;
@@ -1654,6 +1660,7 @@ public class TutorialOneDrawing extends PApplet {
 	    float attackMS = Math.min(50, totalMs * 0.1f);
 	    float releaseMS = Math.min(200, totalMs * 0.3f);
 	    float envGain = AudioUtility.dbToLinear(gainDb);
+	    envGain = 1.0f;
 	    return new ADSRParams(envGain, attackMS / 1000f, 0.01f, 0.8f, releaseMS / 1000f);
 	}
 	
