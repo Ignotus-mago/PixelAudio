@@ -815,6 +815,13 @@ public class TutorialOneDrawing extends PApplet {
 			mapImage.updatePixels();
 			break;
 		case 'K': // color display with spectrum and write to base image
+			// color the base image
+			baseImage.loadPixels();
+			applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
+			baseImage.updatePixels();
+			mapImage.loadPixels();
+			mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
+			mapImage.updatePixels();
 			break;
 		case 'p': // adjust pitch
 			usePitchedGrains = !usePitchedGrains;
