@@ -146,6 +146,10 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         return null; // shouldn't happen
     }
 
+    /**
+     * Required by Minim.UGen, core method for audio synthesis called by Minim. 
+     * Constant-power panning and soft limiter added to support polyphonic voices. 
+     */
     @Override
     protected synchronized void uGenerate(float[] channels) {
         Arrays.fill(channels, 0f);

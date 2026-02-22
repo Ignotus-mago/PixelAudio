@@ -38,7 +38,6 @@ public class PAGranularSampler extends UGen {
         final WindowFunction grainWindow; // may be null -> voice should default
         final int grainLenSamples;        // >= 1
 
-
         ScheduledPlay(PASource src,
         		ADSRParams env,
         		float gain,
@@ -85,7 +84,9 @@ public class PAGranularSampler extends UGen {
     
     private final float[] tmpStereo = new float[2];
 
-    
+    private float mixNorm = 1f;    // NEW, mixing and normalization
+    private float globalMakeUpGain = 2.5f;
+
 	// private long blockStartSample = 0;    // NEW, for revised AudioScheduler
 
     /**
@@ -291,46 +292,61 @@ public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
     @Override
     protected synchronized void uGenerate(float[] channels) {
-        // 1) Fire point events at this exact sample (blockSize = 1 frame)
         scheduler.processBlock(
-                sampleCursor,
-                1,
-                (ScheduledPlay sp, int offsetInBlock) -> {
-                    // offsetInBlock will always be 0 here
-                    getAvailableVoice(
-                            sp.src, sp.env, sp.gain, sp.pan, sp.looping,
-                            sp.grainWindow, sp.grainLenSamples
-                    );
-                },
-                null
+            sampleCursor,
+            1,
+            (ScheduledPlay sp, int offsetInBlock) -> {
+                getAvailableVoice(
+                    sp.src, sp.env, sp.gain, sp.pan, sp.looping,
+                    sp.grainWindow, sp.grainLenSamples
+                );
+            },
+            null
         );
 
-        // 2) Clear this sample frame
         Arrays.fill(channels, 0f);
 
-        // 3) Mix one sample frame from all voices
         float leftMix = 0f;
         float rightMix = 0f;
+        int activeCount = 0;
 
         for (PAGranularVoice v : voices) {
             v.nextSampleStereo(tmpStereo);
-            float left  = tmpStereo[0];
-            float right = tmpStereo[1];
             if (v.isActive() || v.isReleasing()) {
-                leftMix  += left;
-                rightMix += right;
+                activeCount++;
+                leftMix  += tmpStereo[0];
+                rightMix += tmpStereo[1];
             }
         }
 
-        // 4) Write output for this frame
-        channels[0] = (channels.length > 0) ? leftMix : 0f;
-        if (channels.length > 1) {
-            channels[1] = rightMix;
-        }
+        // power normalization, smoothed
+        float targetNorm = (activeCount > 1)
+                ? (float)Math.pow(activeCount, -0.25f)  // gentler than 1/sqrt
+                : 1f;
 
-        // 5) Advance global sample cursor by one sample frame
+        float alpha = 0.12f;
+        mixNorm += alpha * (targetNorm - mixNorm);
+
+        // makeup is MULTIPLICATIVE
+        float postGain = mixNorm * globalMakeUpGain; // e.g., 1.5f..3.0f
+        leftMix  *= postGain;
+        rightMix *= postGain;
+
+        // limiter
+        float drive = 2.0f;
+        leftMix  = softClipSoftsign(leftMix, drive);
+        rightMix = softClipSoftsign(rightMix, drive);
+        channels[0] = leftMix;
+        if (channels.length > 1) channels[1] = rightMix;
+
         sampleCursor++;
     }
+    
+    private static float softClipSoftsign(float x, float drive) {
+        float y = drive * x;
+        return y / (1f + Math.abs(y));
+    }
+   
     
     // ------------------------------------------------------------------------
     // Controls
