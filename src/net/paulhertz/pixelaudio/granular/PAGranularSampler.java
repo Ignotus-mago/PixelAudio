@@ -236,6 +236,10 @@ public class PAGranularSampler extends UGen {
     }
         
     /**
+     * Called by PAGranularInstrument.startAtSampleTime(...), creates a ScheduledPlay instance
+     * with PASource src and other arguments, then passes it to AudioScheduler scheduler, 
+     * which will be handled through Minim's uGenerate call to this instance of PAGranularSampler.
+     * 
      * @param src                PASource
      * @param env                ADSR (already resolved: either custom or default)
      * @param gain               final gain
@@ -286,10 +290,9 @@ public class PAGranularSampler extends UGen {
     }
     
 
-    // ------------------------------------------------------------------------
-    // uGenerate — per-sample frame processing with AudioScheduler
-    // Called through Minim 
-    // ------------------------------------------------------------------------
+    /**
+     * Provides per-sample frame processing with AudioScheduler, called through Minim.
+     */
     @Override
     protected synchronized void uGenerate(float[] channels) {
         scheduler.processBlock(

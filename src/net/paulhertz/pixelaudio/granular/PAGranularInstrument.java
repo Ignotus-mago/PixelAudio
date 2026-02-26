@@ -139,6 +139,7 @@ public class PAGranularInstrument {
     
     /**
      * Schedule playback of a PASource at an absolute sample time.
+     * Called by PAGranularInstrumentDirector
      *
      * @param src            PASource
      * @param amp            amplitude
