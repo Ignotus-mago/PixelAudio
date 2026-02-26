@@ -1,150 +1,3 @@
-/*
- * This example application continues the Tutorial One sequence for the PixelAudio
- * library for Processing. To the previous tools for reading and writing and transcoding
- * audio and image files, triggering audio events, and animating pixels to change
- * audio sample order, it adds the capability of drawing in the display window to 
- * create brush shapes that can be used to trigger audio events. 
- * 
- * The drawing tools and commands are a substantial addition. To implement them 
- * we call on a whole new package of code, net.paulhert.pixelaudio.curves. We make 
- * numerous edits to the previous tutorial, TutorialOneAnimation:
- *     
- *     -- We add a raft of variables to handle drawing.
- *        Here's an outline of how to begin drawing:
- *        
- *     1. Open an audio file with the 'o' key command. The audio file is read into
- *        the audio buffer, playBuffer, It is transcoded as pixel data to the display.
- *        The transcoded data replaces the color pattern that shows the signal path.
- *        Similarly, if you open an image file, it will open in the display and be 
- *        transcoded into the audio buffer, possibly with very noisy results. 
- *        You can turn this simultaneous loading off with the 'L' key and use the
- *        'w' and 'W' keys to write the display to audio or audio to the display.
- *        
- *     2. Press the 'k' key. The color pattern reappears, overlaid on the signal image. 
- *        The overlay works by copying the Hue and Saturation channels of the color image
- *        and combining them with the Brightness channel of the display. See the 
- *        applyColor() and chooseColorImage() methods for the code. You can also load
- *        color data from an image with the 'c' key command.
- *        
- *     3. Click on the display to trigger audio events. They should be fairly quiet: the 
- *        gain for audio output is set to -18.0 dB. The sound will get loud when you draw.
- *        
- *     4. Press 'd' to set isDrawMode to true. Press and drag the mouse to draw a line.
- *        Release the mouse to create a brushstroke -- audio and animation will play.
- *        When you drag the mouse, the sketch accumulates non-repeating points into an 
- *        ArrayList of PVector, allPoints. When you release the mouse, PACurverMaker and 
- *        PACurveMakerUtility process the points:         
- *          - The accumulated points in allPoints are used to create a PACurveMaker object.
- *          - PACurveMaker uses the Ramer-Douglas-Peucker algorithm to reduce the number of points. 
- *          - PACurveMaker uses the reduced point set to generate a Bezier curve.
- *          - The Bezier curve is used to model a brushstroke shape.
- *        All these data elements are available from the PACurveMaker instance. PACurveMaker
- *        also stores time data for drawing, but we don't use it in this sketch. 
- *        The PACurveMaker instance is added to a list of PACUrveMakers, brushShapesList.
- *        BrushShapeList handles drawing curves to the screen. 
- *        
- *     5. Draw some more brushstrokes. Press 'd' to turn drawing off.
- *     
- *     6. Click on a brushstroke to activate it. 
- *     
- *     7. Press the 'x' key while hovering over a brushstroke to delete it. 
- *        Pressing 'x' when you aren't hovering over a brushstroke will delete the oldest 
- *        brushstroke. Pressing 'X' will delete the most recent brushstroke. 
- *     
- *          
- *          
- *     -- We added several new methods, in the DRAWING METHODS section.
- *        See the JavaDocs information for each method for a description of what it does.
- *        The initDrawing(), handleDrawing() and handleMousePressed() are new methods that 
- *        are central to interaction and drawing. 
- *        
- *        SEE the JavaDoc entries for PACurveMaker, PACurveMakerUtility, PABezShape and the
- *        other classes in the net.paulhertz.pixelaudio.curves package for more information
- *        about curve modeling. 
- *        
- *     -- We reconfigured code for handling mouse events and TimedLocation events. The mouse event
- *        tracking starts in mousePressed(), when isDrawMode == true. While the mouse is down, calls
- *        to handleDrawing() in the draw() method accumulate points to allPoints. When the mouse is 
- *        released, allPoints is used to initialize a PACurveMaker. 
- *                
- *     -- In the draw() method, a call to handleDrawing() draws brush shapes and detects user interaction
- *        with the brush shapes by calling drawBrushShapes(). If a brush shape is flagged as active, a
- *        mousePressed event can trigger its audio and animation events by calling handleMousePressed().
- *        This will generate TimedLocation objects that trigger audio and animation events. 
- *        
- *     -- There are now two lists of TimedLocation events, timeLocsArray for point events, just like in 
- *        earlier versions of this tutorial, and curveTLEvents for brush events. The handleDrawing() method
- *        takes care of both lists with calls to runCurveEvents() and runPointEvents().
- *        
- *     -- Mouse clicks that don't involve drawing are passed to audioMousePressed(), used in previous tutorials. 
- *     
- *     >> NOTE: TimedLocation is slated for further development and will probably become part of the PixelAudio library.
- *        
- *     -- We added blending/mixing features that can operate when you open audio or image files.
- *        Turn the feature on by pressing the 'j' key. It's off by default. See the loadAudioFile() and 
- *        loadImageFile() methods for the code. 
- *        
- *     
- * AUDIO EVENTS
- *     
- * In this tutorial we introduce a new class for triggering audio events, PASamplerInstrumentPool.
- * In previous tutorials, we just used PASamplerInstrument, which can support multiple voices and 
- * works well with events triggered by clicking the mouse. Events triggered by drawing add a new
- * level of complication -- we can automatically trigger dozens of event at once. PASamplerInstrument
- * and Minim's AudioSampler, which it wraps, appeared to have practical limits to the number of 
- * voices they could support without distortion. PASamplerInstrumentPool allocates a PASamplerInstrument
- * from a previously created list or "pool" of instruments to handle each request for an audio event. 
- * So far, this is the best solution I have for playing many voices together.
- * 
- * If you would like to hear the difference between multi-voice PASamplerIntrument and PASamplerInstrumentPool,
- * just press the '!' key while one or more brushstrokes are playing.
- * 
- * Remaining in the tutorial are TutorialOne_05_UDP, which implements networked communication with Max 
- * and other media applications, and MusicWindowBox, a sketch that implements a windowed buffer for 
- * traversing an audio file plus various features useful in performance.
- *        
- *
- * Here are the key commands for this sketch:
- * 
- * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
- * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.
- * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.
- * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.
- * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.
- * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.
- * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.
- * Press 'e' to select granular or sampler synth for click response.
- * Press 'r' to select long or short grain duration .
- * Press 'p' to jitter the pitch of granular gestures.
- * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
- * Press 'd' to turn drawing on or off.
- * Press 'c' to apply color from image file to display image.
- * Press 'k' to apply the hue and saturation in the colors array to mapImage (shifted when animating).
- * Press 'K' to color display with spectrum and write to base image.
- * Press 'j' to turn audio and image blending on or off.
- * Press 'n' to normalize the audio buffer to -6.0dB.
- * Press 'l' or 'L' to determine whether to load a new file to both image and audio or not.
- * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
- * Press 'w' to write the image HSB Brightness channel to the audio buffer as transcoded sample values .
- * Press 'W' to write the audio buffer samples to the image as color values.
- * Press 'x' to delete the current active brush shape or the oldest brush shape.
- * Press 'X' to delete the most recent brush shape.
- * Press 'u' to mute audio.
- * Press 'V' to record a video.
- * Press 'h' or 'H' to show help message in the console.
- * 
- * 
- * REVISIONS
- * 
- * Rendering rule: mapper.mapSigToImgShifted(audioSignal, mapImage.pixels, chan, totalShift);
- * CLick rule: int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
- * 
- * 
- */
-
-// TODO 'save' commands
-// TODO normalization etc, should reload granSignal and update granular brushes!   
-
 package net.paulhertz.pixelaudio.example;
 
 import processing.core.PApplet;
@@ -181,7 +34,83 @@ import ddf.minim.*;
 import com.hamoid.*;
 
 
+
+/**
+ * <p>
+ * This example application continues the Tutorial One sequence for the PixelAudio
+ * library for Processing. To the previous tools for reading and writing and transcoding
+ * audio and image files, triggering audio events, and animating pixels to change
+ * audio sample order, it adds the capability of drawing in the display window to 
+ * capture points used to create brush shapes and to capture timing information used
+ * for audio events. In PixelAudio's conceptual framework, the combination of points
+ * and times constitutes a "gesture". Along with mapping of points to audio samples
+ * using PixelAudioMapper, "gesture" is a core concept of the PixelAudio library. 
+ * </p>
+ * Check out {@link net.paulhertz.pixelaudio.curves.PAGesture PAGesture} for a formal definition of gesture.
+ * <div>
+ * <h2>Points + Times = Gestures</h2>
+ * <p>
+ * The drawing tools and commands are a substantial addition. To implement them 
+ * we call on a whole new package of code, {@link net.paulhert.pixelaudio.curves PixelAudio Curves Package}. To turn
+ * gestures into timing information that can be used to schedule audio events, particularly
+ * with granular sysnthesis, we rely on the {@link net.paulhertz.pixelaudio.schedule PixelAudio Schedule Package}. 
+ * The workhorse of the Curves package is {@link net.paulhert.pixelaudio.curves.PACurveMaker PACurveMaker}, which 
+ * is used to capture point and time information when you draw. The unique points that you draw when dragging
+ * the mouse are stored in PACurveMaker's ALL_POINTS representation of the gesture points. PACurveMaker can also 
+ * reduce the number of points captured, using the Ramer-Douglas-Peucker (RDP) algorithm, to create the REDUCED_POINTS
+ * representation of a gesture. RDP controls point reduction with a numerical value, <code>epsilon</code>, 
+ * which you can vary to control the number of reduced in a gesture. PACurveMaker can turn the reduced points representation
+ * of a drawn line into a Bezier curve, the CURVE_POINTS representation of the gesture. 
+ * </p>   
+ * <h2>Audio Processing</h2>
+ * PAGranularInstrumentDirector sets up the PABurstGranularSource and passes it down the granular synth chain, first 
+ * to PAGranularInstrument and then to PAGranularSampler, where the PABurstGranularSource is one of various parameters 
+ * to create an AudioScheduler scheduler. In PAGranularSampler.uGenerate(), scheduler.processBlock is called, leftMix 
+ * and rightMix are initialized to 0 and the currently active PAGranularVoice instances are summed. After that, uGenerate 
+ * does apply power normalization and soft clipping. It look to me that PABurstGranularSource.processBlock handles 
+ * the first filling in of arrays (through the available voices) before any normalization or soft clipping.
+ * <pre>
+ * Here are the key commands for this sketch:
+ * 
+ * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
+ * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.
+ * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.
+ * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.
+ * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.
+ * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.
+ * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.
+ * Press 'e' to select granular or sampler synth for click response.
+ * Press 'r' to select long or short grain duration .
+ * Press 'p' to jitter the pitch of granular gestures.
+ * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
+ * Press 'd' to turn drawing on or off.
+ * Press 'c' to apply color from image file to display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage (shifted when animating).
+ * Press 'K' to color display with spectrum and write to base image.
+ * Press 'j' to turn audio and image blending on or off.
+ * Press 'n' to normalize the audio buffer to -6.0dB.
+ * Press 'l' or 'L' to determine whether to load a new file to both image and audio or not.
+ * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
+ * Press 'w' to write the image HSB Brightness channel to the audio buffer as transcoded sample values .
+ * Press 'W' to write the audio buffer samples to the image as color values.
+ * Press 'x' to delete the current active brush shape or the oldest brush shape.
+ * Press 'X' to delete the most recent brush shape.
+ * Press 'u' to mute audio.
+ * Press 'V' to record a video.
+ * Press 'h' or 'H' to show help message in the console.
+ * </pre>
+ * </div>
+ * 
+ * REVISIONS
+ * 
+ * Rendering rule: mapper.mapSigToImgShifted(audioSignal, mapImage.pixels, chan, totalShift);
+ * Click rule: int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
+ * 
+ * 
+ */
 public class TutorialOneDrawing extends PApplet {
+	
+	// TODO 'save' commands
 	
 	/* ------------------------------------------------------------------ */
 	/*                       PIXELAUDIO VARIABLES                         */
@@ -262,7 +191,7 @@ public class TutorialOneDrawing extends PApplet {
 	float maxAmplitude = 0.75f;         // in the range 0..1, maximum amplitude of envelope for sampler instruments
 	// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
 	ADSRParams defaultEnv = new ADSRParams(maxAmplitude, 0.2f, 0.1f, maxAmplitude * 0.75f, 0.5f);
-	ADSRParams granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
+	// ADSRParams granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
 	float pitchScaling = 1.0f;          // factor for changing pitch
 	float defaultPitchScale = 1.0f;     // pitch scaling factor
 	float lowPitchScaling = 0.5f;       // low pitch scaling, 0.5 => one octave down
@@ -283,13 +212,15 @@ public class TutorialOneDrawing extends PApplet {
     // parameters for granular synthesis
     boolean useShortGrain = true;               // default to short grains, if true
     int longSample = 4096;                      // number of samples for a moderately long grain
-    int shortSample = 1024;                     // number of samples for a relatively short grain
+    int shortSample = 512;                     // number of samples for a relatively short grain
     int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
     int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
     GestureGranularParams gParamsGesture;       // granular parameters when hopMode == HopMode.GESTURE
     GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED
     public int curveSteps = 16;                 // number of steps in curve representation of a brushstroke path
-    public int gMaxVoices = 64;                 // number of voices managed by a PAGranularInstrument (gSynth)
+    public int gMaxVoices = 256;                 // number of voices managed by a PAGranularInstrument (gSynth)
+    boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
+    int burstGrains = 1;
 
 
     /* ------------------------------------------------------------------ */
@@ -799,12 +730,34 @@ public class TutorialOneDrawing extends PApplet {
 			granSamples = useShortGrain ? shortSample : longSample;
 			hopSamples = granSamples/4;
 			initGranularParams();
-			println("-- Granular synth uses grain length = "+ granSamples +" samples");
+			println("-- Granular synth uses grain length = "+ granSamples +" samples with "+ hopSamples +" between each grain");
+			break;
+		case 'b':
+			useLongBursts = !useLongBursts;
+			burstGrains = useLongBursts ? 4 : 1;
+			initGranularParams();
+			println(useLongBursts ? "-- using long bursts" : "using a single grain");
 			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
 			println("-- Play granular synth with "+ msg);
+			break;
+		case '>': case '.': // increment epsilon value of current brush (reduced points decrease)
+			if (hoverBrush != null) {
+				float e = hoverBrush.curve.getEpsilon();
+				e = e < 32 ? e + 1 : e;
+				setBrushEpsilon(hoverBrush, e);
+				println("-- epsilon for current brush is "+ hoverBrush.curve.getEpsilon());
+			}
+			break;
+		case '<': case ',': // decrement epsilon value of current brush (reduced points increase)
+			if (hoverBrush != null) {
+				float e = hoverBrush.curve.getEpsilon();
+				e = e > 1 ? e - 1 : e;
+				setBrushEpsilon(hoverBrush, e);
+				println("-- epsilon for current brush is "+ hoverBrush.curve.getEpsilon());
+			}
 			break;
 		case 'a': //  start or stop animation (bitmap rotation along the signal path)
 			isAnimating = !isAnimating;
@@ -841,7 +794,9 @@ public class TutorialOneDrawing extends PApplet {
 		case 'n': // normalize the audio buffer to -6.0dB
 			audioSignal = playBuffer.getChannel(0);
 			normalize(audioSignal, -6.0f);
-			ensureSamplerReady();		    
+			updateAudioChain(audioSignal);
+			ensureSamplerReady();
+			ensureGranularReady();
 		    println("---- normalized");
 			break;
 		case 'L': case 'l': // determine whether to load a new file to both image and audio or not
@@ -851,6 +806,12 @@ public class TutorialOneDrawing extends PApplet {
 			break;
 		case 'o': case 'O': // open an audio or image file and load to image or audio buffer or both
 			chooseFile();
+			break;
+		case 's': // save display image to a PNG file
+			saveToImage();
+			break;
+		case 'S': // save audio buffer to a .wav file
+			saveToAudio();
 			break;
 		case 'w': // write the image HSB Brightness channel to the audio buffer as transcoded sample values 
 			// TODO refactor with loadImageFile() and loadAudioFile() code
@@ -862,18 +823,11 @@ public class TutorialOneDrawing extends PApplet {
 			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
 			commitMapImageToBaseImage();
 			// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-			playBuffer.setChannel(0, audioSignal);
-			audioLength = audioSignal.length;
+			updateAudioChain(audioSignal);
 			println("--->> Wrote image to audio as audio data.");
 		    // load the buffer of our PASamplerInstrument (it will use a copy)
 			ensureSamplerReady();
-		    // TODO if audioSignal is a the canonical audio source, we don't need copies, or do we?
-		    // because playBuffer is used the sampler instrument and should not change
-		    // we don't want playBuffer and audioSignal to point to the same array
-		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
-		    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		    granSignal = audioSignal;
-		    audioLength = audioSignal.length;
+			ensureGranularReady();
 			break;
 		case 'W': // write the audio buffer samples to the image as color values
 			renderAudioToMapImage(chan, totalShift);
@@ -916,15 +870,6 @@ public class TutorialOneDrawing extends PApplet {
 	}
 
 	/**
-	 * Sets audioOut.gain.
-	 * @param g   gain value for audioOut, in decibels
-	 */
-	public void setAudioGain(float g) {
-		audioOut.setGain(g);
-		outputGain = audioOut.getGain();
-	}
-
-	/**
 	 * to generate help output, run RegEx search/replace on parseKey case lines with:
 	 * // case ('.'): // (.+)
 	 * // println(" * Press $1 to $2.");
@@ -956,6 +901,15 @@ public class TutorialOneDrawing extends PApplet {
 		println(" * Press 'u' to mute audio.");
 		println(" * Press 'V' to record a video.");
 		println(" * Press 'h' or 'H' to show help message in the console.");
+	}
+
+	/**
+	 * Sets audioOut.gain.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void setAudioGain(float g) {
+		audioOut.setGain(g);
+		outputGain = audioOut.getGain();
 	}
 
 	/**
@@ -1487,6 +1441,7 @@ public class TutorialOneDrawing extends PApplet {
 	            .looping(false)
 	            .env(env)
 	            .hopMode(GestureGranularParams.HopMode.GESTURE)
+	            .burstGrains(burstGrains)
 	            .build();
 	   gParamsFixed = GestureGranularParams.builder()
 	            .grainLengthSamples(granSamples)
@@ -1495,6 +1450,7 @@ public class TutorialOneDrawing extends PApplet {
 	            .looping(false)
 	            .env(env)
 	            .hopMode(GestureGranularParams.HopMode.FIXED)
+	            .burstGrains(burstGrains)
 	            .build();
 	}
 		
@@ -1513,12 +1469,18 @@ public class TutorialOneDrawing extends PApplet {
     	// use Granular synthesis instrument
 	    ensureGranularReady();
 	    float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-	    final int grainCount = (int) Math.round(noteDuration/hopMsF);
+	    final int grainCount = useLongBursts ?  8 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
 	    println("-- granular point burst with grainCount = "+ grainCount);
 	    ArrayList<PVector> path = new ArrayList<>(grainCount);
 	    int[] timing = new int[grainCount];
+		int sigIndex = mapper.lookupSignalPosShifted(x, y, totalShift);
 	    for (int i = 0; i < grainCount; i++) {
-	        path.add(this.jitterCoord(x, y, 3));
+	    	if (useLongBursts) {
+	    		path.add(getCoordFromSignalPos(sigIndex + hopSamples * i));
+	    	}
+	    	else {
+	    		path.add(this.jitterCoord(x, y, 3));
+	    	}
 	        timing[i] = Math.round(i * hopMsF);
 	    }
 	    int startTime = millis() + 10;
@@ -1529,7 +1491,8 @@ public class TutorialOneDrawing extends PApplet {
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
 	    playGranularGesture(buf, sched, gParamsFixed);
 	    storeGranularCurveTL(sched, startTime, false);
-	}			
+	}
+	
 	/**
 	 * Calculates the index of the image pixel within the signal path,
 	 * taking the shifting of pixels and audioSignal into account.
@@ -1544,6 +1507,11 @@ public class TutorialOneDrawing extends PApplet {
 	  return pos;
 	}
 
+	public PVector getCoordFromSignalPos(int pos) {
+		int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
+		return new PVector(xy[0], xy[1]);
+	}
+	
 	/**
 	 * Draws a circle at the location of an audio trigger (mouseDown event).
 	 * @param x		x coordinate of circle
@@ -1629,11 +1597,12 @@ public class TutorialOneDrawing extends PApplet {
 	}
 	
 	void ensureGranularReady() {
-		if (gParamsGesture == null) {
-			ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.75f, 0.025f);
+		if (gParamsGesture == null || gParamsFixed == null) {
+			initGranularParams();
 		}
 	    if (gSynth == null) {
-	        gSynth = buildGranSynth(audioOut, granularEnv, gMaxVoices);
+	    	ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.875f, 0.025f);
+	    	gSynth = buildGranSynth(audioOut, granEnv, gMaxVoices);
 	    }
 	    if (granSignal == null) {
 	        granSignal = (audioSignal != null) ? audioSignal : playBuffer.getChannel(0);
@@ -1642,7 +1611,31 @@ public class TutorialOneDrawing extends PApplet {
 	    	gDir = new PAGranularInstrumentDirector(gSynth);
 	    }
 	}
-
+	
+	void updateAudioChain(float[] sig) {
+	    // 0) Decide target length (make this a single source of truth)
+	    int targetSize = mapper.getSize();          // or mapSize, but pick one canonical TODO
+	    if (targetSize <= 0) return;
+	    // 1) Ensure playBuffer matches target
+	    if (playBuffer.getBufferSize() != targetSize) {
+	        playBuffer.setBufferSize(targetSize);
+	    }
+	    // 2) Copy sig into a temp array of exactly targetSize (pad/truncate deterministically)
+	    float[] tmp = new float[targetSize];
+	    if (sig != null) {
+	        System.arraycopy(sig, 0, tmp, 0, Math.min(sig.length, targetSize));
+	    }
+	    // 3) Store into playBuffer
+	    playBuffer.setChannel(0, tmp);
+	    // 4) Snapshot arrays used elsewhere
+	    audioSignal = tmp;                 // already correct size
+	    granSignal = audioSignal;          // alias intentionally (or copy if you want independent)
+	    audioLength = targetSize;
+	    // 5) Propagate into synths (examples — adjust to your actual API)
+	    pool.setBuffer(playBuffer);
+	    // granularDirector doesn't track an audio buffer with a field
+	}
+	
 	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
 		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
 		// println("---> startIndices[0] = "+ startIndices[0] +" for "+ sched.points.get(0).x, sched.points.get(0).y, totalShift, mapper.getSize());
@@ -1885,6 +1878,14 @@ public class TutorialOneDrawing extends PApplet {
 			}
 		}
 	}
+	
+	public void setBrushEpsilon(AudioBrushLite b, float e) {
+		PACurveMaker cm = b.curve();
+		BrushConfig cfg = b.cfg();
+		cfg.rdpEpsilon = e;
+		cm.setEpsilon(e);
+		cm.calculateDerivedPoints();
+	}
 
 	ArrayList<PVector> getPathPoints(AudioBrushLite b) {
 		PACurveMaker cm = b.curve();
@@ -1903,10 +1904,10 @@ public class TutorialOneDrawing extends PApplet {
 		GestureSchedule sched;
 		switch (b.cfg().pathMode) {
 		case REDUCED_POINTS -> {
-			sched = b.curve.getReducedSchedule(epsilon);
+			sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
 		}
 		case CURVE_POINTS -> {
-			sched = b.curve.getCurveSchedule(epsilon, curveSteps, isAnimating);
+			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, curveSteps, isAnimating);
 		}
 		case ALL_POINTS -> {
 			sched = b.curve.getAllPointsSchedule();
