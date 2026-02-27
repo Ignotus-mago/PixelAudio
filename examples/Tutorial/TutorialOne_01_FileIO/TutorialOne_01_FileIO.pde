@@ -64,7 +64,7 @@
  * The second method allows you to supply your own ADSR. Press the 'r' key to have this
  * sketch trigger sounds with a randomly selected envelope from adsrList. 
  * 
- * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.voices
+ * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.sampler
  * play an audio event with for the requested duration (samplelen) using the attack, decay,
  * and sustain portion of the envelope. When the duration ends, the release portion of the 
  * envelope controls how the audio fades away. Calls to the instruments playSample() methods
@@ -107,7 +107,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 //Mama's ever-lovin' blue-eyed PixelAudio library
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 //audio library

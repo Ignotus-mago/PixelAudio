@@ -75,7 +75,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 //Mama's ever-lovin' blue-eyed PixelAudio library
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 //audio library

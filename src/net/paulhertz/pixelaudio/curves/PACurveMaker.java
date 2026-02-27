@@ -54,7 +54,7 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * You can use PACurveMaker for data storage in interactive drawing applications, or 
  * implement your own storage with just the features you require. It is a key
  * data structure for playing digital audio instruments using granular synthesis and sampling 
- * in the net.paulhertz.pixelaudio.granular and net.paulhertz.pixelaudio.voices packages. 
+ * in the net.paulhertz.pixelaudio.granular and net.paulhertz.pixelaudio.sampler packages. 
  * </p><p>
  * PACUrveMaker makes extensive use of PACurveUtility's static methods and provides
  * a wide range of graphic objects and properties for dense point arrays, 

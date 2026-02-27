@@ -137,7 +137,7 @@ import processing.data.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.WaveData.WaveState;
 // Other handy class in local project
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 
 // audio library
 import ddf.minim.*;

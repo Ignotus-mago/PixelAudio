@@ -83,7 +83,7 @@ import processing.sound.*;
 import java.util.Arrays;
 
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 import processing.core.*;
 import ddf.minim.*;
 import ddf.minim.ugens.*;

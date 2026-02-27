@@ -417,7 +417,7 @@ public class GesturePlayground extends PApplet {
 		initDrawing();                  // set up drawing variables
 		initGUI();                      // set up the G4P control window and widgets
 		resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
-		preloadFiles(daPath, daFilename);    // load files - system dependent code!
+		preloadFiles(daPath, daFilename);    // load files - BEWARE system dependent file references!
 		applyColorMap();                // apply spectrum to mapImage adn baseImage - TODO revise to handle both images
 		showHelp();                     // print key commands to console
 	}
@@ -453,11 +453,11 @@ public class GesturePlayground extends PApplet {
 	 * MapImage handles the color data for mapper and also serves as our display image.
 	 */
 	public void initImages() {
-		baseImage = createImage(width, height, ARGB);
 		mapImage = createImage(width, height, ARGB);
 		mapImage.loadPixels();
 		mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
 		mapImage.updatePixels();
+		baseImage = mapImage.copy();
 	}
 	
 	/**

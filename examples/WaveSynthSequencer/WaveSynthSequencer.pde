@@ -51,7 +51,7 @@ import java.util.Locale;
 
 import ddf.minim.*;
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 
 PixelAudio pixelaudio;      // our shiny new library
 HilbertGen hGen;            // a PixelMapGen to draw Hilbert curves

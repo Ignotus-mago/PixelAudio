@@ -104,7 +104,7 @@ import ddf.minim.AudioOutput;
 import ddf.minim.Minim;
 import ddf.minim.MultiChannelBuffer;
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 
 
 PixelAudio pixelaudio;      // our shiny new library

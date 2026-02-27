@@ -150,7 +150,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 
 //audio library
 import ddf.minim.*;

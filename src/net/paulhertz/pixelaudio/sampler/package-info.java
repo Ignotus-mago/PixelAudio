@@ -1,5 +1,5 @@
 /**
-<p>Package <code>net.paulhertz.pixelaudio.voices</code> provides a hierarchy of Java classes 
+<p>Package <code>net.paulhertz.pixelaudio.sampler</code> provides a hierarchy of Java classes 
 for implementing digital audio sampling synthesis with support from the Minim library for Processing.</p>
 
 

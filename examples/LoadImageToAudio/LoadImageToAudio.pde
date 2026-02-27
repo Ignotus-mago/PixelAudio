@@ -69,7 +69,7 @@ import javax.sound.sampled.*;
 import ddf.minim.*;
 
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.voices.*;
+import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 
