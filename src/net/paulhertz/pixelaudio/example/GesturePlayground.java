@@ -38,8 +38,8 @@ import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
 import net.paulhertz.pixelaudio.schedule.*;
-import net.paulhertz.pixelaudio.voices.*;
 import net.paulhertz.pixelaudio.granular.*;
+import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
@@ -417,9 +417,9 @@ public class GesturePlayground extends PApplet {
 		initDrawing();                  // set up drawing variables
 		initGUI();                      // set up the G4P control window and widgets
 		resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
-		preloadFiles(daPath, daFilename);
-		applyColorMap();                // 
-		showHelp();
+		preloadFiles(daPath, daFilename);    // load files - system dependent code!
+		applyColorMap();                // apply spectrum to mapImage adn baseImage - TODO revise to handle both images
+		showHelp();                     // print key commands to console
 	}
 	
 	/**
@@ -431,7 +431,6 @@ public class GesturePlayground extends PApplet {
 		if (minim != null) minim.stop();
 		super.stop();
 	}
-
  
 	/**
 	 * Generates an array of rainbow colors using the HSB color space.
@@ -802,7 +801,9 @@ public class GesturePlayground extends PApplet {
 	/*                                                                */
 	/*----------------------------------------------------------------*/
 	
-	// ------------- SIMPLIFIED FILE I/O SECTION FOR GranularPlayground ------------- //
+	// ------------- SIMPLIFIED FILE I/O SECTION FOR GranularPlayground ------------- 
+	// TODO expand file i/o methods, but omit image opening - we just handle audio 
+	// and that keeps things simple and focused 
 
 	/**
 	 * Attempts to load audio data from a selected file into playBuffer, then calls
@@ -817,25 +818,30 @@ public class GesturePlayground extends PApplet {
 		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
 		float[] resampled;
 		if (fileSampleRate > 0) {
-			println("---- file sample rate is "+ this.fileSampleRate);
 			if (fileSampleRate != audioOut.sampleRate()) {
 				resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
 				buff.setChannel(0, resampled);
-				//if (buff.getBufferSize() != mapSize) buff.setBufferSize(mapSize);
-				fileSampleRate = audioOut.sampleRate();
+				println("---- file sample rate of "+ this.fileSampleRate +" was resampled to "+ audioOut.sampleRate());
+			}
+			else {
+				println("---- file sample rate is "+ this.fileSampleRate);
 			}
 		}
-		// read audio file into our MultiChannelBuffer, buffer size will be adjusted to match the file
+		else {
+			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
+			return;
+		}
+		// save the length of the file, possibly resampled, for future use
+		this.audioFileLength = buff.getBufferSize();
+		// adjust buffer size to mapper.getSize()
+		if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
 		playBuffer = buff;
-		// save the length of the buffer as read from the file, for future use
-		this.audioFileLength = playBuffer.getBufferSize();
-		// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-		if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
 		// load the buffer of our PASamplerInstrument (created in initAudio(), on starting the sketch)
 		synth.setBuffer(playBuffer, fileSampleRate);
 		if (pool != null) pool.setBuffer(playBuffer, fileSampleRate);
 		else pool = new PASamplerInstrumentPool(playBuffer, fileSampleRate, sMaxVoices, 1, audioOut, samplerEnv);
+		// TODO doesn't Sampler copy the buffer?
 		// because playBuffer is used by synth and pool and should not change, while audioSignal changes
 		// when the image animates, we don't want playBuffer and audioSignal to point to the same array
 		float[] newSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
@@ -844,9 +850,11 @@ public class GesturePlayground extends PApplet {
 		audioLength = audioSignal.length;
 		if (isLoadToBoth) {
 			writeAudioToImage(audioSignal, mapper, mapImage, chan);
+			commitMapImageToBaseImage();
 		}
 		totalShift = 0;    // reset animation shift when audio is reloaded
 	}
+
 
 	/**
 	 * Transcodes audio data in sig[] and writes it to color channel chan of mapImage 
@@ -864,6 +872,17 @@ public class GesturePlayground extends PApplet {
 		img.loadPixels();
 		mapper.mapSigToImg(sig, img.pixels, chan);
 		img.updatePixels();
+	}
+		
+	public void commitMapImageToBaseImage() {
+		baseImage = mapImage.copy();
+		totalShift = 0;
+	}
+	
+	public void commitNewBaseImage(PImage img) {
+		baseImage = img.copy();
+		mapImage = img.copy();
+		totalShift = 0;
 	}
 	
 	
@@ -1118,8 +1137,7 @@ public class GesturePlayground extends PApplet {
 	    }
 	}
 		
-	// ---- NEW METHODS FROM TutorialOneDrawing ---- //
-
+	// ---- NEW METHOD FROM TutorialOneDrawing ---- //
 	void updateAudioChain(float[] sig) {
 	    // 0) Decide target length (make this a single source of truth)
 	    int targetSize = mapper.getSize();          // or mapSize, but pick one canonical TODO

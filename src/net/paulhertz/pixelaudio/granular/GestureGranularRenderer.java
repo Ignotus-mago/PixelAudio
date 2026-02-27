@@ -1,9 +1,8 @@
 package net.paulhertz.pixelaudio.granular;
 
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
-
-import net.paulhertz.pixelaudio.voices.ADSRParams;
 import net.paulhertz.pixelaudio.PixelAudioMapper;
+import net.paulhertz.pixelaudio.sampler.ADSRParams;
 import processing.core.PVector;
 
 import java.util.List;

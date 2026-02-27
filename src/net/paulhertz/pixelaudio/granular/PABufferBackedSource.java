@@ -3,8 +3,8 @@ package net.paulhertz.pixelaudio.granular;
 import java.util.Objects;
 
 import ddf.minim.MultiChannelBuffer;
-import net.paulhertz.pixelaudio.voices.PitchPolicy;
 import ddf.minim.analysis.WindowFunction;
+import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
 public final class PABufferBackedSource implements PASource {
 

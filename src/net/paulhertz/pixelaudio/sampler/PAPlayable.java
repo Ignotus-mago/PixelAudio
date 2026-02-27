@@ -1,4 +1,4 @@
-package net.paulhertz.pixelaudio.voices;
+package net.paulhertz.pixelaudio.sampler;
 
 /**
  * Generic interface for anything that can be "played."

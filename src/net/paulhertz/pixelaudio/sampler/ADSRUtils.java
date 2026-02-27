@@ -1,4 +1,4 @@
-package net.paulhertz.pixelaudio.voices;
+package net.paulhertz.pixelaudio.sampler;
 
 /** Utility functions for ADSRParams. */
 public final class ADSRUtils {

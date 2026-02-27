@@ -1,4 +1,4 @@
-package net.paulhertz.pixelaudio.voices;
+package net.paulhertz.pixelaudio.sampler;
 
 /**
  * PASamplerVoice — a single playback "voice" reading from a shared mono buffer.

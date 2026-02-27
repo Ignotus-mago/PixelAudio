@@ -3,8 +3,7 @@ package net.paulhertz.pixelaudio.granular;
 import java.util.Objects;
 
 import ddf.minim.analysis.WindowFunction;
-
-import net.paulhertz.pixelaudio.voices.ADSRParams;
+import net.paulhertz.pixelaudio.sampler.ADSRParams;
 
 
 /**

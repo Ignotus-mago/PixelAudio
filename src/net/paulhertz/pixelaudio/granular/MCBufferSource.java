@@ -2,7 +2,7 @@ package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.MultiChannelBuffer;
 import ddf.minim.analysis.WindowFunction;
-import net.paulhertz.pixelaudio.voices.PitchPolicy;
+import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
 /**
  * MCBufferSource

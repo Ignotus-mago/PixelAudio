@@ -24,9 +24,8 @@ import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
 import net.paulhertz.pixelaudio.schedule.*;
-import net.paulhertz.pixelaudio.voices.*;
 import net.paulhertz.pixelaudio.granular.*;
-
+import net.paulhertz.pixelaudio.sampler.*;
 //audio library
 import ddf.minim.*;
 
@@ -1109,6 +1108,11 @@ public class TutorialOneDrawing extends PApplet {
 				fileSampleRate = audioOut.sampleRate();
 			}
 		}
+		else {
+			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
+			return;
+		}
+		// everything looks good, proceed
 		if (isBlending) {
 			blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
 		}

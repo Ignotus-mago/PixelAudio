@@ -2,8 +2,8 @@ package net.paulhertz.pixelaudio.granular;
 
 import java.util.Objects;
 
+import net.paulhertz.pixelaudio.sampler.ADSRParams;
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
-import net.paulhertz.pixelaudio.voices.ADSRParams;
 
 public final class GestureGranularConfig {
 

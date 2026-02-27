@@ -3,12 +3,11 @@ package net.paulhertz.pixelaudio.granular;
 import java.util.Objects;
 
 import ddf.minim.analysis.WindowFunction;
+import net.paulhertz.pixelaudio.sampler.ADSRParams;
 import ddf.minim.analysis.HannWindow;
 import ddf.minim.analysis.HammingWindow;
 import ddf.minim.analysis.BlackmanWindow;
 import ddf.minim.analysis.RectangularWindow;
-
-import net.paulhertz.pixelaudio.voices.ADSRParams;
 
 // TODO candidate for removal
 
