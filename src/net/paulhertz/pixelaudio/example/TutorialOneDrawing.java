@@ -55,13 +55,18 @@ import com.hamoid.*;
  * gestures into timing information that can be used to schedule audio events, particularly
  * with granular sysnthesis, we rely on the {@link net.paulhertz.pixelaudio.schedule PixelAudio Schedule Package}. 
  * The workhorse of the Curves package is {@link net.paulhert.pixelaudio.curves.PACurveMaker PACurveMaker}, which 
- * is used to capture point and time information when you draw. The unique points that you draw when dragging
+ * is used to capture point and time information when you draw. 
+ * The unique points that you draw when dragging A PACurveMaker instance is intialized with a list of points and
+ * a list of time offsets where both lists have the same number of elements: each point corresponds a unique time,
+ * ascending from a start time, 
  * the mouse are stored in PACurveMaker's ALL_POINTS representation of the gesture points. PACurveMaker can also 
  * reduce the number of points captured, using the Ramer-Douglas-Peucker (RDP) algorithm, to create the REDUCED_POINTS
  * representation of a gesture. RDP controls point reduction with a numerical value, <code>epsilon</code>, 
- * which you can vary to control the number of reduced in a gesture. PACurveMaker can turn the reduced points representation
- * of a drawn line into a Bezier curve, the CURVE_POINTS representation of the gesture. 
- * </p>   
+ * which you can vary to control the number of reduced points in a gesture. PACurveMaker can turn the reduced points 
+ * representation of a drawn line into a Bezier curve, the CURVE_POINTS representation of the gesture. 
+ * </p><p>
+ * A PACurveMaker 
+ * </p> 
  * <h2>Audio Processing</h2>
  * PAGranularInstrumentDirector sets up the PABurstGranularSource and passes it down the granular synth chain, first 
  * to PAGranularInstrument and then to PAGranularSampler, where the PABurstGranularSource is one of various parameters 
@@ -110,7 +115,6 @@ import com.hamoid.*;
  */
 public class TutorialOneDrawing extends PApplet {
 	
-	// TODO 'save' commands
 	
 	/* ------------------------------------------------------------------ */
 	/*                       PIXELAUDIO VARIABLES                         */
@@ -180,7 +184,7 @@ public class TutorialOneDrawing extends PApplet {
 	// SampleInstrument setup
 	int noteDuration = 1000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
-	float synthGain = 0.5f;         // gain setting for gesture events with Sampler instrument, decimal value 0..1
+	float synthGain = 0.75f;         // gain setting for gesture events with Sampler instrument, decimal value 0..1
 	float synthPointGain = 0.75f;   // gain for point events with the Sampler instrument
 	float outputGain = -6.0f;       // gain setting for audio output, decibels
 	boolean isMuted = false;
@@ -188,7 +192,7 @@ public class TutorialOneDrawing extends PApplet {
 	int samplerMaxVoices = 64;
 
 	// ADSR and its parameters
-	float maxAmplitude = 0.75f;         // in the range 0..1, maximum amplitude of envelope for sampler instruments
+	float maxAmplitude = 0.875f;         // in the range 0..1, maximum amplitude of envelope for sampler instruments
 	// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
 	ADSRParams defaultEnv = new ADSRParams(maxAmplitude, 0.2f, 0.1f, maxAmplitude * 0.75f, 0.5f);
 	// ADSRParams granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
@@ -220,6 +224,7 @@ public class TutorialOneDrawing extends PApplet {
     public int curveSteps = 16;                 // number of steps in curve representation of a brushstroke path
     public int gMaxVoices = 256;                 // number of voices managed by a PAGranularInstrument (gSynth)
     boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
+    int maxBurstGrains = 4;
     int burstGrains = 1;
 
 
@@ -233,7 +238,6 @@ public class TutorialOneDrawing extends PApplet {
 	
     int shift = 1024;                    // number of pixels to shift the animation
     int totalShift = 0;                  // cumulative shift
-    int totalShiftCache;                 // tracking variable for change in totalShift
     boolean isAnimating = false;         // do we run animation or not?
     boolean oldIsAnimating;              // keep track of animation state when opening a file
     // animation variables for video recording
@@ -257,9 +261,6 @@ public class TutorialOneDrawing extends PApplet {
 	 * timing data for each point it stores, it can reproduce gestures as audio events. 
 	 */
 	    
-	int sampleX;                         // x-coordinate associated with mouse click and audio samples
-	int sampleY;                         // y-coordinate associated with mouse click and audio samples
-	
     PACurveMaker curveMaker;             // a PACurveMaker instance for use when drawing a new brushstroke
     public boolean isDrawMode = false;   // flag that drawing is enabled
     public float epsilon = 4.0f;         // variable that controls point reduction in PACurveMaker
@@ -424,7 +425,7 @@ public class TutorialOneDrawing extends PApplet {
 		pushStyle(); // save styles
 		colorMode(HSB, colorWheel.length, 100, 100); // pop over to the HSB color space and give hue a very wide range
 		for (int i = 0; i < colorWheel.length; i++) {
-			colorWheel[i] = color(i, 50, 70); // fill our array with colors, gradually changing hue
+			colorWheel[i] = color(i, 40, 60); // fill our array with colors, gradually changing hue
 		}
 		popStyle(); // restore styles, including the default RGB color space
 		return colorWheel;
@@ -734,7 +735,7 @@ public class TutorialOneDrawing extends PApplet {
 			break;
 		case 'b':
 			useLongBursts = !useLongBursts;
-			burstGrains = useLongBursts ? 4 : 1;
+			burstGrains = useLongBursts ? maxBurstGrains : 1;
 			initGranularParams();
 			println(useLongBursts ? "-- using long bursts" : "using a single grain");
 			break;
@@ -812,6 +813,9 @@ public class TutorialOneDrawing extends PApplet {
 			break;
 		case 'S': // save audio buffer to a .wav file
 			saveToAudio();
+			break;
+		case 'm': // copy the current display image to the baseImage
+			commitMapImageToBaseImage();
 			break;
 		case 'w': // write the image HSB Brightness channel to the audio buffer as transcoded sample values 
 			// TODO refactor with loadImageFile() and loadAudioFile() code
@@ -1092,27 +1096,30 @@ public class TutorialOneDrawing extends PApplet {
 	 * @param audFile    an audio file
 	 */
 	public void loadAudioFile(File audFile) {
-		if (isBlending) {
-			MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
-			fileSampleRate =  minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), buff);
-			if (fileSampleRate > 0) {
-				println("---- file sample rate is "+ this.fileSampleRate);
-				// TODO we're ignoring possibly different sampling rates in the playBuffer and buff, does it matter?
-				blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
+		float[] resampled;
+		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
+		fileSampleRate =  minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), buff);
+		if (fileSampleRate > 0) {
+			println("---- file sample rate is "+ this.fileSampleRate);
+			if (fileSampleRate != audioOut.sampleRate()) {
+				resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+				buff.setBufferSize(resampled.length);
+				buff.setChannel(0, resampled);
+				//if (buff.getBufferSize() != mapSize) buff.setBufferSize(mapSize);
+				fileSampleRate = audioOut.sampleRate();
 			}
+		}
+		if (isBlending) {
+			blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
 		}
 		else {
 			// read audio file into our MultiChannelBuffer, buffer size will be adjusted to match the file
-			fileSampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), playBuffer);
-			// sampleRate > 0 means we read audio from the file
-			if (fileSampleRate > 0) {
-				println("---- file sample rate is "+ this.fileSampleRate);
-				// save the length of the buffer as read from the file, for future use
-				this.audioFileLength = playBuffer.getBufferSize();
-				// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-				if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-				// load the buffer of our PASamplerInstrument (created in initAudio(), on starting the sketch)
-			}
+			playBuffer = buff;
+			// save the length of the buffer as read from the file, for future use
+			this.audioFileLength = playBuffer.getBufferSize();
+			// resize the buffer to mapSize, if necessary -- signal will not be overwritten
+			if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
+			// load the buffer of our PASamplerInstrument (created in initAudio(), on starting the sketch)
 		}
 		ensureSamplerReady();
 		// because playBuffer is used by synth and pool and should not change, while audioSignal changes
@@ -1160,34 +1167,11 @@ public class TutorialOneDrawing extends PApplet {
 
 		}
 	}
-	
-	/**
-	 * Normalizes a single-channel signal array to a target RMS level in dBFS.
-	 *
-	 * @param signal    The audio samples to normalize (modified in place)
-	 * @param targetDB  The target RMS level in decibels relative to full scale
-	 *                  (e.g. -3.0f for moderately loud, -12.0f for safe headroom)
-	 */
-	public static void normalize(float[] signal, float targetDB) {
-	    if (signal == null || signal.length == 0) return;
-	    // --- Step 1: Compute RMS of the signal ---
-	    float sumSq = 0f;
-	    for (float v : signal) {
-	        sumSq += v * v;
-	    }
-	    float rms = (float)Math.sqrt(sumSq / signal.length);
-	    // --- Step 2: Convert target dBFS to linear RMS value ---
-	    float targetRMS = (float)Math.pow(10.0, targetDB / 20.0);
-	    // --- Step 3: Compute and apply gain ---
-	    if (rms > 1e-6f) {
-	        float gain = targetRMS / rms;
-	        if (gain > 100.0f) gain = 100.0f; // safety limit
-	        for (int i = 0; i < signal.length; i++) {
-	            signal[i] *= gain;
-	        }
-	    }
+		
+	public static void normalize(float[] signal, float targetPeakDB) {
+		AudioUtility.normalizeRmsWithCeiling(signal, targetPeakDB, -3.0f);
 	}
-	
+		
 	public void renderAudioToMapImage(PixelAudioMapper.ChannelNames chan, int shift) {
 	    // Render current audioSignal into mapImage using current mapper & current totalShift
 	    writeAudioToImage(audioSignal, mapper, mapImage, chan, shift);
@@ -1947,8 +1931,8 @@ public class TutorialOneDrawing extends PApplet {
 	    int currentTime = millis();
 	    samplerTimeLocs.forEach(tl -> {
 	        if (tl.eventTime() < currentTime) {
-	            sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-	            sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
+	            int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
+	            int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
 	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
 	            int pos = getSamplePos(sampleX, sampleY);
                 playSample(pos, calcSampleLen(), synthGain, panning);
