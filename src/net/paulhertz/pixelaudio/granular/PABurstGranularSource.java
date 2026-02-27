@@ -5,130 +5,171 @@ import net.paulhertz.pixelaudio.voices.PitchPolicy;
 
 public final class PABurstGranularSource implements PASource {
 
-	private final float[] source;
-	private final int baseIndex;          // startIndices[i]
-	private final int burstGrains;        // >= 1
-	private final int timeHopSamples;     // >= 1 (intra-burst spacing in time)
-	private final int indexHopSamples;    // >= 0 (intra-burst scan in source index)
-	private final float pitchRatio;       // > 0
+    private final float[] source;
+    private final int baseIndex;          // startIndices[i]
+    private final int burstGrains;        // >= 1
+    private final int timeHopSamples;     // >= 1 (intra-burst spacing in time)
+    private final int indexHopSamples;    // >= 0 (intra-burst scan in source index)
+    private final float pitchRatio;       // > 0
 
-	// window + grain length (authoritative)
-	private int grainLength;
-	private WindowFunction grainWindow = null;
-	private float[] windowCurve = null;
+    // Optional per-source gain (multiplicative). Default unity.
+    // If you already apply gain outside this PASource, leave at 1.
+    // Not used, for now.
+    private float gain = 1.0f;
 
-	// note-level state (voice time origin)
-	private long noteStartSample = Long.MIN_VALUE;
-	private boolean noteStarted = false;
+    // window + grain length (authoritative)
+    private int grainLength;
+    private WindowFunction grainWindow = null;
+    private float[] windowCurve = null;
 
-	public PABurstGranularSource(
-			float[] source,
-			int baseIndex,
-			int grainLengthSamples,
-			int burstGrains,
-			int timeHopSamples,
-			int indexHopSamples,
-			float pitchRatio
-			) {
-		if (source == null) throw new IllegalArgumentException("source must not be null");
-		this.source = source;
+    // note-level state (voice time origin)
+    private long noteStartSample = Long.MIN_VALUE;
+    private boolean noteStarted = false;
 
-		this.baseIndex = Math.max(0, baseIndex);
-		this.grainLength = Math.max(1, grainLengthSamples);
+    // Scratch buffers (reused) for safe in-source OLA normalization
+    private float[] wsum = new float[0];
 
-		this.burstGrains = Math.max(1, burstGrains);
-		this.timeHopSamples = Math.max(1, timeHopSamples);
-		this.indexHopSamples = Math.max(0, indexHopSamples);
+    public PABurstGranularSource(
+            float[] source,
+            int baseIndex,
+            int grainLengthSamples,
+            int burstGrains,
+            int timeHopSamples,
+            int indexHopSamples,
+            float pitchRatio
+    ) {
+        if (source == null) throw new IllegalArgumentException("source must not be null");
+        this.source = source;
 
-		this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
-	}
+        this.baseIndex = Math.max(0, baseIndex);
+        this.grainLength = Math.max(1, grainLengthSamples);
 
-	@Override
-	public void seekTo(long absoluteSample) {
-		this.noteStartSample = absoluteSample;
-		this.noteStarted = true;
-	}
+        this.burstGrains = Math.max(1, burstGrains);
+        this.timeHopSamples = Math.max(1, timeHopSamples);
+        this.indexHopSamples = Math.max(0, indexHopSamples);
 
-	@Override
-	public void renderBlock(long blockStart, int blockSize, float[] outL, float[] outR) {
-		if (!noteStarted) return;
-		if (outL == null || blockSize <= 0) return;
+        this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
+    }
 
-		final long blockEnd = blockStart + (long) blockSize;
+    /** Optional: set multiplicative gain applied after OLA normalization. */
+    public synchronized void setGain(float gain) {
+        if (Float.isFinite(gain)) this.gain = Math.max(0f, gain);
+    }
 
-		// Resolve window curve once per block (rectangular fallback)
-		final float[] window = (windowCurve != null && windowCurve.length == grainLength)
-				? windowCurve : (grainWindow != null && grainLength > 1)
-						? WindowCache.INSTANCE.getWindowCurve(grainWindow, grainLength) : null;
+    public synchronized float getGain() {
+        return gain;
+    }
 
-		final boolean doR = (outR != null && outR != outL);    // 
+    @Override
+    public void seekTo(long absoluteSample) {
+        this.noteStartSample = absoluteSample;
+        this.noteStarted = true;
+    }
 
-		// Each grain g occupies [grainStartAbs, grainEndAbs) in voice time
-		for (int g = 0; g < burstGrains; g++) {
-			final long grainStartAbs = noteStartSample + (long) g * (long) timeHopSamples;
-			final long grainEndAbs   = grainStartAbs + (long) grainLength;
+    @Override
+    public void renderBlock(long blockStart, int blockSize, float[] outL, float[] outR) {
+        if (!noteStarted) return;
+        if (outL == null || blockSize <= 0) return;
 
-			if (grainEndAbs <= blockStart || grainStartAbs >= blockEnd) continue;    // process in next block
+        final long blockEnd = blockStart + (long) blockSize;
 
-			OverlapUtil.Slice slice = OverlapUtil.computeBlockSlice(
-					blockStart, blockSize, grainStartAbs, grainEndAbs);
-			if (!slice.hasOverlap) continue;
+        final float[] window =
+                (windowCurve != null && windowCurve.length == grainLength)
+                        ? windowCurve
+                        : (grainWindow != null && grainLength > 1)
+                            ? WindowCache.INSTANCE.getWindowCurve(grainWindow, grainLength)
+                            : null;
 
-			final int i0 = slice.startIndex;
-			final int i1 = slice.endIndex;
+        final boolean doR = (outR != null && outR != outL);
 
-			final int grainSourceStart = baseIndex + g * indexHopSamples;
+        ensureWSum(blockSize);
 
-			for (int i = i0; i < i1; i++) {
-				final long globalSample = blockStart + (long) i;
-				final int offsetInGrain = (int) (globalSample - grainStartAbs);
-				if (offsetInGrain < 0 || offsetInGrain >= grainLength) continue;
+        // Each grain g occupies [grainStartAbs, grainEndAbs)
+        for (int g = 0; g < burstGrains; g++) {
+            final long grainStartAbs = noteStartSample + (long) g * (long) timeHopSamples;
+            final long grainEndAbs   = grainStartAbs + (long) grainLength;
 
-				final float srcPos = (float) grainSourceStart + (float) offsetInGrain * pitchRatio;
+            if (grainEndAbs <= blockStart || grainStartAbs >= blockEnd) continue;
 
-				// Edge policy (current): drop out-of-range samples
-				// TODO a wrap around edge policy
-				if (srcPos < 0f || srcPos >= (source.length - 1)) continue;
+            OverlapUtil.Slice slice = OverlapUtil.computeBlockSlice(
+                    blockStart, blockSize, grainStartAbs, grainEndAbs);
+            if (!slice.hasOverlap) continue;
 
-				final float w = (window != null) ? window[offsetInGrain] : 1.0f;
-				final float s = readLinear(source, srcPos) * w;
+            final int i0 = slice.startIndex;
+            final int i1 = slice.endIndex;
 
-				outL[i] += s;
-				if (doR) outR[i] += s;
-			}
-		}
-	}
+            final int grainSourceStart = baseIndex + g * indexHopSamples;
 
-	@Override
-	public long lengthSamples() {
-		return (long) (burstGrains - 1) * (long) timeHopSamples + (long) grainLength;
-	}
+            for (int i = i0; i < i1; i++) {
+                final long globalSample = blockStart + (long) i;
+                final int offsetInGrain = (int) (globalSample - grainStartAbs);
+                if (offsetInGrain < 0 || offsetInGrain >= grainLength) continue;
 
-	@Override
-	public PitchPolicy pitchPolicy() {
-		return PitchPolicy.SOURCE_GRANULAR;
-	}
+                final float srcPos =
+                        (float) grainSourceStart +
+                        (float) offsetInGrain * pitchRatio;
 
-	@Override
-	public synchronized void setGrainWindow(WindowFunction wf, int grainLenSamples) {
-		this.grainWindow = wf;
-		this.grainLength = Math.max(1, grainLenSamples);
-		if (wf != null && this.grainLength > 1) {
-			this.windowCurve = WindowCache.INSTANCE.getWindowCurve(wf, this.grainLength);
-		} else {
-			this.windowCurve = null; // rectangular
-		}
-	}
+                if (srcPos < 0f || srcPos >= (source.length - 1)) continue;
 
-	private static float readLinear(float[] buf, float pos) {
-		int i0 = (int) pos;
-		float frac = pos - i0;
+                final float w = (window != null) ? window[offsetInGrain] : 1.0f;
+                final float s = readLinear(source, srcPos) * w;
 
-		if (i0 < 0) return buf[0];
-		if (i0 >= buf.length - 1) return buf[buf.length - 1];
+                outL[i] += s;
+                if (doR) outR[i] += s;
 
-		float a = buf[i0];
-		float b = buf[i0 + 1];
-		return a + frac * (b - a);
-	}
+                wsum[i] += w;
+            }
+        }
+
+        // OLA normalization (in-place, safe in your architecture)
+        final float eps = 1e-12f;
+        for (int i = 0; i < blockSize; i++) {
+            float den = wsum[i];
+            if (den > eps) {
+                float inv = 1.0f / den;
+                outL[i] *= inv;
+                if (doR) outR[i] *= inv;
+            }
+        }
+    }
+    
+    @Override
+    public long lengthSamples() {
+        return (long) (burstGrains - 1) * (long) timeHopSamples + (long) grainLength;
+    }
+
+    @Override
+    public PitchPolicy pitchPolicy() {
+        return PitchPolicy.SOURCE_GRANULAR;
+    }
+
+    @Override
+    public synchronized void setGrainWindow(WindowFunction wf, int grainLenSamples) {
+        this.grainWindow = wf;
+        this.grainLength = Math.max(1, grainLenSamples);
+        if (wf != null && this.grainLength > 1) {
+            this.windowCurve = WindowCache.INSTANCE.getWindowCurve(wf, this.grainLength);
+        } else {
+            this.windowCurve = null; // rectangular
+        }
+    }
+
+    private void ensureWSum(int blockSize) {
+        if (wsum.length != blockSize) {
+            wsum = new float[blockSize];
+        }
+        java.util.Arrays.fill(wsum, 0f);
+    }
+    
+    private static float readLinear(float[] buf, float pos) {
+        int i0 = (int) pos;
+        float frac = pos - i0;
+
+        if (i0 < 0) return buf[0];
+        if (i0 >= buf.length - 1) return buf[buf.length - 1];
+
+        float a = buf[i0];
+        float b = buf[i0 + 1];
+        return a + frac * (b - a);
+    }
 }
