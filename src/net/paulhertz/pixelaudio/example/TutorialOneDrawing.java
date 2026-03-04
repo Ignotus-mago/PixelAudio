@@ -125,7 +125,9 @@ public class TutorialOneDrawing extends PApplet {
 	int genHeight = 512;       // height of  multigen PixelMapGens
 	PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
 	int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
+	// baseImage is a reference image that generally should not be changed except when you load a new file
 	PImage baseImage;          // unchanging source image
+	// mapImage can change, and often does so with reference to the stable baseImage, for example when animating
 	PImage mapImage;           // image for display, may be animated
 	PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // also try ChannelNames.L (HSB brightness channel)
 	int[] colors;              // array of spectral colors
@@ -433,13 +435,14 @@ public class TutorialOneDrawing extends PApplet {
 	/**
 	 * Initializes mapImage with the colors array. 
 	 * MapImage handles the color data for mapper and also serves as our display image.
+	 * BaseImage is intended as a reference image that usually only changes when you open a new image file.
 	 */
 	public void initImages() {
-		baseImage = createImage(width, height, ARGB);
 		mapImage = createImage(width, height, ARGB);
 		mapImage.loadPixels();
 		mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
 		mapImage.updatePixels();
+		baseImage = mapImage.copy();
 	}
 	
 	/**
@@ -878,6 +881,8 @@ public class TutorialOneDrawing extends PApplet {
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
+		println(" * Press UP ARROW to increase audio gain by 3 dB.");
+		println(" * Press DOWN ARROW to decrease audio gain by 3 dB.");
 		println(" * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.");
 		println(" * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.");
 		println(" * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.");
