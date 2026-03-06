@@ -33,11 +33,10 @@ public final class GestureScheduleBuilder {
 	      s = toFixedHopScheduleMs(s, cfg.hopLengthSamples, sampleRate);
 	    }
 
-	    // 3) Optional resample (value-driven: 0 means "no resample")
-	    if (cfg.resampleCount > 0) {
-	      s = resampleToCount(s, cfg.resampleCount);
+	    // 3) Optional resample (value-driven: <= 0 means "no resample"; min meaningful is 2)
+	    if (cfg.resampleCount >= 2) {
+	        s = resampleToCount(s, cfg.resampleCount);
 	    }
-
 	    // 4) Optional duration scale (value-driven: 0 means "no duration override")
 	    if (cfg.targetDurationMs > 0) {
 	      s = scaleToDurationMs(s, cfg.targetDurationMs);

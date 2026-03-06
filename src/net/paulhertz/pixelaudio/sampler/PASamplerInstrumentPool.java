@@ -2,6 +2,7 @@ package net.paulhertz.pixelaudio.sampler;
 
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
+import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 import java.util.*;
 
@@ -43,6 +44,8 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     private int outputBufferSize;        // frames per audio callback
 	private float bufferSampleRate;      // sample rate of source from which buffer was loaded
 	private float outputSampleRate;      // sample rate of AudioOutput
+	
+	private volatile float poolGain = 1f; // linear >= 0
 
 
     // ------------------------------------------------------------------------
@@ -128,6 +131,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
             PASamplerInstrument inst = new PASamplerInstrument(buffer, bufferSampleRate, maxVoices, out, defaultEnv);
             inst.setPitchScale(globalPitch);
             inst.setGlobalPan(globalPan);
+            inst.setParentGain(poolGain);
             pool.add(inst);
         }
     }
@@ -293,6 +297,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         for (PASamplerInstrument inst : pool) {
             inst.setBuffer(newBuffer);
         }
+        propagateParentGain();
     }
 
     /**
@@ -317,6 +322,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         for (PASamplerInstrument inst : pool) {
             inst.setBuffer(newBuffer, newBufferSampleRate);
         }
+        propagateParentGain();
     }
     
     /**
@@ -334,6 +340,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     	for (PASamplerInstrument inst : pool) {
     		inst.setBuffer(newBuffer, newBufferSampleRate);
     	}
+    	propagateParentGain();
     }
 
     /** Re-sync instruments to current AudioOutput sample rate (if device changes). */
@@ -349,6 +356,25 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------
     // Attributes
     // ------------------------------------------------------------------------
+    
+    public void setGain(float linear) {
+        if (Float.isNaN(linear) || Float.isInfinite(linear)) return;
+        poolGain = Math.max(0f, linear);
+        propagateParentGain();
+    }
+
+    public float getGain() { return poolGain; }
+
+    public void setGainDb(float db) { setGain(AudioUtility.dbToLinear(db)); }
+
+    public float getGainDb() { return AudioUtility.linearToDb(poolGain); }
+
+    private void propagateParentGain() {
+        for (PASamplerInstrument inst : pool) {
+            inst.setParentGain(poolGain); // package-private method in same package
+        }
+    }
+    
 
     public synchronized void setGlobalPitch(float pitch) { this.globalPitch = pitch; }
     public synchronized float getGlobalPitch() { return globalPitch; }
@@ -392,6 +418,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
                 PASamplerInstrument inst = new PASamplerInstrument(buffer, bufferSampleRate, maxVoices, out, defaultEnv);
                 inst.setPitchScale(globalPitch);
                 inst.setGlobalPan(globalPan);
+                inst.setParentGain(poolGain);
                 pool.add(inst);
             }
         }
@@ -413,6 +440,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
             inst.setDefaultEnv(defaultEnv);
             inst.setPitchScale(globalPitch);
             inst.setGlobalPan(globalPan);
+            inst.setParentGain(poolGain);
         }
     }
 

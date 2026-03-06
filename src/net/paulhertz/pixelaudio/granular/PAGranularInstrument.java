@@ -2,6 +2,7 @@ package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.AudioOutput;
 import ddf.minim.analysis.WindowFunction;
+
 import net.paulhertz.pixelaudio.sampler.ADSRParams;
 
 /**

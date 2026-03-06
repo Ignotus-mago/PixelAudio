@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
+import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 /**
  * PASamplerInstrument
@@ -48,6 +49,9 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	// Global modifiers
 	private volatile float globalPitch = 1.0f;  // global pitch multiplier
 	private float globalPan = 0.0f;             // -1.0 = left, +1.0 = right, 0.0 = center
+	
+	private volatile float gain = 1f;        // per-instrument linear trim
+	private volatile float parentGain = 1f;  // set by pool (group/master)
 
 
 	// ------------------------------------------------------------------------
@@ -77,6 +81,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 		this.maxVoices = Math.max(1, maxVoices);
 		// pass through to sampler
 		this.sampler = new PASharedBufferSampler(buffer, sampleRate, audioOut, this.maxVoices);
+		syncMasterGain();
 	}
 
 	/**
@@ -86,8 +91,8 @@ public class PASamplerInstrument implements PASamplerPlayable {
 		this.out = out;
 		this.buffer = buffer;
 		this.sampler = sampler;
+		syncMasterGain();
 		this.defaultEnv = defaultEnv;
-
 		this.bufferSize = (buffer != null) ? buffer.getBufferSize() : 0;
 		this.outputSampleRate = (out != null) ? out.sampleRate() : bufferSampleRate;
 		this.bufferSampleRate = bufferSampleRate;
@@ -229,6 +234,35 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	// ------------------------------------------------------------------------
 	// Accessors and utilities
 	// ------------------------------------------------------------------------
+	
+	public void setGain(float linear) {
+	    if (Float.isNaN(linear) || Float.isInfinite(linear)) return;
+	    gain = Math.max(0f, linear);
+	    syncMasterGain();
+	}
+
+	public float getGain() { return gain; }
+
+	public void setGainDb(float db) { setGain(AudioUtility.dbToLinear(db)); }
+
+	public float getGainDb() { return AudioUtility.linearToDb(gain); }
+
+	// package-private: only the pool should call this
+	void setParentGain(float linear) {
+	    if (Float.isNaN(linear) || Float.isInfinite(linear)) return;
+	    parentGain = Math.max(0f, linear);
+	    syncMasterGain();
+	}
+
+	float getParentGain() { return parentGain; }
+
+	private void syncMasterGain() {
+	    if (sampler instanceof PASharedBufferSampler s) {
+	        s.setMasterGain(gain * parentGain);
+	    }
+	}
+
+
 
 	public boolean hasAvailableVoice() {
 	    if (sampler == null) return false;

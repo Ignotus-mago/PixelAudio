@@ -26,7 +26,8 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayab
 	private final Map<String, PASamplerInstrumentPool> pools = new LinkedHashMap<>();
 	private String activeKey = null; // default route
 	private boolean isClosed = false;
-
+	
+	private volatile float masterGain = 1f;
 
     // ------------------------------------------------------------------------
     // Constructors
@@ -244,6 +245,12 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayab
         }
     }
 
+    public void setMasterGain(float linear) {
+        masterGain = Math.max(0f, linear);
+        for (PASamplerInstrumentPool p : pools.values()) {
+            p.setGain(masterGain); // if you want this to override per-pool gain
+        }
+    }
     
     // ------------------------------------------------------------------------
     // Resizing support

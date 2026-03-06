@@ -3,6 +3,7 @@ package net.paulhertz.pixelaudio.sampler;
 import ddf.minim.MultiChannelBuffer;
 import ddf.minim.AudioOutput;
 import ddf.minim.UGen;
+import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 import java.util.*;
 
@@ -33,7 +34,11 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     private boolean globalLooping = false;
     private boolean smoothSteal = true;
     
-    private float mixNorm = 1f; // smoothed normalization gain (NEW)
+    // smoothed normalization gain
+    private float mixNorm = 1f; 
+    
+    // --- Master gain applied to mixed output (affects currently playing voices) (NEW) ---
+    private volatile float masterGain = 1f; // linear >= 0
     
     protected boolean DEBUG = false;
     
@@ -197,9 +202,9 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         float alpha = 0.12f;
         mixNorm += alpha * (targetNorm - mixNorm);
 
-        channels[0] *= mixNorm;
-        if (channels.length > 1) channels[1] *= mixNorm;
-
+        float g = mixNorm * masterGain;
+        channels[0] *= g;
+        if (channels.length > 1) channels[1] *= g;
 
         // soft limiter
         final float drive = 2.0f; // try 1.5..3.0
@@ -258,6 +263,23 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     }
     
     // ----- Accessors ----- //
+    
+    public void setMasterGain(float linear) {
+        if (Float.isNaN(linear) || Float.isInfinite(linear)) return;
+        masterGain = Math.max(0f, linear);
+    }
+
+    public float getMasterGain() {
+        return masterGain;
+    }
+
+    public void setMasterGainDb(float db) {
+        setMasterGain(AudioUtility.dbToLinear(db));
+    }
+
+    public float getMasterGainDb() {
+        return AudioUtility.linearToDb(masterGain);
+    }
     
     public synchronized void setBuffer(float[] buffer) {
     	this.buffer = buffer;

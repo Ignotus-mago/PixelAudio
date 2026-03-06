@@ -128,6 +128,16 @@ public final class GestureGranularConfig {
     // Timing from geometry
     public boolean useArcLengthTime = false;
     
+    
+    /**
+     * @param gainDb    desired gain in dB
+     * @return reference to this Builder
+     */
+    public Builder gainDb(float gainDb) {
+        this.gainDb = gainDb;
+        return this;
+    }
+    
 
     /** Build an immutable snapshot safe to pass into scheduler/renderer threads. */
     public GestureGranularConfig build() {
@@ -209,6 +219,7 @@ public final class GestureGranularConfig {
     	this.useArcLengthTime = src.useArcLengthTime;
     }
 
+    
 
   }
   
