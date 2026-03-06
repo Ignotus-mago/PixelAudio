@@ -163,7 +163,8 @@ public class TutorialOneDrawing extends PApplet {
 	
 	/*
 	 * Audio playback support is added with the audio variables and audio methods. 
-	 * You will also need the ADSRParams, PASamplerInstrument, PASamplerInstrumentPool5	 * and TimedLocation classes. In setup(), call initAudio(), then add
+	 * You will also need the ADSRParams, PASamplerInstrument, PASamplerInstrumentPool
+	 * and TimedLocation classes. In setup(), call initAudio(), then add
 	 * a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
 	 * and call runTimeArray() in your draw method. 
 	 */
@@ -173,8 +174,9 @@ public class TutorialOneDrawing extends PApplet {
 	Minim minim;					// library that handles audio 
 	AudioOutput audioOut;			// line out to sound hardware
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset, not used in TutorialOneDrawing
-	float sampleRate = 44100;       // sample rate of audioOut
-	float fileSampleRate;           // sample rate of most recently opened file
+	float sampleRate = 44100;       // target audio engine rate used to configure audioOut
+	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
+	float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
 	float[] audioSignal;			// the audio signal as an array of floats
 	MultiChannelBuffer playBuffer;	// a buffer for playing the audio signal
 	int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
@@ -1112,6 +1114,8 @@ public class TutorialOneDrawing extends PApplet {
 				//if (buff.getBufferSize() != mapSize) buff.setBufferSize(mapSize);
 				fileSampleRate = audioOut.sampleRate();
 			}
+			// save the length of the file, possibly resampled, for future use
+			this.audioFileLength = buff.getBufferSize();
 		}
 		else {
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
@@ -1122,14 +1126,11 @@ public class TutorialOneDrawing extends PApplet {
 			blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
 		}
 		else {
-			// read audio file into our MultiChannelBuffer, buffer size will be adjusted to match the file
+			// adjust buffer size to mapper.getSize()
+			if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
 			playBuffer = buff;
-			// save the length of the buffer as read from the file, for future use
-			this.audioFileLength = playBuffer.getBufferSize();
-			// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-			if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-			// load the buffer of our PASamplerInstrument (created in initAudio(), on starting the sketch)
 		}
+		// ensureSamplerReady will load playBuffer to the Sampler synth "pool"
 		ensureSamplerReady();
 		// because playBuffer is used by synth and pool and should not change, while audioSignal changes
 		// when the image animates, we don't want playBuffer and audioSignal to point to the same array
@@ -1977,8 +1978,11 @@ public class TutorialOneDrawing extends PApplet {
 		for (PVector loc : sched.points) {
 			int x = Math.round(loc.x);
 			int y = Math.round(loc.y);
-			int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
-			int d = (isGesture) ? 200 : durMsFixed;
+			// we can rely on sched for accurate times -- TODO drop in next iteration
+			// int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
+			// int d = (isGesture) ? 200 : durMsFixed;
+			int t = startTime + Math.round(sched.timesMs[i++]);
+			int d = 200;
 			this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
 		}
 		Collections.sort(grainTimeLocs);

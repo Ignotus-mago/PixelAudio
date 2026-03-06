@@ -1,7 +1,7 @@
 /*
  * TutorialOne_00_BeginHere showed the basics of loading the PixelAudio library and 
  * using it to display a rainbow array of colors along the signal path. It also provided
- * a basic response to mousePressed events. Tutorial_01_FileIO adds basic input and
+ * a simple response to mousePressed events. Tutorial_01_FileIO adds basic input and
  * output of audio and image files to the previous materials.
  * 
  * TutorialOne_01_FileIO can open and display audio and image files, transcode RGB pixel 

@@ -1,37 +1,51 @@
 /**
  * TutorialOne_00_BeginHere
  * 
- * This tutorial give you the bare bones for a PixelAudio application, which appear in all 
+ * Pixels <- 1 to 1 -> Samples
+ * This tutorial gives you the bare bones for a PixelAudio application, which appear in all 
  * the tutorials that follow. The fundamental concept of PixelAudio is that the pixels in
  * an image and the samples in an audio signal can be put into one-to-one correspondence. 
  * In other words, there are just as many pixels as there are samples, and every pixel has
  * exactly one audio sample that corresponds to it.
  * 
  * Pixels have a standard order that is probably already familiar to you: left-to-right, 
- * top-to-bottom, like reading a book in the English language. Pixel are ordered in
- * two dimensions because images are two-dimensional. Audio signals have one dimension: time. 
+ * top-to-bottom, like reading a book in the English language. Pixels are ordered in
+ * two dimensions because images are two-dimensional. Audio signals have one dimension: time.
+ *
+ * The Signal Path 
  * In PixelAudio, we imagine that a one-to-one correspondence between pixels and samples
  * can be rendered as a path that visits each pixel exactly once. PixelAudio refers to 
  * this path as the "signal path". The signal path might be a zigzag line, from corner 
  * to corner of an image, or a fractal labyrinth like a Hilbert curve, or even a random
  * walk that bumps into every pixel once only. 
  * 
+ * PixelMapGen classes generate Signal Paths
  * PixelAudio provides an abstract class that maps pixels and samples back and forth: 
- * PixelMapGen. With a PixelMapGen (or "gen", for short) you can find the pixel that 
- * corresponds to any sample and the sample that corresponds to any pixel. PixelMapGens
+ * PixelMapGen. A PixelMapGen instance generates a specific kind of Signal Path. It
+ * might be a zigzag, a back-and-forth boustrophedon, or a fractal Hilbert curve.
+ * With a PixelMapGen (or "gen", for short) you can find the exact pixel that 
+ * corresponds to any sample and the sample that corresponds to any pixel. You can 
+ * get the coordinates of the signal path as it traverses the image, too. PixelMapGens
  * can be combined into larger structures, MultiGens. It's all done with arrays, and 
  * for the most part you don't need to be concerned with how it works. See the 
- * LookupTables and MultiGenLookupTables examples for a details.  
+ * LookupTables and MultiGenLookupTables examples for a details. 
  * 
- * The actual work of moving between audio signal and image pixels is done by another 
- * PixelAudio class, PixelAudioMapper. A PixelAudioMapper instance (or "mapper") is 
- * initialized with a PixelMapGen. It can copy values back and forth between audio
- * signals and images. Because samples and pixels are very different numeric formats,
- * PixelAudioMapper also provides a big toolkit for transcoding audio samples, which are
- * floating point numbers between -1.0 and 1.0, and RGB or HSB color values. RGB data is
- * encoded in 24-bit integers, where each channel has 8 bits of data. Another 8 bits are
- * used as an alpha channel, which can be through of as opacity. These features are covered
- * in the TutorialOne sequence and in many of the sample sketches that come with PixelAudio. 
+ * PixelAudioMapper works with PixelMapGens
+ * PixelAudioMapper instances read and write audio samples and image pixels using a
+ * PixelMapGen. A PixelAudioMapper instance (or "mapper") is initialized with a PixelMapGen. 
+ * It can copy values back and forth between audio signals and images. Because samples and 
+ * pixels are very different numeric formats, PixelAudioMapper also provides a big toolkit 
+ * for transcoding audio samples, which are floating point numbers between -1.0 and 1.0, 
+ * and RGB or HSB color values. RGB data is encoded in 24-bit integers, where each channel 
+ * has 8 bits of data. Another 8 bits are used as an alpha channel, which can be thought of 
+ * as opacity. These features are covered in the TutorialOne sequence and in many of the 
+ * sample sketches that come with PixelAudio. 
+ *
+ * Most PixelAudio applications only require one PixelMapGen and one PixelAudioMapper. 
+ * This simple tutorial shows you how to get started with that typical configuration. 
+ * 
+ * PixelMapGen and PixelAudioMapper together express one of the core ideas of the 
+ * PixelAudio library: audio signals and images can be mapped onto one another. 
  * 
  */
 
