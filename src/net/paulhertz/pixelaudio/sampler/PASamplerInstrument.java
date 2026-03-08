@@ -314,7 +314,8 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 */
 	public synchronized void setBuffer(MultiChannelBuffer newBuffer) {
 	    if (newBuffer != null) {
-	    	// use MultiChannelBuffer.set() to avoid reallocating memory and copy sample data efficiently
+	    	// MultiChannelBuffer.set() copies newBuffer data and resizes buffer and channel count, if necessary
+	    	// We call it to avoid reallocating memory and copy sample data efficiently.
 	        this.buffer.set(newBuffer);
 	        this.bufferSize = newBuffer.getBufferSize();
 	        float[] sharedBuffer = Arrays.copyOf(newBuffer.getChannel(0), newBuffer.getBufferSize());
@@ -332,7 +333,8 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 */
 	public synchronized void setBuffer(MultiChannelBuffer newBuffer, float newSampleRate) {
 	    if (newBuffer != null) {
-	    	// use MultiChannelBuffer.set() to avoid reallocating memory and copy sample data efficiently
+	    	// MultiChannelBuffer.set() copies newBuffer data and resizes buffer and channel count, if necessary
+	    	// We call it to avoid reallocating memory and copy sample data efficiently.
 	    	this.buffer.set(newBuffer);
 	    	this.bufferSize = newBuffer.getBufferSize();
 	    	setBufferSampleRate(newSampleRate);
