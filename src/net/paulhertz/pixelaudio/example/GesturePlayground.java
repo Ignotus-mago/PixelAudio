@@ -37,6 +37,7 @@ import g4p_controls.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
+import net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing.BrushOutput;
 import net.paulhertz.pixelaudio.schedule.*;
 import net.paulhertz.pixelaudio.granular.*;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig.HopMode;
@@ -44,19 +45,62 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
- * TODO A lot of what the brushstroke "does" is visible in its appearance, particularly its synth, represented by color,
- * and its PathMode, shown by the drawing of points along the curve within the brushstroke. I can see where we might
- * eventually want to write a performance application where hovering activates the additional information in a GUI
- * and pressing spacebar plays the brushstroke. In one of the edit modes, a click selects for editing. 
+ * TODO
  */
 
 /**
- * <p>DONE for granular brushes, construct ADSR, don't read from GUI</p>
  * 
  * <DIV>
+ * <h2>QUICK START</h2>
+ * <ol>
+ * <li>Launch the sketch. A display window and a palette of Graphical User Interface (GUI) controls appears.
+ * The display window has an audio file preloaded. The grayscale values in the image are transcoded audio
+ * samples. An overlaid rainbow spectrum traces the Signal Path, the mapping of the audio signal to the image
+ * pixels created by the PixelMapGen <code>multigen</code> and managed by the PixelAudioMapper <code>mapper</code>.
+ * The Signal Path starts in the upper left corner and ends in the lower right corner.</li> 
  * 
+ * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing, 
+ * a brushstroke appears when you release the mouse. TutorialOne_03_Drawing gave you limited control over
+ * the attributes of the brushstroke and its associated audio parameters. In GesturePlayground, you can
+ * control nearly all the available parameters with the control palette.</li> 
+ * 
+ * <li>At the top of the control palette, you'll find Path Source radio buttons and sliders for setting 
+ * the geometry of the brush curve. When the curve is set to Reduced Points or Curve Points, the epsilon 
+ * slider will allow you to visualize changes in the curve. For the curve points representation of the 
+ * curve, theCurve Points slider will add or subtract points.</li>
+ * 
+ * <li>The control palette displays knobs for the type of audio synthesis instrument you have selected.
+ * Press the 't' key to change the instrument. The control palette will reflect the changes. The 
+ * control palette provides three play modes: one for editing granular synthesis parameters, another
+ * for the sampler synthesizer, and a "play only" mode where you can play both instruments but
+ * don't have editing enabled.</li>
+ * 
+ * <li>The controls for the Sampler are fairly simple. You can change the number of points in the curve
+ * with the geometry controls. You can also change the duration of the gesture and the number of 
+ * points in it with the Resample and Duration sliders. Finally, there's a Sampler Envelope menu
+ * that will change the ADSR envelope of each sampler event point.</li> 
+ * 
+ * <li>The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus 
+ * many controls for granular synthesis:</li>
+ *   <ol>
+ *   <li>The Hop Mode radio buttons determine if the duration of the granular event is determined 
+ *   by the gesture timing data in the brushstroke's PACurveMaker instance, or by the Grain
+ *   Length and Hop Length sliders.</li> 
+ *   <li>Burst Count sets the number of linear grains at each event point. Its effect is to expand
+ *   the sound of the grain.</li> 
+ *   <li>Grain Length and Hop Length sliders control the spacing of the grains. Hop Length is only 
+ *   used for Fixed Hop Mode. Grain and Hop durations are in milliseconds.</li> 
+ *   <li>The Warp radio buttons and slider control non-linear timing changes to the gesture.</li> 
+ *   </ol>
+ * <li>There are many key commands too, including command to load new audio files. Two commands are 
+ * particularly useful with granular synthesis: the 'q' command key will calculate the optimal
+ * number of grains in a gesture (usually in GESTURE Path Mode) and update the control palette. 
+ * This can provide smooth granular synthesis even as it preserves the timing characteristic 
+ * of the gesture. The 'c' command will print configuration data to the console.</li>
+ * 
+ * </ol>
  * <p>
- * <b>GesturePlayground<?b> uses a GUI to provide a tour of the usage and properties of the <code>AudioBrush</code> 
+ * <b>GesturePlayground</b> uses a GUI to provide a tour of the usage and properties of the <code>AudioBrush</code> 
  * subclasses <code>GranularBrush</code> and <code>SamplerBrush</code> and the <code>GestureSchedule</code> class.
  * An AudioBrush combines a <code>PACurveMaker</code> and a <code>GestureGranularConfig.Builder</code>. PACurveMaker
  * models <i>gestures</i>, one of the core concepts of PixelAudio. In its simplest encoded form, the <code>PAGesture</code> interface, 
@@ -677,6 +721,19 @@ public class GesturePlayground extends PApplet {
 
 	public void parseKey(char key, int keyCode) {
 		switch(key) {
+		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
+			if (hoverBrush != null) {
+				if (hoverBrush instanceof SamplerBrush sb) {
+					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
+				}
+				else if (hoverBrush instanceof GranularBrush gb) {
+					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
+				}
+			}
+			else {
+				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+			}
+			break;
 		case 'c': case 'C': // print the current configuration status to the console
 			printGConfigStatus();
 			break;
@@ -686,18 +743,13 @@ public class GesturePlayground extends PApplet {
 				controlWindow.setTitle("Sampler Synth");				
 			}
 			else if (mode == Mode.DRAW_EDIT_SAMPLER) {
+				setMode(Mode.PLAY_ONLY);
+				controlWindow.setTitle("Play Only: Both Synths");
+			}
+			else if (mode == Mode.PLAY_ONLY) {
 				setMode(Mode.DRAW_EDIT_GRANULAR);
 				controlWindow.setTitle("Granular Synth");
 			}
-			else {
-				setMode(Mode.DRAW_EDIT_GRANULAR);
-				controlWindow.setTitle("Granular Synth");
-			}
-			println("---> mode is "+ mode.toString());			
-			break;
-		case 'T': // set mode to PLAY ONLY (no editing)
-			setMode(Mode.PLAY_ONLY);
-			controlWindow.setTitle("Play Mode");
 			println("---> mode is "+ mode.toString());			
 			break;
 		case 'f': case'F': // toggle verbose output to the console
@@ -762,37 +814,38 @@ public class GesturePlayground extends PApplet {
 	}
 
 	void setMode(Mode newMode) {
-	    if (newMode == mode) return;
-	    mode = newMode;
-	    // Clear hover because the hover rules changed
-	    hoverBrush = null;
-	    hoverIndex = -1;
-	    // Choose what should be "active" in the new mode
-	    AudioBrush nextActive = null;
-	    switch (mode) {
-	        case DRAW_EDIT_GRANULAR -> {
-	        	nextActive = activeGranularBrush;
-		    	gConfig.env = granEnvelope;
-	        }
-	        case DRAW_EDIT_SAMPLER  -> {
-	        	nextActive = activeSamplerBrush;
-	        }
-	        case PLAY_ONLY          -> { nextActive = (activeBrush != null) ? activeBrush
-	                                   : (activeGranularBrush != null ? activeGranularBrush : activeSamplerBrush);
-	        }
-	        default -> {}
-	    }
-	    if (nextActive != null) {
-	        // Keep indices consistent: use stored index for the corresponding type
-	        int idx = (nextActive instanceof GranularBrush) ? activeGranularIndex : activeSamplerIndex;
-	        setActiveBrush(nextActive, idx);     // this also syncs GUI
-	    } 
-	    else {
-	        // No selection for this mode
-	        activeBrush = null;
-	        resetConfigForMode();
-	    }
-	    setControlsEnabled();
+		if (newMode == mode) return;
+		mode = newMode;
+		// Clear hover because the hover rules changed
+		hoverBrush = null;
+		hoverIndex = -1;
+		// Choose what should be "active" in the new mode
+		AudioBrush nextActive = null;
+		switch (mode) {
+		case DRAW_EDIT_GRANULAR: 
+			nextActive = activeGranularBrush;
+			gConfig.env = granEnvelope;
+			break;
+		case DRAW_EDIT_SAMPLER:  
+			nextActive = activeSamplerBrush;
+			break;
+		case PLAY_ONLY:
+			nextActive = (activeBrush != null) ? activeBrush
+					: (activeGranularBrush != null ? activeGranularBrush : activeSamplerBrush);
+			break;
+		default: {}
+		}
+		if (nextActive != null) {
+			// Keep indices consistent: use stored index for the corresponding type
+			int idx = (nextActive instanceof GranularBrush) ? activeGranularIndex : activeSamplerIndex;
+			setActiveBrush(nextActive, idx);     // this also syncs GUI
+		} 
+		else {
+			// No selection for this mode
+			activeBrush = null;
+			resetConfigForMode();
+		}
+		setControlsEnabled();
 	}
 
 	// Reset tool config to defaults (copy, so default config never mutates)
@@ -1539,12 +1592,12 @@ public class GesturePlayground extends PApplet {
 	}
 	
 	boolean isBrushInteractable(AudioBrush b) {
-	    return switch (mode) {
-	        case DRAW_EDIT_SAMPLER -> b instanceof SamplerBrush;
-	        case DRAW_EDIT_GRANULAR -> b instanceof GranularBrush;
-	        case PLAY_ONLY -> true; // both playable
-	        default -> false;
-	    };
+	    switch (mode) {
+	        case DRAW_EDIT_SAMPLER: return b instanceof SamplerBrush;
+	        case DRAW_EDIT_GRANULAR: return b instanceof GranularBrush;
+	        case PLAY_ONLY: return true; // both playable
+	        default: return false;
+	    }
 	}
 
 	void setActiveBrush(AudioBrush brush) {
@@ -1580,12 +1633,19 @@ public class GesturePlayground extends PApplet {
 		}
 		// 1) Count: based on the point set implied by current PathMode
 		PACurveMaker curve = activeBrush.curve();
-		List<PVector> pts = switch (gConfig.pathMode) {
-			case REDUCED_POINTS -> (curve.getReducedPoints());
-			case CURVE_POINTS   -> (curve.getCurvePoints());
-			case ALL_POINTS     -> (curve.getAllPoints());
-			default             -> (curve.getAllPoints());
-		};
+		List<PVector> pts;
+		switch (gConfig.pathMode) {
+		  case REDUCED_POINTS:
+		    pts = curve.getReducedPoints();
+		    break;
+		  case CURVE_POINTS:
+		    pts = curve.getCurvePoints();
+		    break;
+		  case ALL_POINTS:
+		  default:
+		    pts = curve.getAllPoints();
+		    break;
+		}
 		baselineCount = (pts == null) ? 0 : pts.size();
 		// 2) Duration: depends on HopMode (baseline has resample/duration/warp off)
 		if (baselineCount <= 1) {
@@ -1621,38 +1681,38 @@ public class GesturePlayground extends PApplet {
 	public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int hoverColor, int selectedColor) {
 		if (brushes.isEmpty()) return;
 		for (int i = 0; i < brushes.size(); i++) {
-	        AudioBrush b = brushes.get(i);
-	        PACurveMaker brush = b.curve();
-	        boolean isHover = (b == hoverBrush);
-	        boolean isSelected = (b == activeBrush);
-	        int fill = readyColor;
-	        if (isSelected) {
-	            fill = selectedColor;
-	            brush.setEpsilon(b.cfg().rdpEpsilon);
-	            brush.setCurveSteps(b.cfg().curveSteps);
-	        } 
-	        else if (isHover) {
-	            fill = hoverColor;
-	        }
+			AudioBrush b = brushes.get(i);
+			PACurveMaker brush = b.curve();
+			boolean isHover = (b == hoverBrush);
+			boolean isSelected = (b == activeBrush);
+			int fill = readyColor;
+			if (isSelected) {
+				fill = selectedColor;
+				brush.setEpsilon(b.cfg().rdpEpsilon);
+				brush.setCurveSteps(b.cfg().curveSteps);
+			} 
+			else if (isHover) {
+				fill = hoverColor;
+			}
 			GestureGranularConfig.PathMode pm = b.cfg().pathMode;
 			PACurveUtility.shapeDraw(this, brush.getBrushShape(), fill, fill, 2);
 			int w = 1, d = 5;
 			int lc = isSelected ? lineColor : dimLineColor;
 			int cc = isSelected ? circleColor : dimCircleColor;
 			switch (pm) {
-			case REDUCED_POINTS -> {
+			case REDUCED_POINTS:
 				PACurveUtility.lineDraw(this, brush.getReducedPoints(), lc, w);
 				PACurveUtility.pointsDraw(this, brush.getReducedPoints(), cc, d);
-			}
-			case CURVE_POINTS -> {
+				break;
+			case CURVE_POINTS:
 				PACurveUtility.lineDraw(this, brush.getCurvePoints(), lc, w);
 				PACurveUtility.pointsDraw(this, brush.getCurvePoints(), cc, d);
-			}
-			case ALL_POINTS -> {
+				break;
+			case ALL_POINTS:
 				PACurveUtility.lineDraw(this, brush.getAllPoints(), lc, w);
 				PACurveUtility.pointsDraw(this, brush.getAllPoints(), cc, d);
-			}
-			default -> {
+				break;
+			default: {
 				PACurveUtility.lineDraw(this, brush.getAllPoints(), lc, w);
 				PACurveUtility.pointsDraw(this, brush.getAllPoints(), cc, d);
 			}
@@ -1665,11 +1725,12 @@ public class GesturePlayground extends PApplet {
 	
 	ArrayList<PVector> getPathPoints(AudioBrush b) {
 		PACurveMaker cm = b.curve();
-		return switch (b.cfg().pathMode) {
-			case ALL_POINTS -> cm.getAllPoints();
-			case REDUCED_POINTS -> cm.getReducedPoints();
-			case CURVE_POINTS -> cm.getCurvePoints();
-		};
+		switch (b.cfg().pathMode) {
+			case ALL_POINTS: return cm.getAllPoints();
+			case REDUCED_POINTS: return cm.getReducedPoints();
+			case CURVE_POINTS: return cm.getCurvePoints();
+			default: return cm.getAllPoints();
+		}
 	}
 
 	/**
@@ -1677,12 +1738,11 @@ public class GesturePlayground extends PApplet {
 	 * @return     GestureSchedule for the current pathMode of the brush
 	 */
 	public GestureSchedule getScheduleForBrush(AudioBrush b) {
-		return switch (b.cfg().pathMode) {
-		case REDUCED_POINTS -> b.curve().getReducedSchedule(b.cfg().rdpEpsilon);
-		case CURVE_POINTS -> b.curve().getCurveSchedule(b.cfg().rdpEpsilon, curveSteps, isAnimating);
-		case ALL_POINTS -> b.curve().getAllPointsSchedule();
-		default -> b.curve().getAllPointsSchedule();
-		};
+		switch (b.cfg().pathMode) {
+			case REDUCED_POINTS: return b.curve().getReducedSchedule(b.cfg().rdpEpsilon);
+			case CURVE_POINTS: return b.curve().getCurveSchedule(b.cfg().rdpEpsilon, curveSteps, isAnimating);
+			case ALL_POINTS: default: return b.curve().getAllPointsSchedule();
+		}
 	}
 
 
@@ -1822,7 +1882,10 @@ public class GesturePlayground extends PApplet {
 		if (sb == null) return;
 		ArrayList<PVector> pts = getPathPoints(sb);
 		if (pts == null || pts.size() < 2) return;
-		GestureSchedule sched = getScheduleForBrush(sb);
+		ensureSamplerReady();
+		GestureGranularConfig snap = sb.snapshot();
+		GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
+		// GestureSchedule sched = getScheduleForBrush(sb);  // just the brush settings here
 		storeSamplerCurveTL(sched, millis() + 10);
 	}
 
@@ -1866,8 +1929,7 @@ public class GesturePlayground extends PApplet {
 	    ArrayList<PVector> pts = getPathPoints(gb);
 	    if (pts == null || pts.size() < 2) return;
 	    ensureGranularReady();
-	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    
+	    float[] buf = (granSignal != null) ? granSignal : audioSignal;	    
 	    // Snapshot config ONCE so schedule + params are consistent
 	    GestureGranularConfig snap = gb.snapshot();
 		// TODO:
@@ -1878,7 +1940,6 @@ public class GesturePlayground extends PApplet {
 	    // apply resample/duration/warp via scheduleBuilder
 	    GestureSchedule sched = scheduleBuilder.build(gb.curve(), snap, audioOut.sampleRate());
 	    if (sched == null || sched.isEmpty()) return;
-
 	    if (isVerbose) {
 		    println("sched.size=" + sched.size()
 		    + " durationMs=" + sched.durationMs()
@@ -2804,15 +2865,15 @@ public class GesturePlayground extends PApplet {
 	
 	// Envelopes
 	static ADSRParams envPreset(String name) {
-		return switch (name) {
-		case "Pluck"      -> new ADSRParams(0.9f, 0.005f, 0.18f, 0.0f, 0.12f);
-		case "Soft"       -> new ADSRParams(0.9f, 0.020f, 0.60f, 0.15f, 0.25f); // new
-		case "Percussion" -> new ADSRParams(0.9f, 0.002f, 0.20f, 0.10f, 0.18f);
-		case "Fade"       -> new ADSRParams(0.9f, 0.50f, 0.0f, 1.0f, 0.50f);   // your trapezoid
-		case "Swell"      -> new ADSRParams(0.9f, 0.90f, 0.40f, 0.70f, 0.90f);
-		case "Pad"        -> new ADSRParams(0.9f, 1.40f, 0.60f, 0.85f, 1.80f);
-		default           -> new ADSRParams(0.9f, 0.01f, 0.15f, 0.75f, 0.25f);
-		};
+		switch (name) {
+		case "Pluck"      : return new ADSRParams(0.9f, 0.005f, 0.18f, 0.0f, 0.12f);
+		case "Soft"       : return new ADSRParams(0.9f, 0.020f, 0.60f, 0.15f, 0.25f); // new
+		case "Percussion" : return new ADSRParams(0.9f, 0.002f, 0.20f, 0.10f, 0.18f);
+		case "Fade"       : return new ADSRParams(0.9f, 0.50f, 0.0f, 1.0f, 0.50f);   // your trapezoid
+		case "Swell"      : return new ADSRParams(0.9f, 0.90f, 0.40f, 0.70f, 0.90f);
+		case "Pad"        : return new ADSRParams(0.9f, 1.40f, 0.60f, 0.85f, 1.80f);
+		default           : return new ADSRParams(0.9f, 0.01f, 0.15f, 0.75f, 0.25f);
+		}
 	}
 
 	/** Quantize an integer to the nearest multiple of step. */

@@ -23,6 +23,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 //Mama's ever-lovin' blue-eyed PixelAudio library
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.sampler.*;
+import net.paulhertz.pixelaudio.schedule.AudioUtility;
 import net.paulhertz.pixelaudio.schedule.TimedLocation;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
@@ -156,6 +157,12 @@ import ddf.minim.*;
 	 String imageFileTag;
 	 int imageFileWidth;
 	 int imageFileHeight;
+	 
+	 /** 
+	  * If doResample == true, resample audio from files with a sampling rate != audioOut.sampleRate(). 
+	  * For PixelAudio applications where we want the display pixels to correspond to the audio samples,
+	  * we should always resample. We'll do it automatically in most example code. */
+	 boolean doResample = true;      // 
 
 	 /* ------------------------------------------------------------------ */
 	 /*                          AUDIO VARIABLES                           */
@@ -170,8 +177,8 @@ import ddf.minim.*;
 	 AudioOutput audioOut;           // output to sound hardware
 	 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 	 float sampleRate = 44100;       // target audio engine rate used to configure audioOut
-	 float fileSampleRate;           // sample rate of most recently opened file (before resampling)
-	 float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
+	 float fileSampleRate;           // sample rate of most recently opened file (before resampling, but may already == sampleRate)
+	 float bufferSampleRate;         // sample rate of playBuffer, == fileSampleRate when we don't resample, == sampleRate when we do
 	 float[] audioSignal;            // the audio signal as an array of floats
 	 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 	 int samplePos;                  // index into the audio signal, set when an audio event is triggered
@@ -322,6 +329,10 @@ import ddf.minim.*;
 			String msg = isRandomADSR ? " synth uses a random ADSR" : " synth uses default ADSR";
 			println("---- isRandomADSR = "+ isRandomADSR +","+ msg);
 			break;
+		case 'd': // toggle doResample: if true, resample audio when fileSampleRate != audioOut.sampleRate()
+			doResample = !doResample;
+			println("---- doResample = "+ doResample);
+			break;
 		case 'h': case 'H': // show help and key commands in console
 			showHelp();
 			break;
@@ -330,6 +341,11 @@ import ddf.minim.*;
 		}
 	}
 
+	/**
+	 * to generate help output, run RegEx search/replace on parseKey case lines with:
+	 * // case ('.'): // (.+)
+	 * // println(" * Press $1 to $2.");
+	 */
 	public void showHelp() {
 		println(" * Press ' ' (spacebar) to play sample at current mouse position.");
 		println(" * Press 'c' to apply color from image file to display image.");
@@ -495,34 +511,51 @@ import ddf.minim.*;
 	}
 
 	/**
-	 * Attempts to load audio data from a selected file into playBuffer, then calls
-	 * writeAudioToImage() to transcode audio data and write it to mapImage
-	 * Note that if the file does not use the default sample rate we set in initAudio(),
-	 * It will play correctly, but the pixel display may not correspond exactly to the 
-	 * audio signal. 
+	 * Attempts to load audio data from a selected file into playBuffer, then
+	 * calls writeAudioToImage() to transcode audio data and write it to mapImage
+	 * If the file does not use the default sample rate we set in initAudio(),
+	 * it will still play correctly. If we set doResample = true the file will be 
+	 * resampled to audioOut.sampleRate(), if necessary. 
+	 * 
+	 * In most PixelAudio examples, we provide built-in resampling. 
 	 * 
 	 * @param audFile    an audio file
 	 */
 	public void loadAudioFile(File audFile) {
-		// read audio file into our MultiChannelBuffer, buffer size will be adjusted to match the file
-		float fileSampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), playBuffer);
-		println("----- file sample rate is "+ fileSampleRate);
-		// sampleRate > 0 means we read audio from the file
+		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
+		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
 		if (fileSampleRate > 0) {
-			// save the length of the buffer as read from the file, for future use
-			this.audioFileLength = playBuffer.getBufferSize();
-			// resize the buffer to mapSize, if necessary -- audio data will not be overwritten
-			if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-			// read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
-			audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-			audioLength = audioSignal.length;
-			// load the buffer of our PASamplerInstrument at the sample rate of the file
-			synth.setBuffer(playBuffer, fileSampleRate);
-			// write the signal to mapImage 
-			writeAudioToImage(audioSignal, mapper, mapImage, chan);
+			if (doResample && fileSampleRate != audioOut.sampleRate()) {
+				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+				buff.setBufferSize(resampled.length);
+				buff.setChannel(0, resampled);
+				bufferSampleRate = sampleRate;
+			}
+			else {
+				bufferSampleRate = fileSampleRate;
+			}
+			this.audioFileLength = buff.getBufferSize();
+			println("---- doResample = "+ doResample 
+					+", file sample rate = "+ this.fileSampleRate 
+					+", buffer sample rate = "+ bufferSampleRate
+					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
+		else {
+			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
+			return;
+		}
+		// adjust buffer size to mapper.getSize()
+		if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
+		playBuffer = buff;
+		// read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
+		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
+		audioLength = audioSignal.length;
+		// load the buffer of our PASamplerInstrument at the sample rate of the buffer
+		synth.setBuffer(playBuffer, bufferSampleRate);
+		// write the signal to mapImage 
+		writeAudioToImage(audioSignal, mapper, mapImage, chan);
 	}
-
+	
 	/**
 	 * Transcodes audio data in sig[] and writes it to color channel chan of mapImage 
 	 * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(), 
