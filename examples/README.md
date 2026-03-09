@@ -1,4 +1,4 @@
-As of November 12, 2025, we have these examples, in the suggested order for learning about PixelAudio:
+As of March 9, 2026, we have these examples, in the suggested order for learning about PixelAudio:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
@@ -9,10 +9,10 @@ As of November 12, 2025, we have these examples, in the suggested order for lear
 - **Tutorial Folder**
    1. **TutorialOne_00_BeginHere**: Basics of creating a MultiGen and a PixelAudioMapper.
    2. **TutorialOne_01_FileIO**: Load audio and image files, turn images into sound, sound into images.
-   3. **TutorialOne_02_SkipThis**: Just skip this, it's a placeholder.
-   4. **TutorialOne_03_Animation**: Add animation and video output.
-   5. **TutorialOne_04_Drawing**: Create interactive drawing tools to trigger audio events.
-   6. **TutorialOne_05_UDP**: Communicate with Max and other media apps with UDP. 
+   3. **TutorialOne_02_Animation**: Add animation and video output.
+   4. **TutorialOne_03_Drawing**: Create interactive drawing tools to trigger audio events.
+   5. **TutorialOne_04_Network**: Communicate with Max and other media apps with UDP. 
+   6. **GesturePlayground**: Explore the intricacies of granular and sampler synthesis with a GUI.
    7. **TutorialOne_06_WindowBuffer**: Use a windowed buffer to move through and interact with a large audio file.
 - **LoadAudioToImage**: read an audio file, trancode it into an image and then play audio samples. 
 - **LoadImageToAudio**: read, write, play, and mix channels of images and audio files. 
