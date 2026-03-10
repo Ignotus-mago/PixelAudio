@@ -52,6 +52,7 @@ import java.util.Locale;
 import ddf.minim.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.sampler.*;
+import net.paulhertz.pixelaudio.schedule.*;
 
 PixelAudio pixelaudio;      // our shiny new library
 HilbertGen hGen;            // a PixelMapGen to draw Hilbert curves
@@ -274,7 +275,7 @@ public void keyPressed() {
     break;
   case 'W':
     stepWaveSynth();
-    playSample(mapper.lookupSample(width/2, height/2), calcSampleLen(), 0.3f, new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
+    playSample(mapper.lookupSignalPos(width/2, height/2), calcSampleLen(), 0.3f, new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime));
     break;
   case 'd':
     isRaining = !isRaining;

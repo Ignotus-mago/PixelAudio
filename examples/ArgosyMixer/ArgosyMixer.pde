@@ -9,6 +9,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.sampler.*;
+import net.paulhertz.pixelaudio.schedule.*;
 
 //video export library
 import com.hamoid.*;

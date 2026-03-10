@@ -71,6 +71,7 @@ import ddf.minim.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
+import net.paulhertz.pixelaudio.schedule.*;
 
 
 // PixelAudio vars and objects
@@ -416,7 +417,7 @@ public void mousePressed() {
  * @return     the index of the sample corresponding to (x,y) on the signal path
  */
 public int getSamplePos(int x, int y) {
-  int pos = mapper.lookupSample(x, y);
+  int pos = mapper.lookupSignalPos(x, y);
   // calculate how much animation has shifted the indices into the buffer
   totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
   return (pos + totalShift) % mapSize;

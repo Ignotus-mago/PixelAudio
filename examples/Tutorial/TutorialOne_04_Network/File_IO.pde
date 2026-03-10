@@ -6,12 +6,12 @@
 
 // -------- BEGIN FILE I/O FOR APPLYING COLOR --------- //
 
-/*
- * Here is a special section of code for TutorialOne and other applications that
- * color a grayscale image with color data from a file. The color and saturation
- * come from the selected file, the brightness (gray values, more or less) come
- * from an image you supply, such as display image.
- */
+/* 
+  * Here is a special section of code for TutorialOne and other applications that
+  * color a grayscale image with color data from a file. The color and saturation
+  * come from the selected file, the brightness (gray values, more or less) come
+  * from an image you supply, such as display image. 
+  */
 
 
 /**
@@ -22,7 +22,7 @@ public void chooseColorImage() {
 }
 
 /**
- * callback method for chooseColorImage()
+ * callback method for chooseColorImage() 
  * @param selectedFile    the File the user selected
  */
 public void colorFileSelected(File selectedFile) {
@@ -39,12 +39,10 @@ public void colorFileSelected(File selectedFile) {
       println("--- Selected color file "+ fileName +"."+ fileTag);
       // apply the color data (hue, saturation) in the selected image to our display image, mapImage
       applyImageColor(imageFile, mapImage);
-    } 
-    else {
+    } else {
       println("----- File is not a recognized image format ending with \"png\", \"jpg\", or \"jpeg\".");
     }
-  } 
-  else {
+  } else {
     println("----- No file was selected.");
   }
 }
@@ -77,8 +75,8 @@ public void applyImageColor(File imgFile, PImage targetImage) {
 // -------- END FILE I/O FOR APPLYING COLOR --------- //
 
 /*
- * Here is a section of "regular" file i/o methods for audio and image files.
- */
+  * Here is a section of "regular" file i/o methods for audio and image files.
+  */
 
 
 /**
@@ -93,7 +91,7 @@ public void chooseFile() {
 /**
  * callback method for chooseFile(), handles standard audio and image formats for Processing.
  * If a file has been successfully selected, continues with a call to loadAudioFile() or loadImageFile().
- *
+ * 
  * @param selectedFile    the File the user selected
  */
 public void fileSelected(File selectedFile) {
@@ -103,18 +101,20 @@ public void fileSelected(File selectedFile) {
     String fileTag = fileName.substring(fileName.lastIndexOf('.') + 1);
     fileName = fileName.substring(0, fileName.lastIndexOf('.'));
     if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif")
-      || fileTag.equalsIgnoreCase("aiff")) {
+        || fileTag.equalsIgnoreCase("aiff")) {
       // we chose an audio file
       audioFile = selectedFile;
       audioFilePath = filePath;
       audioFileName = fileName;
       audioFileTag = fileTag;
       println("----- Selected file " + fileName + "." + fileTag + " at "
-        + filePath.substring(0, filePath.length() - fileName.length()));
+          + filePath.substring(0, filePath.length() - fileName.length()));
       loadAudioFile(audioFile);
+      // *****>>> NETWORKING <<<***** //
+      if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
     } 
     else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
-      || fileTag.equalsIgnoreCase("jpeg")) {
+        || fileTag.equalsIgnoreCase("jpeg")) {
       // we chose an image file
       imageFile = selectedFile;
       imageFilePath = filePath;
@@ -135,45 +135,51 @@ public void fileSelected(File selectedFile) {
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
  * writeAudioToImage() to transcode audio data and write it to mapImage.
- * If you want to load the image file and audio file separately, comment out writeAudioToImage().
- *
+ * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
+ * 
  * @param audFile    an audio file
  */
 public void loadAudioFile(File audFile) {
-  if (isBlending) {
-    MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
-    fileSampleRate =  minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), buff);
-    if (fileSampleRate > 0) {
-      println("---- file sample rate is "+ this.fileSampleRate);
-      // TODO we're ignoring possibly different sampling rates in the playBuffer and buff, does it matter?
-      blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
+  float[] resampled;
+  MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
+  fileSampleRate =  minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), buff);
+  if (fileSampleRate > 0) {
+    println("---- file sample rate is "+ this.fileSampleRate);
+    if (fileSampleRate != audioOut.sampleRate()) {
+      resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+      buff.setBufferSize(resampled.length);
+      buff.setChannel(0, resampled);
+      //if (buff.getBufferSize() != mapSize) buff.setBufferSize(mapSize);
+      fileSampleRate = audioOut.sampleRate();
     }
-  } 
-  else {
-    // read audio file into our MultiChannelBuffer, buffer size will be adjusted to match the file
-    fileSampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), playBuffer);
-    // sampleRate > 0 means we read audio from the file
-    if (fileSampleRate > 0) {
-      println("---- file sample rate is "+ this.fileSampleRate);
-      // save the length of the buffer as read from the file, for future use
-      this.audioFileLength = playBuffer.getBufferSize();
-      // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-      if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-      // load the buffer of our PASamplerInstrument (created in initAudio(), on starting the sketch)
-    }
+    // save the length of the file, possibly resampled, for future use
+    this.audioFileLength = buff.getBufferSize();
   }
-  synth.setBuffer(playBuffer, fileSampleRate);
-  if (pool != null) pool.setBuffer(playBuffer, fileSampleRate);
-  else pool = new PASamplerInstrumentPool(playBuffer, fileSampleRate, maxVoices, 1, audioOut, defaultEnv);
+  else {
+    println("-- Unable to load file. File may be empty, wrong format, or damaged.");
+    return;
+  }
+  // everything looks good, proceed
+  if (isBlending) {
+    blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
+  }
+  else {
+    // adjust buffer size to mapper.getSize()
+    if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
+    playBuffer = buff;
+  }
+  // ensureSamplerReady will load playBuffer to the Sampler synth "pool"
+  ensureSamplerReady();
   // because playBuffer is used by synth and pool and should not change, while audioSignal changes
   // when the image animates, we don't want playBuffer and audioSignal to point to the same array
   // so we copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
   audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
+  granSignal = audioSignal;
   audioLength = audioSignal.length;
   if (isLoadToBoth) {
-    writeAudioToImage(audioSignal, mapper, mapImage, chan);
+    renderAudioToMapImage(chan, 0);
+    commitMapImageToBaseImage();
   }
-  totalShift = 0;    // reset animation shift when audio is reloaded
 }
 
 /**
@@ -206,59 +212,54 @@ public static void blendInto(MultiChannelBuffer dest, MultiChannelBuffer src, fl
       float[] d = dest.getChannel(c);
       normalize(d, targetDB);
     }
+
   }
 }
-
+  
 /**
- * Normalizes a single-channel signal array to a target RMS level in dBFS.
- *
- * @param signal    The audio samples to normalize (modified in place)
- * @param targetDB  The target RMS level in decibels relative to full scale
- *                  (e.g. -3.0f for moderately loud, -12.0f for safe headroom)
+ * Normalizes a single-channel signal array to a target RMS level in dBFS (decibels relative to full scale).
+ * 0 is the maximum digital amplitude. -6.0 dB is 50% of the maximum level. 
+ *  
+ * @param signal
+ * @param targetPeakDB
  */
-public static void normalize(float[] signal, float targetDB) {
-  if (signal == null || signal.length == 0) return;
-  // --- Step 1: Compute RMS of the signal ---
-  float sumSq = 0f;
-  for (float v : signal) {
-    sumSq += v * v;
-  }
-  float rms = (float)Math.sqrt(sumSq / signal.length);
-  // --- Step 2: Convert target dBFS to linear RMS value ---
-  float targetRMS = (float)Math.pow(10.0, targetDB / 20.0);
-  // --- Step 3: Compute and apply gain ---
-  if (rms > 1e-6f) {
-    float gain = targetRMS / rms;
-    if (gain > 100.0f) gain = 100.0f; // safety limit
-    for (int i = 0; i < signal.length; i++) {
-      signal[i] *= gain;
-    }
-  }
+public static void normalize(float[] signal, float targetPeakDB) {
+  AudioUtility.normalizeRmsWithCeiling(signal, targetPeakDB, -3.0f);
+}
+  
+/**
+ * Transcodes audio data in audioSignal and writes it to color channel chan of mapImage.
+ * 
+ * @param chan     A color channel
+ * @param shift    number of index positions to shift the audio signal
+ */
+public void renderAudioToMapImage(PixelAudioMapper.ChannelNames chan, int shift) {
+  // Render current audioSignal into mapImage using current mapper & current totalShift
+  writeAudioToImage(audioSignal, mapper, mapImage, chan, shift);
 }
 
 /**
- * Transcodes audio data in sig[] and writes it to color channel chan of mapImage
- * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(),
+ * Transcodes audio data in sig[] and writes it to color channel chan of img 
+ * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImgShifted(), 
  * which will throw an IllegalArgumentException if sig.length != img.pixels.length
- * or sig.length != mapper.getSize().
- *
+ * or sig.length != mapper.getSize(). 
+ * 
  * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
  * @param mapper      a PixelAudioMapper
  * @param img         a PImage
  * @param chan        a color channel
+ * @param shift       the number of indices to shift when writing audio
  */
-public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
-  // If sig.length == mapper.getSize() == mapImage.width * mapImage.height, we can call safely mapper.mapSigToImg()
+public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan, int shift) {
   img.loadPixels();
-  mapper.mapSigToImg(sig, img.pixels, chan);
+  mapper.mapSigToImgShifted(sig, img.pixels, chan, shift); // commit current phase
   img.updatePixels();
 }
 
 /**
- * Attempts to load image data from a selected file into mapImage, then calls writeImageToAudio()
+ * Attempts to load image data from a selected file into mapImage, then calls writeImageToAudio() 
  * to transcode HSB brightness channel to audio and writes it to playBuffer and audioSignal.
- * If you want to load the image file and audio file separately, comment out writeImageToAudio().
- *
+ * 
  * @param imgFile    an image file
  */
 public void loadImageFile(File imgFile) {
@@ -280,7 +281,7 @@ public void loadImageFile(File imgFile) {
       }
       src.updatePixels();
       dest.blend(src, 0, 0, src.width, src.height, 0, 0, dest.width, dest.height, BLEND);
-    } 
+    }
     else {
       // copy the image directly using Processing copy command
       mapImage.copy(img, 0, 0, w, h, 0, 0, w, h);
@@ -301,23 +302,29 @@ public void loadImageFile(File imgFile) {
     // resize the buffer to mapSize, if necessary -- signal will not be overwritten
     if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
     audioSignal = playBuffer.getChannel(0);
-    writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
+    renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
     // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
     playBuffer.setChannel(0, audioSignal);
     audioLength = audioSignal.length;
     // load the buffer of our PASamplerInstrument (created in initAudio() on starting the sketch)
-    synth.setBuffer(playBuffer);
-    if (pool != null) pool.setBuffer(playBuffer);
-    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, maxVoices, 1, audioOut, defaultEnv);
+    ensureSamplerReady();
     // because playBuffer is used by synth and pool and should not change, while audioSignal changes
     // when the image animates, we don't want playBuffer and audioSignal to point to the same array
     // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
     audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
+    granSignal = audioSignal;
     audioLength = audioSignal.length;
-    totalShift = 0;    // reset animation shift when audio is reloaded
   }
+  commitMapImageToBaseImage();
 }
 
+/**
+ * Sets the alpha channel of an RGBA color, conditionally setting alpha = 0 if all other channels = 0.
+ * 
+ * @param argb     an RGBA color value
+ * @param alpha    the desired alpha value to apply to argb
+ * @return         the argb color with changed alpha channel value
+ */
 public int setAlphaWithBlack(int argb, int alpha) {
   int[] c = PixelAudioMapper.rgbaComponents(argb);
   if (c[0] == c[1] && c[1] == c[2] && c[2] == 0) {
@@ -326,29 +333,75 @@ public int setAlphaWithBlack(int argb, int alpha) {
   return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
 }
 
+/**
+ * Sets the alpha channel of an RGBA color.
+ * 
+ * @param argb     an RGBA color value
+ * @param alpha    the desired alpha value to apply to argb
+ * @return         the argb color with changed alpha channel value
+ */
 public static int setAlpha(int argb, int alpha) {
-  return (argb & 0x00FFFFFF) | (alpha << 24);
+    return (argb & 0x00FFFFFF) | (alpha << 24);
 }
 
 /**
- * This method writes a color channel from an image to playBuffer, fulfilling a
- * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
- * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
- * img.width * img.height != mapper.getWidth() * mapper.getHeight().
- *
+ * This method writes a color channel from an image to playBuffer, fulfilling a 
+ * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
+ * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
+ * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
+ * Sets totalShift = 0 on completion: the image and audio are now in sync. 
+ * 
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format
+ * @param sig       an target array of float in audio format 
  * @param chan      a color channel
+ * @param shift     number of indices to shift 
  */
-public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
-  sig = mapper.mapImgToSig(img.pixels, sig, chan);
+public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan, int shift) {
+  // If img is the *display* (shifted) image, commit its phase into audio:
+  sig = mapper.mapImgToSigShifted(img.pixels, sig, chan, shift);
 }
 
+/**
+ * Writes a specified channel of mapImage to audioSignal.
+ * 
+ * @param chan    the selected color channel
+ */
+public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
+  writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
+}
 
 /**
- * Calls Processing's selectOutput method to start the process of saving
- * the current audio signal to a .wav file.
+ * Writes the mapImage, which may change with animation, to the baseImage, a reference image
+ * that usually only changes when a new file is loaded.
+ */
+public void commitMapImageToBaseImage() {
+  baseImage = mapImage.copy();
+  totalShift = 0;
+}
+
+/**
+ * Copies the supplied PImage to mapImage and baseImage, sets totalShift to 0 (the images are identical).
+ * @param img
+ */
+public void commitNewBaseImage(PImage img) {
+  baseImage = img.copy();
+  mapImage = img.copy();
+  totalShift = 0;
+}
+
+/**
+ * Writes baseImage to mapImage with an index position offset of totalShift.
+ */
+public void refreshMapImageFromBase() {
+  mapImage.loadPixels();
+  mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
+  mapImage.updatePixels();
+}
+
+/**
+ * Calls Processing's selectOutput method to start the process of saving 
+ * the current audio signal to a .wav file. 
  */
 public void saveToAudio() {
   // File folderToStartFrom = new File(dataPath("") + "/");
@@ -356,6 +409,9 @@ public void saveToAudio() {
   selectOutput("Select an audio file to write to:", "audioFileSelectedWrite");
 }
 
+/**
+ * @param selection    a File to write as audio
+ */
 public void audioFileSelectedWrite(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
@@ -367,19 +423,17 @@ public void audioFileSelectedWrite(File selection) {
   }
   try {
     saveAudioToFile(audioSignal, sampleRate, fileName);
-  }
-  catch (IOException e) {
+  } catch (IOException e) {
     println("--->> There was an error outputting the audio file " + fileName +", "  + e.getMessage());
-  }
-  catch (UnsupportedAudioFileException e) {
+  } catch (UnsupportedAudioFileException e) {
     println("--->> The file format is unsupported " + e.getMessage());
   }
 }
 
 /**
  * Saves audio data to 16-bit integer PCM format, which Processing can also open.
- * This same method can be called as a static method in PixelAudio.
- *
+ * This same method can be called as a static method in AudioUtility.
+ * 
  * @param samples      an array of floats in the audio range (-1.0f, 1.0f)
  * @param sampleRate    audio sample rate for the file
  * @param fileName      name of the file to save to
@@ -387,7 +441,7 @@ public void audioFileSelectedWrite(File selection) {
  * @throws UnsupportedAudioFileException    another Exception
  */
 public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
-  throws IOException, UnsupportedAudioFileException {
+    throws IOException, UnsupportedAudioFileException {
   // Convert samples from float to 16-bit PCM
   byte[] audioBytes = new byte[samples.length * 2];
   int index = 0;
@@ -408,8 +462,8 @@ public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
 }
 
 /**
- * Calls Processing's selectOutput method to start the process of saving
- * the mapImage (the offscreen copy of the display image) to a .png file.
+ * Calls Processing's selectOutput method to start the process of saving 
+ * the mapImage (the offscreen copy of the display image) to a .png file. 
  */
 public void saveToImage() {
   // File folderToStartFrom = new File(dataPath(""));

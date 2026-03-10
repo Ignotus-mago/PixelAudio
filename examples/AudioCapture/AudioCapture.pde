@@ -207,7 +207,7 @@ public void draw() {
 public void mousePressed() {
   // get the position in the audio buffer that corresponds to the pixel location in the image
   pixelPos = mouseX + mouseY * width;
-  samplePos = mapper.lookupSample(mouseX, mouseY);
+  samplePos = mapper.lookupSignalPos(mouseX, mouseY);
   playSample(samplePos);
 }
 

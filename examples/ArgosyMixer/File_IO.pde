@@ -56,7 +56,7 @@ public void saveToAudio(boolean isStereo) {
   renderSignals();
   if (!isStereo) {
     try {
-      PixelAudio.saveAudioToFile(argo1Signal, sampleRate, "argo1_" + fileIndex + ".wav");
+      AudioUtility.saveAudioToFile(argo1Signal, sampleRate, "argo1_" + fileIndex + ".wav");
     }
     catch (IOException e) {
       println("--->> There was an error outputting the audio file argo1_"+ fileIndex +".wav"+ e.getMessage());
@@ -65,7 +65,7 @@ public void saveToAudio(boolean isStereo) {
       println("--->> The file format is unsupported " + e.getMessage());
     }
     try {
-      PixelAudio.saveAudioToFile(argo2Signal, sampleRate, "argo2_" + fileIndex + ".wav");
+      AudioUtility.saveAudioToFile(argo2Signal, sampleRate, "argo2_" + fileIndex + ".wav");
     }
     catch (IOException e) {
       println("--->> There was an error outputting the audio file argo2_"+ fileIndex +".wav"+ e.getMessage());
@@ -77,7 +77,7 @@ public void saveToAudio(boolean isStereo) {
   } 
   else {
     try {
-      PixelAudio.saveStereoAudioToFile(argo1Signal, argo2Signal, sampleRate, "argo1+2_" + fileIndex + ".wav");
+      AudioUtility.saveStereoAudioToFile(argo1Signal, argo2Signal, sampleRate, "argo1+2_" + fileIndex + ".wav");
     }
     catch (IOException e) {
       println("--->> There was an error outputting the audio file argo1+2"+ fileIndex +".wav"+ e.getMessage());

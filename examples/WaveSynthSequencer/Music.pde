@@ -185,7 +185,7 @@ public void loadMusic() {
   ADSRParams adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   for (int dur : this.dbwfTimes) {
     signalPos = (int) random(samplelen, mapSize - samplelen - 1);
-    coords = mapper.lookupCoordinate(signalPos);
+    coords = mapper.lookupImageCoord(signalPos);
     x = coords[0];
     y = coords[1];
     circ = color(233, 220, 199, 128);

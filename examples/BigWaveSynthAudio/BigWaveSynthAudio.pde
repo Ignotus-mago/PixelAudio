@@ -105,6 +105,7 @@ import ddf.minim.Minim;
 import ddf.minim.MultiChannelBuffer;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.sampler.*;
+import net.paulhertz.pixelaudio.schedule.*;
 
 
 PixelAudio pixelaudio;      // our shiny new library
@@ -337,7 +338,7 @@ public void drawCircle(int x, int y) {
  */
 public void raindrops() {
   int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
-  int[] coords = mapper.lookupCoordinate(signalPos);
+  int[] coords = mapper.lookupImageCoord(signalPos);
   sampleX = coords[0];
   sampleY = coords[1];
   if (audioSignal == null || isBufferStale) {
@@ -497,7 +498,7 @@ public void stepAnimation() {
 public void mousePressed() {
   sampleX = mouseX;
   sampleY = mouseY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);
+  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
   println("---> samplePos = "+ samplePos);
   float panning = map(sampleX, 0, width, -0.875f, 0.875f);
   if (audioSignal == null || isBufferStale) {

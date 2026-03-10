@@ -138,6 +138,7 @@ import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.WaveData.WaveState;
 // Other handy class in local project
 import net.paulhertz.pixelaudio.sampler.*;
+import net.paulhertz.pixelaudio.schedule.*;
 
 // audio library
 import ddf.minim.*;
@@ -156,7 +157,7 @@ int bgFillColor;
  * width and height. Set renderWidth and renderHeight to the dimensions
  * of the PixelMapGen you want render and animate.
  */
-boolean isDesignMode = false;
+boolean isDesignMode = true;
 int genWidth = isDesignMode ? 1024 : 512;         // for Hilbert and Moore curves, genWidth must be a power of 2
 int genHeight = isDesignMode ? 1024 : 512;        // for Hilbert and Moore curves, genHeight must be a power of 2
 int designWidth = genWidth;

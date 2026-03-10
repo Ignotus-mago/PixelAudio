@@ -77,8 +77,8 @@ public void renderSignals() {
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
 public void audioMousePressed(int x, int y) {
-  setSampleVars(x, y);    // set sampleX, sampleY, samplePos
-  float panning = map(sampleX, 0, width, -0.8f, 0.8f);
+  samplePos = getSamplePos(x, y);
+  float panning = map(x, 0, width, -0.8f, 0.8f);
   // update audioSignal and playBuffer if audioSignal hasn't been initialized or if
   // playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
   if (audioSignal == null || isBufferStale) {
@@ -95,19 +95,19 @@ public void audioMousePressed(int x, int y) {
 }
 
 /**
- * Sets variables sampleX, sampleY and samplePos. Arguments x and y may be outside
- * the window bounds, sampleX and sampleY will be constrained to window bounds. As
- * a result, samplePos will be within the bounds of audioSignal.
- *
- * @param x    x coordinate, typically from a mouse event
- * @param y    y coordinate, typically from a mouse event
- * @return     samplePos, the index of of (x, y) along the signal path
+ * @param x    a value to constrain to the current window width
+ * @return the constrained value
  */
-public int setSampleVars(int x, int y) {
-  sampleX = min(max(0, x), width - 1);
-  sampleY = min(max(0, y), height - 1);
-  samplePos = getSamplePos(sampleX, sampleY);
-  return samplePos;
+public int clipToWidth(int x) {
+  return min(max(0, x), width - 1);
+}
+
+/**
+ * @param y    a value to constrain to the current window height
+ * @return the constrained value
+ */
+public int clipToHeight(int y) {
+  return min(max(0, y), height - 1);
 }
 
 /**
@@ -120,10 +120,7 @@ public int setSampleVars(int x, int y) {
  * @return     the index of the sample corresponding to (x,y) on the signal path
  */
 public int getSamplePos(int x, int y) {
-  int pos = mapper.lookupSample(x, y);
-  // calculate how much animation has shifted the indices into the buffer
-  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
-  return (pos + totalShift) % mapSize;
+  return mapper.lookupSignalPosShifted(x, y, totalShift);
 }
 
 /**
@@ -138,7 +135,8 @@ public int getSamplePos(int x, int y) {
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
   samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env, pitchScaling, pan);
   int durationMS = (int)(samplelen/sampleRate * 1000);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
+  int[] coords = mapper.lookupImageCoordShifted(samplePos, totalShift);
+  timeLocsArray.add(new TimedLocation(coords[0], coords[1], durationMS + millis()));
   // return the length of the sample
   return samplelen;
 }
@@ -154,7 +152,8 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
 public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
   samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, defaultEnv, pitchScaling, pan);
   int durationMS = (int)(samplelen/sampleRate * 1000);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
+  int[] coords = mapper.lookupImageCoordShifted(samplePos, totalShift);
+  timeLocsArray.add(new TimedLocation(coords[0], coords[1], durationMS + millis()));
   // return the length of the sample
   return samplelen;
 }

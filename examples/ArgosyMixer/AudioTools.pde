@@ -128,7 +128,7 @@ public int calcSampleLen() {
  * See MusicBoxBuffer for use of a windowed buffer in this calculation.
  */
 public int getSamplePos(Argosy argo, int x, int y, int shift) {
-  int pos = argo.getMapper().lookupSample(x, y);
+  int pos = argo.getMapper().lookupSignalPos(x, y);
   int totalShift = argo.getArgosyPixelShift();
   // calculate how much animation has shifted the indices into the buffer
   totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;

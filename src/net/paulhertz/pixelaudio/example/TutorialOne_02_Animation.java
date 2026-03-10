@@ -804,6 +804,7 @@ public class TutorialOne_02_Animation extends PApplet {
 		// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
 		playBuffer.setChannel(0, audioSignal);
 		audioLength = audioSignal.length;
+		synth.setBuffer(playBuffer);
 		commitMapImageToBaseImage();
 	}
 

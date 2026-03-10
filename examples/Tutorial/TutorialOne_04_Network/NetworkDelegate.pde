@@ -9,7 +9,7 @@ import netP5.*;
  */
 public class NetworkDelegate {
   private PApplet parent;
-  private TutorialOne_05_UDP app;
+  private TutorialOne_04_Network app;
   private OscP5 osc;
   private int inPort = 7401;
   private int outPort = 7400;
@@ -21,7 +21,7 @@ public class NetworkDelegate {
   private int drawCount = 0;
 
 
-  public NetworkDelegate(TutorialOne_05_UDP app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort) {
+  public NetworkDelegate(TutorialOne_04_Network app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort) {
     this.app = app;
     this.parent = app.getPApplet();
     this.osc = new OscP5(parent, inPort);
@@ -32,7 +32,7 @@ public class NetworkDelegate {
     init();
   }
 
-  public NetworkDelegate(TutorialOne_05_UDP app, String remoteFromAddr, String remoteToAddr) {
+  public NetworkDelegate(TutorialOne_04_Network app, String remoteFromAddr, String remoteToAddr) {
     this.app = app;
     this.parent = app.getPApplet();
     this.osc = new OscP5(parent, inPort);
@@ -41,7 +41,7 @@ public class NetworkDelegate {
     init();
   }
 
-  public NetworkDelegate(TutorialOne_05_UDP app) {
+  public NetworkDelegate(TutorialOne_04_Network app) {
     this.app = app;
     this.parent = app.getPApplet();
     this.osc = new OscP5(parent, inPort);
@@ -172,7 +172,7 @@ public class NetworkDelegate {
       msg.add(i++);
       int x = (int) vec.x;
       int y = (int) vec.y;
-      msg.add(this.app.getMapper().lookupSample(x, y));
+      msg.add(this.app.getMapper().lookupSignalPos(x, y));
       msg.add(x);
       msg.add(y);
     }
@@ -229,7 +229,7 @@ public class NetworkDelegate {
    */
 
   public void sampleHit(int sam) {
-    int[] xy = app.getMapper().lookupCoordinate(sam);
+    int[] xy = app.getMapper().lookupImageCoord(sam);
     PApplet.println("---> sampleHit " + xy[0], xy[1]);
     app.playSample(sam);
   }
@@ -238,7 +238,7 @@ public class NetworkDelegate {
     ArrayList<PVector> pts = new ArrayList<PVector>();
     PApplet.println("---> drawHit "+ args.length);
     for (int pos : args) {
-      int[] xy = app.getMapper().lookupCoordinate(pos);
+      int[] xy = app.getMapper().lookupImageCoord(pos);
       pts.add(new PVector(xy[0], xy[1]));
       // PApplet.println("  "+ xy[0] +", "+ xy[1]);
     }

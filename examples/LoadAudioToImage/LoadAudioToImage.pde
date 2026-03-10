@@ -256,7 +256,7 @@ public void showHelp() {
 
 public void mousePressed() {
   pixelPos = mouseX + mouseY * width;
-  samplePos = mapper.lookupSample(mouseX, mouseY);
+  samplePos = mapper.lookupSignalPos(mouseX, mouseY);
   // println("----- sample position for "+ mouseX +", "+ mouseY +" is "+ samplePos);
   int varyDuration = calcSampleLen(duration);
   int sampleLength = playSample(samplePos, varyDuration, 0.9f);

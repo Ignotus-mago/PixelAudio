@@ -54,7 +54,7 @@ public void renderSignal() {
 public void audioMousePressed(int sampleX, int sampleY) {
   this.sampleX = sampleX;
   this.sampleY = sampleY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);
+  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
   checkBufferState();
   playSample(samplePos, calcSampleLen(), 0.6f, adsr);
 }

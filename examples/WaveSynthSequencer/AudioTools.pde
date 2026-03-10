@@ -25,7 +25,7 @@ public void initAudio() {
 public void audioMousePressed(int sampleX, int sampleY) {
   this.sampleX = sampleX;
   this.sampleY = sampleY;
-  samplePos = mapper.lookupSample(sampleX, sampleY);
+  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
   checkBufferState(isBufferStale);
   playSample(samplePos, calcSampleLen(), 0.6f, adsr);
 }
@@ -131,9 +131,9 @@ public void runMusicArray() {
       sampleX = tl.getX();
       sampleY = tl.getY();
       circleColor = tl.getCircleColor();
-      // println("---> music ", tl.getX(), tl.getY(), mapper.lookupSample(tl.getX(), tl.getY()));
+      // println("---> music ", tl.getX(), tl.getY(), mapper.lookupSignalPos(tl.getX(), tl.getY()));
       // println("---> music ", twoPlaces.format(tl.getAmplitude()));
-      playSample(mapper.lookupSample(tl.getX(), tl.getY()), len, tl.getAmplitude(), tl.getAdsr());
+      playSample(mapper.lookupSignalPos(tl.getX(), tl.getY()), len, tl.getAmplitude(), tl.getAdsr());
       tl.setStale(true);
     } 
     else {
@@ -149,7 +149,7 @@ public void runMusicArray() {
  */
 public void raindrops() {
   int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
-  int[] coords = mapper.lookupCoordinate(signalPos);
+  int[] coords = mapper.lookupImageCoord(signalPos);
   sampleX = coords[0];
   sampleY = coords[1];
   if (audioSignal == null || isBufferStale) {
