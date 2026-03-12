@@ -18,6 +18,8 @@
 
 package net.paulhertz.pixelaudio.curves;
 
+import java.io.PrintWriter;
+
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
@@ -81,5 +83,12 @@ public interface PAVertex2DINF {
    * Draws marks at vertices and control points to an off-screen PGraphics.
    */
   public void mark(PGraphics pg);
+  
+  /**
+   * Writes graphics operator and values to an output.
+   * 
+   * @param output    a Java PrintWriter instance
+   */
+  public void write(PrintWriter output);
   
 }

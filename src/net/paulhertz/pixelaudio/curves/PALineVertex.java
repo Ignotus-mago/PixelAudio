@@ -18,6 +18,9 @@
 
 package net.paulhertz.pixelaudio.curves;
 
+import java.io.PrintWriter;
+
+import net.paulhertz.aifile.AIFileWriter;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
@@ -107,5 +110,11 @@ public class PALineVertex implements PAVertex2DINF {
     pg.square(x - w/2, y - w/2, w);
     pg.popStyle();
   }
+  
+  @Override
+  public void write(PrintWriter output) {
+	  PAGestureWriter.psLineTo(x, y, output);
+  }
+
 
 }

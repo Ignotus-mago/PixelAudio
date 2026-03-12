@@ -23,8 +23,13 @@ import processing.core.PApplet;
 import processing.core.PGraphics;
 import processing.core.PVector;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.ListIterator;
+
+import net.paulhertz.aifile.AIFileWriter;
+import net.paulhertz.aifile.Vertex2DINF;
+import net.paulhertz.pixelaudio.PixelAudioMapper;
 
 /**
  * Class to store a path composed of lines and Bezier curves, along with fill, stroke, weight and opacity values.
@@ -1122,6 +1127,57 @@ public class PABezShape {
 		}
 		return inside;
 	}
+	
+	public void write(PrintWriter pw) {
+		boolean transparencySet = false;
+		int pathOp = 0;
+		if (hasFill()) {
+			int[] colors = PixelAudioMapper.rgbComponents(fillColor);
+			if (colors[0] < 255 && PAGestureWriter.useTransparency) {
+				PAGestureWriter.setTransparency(colors[0]/255.0, pw);
+				transparencySet = true;
+			}
+			PAGestureWriter.setRGBFill(colors[1]/255.0, colors[2]/255.0, colors[3]/255.0, pw);
+			pathOp += PAGestureWriter.FILL;
+		}
+		if (hasStroke()) {
+			int[] colors = PixelAudioMapper.rgbComponents(strokeColor);
+			if (colors[0] < 255 && PAGestureWriter.useTransparency) {
+				if (!transparencySet) {
+					PAGestureWriter.setTransparency(colors[0]/255.0, pw);
+					transparencySet = true;
+				}
+			}
+			PAGestureWriter.setRGBStroke(colors[1]/255.0, colors[2]/255.0, colors[3]/255.0, pw);
+			pathOp += PAGestureWriter.STROKE;
+			PAGestureWriter.setWeight(weight(), pw);
+		}
+		// the startPoint differently, without calling its write() method. 
+		PAGestureWriter.psMoveTo(x, y, pw);
+		ListIterator<PAVertex2DINF> it = curveIterator();
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			vt.write(pw);
+		}
+		if (isClosed()) {
+			pathOp += PAGestureWriter.CLOSE;
+		}
+		PAGestureWriter.paintPath(pathOp, pw);
+		if (PAGestureWriter.useTransparency && transparencySet) {
+			PAGestureWriter.noTransparency(pw);
+		}
+	}
+
+	public void write(int pathOp, PrintWriter output) {
+		PAGestureWriter.psMoveTo(x, y, output);
+		ListIterator<PAVertex2DINF> it = curveIterator();
+		while (it.hasNext()) {
+			PAVertex2DINF vt = it.next();
+			vt.write(output);
+		}
+		PAGestureWriter.paintPath(pathOp, output);
+	}
+
 
 }
 
