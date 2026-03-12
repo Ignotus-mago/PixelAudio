@@ -1,4 +1,3 @@
-
 /* ------------------------------------------------------------------ */
 /*                       PIXELAUDIO VARIABLES                         */
 /* ------------------------------------------------------------------ */
@@ -36,28 +35,27 @@ int imageFileWidth;
 int imageFileHeight;
 
 boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video
+boolean isBlending = false;
 
-String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
-String daFilename = "audioBlend.wav";
 
 /* ------------------------------------------------------------------ */
 /*                          AUDIO VARIABLES                           */
 /* ------------------------------------------------------------------ */
 
 /** Minim audio library */
-Minim minim;                    // library that handles audio
-AudioOutput audioOut;           // line out to sound hardware
+Minim minim;          // library that handles audio
+AudioOutput audioOut;      // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 float sampleRate = 44100;       // target audio engine rate used to configure audioOut
 float fileSampleRate;           // sample rate of most recently opened file (before resampling)
 float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
-float[] audioSignal;            // the audio signal as an array of floats
+float[] audioSignal;      // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
-int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
+int audioLength;        // length of the audioSignal, same as the number of pixels in the display image
 
 // ADSR and its parameters
-ADSRParams samplerEnv;          // good old attack, decay, sustain, release for Sampler instrument
+ADSRParams samplerEnv;      // good old attack, decay, sustain, release for Sampler instrument
 ADSRParams granularEnv;         // envelope for a granular-style series of samples
 float maxAmplitude = 0.75f;     // 0..1
 float attackTime = 0.4f;        // seconds
@@ -69,16 +67,16 @@ float defaultPitchScaling = 1.0f;
 float lowPitchScaling = 0.5f;
 float highPitchScaling = 2.0f;
 
-boolean envIsGranular = false;   // if true, sets all envelopes to the same size, with 50% overlap when playing
-int grainDuration = 120;         // granular envelope duration in milliseconds
+boolean envIsGranular = false;  // if true, sets all envelopes to the same size, with 50% overlap when playing
+int grainDuration = 120;        // granular envelope duration in milliseconds
 
 // ====== Sampler Synth ====== //
 
 // SampleInstrument setup
 int noteDuration = 1000;        // average sample synth note duration, milliseconds
 int samplelen;                  // calculated sample synth note length, samples
-float samplerGain = 0.67f;      // linear gain setting for Sampler instrument
-float samplerPointGain = 0.75f; // linear gain for Sampler instrument point events
+float samplerGain = 0.95f;      // linear gain setting for Sampler instrument
+float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
 float outputGain = -6.0f;       // gain setting for audio output, decibels
 boolean isMuted = false;
 PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
@@ -138,7 +136,7 @@ VideoExport videx;                   // hamoid library class for video export (r
 /* ------------------------------------------------------------------ */
 
 /*
- * Drawing uses classes in the package net.paulhertz.pixelaudio.curves to store drawing data
+   * Drawing uses classes in the package net.paulhertz.pixelaudio.curves to store drawing data
  * and draw Bezier curves and lines. It also provides very basic brushstroke modeling code.
  * Unlike most of the code in PixelAudio, which avoids dependencies on Processing, the
  * curves.* classes interface with Processing to draw to PApplets and PGraphics instances.
@@ -149,27 +147,27 @@ VideoExport videx;                   // hamoid library class for video export (r
 // curve drawing and interaction
 public PACurveMaker curveMaker;                     // class for tracking and storing drawing data
 public boolean isDrawMode = false;                  // is drawing on or not?
-public float epsilon = 4.0f;                        // controls how much reduction is applied to points
+public float epsilon = 4.0f;            // controls how much reduction is applied to points
 
 public PVector currentPoint = new PVector(-1, -1);  // point to add to brushstroke points
 public ArrayList<PVector> allPoints;                // in-progress brushstroke points
 public ArrayList<Integer> allTimes;                 // in-progress brushstroke times
 public int startTime;                               // in-progress brushstroke start time
 
-public int dragColor = color(233, 199, 89, 128);    // color for initial drawing
-public float dragWeight = 8.0f;                     // weight (brush diameter) of initial line drawing
+public int dragColor = color(233, 199, 89, 128);  // color for initial drawing
+public float dragWeight = 8.0f;            // weight (brush diameter) of initial line drawing
 
 public int polySteps = 5;              // number of steps in polygon representation of a Bezier curve
 
 // ====== Visual styling for brushstrokes ======
 
 // the next series of colors seems to be all we need
-int readyBrushColor1 = color(34, 55, 89, 178);      // color for a brushstroke when available to be clicked
+int readyBrushColor1 = color(34, 55, 89, 178);    // color for a brushstroke when available to be clicked
 int hoverBrushColor1 = color(55, 89, 144, 178);     // color for brushstroke under the cursor
-int selectedBrushColor1 = color(199, 123, 55, 233); // color for the selected (clicked or currently active for editing) brushstroke
-int readyBrushColor2 = color(55, 34, 89, 178);      // color for a brushstroke when available to be clicked
+int selectedBrushColor1 = color(199, 123, 55, 233);  // color for the selected (clicked or currently active for editing) brushstroke
+int readyBrushColor2 = color(55, 34, 89, 178);    // color for a brushstroke when available to be clicked
 int hoverBrushColor2 = color(89, 55, 144, 178);     // color for brushstroke under the cursor
-int selectedBrushColor2 = color(123, 199, 55, 233); // color for the selected (clicked or currently active for editing) brushstroke
+int selectedBrushColor2 = color(123, 199, 55, 233);  // color for the selected (clicked or currently active for editing) brushstroke
 
 int dimmedBrushColor = color(55, 55, 55, 178);      // color for a brush that cannot be selected
 
@@ -247,8 +245,6 @@ static final int CURVE_STEPS_HARD_MAX = 128;   // Curve steps GUI slider max
 static final int CURVE_STEPS_SAFE_MAX = 32;    // Curve steps preferred max threshold
 static final int CURVE_STEPS_FLOOR = 4;        // don’t go too low
 
-boolean doPlayOnDraw = false;                  // play audio when a curve is drawn
-
 /* ------------------------------------------------------------------ */
 /*                    TIME/LOCATION/ACTION VARIABLES                  */
 /* ------------------------------------------------------------------ */
@@ -280,8 +276,16 @@ int optGrainCount = 2;
 int eventStep = 90;    // milliseconds between events, formerly used by Sampler instrument
 
 /* ------------------------------------------------------------------ */
-/*                         DEBUGGING AND FEEDBACK                     */
+/*                       DEBUGGING & LOCAL SETTINGS                   */
 /* ------------------------------------------------------------------ */
 
 boolean isVerbose = true;
 boolean isDebugging = false;
+
+// system-specific path to example files data, in Processing this should work for PixelAudio Tutorial files
+// daPath = sketchPath("") + "../../examples_data/";
+String daPath;    
+String daFilename = "audioBlend.wav";
+
+boolean isRunWordGame = false;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
+boolean doPlayOnDraw = false;                  // play audio when a curve is drawn

@@ -188,8 +188,7 @@ public AudioBrush initCurveMakerAndAddBrush() {
     this.samplerBrushes.add(sb);                   // add new brush to sampler brush list
     setActiveBrush(sb, samplerBrushes.size() - 1);
     if (doPlayOnDraw) {
-      GestureGranularConfig snap = gConfig.build();
-      loadGestureSchedule(sb.curve(), snap);
+      scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
     }
     return sb;
   } else {
@@ -201,8 +200,7 @@ public AudioBrush initCurveMakerAndAddBrush() {
     granularBrushes.add(gb);                           // add new brush to granular brush list
     setActiveBrush(gb, granularBrushes.size() - 1);
     if (doPlayOnDraw) {
-      GestureGranularConfig snap = gConfig.build();
-      loadGestureSchedule(gb.curve(), snap);
+      scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
     }
     if (isVerbose) println("----- new granular brush created");
     return gb;
@@ -375,6 +373,7 @@ public GestureSchedule getScheduleForBrush(AudioBrush b) {
     return b.curve().getAllPointsSchedule();
   }
 }
+
 
 /*             END DRAWING METHODS              */
 

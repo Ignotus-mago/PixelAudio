@@ -49,10 +49,12 @@ public void initTimedEventLists() {
  * @return     the index of the sample corresponding to (x,y) on the signal path
  */
 public int getSamplePos(int x, int y) {
-  int pos = mapper.lookupSignalPos(x, y);
+  int pos = mapper.lookupSignalPosShifted(x, y, totalShift);
+  // * BUG * do not add any shift !!!
   // calculate how much animation has shifted the indices into the buffer
-  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
-  return (pos + totalShift) % mapSize;
+  // totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
+  // return (pos + totalShift) % mapSize;
+  return pos;
 }
 
 /**
@@ -81,7 +83,7 @@ void runSamplerPointEvent(int x, int y) {
   samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
   int durationMS = (int)(samplelen / sampleRate * 1000);
   pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
-  if (isVerbose) println("----- sampler audio event + edit enabled "+ hoverIndex);
+  if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
 }
 
 /**
@@ -96,10 +98,10 @@ void runGranularPointEvent(int x, int y) {
   if (isVerbose) println("-- granular point burst with grainCount = "+ grainCount);
   ArrayList<PVector> path = new ArrayList<>(grainCount);
   int[] timing = new int[grainCount];
-  int sigIndex = mapper.lookupSignalPosShifted(x, y, totalShift);
+  int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
   for (int i = 0; i < grainCount; i++) {
     if (useLongBursts) {
-      path.add(getCoordFromSignalPos(sigIndex + hopSamples * i));
+      path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
     } else {
       path.add(this.jitterCoord(x, y, 3));
     }
@@ -113,7 +115,7 @@ void runGranularPointEvent(int x, int y) {
   float[] buf = (granSignal != null) ? granSignal : audioSignal;
   playGranularGesture(buf, sched, gParamsFixed);
   storeGranularCurveTL(sched, startTime, false);
-  if (isVerbose) println("----- granular audio event + edit enabled ----- " + hoverIndex);
+  if (isVerbose) println("----- granular point event, signalPos = " + signalPos);
   return;
 }
 
@@ -373,6 +375,8 @@ public void initGranularParams() {
     .build();
 }
 
+
+// ---- NEW METHOD FROM TutorialOneDrawing ---- //
 
 /**
  * Updates the various audio buffers when we load a new signal, typically from a file.

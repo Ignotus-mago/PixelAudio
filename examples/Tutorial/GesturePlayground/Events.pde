@@ -15,6 +15,10 @@ void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
   GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
   // GestureSchedule sched = getScheduleForBrush(sb);  // just the brush settings here
   storeSamplerCurveTL(sched, millis() + 10);
+  PVector startPoint = sched.points.get(0);
+  int clickPos = mapper.lookupSignalPos(clickX, clickY);
+  int signalPos = mapper.lookupSignalPos((int)startPoint.x, (int)startPoint.y);
+  if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 }
 
 public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
@@ -82,6 +86,10 @@ void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
   // GestureSchedule sched = getScheduleForBrush(gb);
   playGranularGesture(buf, sched, gParams);
   storeGranularCurveTL(sched, millis() + 10, isGesture);
+  PVector startPoint = sched.points.get(0);
+  int clickPos = mapper.lookupSignalPos(clickX, clickY);
+  int signalPos = mapper.lookupSignalPos((int)startPoint.x, (int)startPoint.y);
+  if (isVerbose) println("-- granular brush event "+ signalPos +", clickPos = "+ clickPos);
 }
 
 public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
