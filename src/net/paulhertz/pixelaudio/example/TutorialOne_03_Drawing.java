@@ -253,7 +253,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	Minim minim;					// library that handles audio 
 	AudioOutput audioOut;			// line out to sound hardware
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset, not used in TutorialOneDrawing
-	float sampleRate = 44100;       // target audio engine rate used to configure audioOut
+	float sampleRate = 48000;       // target audio engine rate used to configure audioOut
 	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
 	float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
 	float[] audioSignal;			// the audio signal as an array of floats
@@ -1204,7 +1204,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
 		fileSampleRate =  minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), buff);
 		if (fileSampleRate > 0) {
-			println("---- file sample rate is "+ this.fileSampleRate);
 			if (fileSampleRate != audioOut.sampleRate()) {
 				resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
@@ -1212,8 +1211,14 @@ public class TutorialOne_03_Drawing extends PApplet {
 				//if (buff.getBufferSize() != mapSize) buff.setBufferSize(mapSize);
 				fileSampleRate = audioOut.sampleRate();
 			}
+			else {
+				bufferSampleRate = fileSampleRate;
+			}
 			// save the length of the file, possibly resampled, for future use
 			this.audioFileLength = buff.getBufferSize();
+			println("---- file sample rate = "+ this.fileSampleRate 
+					+", buffer sample rate = "+ bufferSampleRate
+					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
 		else {
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");

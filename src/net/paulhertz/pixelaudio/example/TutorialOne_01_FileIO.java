@@ -529,7 +529,7 @@ import ddf.minim.*;
 				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
 				buff.setChannel(0, resampled);
-				bufferSampleRate = sampleRate;
+				bufferSampleRate = audioOut.sampleRate();
 			}
 			else {
 				bufferSampleRate = fileSampleRate;

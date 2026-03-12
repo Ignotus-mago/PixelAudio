@@ -1220,7 +1220,6 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
 		fileSampleRate =  minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), buff);
 		if (fileSampleRate > 0) {
-			println("---- file sample rate is "+ this.fileSampleRate);
 			if (fileSampleRate != audioOut.sampleRate()) {
 				resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
@@ -1228,8 +1227,14 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				//if (buff.getBufferSize() != mapSize) buff.setBufferSize(mapSize);
 				fileSampleRate = audioOut.sampleRate();
 			}
+			else {
+				bufferSampleRate = fileSampleRate;
+			}
 			// save the length of the file, possibly resampled, for future use
 			this.audioFileLength = buff.getBufferSize();
+			println("---- file sample rate = "+ this.fileSampleRate 
+					+", buffer sample rate = "+ bufferSampleRate
+					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
 		else {
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");

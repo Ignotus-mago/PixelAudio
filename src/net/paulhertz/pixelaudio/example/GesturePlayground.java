@@ -170,7 +170,24 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Sampler events all pass through <code>pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan)</code>.
  * 
  * <p>
- * 
+ * <pre>
+ * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
+ * Press 'c' or 'C' to print the current configuration status to the console.
+ * Press 't' to switch between Granular and Sampler editing and playing.
+ * Press 'z' to change the drawing mode of the hover brush.
+ * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.
+ * Press 'p' to jitter the pitch of granular gestures.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
+ * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
+ * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
+ * Press 'f' or 'F' to toggle verbose output to the console.
+ * Press 'o' to open an audio file.
+ * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.
+ * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
+ * Press 'x' to delete the current active brush shape or the oldest brush shape.
+ * Press 'X' to delete the most recent brush shape.
+ * Press 'h' or 'H' to print help.
+ * </pre>
  * </p>
  * 
  * </DIV>
@@ -218,8 +235,6 @@ public class GesturePlayground extends PApplet {
 	boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video
 	boolean isBlending = false;
 
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
-	String daFilename = "audioBlend.wav";
 
 	/* ------------------------------------------------------------------ */
 	/*                          AUDIO VARIABLES                           */
@@ -258,7 +273,7 @@ public class GesturePlayground extends PApplet {
 	// SampleInstrument setup
 	int noteDuration = 1000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
-	float samplerGain = 0.67f;      // linear gain setting for Sampler instrument
+	float samplerGain = 0.95f;      // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
 	float outputGain = -6.0f;       // gain setting for audio output, decibels
 	boolean isMuted = false;
@@ -426,7 +441,6 @@ public class GesturePlayground extends PApplet {
 	static final int CURVE_STEPS_SAFE_MAX = 32;    // Curve steps preferred max threshold
 	static final int CURVE_STEPS_FLOOR = 4;        // don’t go too low
 
-	boolean doPlayOnDraw = false;                  // play audio when a curve is drawn
 	
 	/* ------------------------------------------------------------------ */
 	/*                    TIME/LOCATION/ACTION VARIABLES                  */
@@ -456,13 +470,18 @@ public class GesturePlayground extends PApplet {
 	int eventStep = 90;    // milliseconds between events, formerly used by Sampler instrument
 	
 	/* ------------------------------------------------------------------ */
-	/*                         DEBUGGING AND FEEDBACK                     */
+	/*                       DEBUGGING & LOCAL SETTINGS                   */
 	/* ------------------------------------------------------------------ */
 	
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
-	boolean isRunWordGame = true;
+	boolean isRunWordGame = true;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
+	boolean doPlayOnDraw = false;                  // play audio when a curve is drawn
+	
+	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
+	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
+	String daFilename = "audioBlend.wav";
 
 	
 	//------------- APPLICATION CODE -------------//
@@ -489,6 +508,7 @@ public class GesturePlayground extends PApplet {
 		if (isRunWordGame) {
 			sampleRate = 48000;
 			multigen = loadWordGen(genWidth/4, genHeight/4);
+			daFilename = "workflow_48Khz.wav";
 		}
 		else {
 			multigen = HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
@@ -863,19 +883,24 @@ public class GesturePlayground extends PApplet {
 			}
 			println("---> mode is "+ drawingMode.toString());			
 			break;
-		case 'w': // change the drawing mode of the hover brush
+		case 'z': // change the drawing mode of the hover brush
 		    AudioBrush changed = null;
 		    if (hoverBrush != null) {
 		        changed = toggleHoveredBrushType();
+			    syncDrawingModeToBrush(changed);
 		    }
 		    else if (activeBrush != null) {
 		        changed = toggleActiveBrushType();
+			    syncDrawingModeToBrush(changed);
 		    }
 		    else {
 		        handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 		    }
-		    syncDrawingModeToBrush(changed);
 		    break;
+		case 'd': // toggle doPlayOnDraw to play when a drawing gesture ends or not
+			doPlayOnDraw = !doPlayOnDraw;
+			println("-- play on draw is "+ doPlayOnDraw);
+			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -893,7 +918,7 @@ public class GesturePlayground extends PApplet {
 			baseImage.updatePixels();
 			refreshMapImageFromBase();
 			break;
-		case 'l': case 'L':
+		case 'l': case 'L': // toggle loading data to both image and audio buffers when you open either an image or an audio file
 			isLoadToBoth = !isLoadToBoth;
 			println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
 			break;
@@ -929,6 +954,9 @@ public class GesturePlayground extends PApplet {
 		case 'X': // delete the most recent brush shape
 			removeNewestBrush();
 			break;
+		case 'h': case 'H': // show help message
+			showHelp();
+			break;
 		default:
 			break;
 		}
@@ -940,16 +968,22 @@ public class GesturePlayground extends PApplet {
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
-		println(" * Press UP ARROW to increase audio gain by 3 dB.");
-		println(" * Press DOWN ARROW to decrease audio gain by 3 dB.");
+		println(" * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.");
 		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
-		println(" * Press 't' to switch between GRANULAR and SAMPLER editing and playing.");
-		println(" * Press 'T' to set mode to PLAY ONLY (no editing).");
-		println(" * Press 'f' to toggle verbose output to the console.");
+		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
+		println(" * Press 'z' to change the drawing mode of the hover brush.");
+		println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.");
+		println(" * Press 'p' to jitter the pitch of granular gestures.");
+		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
+		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
+		println(" * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
+		println(" * Press 'f' or 'F' to toggle verbose output to the console.");
+		println(" * Press 'o' to open an audio file.");
 		println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
+		println(" * Press 'h' or 'H' to print help.");
 	}
 
 	/**
@@ -1092,17 +1126,20 @@ public class GesturePlayground extends PApplet {
 	public void loadAudioFile(File audFile) {
 		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
 		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
-		float[] resampled;
 		if (fileSampleRate > 0) {
-			println("---- file sample rate is "+ this.fileSampleRate);
 			if (fileSampleRate != audioOut.sampleRate()) {
-				resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
 				buff.setChannel(0, resampled);
 				bufferSampleRate = sampleRate;
 			}
-			// save the length of the file, possibly resampled, for future use
+			else {
+				bufferSampleRate = fileSampleRate;
+			}
 			this.audioFileLength = buff.getBufferSize();
+			println("---- file sample rate = "+ this.fileSampleRate 
+					+", buffer sample rate = "+ bufferSampleRate
+					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
 		else {
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
@@ -1238,7 +1275,7 @@ public class GesturePlayground extends PApplet {
 	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
 	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
 	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
-	 * Sets totalShift = 0 on completion: the image and audio are now in sync. 
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
@@ -1338,10 +1375,12 @@ public class GesturePlayground extends PApplet {
 	 * @return     the index of the sample corresponding to (x,y) on the signal path
 	 */
 	public int getSamplePos(int x, int y) {
-	  int pos = mapper.lookupSignalPos(x, y);
+	  int pos = mapper.lookupSignalPosShifted(x, y, totalShift);
+	  // * BUG * do not add any shift !!!
 	  // calculate how much animation has shifted the indices into the buffer
-	  totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
-	  return (pos + totalShift) % mapSize;
+	  // totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
+	  // return (pos + totalShift) % mapSize;
+	  return pos;
 	}
 
 	/**
@@ -1370,7 +1409,7 @@ public class GesturePlayground extends PApplet {
 		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
 		pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));		
-		if (isVerbose) println("----- sampler audio event + edit enabled "+ hoverIndex);
+		if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
 	}
 
 	/**
@@ -1385,10 +1424,10 @@ public class GesturePlayground extends PApplet {
 		if (isVerbose) println("-- granular point burst with grainCount = "+ grainCount);
 		ArrayList<PVector> path = new ArrayList<>(grainCount);
 		int[] timing = new int[grainCount];
-		int sigIndex = mapper.lookupSignalPosShifted(x, y, totalShift);		
+		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
 		for (int i = 0; i < grainCount; i++) {
 			if (useLongBursts) {
-				path.add(getCoordFromSignalPos(sigIndex + hopSamples * i));
+				path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
 			}
 			else {
 				path.add(this.jitterCoord(x, y, 3));
@@ -1403,7 +1442,7 @@ public class GesturePlayground extends PApplet {
 		float[] buf = (granSignal != null) ? granSignal : audioSignal;
 	    playGranularGesture(buf, sched, gParamsFixed);
 	    storeGranularCurveTL(sched, startTime, false);
-		if (isVerbose) println("----- granular audio event + edit enabled ----- " + hoverIndex);
+		if (isVerbose) println("----- granular point event, signalPos = " + signalPos);
 		return;
 	}
 
@@ -1749,8 +1788,7 @@ public class GesturePlayground extends PApplet {
 	}	
 
 	/**
-	 * Applies the Hue and Saturation of pixel values in the colors[] array to mapImage and baseImage.
-	 * 
+	 * Applies the Hue and Saturation of pixel values in the colors[] array to mapImage and baseImage. 
 	 */
 	public void applyColorMap() {
 		mapImage.loadPixels();
@@ -1888,8 +1926,7 @@ public class GesturePlayground extends PApplet {
 			this.samplerBrushes.add(sb);                   // add new brush to sampler brush list
 			setActiveBrush(sb, samplerBrushes.size() - 1);
 			if (doPlayOnDraw) {
-				GestureGranularConfig snap = gConfig.build();
-				loadGestureSchedule(sb.curve(), snap);
+				scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
 			}
 			return sb;
 		}
@@ -1902,8 +1939,7 @@ public class GesturePlayground extends PApplet {
 			granularBrushes.add(gb);                           // add new brush to granular brush list
 			setActiveBrush(gb, granularBrushes.size() - 1);
 			if (doPlayOnDraw) {
-				GestureGranularConfig snap = gConfig.build();
-				loadGestureSchedule(gb.curve(), snap);
+				scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
 			}
 			if (isVerbose) println("----- new granular brush created");
 			return gb;
@@ -2415,11 +2451,11 @@ public class GesturePlayground extends PApplet {
 	 */
 	void syncDrawingModeToBrush(AudioBrush brush) {
 	    if (brush instanceof GranularBrush) {
-	        drawingMode = DrawingMode.DRAW_EDIT_GRANULAR;
+	        setMode(DrawingMode.DRAW_EDIT_GRANULAR);
 			controlWindow.setTitle("Granular Synth");				
 	    }
 	    else if (brush instanceof SamplerBrush) {
-	        drawingMode = DrawingMode.DRAW_EDIT_SAMPLER;
+	        setMode(DrawingMode.DRAW_EDIT_SAMPLER);
 			controlWindow.setTitle("Sampler Synth");				
 	    }
 	}
@@ -2441,6 +2477,10 @@ public class GesturePlayground extends PApplet {
 		GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
 		// GestureSchedule sched = getScheduleForBrush(sb);  // just the brush settings here
 		storeSamplerCurveTL(sched, millis() + 10);
+		PVector startPoint = sched.points.get(0);
+		int clickPos = mapper.lookupSignalPos(clickX, clickY);
+		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+		if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	}
 
 	public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
@@ -2508,6 +2548,10 @@ public class GesturePlayground extends PApplet {
 		// GestureSchedule sched = getScheduleForBrush(gb); 
 	    playGranularGesture(buf, sched, gParams);
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
+		PVector startPoint = sched.points.get(0);
+		int clickPos = mapper.lookupSignalPos(clickX, clickY);
+		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+		if (isVerbose) println("-- granular brush event "+ signalPos +", clickPos = "+ clickPos);
 	}	
 
 	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {

@@ -406,7 +406,7 @@ public class GesturePlayground_back extends PApplet {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		PApplet.main(new String[] { GesturePlayground.class.getName() });
+		PApplet.main(new String[] { DeadBodyWorkFlow.class.getName() });
 	}
 	
 	public void settings() {
