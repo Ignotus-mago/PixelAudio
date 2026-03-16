@@ -1,6 +1,7 @@
 package net.paulhertz.pixelaudio.example;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +37,13 @@ import net.paulhertz.pixelaudio.curves.*;
 import net.paulhertz.pixelaudio.schedule.*;
 import net.paulhertz.pixelaudio.granular.*;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig.HopMode;
+import net.paulhertz.pixelaudio.io.AudioBrushFileNamer;
+import net.paulhertz.pixelaudio.io.AudioBrushLibraryLoader;
+import net.paulhertz.pixelaudio.io.AudioBrushSessionIO;
+import net.paulhertz.pixelaudio.io.AudioBrushSessionLoader;
+import net.paulhertz.pixelaudio.io.GestureGranularConfigIO;
+import net.paulhertz.pixelaudio.io.PACurveMakerIO;
+import net.paulhertz.pixelaudio.io.PACurveMakerIO.Meta;
 import net.paulhertz.pixelaudio.sampler.*;
 
 
@@ -470,15 +478,24 @@ public class DeadBodyWorkFlow extends PApplet {
 	int eventStep = 90;    // milliseconds between events, formerly used by Sampler instrument
 	
 	/* ------------------------------------------------------------------ */
+	/*                              JSON FILE IO                          */
+	/* ------------------------------------------------------------------ */
+
+	boolean isSaveConfig = true;
+	
+	/* ------------------------------------------------------------------ */
 	/*                       DEBUGGING & LOCAL SETTINGS                   */
 	/* ------------------------------------------------------------------ */
 	
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
-	boolean isRunWordGame = true;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
-	boolean doPlayOnDraw = true;                  // play audio when a curve is drawn
-	boolean isAutoOptimize = true;
+	boolean isRunWordGame = true;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
+	boolean doPlayOnDraw = false;       // play audio when a curve is drawn
+	boolean isAutoOptimize = false;     // optimize the freshly drawn curve before playing it 
+	boolean isSaveSession = true;       // save the session brushes ('J' key commend)
+	boolean isReplaceBrushes = true;    // do we replace current brushes when we load a session or library folder?
+	boolean doMagicClick = false;
 	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
 	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
@@ -746,6 +763,50 @@ public class DeadBodyWorkFlow extends PApplet {
 	        hoverIndex = -1;
 	    }
 	}
+	
+	BrushHit getBrushInRect(int x, int y, int wStep, int hStep) {
+		float[] r = new float[4];
+		int x1 = (x / wStep) * wStep;
+		int y1 = (y / hStep) * hStep;
+		int x2 = x1 + wStep;
+		int y2 = y1 + hStep;
+		r[0] = x1;
+		r[1] = y1;
+		r[2] = x2;
+		r[3] = y2;
+		// println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
+			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+				GranularBrush b = granularBrushes.get(i);
+				PVector v = b.curve().getDragPoints().get(0);
+				if (containsPoint(v.x, v.y, r)) {
+					return new BrushHit(b, i);
+				}
+			}
+		}
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER || drawingMode == DrawingMode.PLAY_ONLY) {
+			for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+				SamplerBrush b = samplerBrushes.get(i);
+				PVector v = b.curve().getDragPoints().get(0);
+				if (containsPoint(v.x, v.y, r)) {
+					return new BrushHit(b, i);
+				}
+			}
+		}
+		return null;
+	}
+	
+	/**
+     * @param x   x-coordinate of point to test
+     * @param y   y-coordinate of point to test
+     * @param r   rectangle to test
+     * @return    {@code true} if r contains the specified point
+     */
+    public static boolean containsPoint(float x, float y, float[] r) {
+        return (    x >= r[0] && x <= r[2]
+                 && y >= r[1] && y <= r[3]);
+    }
+
 
 	/**
 	 * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
@@ -788,14 +849,14 @@ public class DeadBodyWorkFlow extends PApplet {
 	
 	public void mouseReleased() {
 		// if (!(isEditable() && allPoints != null)) return; // EDIT to go ahead in all modes
-		if (allPoints.size() > 2) {	
+		if (allPoints != null && allPoints.size() > 2) {	
 			initCurveMakerAndAddBrush();    // create a new brush
+			allPoints.clear();
 			// possible preview action, play on draw
 		}
 		else {	// handle the event as a click in mouseClicked()
-			// nothing
+			if (allPoints != null) allPoints.clear();
 		}
-		allPoints.clear();
 	}
 	
 	public void mouseClicked() {
@@ -858,6 +919,14 @@ public class DeadBodyWorkFlow extends PApplet {
 		String msg;
 		switch(key) {
 		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
+			if (doMagicClick) {
+				BrushHit hit = getBrushInRect(clipToWidth(mouseX), clipToHeight(mouseY), genWidth, genHeight/4);
+				if (hit != null) {
+					hoverBrush = hit.brush;
+					hoverIndex = hit.index;
+					setActiveBrush(hoverBrush);
+				}
+			}
 			if (hoverBrush != null) {
 				if (hoverBrush instanceof SamplerBrush sb) {
 					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
@@ -872,6 +941,9 @@ public class DeadBodyWorkFlow extends PApplet {
 			break;
 		case 'c': case 'C': // print the current configuration status to the console
 			printGConfigStatus();
+			if (activeBrush != null) {
+				println("-- "+ activeBrush.curve().curveInfo());
+			}
 			break;
 		case 't': // switch between Granular and Sampler editing and playing
 			if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
@@ -906,6 +978,10 @@ public class DeadBodyWorkFlow extends PApplet {
 			doPlayOnDraw = !doPlayOnDraw;
 			println("-- play on draw is "+ doPlayOnDraw);
 			break;
+		case 'u': // toggle isAutoOptimize
+			isAutoOptimize = !isAutoOptimize;
+			println("-- isAutoOptimize is "+ isAutoOptimize);
+			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -927,12 +1003,23 @@ public class DeadBodyWorkFlow extends PApplet {
 			isLoadToBoth = !isLoadToBoth;
 			println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
 			break;
-		case 'f': case'F': // toggle verbose output to the console
-			isVerbose = !isVerbose;
-			println("-- isVerbose == "+ isVerbose);
+		case 'f': case'F': // open a folder with JSON brush data and load all files
+			chooseGestureLibraryFolder();
 			break;
-		case 'o': // open an audio file
+		case 'j': // save the active brush curve and config to JSON files
+			isSaveSession = false;
+			this.saveGestureJSON(isSaveSession);
+			break;
+		case 'J': // save all brushes curve and config to JSON Session file
+			isSaveSession = true;
+			this.saveGestureJSON(isSaveSession);
+			break;
+		case 'o': // open an audio file, image file, or JSON file
 			chooseFile();
+			break;
+		case 'm': // toggle doMagicClick 
+			doMagicClick = !doMagicClick;
+			println(doMagicClick ? "-- doMagicClick is true" : "-- doMagicClick is false");
 			break;
 		case 'r': case 'R': // reset synths to defaults -- TODO may be dropped
 			resetToDefaults(); 
@@ -969,7 +1056,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
-		println(" * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.");
+		println(" * Press ' ' spacebar to trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
 		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
 		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
@@ -1068,14 +1155,10 @@ public class DeadBodyWorkFlow extends PApplet {
 	
 	/*----------------------------------------------------------------*/
 	/*                                                                */
-	/*                FILE I/O METHODS (AUDIO ONLY)                   */
+	/*                       FILE I/O METHODS                         */
 	/*                                                                */
 	/*----------------------------------------------------------------*/
 	
-	// ------------- SIMPLIFIED FILE I/O SECTION FOR GranularPlayground ------------- 
-	// To keep things simple and focused on our synthesis instruments
-	// we omit image file opening - we just handle audio
-
 	/**
 	 * Wrapper method for Processing's selectInput command
 	 */
@@ -1097,7 +1180,10 @@ public class DeadBodyWorkFlow extends PApplet {
 			String fileName = selectedFile.getName();
 			String fileTag = fileName.substring(fileName.lastIndexOf('.') + 1);
 			fileName = fileName.substring(0, fileName.lastIndexOf('.'));
-			if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif")
+			if (fileTag.equalsIgnoreCase("json")) {
+				jsonFileSelectedRead(selectedFile);
+			}
+			else if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif")
 					|| fileTag.equalsIgnoreCase("aiff")) {
 				// we chose an audio file
 				audioFile = selectedFile;
@@ -1118,11 +1204,12 @@ public class DeadBodyWorkFlow extends PApplet {
 				loadImageFile(imageFile);
 			} 
 			else {
-				println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
+				println("----- File is not a recognized format ending with" 
+			            +"\"mp3\", \"wav\", \"aif\", \"aiff\", \"png\", \"jpg\", \"jpeg\" or \"json\" .");
 			}
 		} 
 		else {
-			println("----- No audio or image file was selected.");
+			println("----- No audio, image, or JSON file was selected.");
 		}
 		isAnimating = oldIsAnimating;
 	}
@@ -1334,6 +1421,236 @@ public class DeadBodyWorkFlow extends PApplet {
 	    mapImage.loadPixels();
 	    mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
 	    mapImage.updatePixels();
+	}
+	
+
+	// ------------- JSON FILE I/O ------------- 
+	
+	
+	void saveGestureJSON(boolean saveSession) {
+		if (saveSession) selectOutput("Select a JSON Session file to write to:", "jsonFileSelectedWrite");
+		else selectOutput("Select a JSON Brush file to write to:", "jsonFileSelectedWrite");
+	}
+	
+	/**
+	 * Save the curve and config data from  the current activeBrush.
+	 * 
+	 * @param jsonFile    initially, the file to save to (naming conventions may change the full name)
+	 */
+	public void jsonFileSelectedWrite(File jsonFile) {
+	    if (jsonFile == null) {
+	        println("Window was closed or cancelled.");
+	        return;
+	    }
+	    if (isSaveSession) {
+	    	saveSessionJSON(jsonFile);
+	    	return;
+	    }
+	    if (activeBrush == null) {
+	        println("-- No active brush found.");
+	        return;
+	    }
+	    AudioBrushFileNamer.Result files = AudioBrushFileNamer.build(jsonFile);
+	    File gestureFile = files.gestureFile;
+	    File configFile  = files.configFile;
+	    try {
+	    	// ---------- config ----------
+	    	GestureGranularConfig.Builder cfg = activeBrush.cfg().copy();
+	    	GestureGranularConfigIO.Meta configMeta = new GestureGranularConfigIO.Meta();
+	    	configMeta.id = "1";
+	    	configMeta.linkedGesturePath = files.linkedGesturePath;
+	    	if (activeBrush instanceof GranularBrush)
+	    		configMeta.instrumentType =
+	    		GestureGranularConfigIO.InstrumentType.GRANULAR;
+	    	else
+	    		configMeta.instrumentType =
+	    		GestureGranularConfigIO.InstrumentType.SAMPLER;
+	    	GestureGranularConfigIO.write(configFile, cfg, configMeta);
+	    	// ---------- gesture ----------
+	    	PACurveMakerIO.Meta meta = new PACurveMakerIO.Meta();
+	    	meta.id = "1";
+	    	meta.name = files.baseName;
+	    	meta.includeStyle = false;
+	    	meta.linkedConfigPath = files.linkedConfigPath;
+	    	PACurveMakerIO.write(gestureFile, activeBrush.curve(), meta);
+	    }
+	    catch (Exception e) {
+	    	println("--->> Error writing JSON: " + e.getMessage());
+	    }
+	}
+	
+	public void saveSessionJSON(File jsonFile) {
+	    if (jsonFile == null) {
+	        println("Window was closed or cancelled.");
+	        return;
+	    }
+	    AudioBrushFileNamer.Result files = AudioBrushFileNamer.build(jsonFile);
+	    File sessionFile = files.sessionFile;
+	    List<AudioBrush> allBrushes = new ArrayList<>();
+	    allBrushes.addAll(granularBrushes);
+	    allBrushes.addAll(samplerBrushes);
+	    if (allBrushes.isEmpty()) {
+	        println("-- No brushes to save.");
+	        return;
+	    }
+	    AudioBrushSessionIO.SessionMeta meta = new AudioBrushSessionIO.SessionMeta();
+	    meta.id = files.baseName;
+	    meta.name = files.baseName;
+	    meta.description = "DeadBodyWorkFlow session";
+	    meta.audioFilePath = audioFilePath;
+	    meta.audioFileName = audioFileName;
+	    meta.audioFileTag = audioFileTag;
+
+	    AudioBrushSessionIO.BrushAdapter<AudioBrush> adapter =
+	        new AudioBrushSessionIO.BrushAdapter<>() {
+
+	            @Override
+	            public PACurveMaker curveOf(AudioBrush b) {
+	                return b.curve();
+	            }
+
+	            @Override
+	            public GestureGranularConfig.Builder configOf(AudioBrush b) {
+	                return b.cfg();
+	            }
+
+	            @Override
+	            public GestureGranularConfigIO.InstrumentType instrumentTypeOf(AudioBrush b) {
+	                return (b instanceof GranularBrush)
+	                    ? GestureGranularConfigIO.InstrumentType.GRANULAR
+	                    : GestureGranularConfigIO.InstrumentType.SAMPLER;
+	            }
+
+	            @Override
+	            public String idOf(AudioBrush b) {
+	                int idx;
+	                if (b instanceof GranularBrush) {
+	                    idx = granularBrushes.indexOf(b);
+	                    return "granular_" + idx;
+	                } else {
+	                    idx = samplerBrushes.indexOf(b);
+	                    return "sampler_" + idx;
+	                }
+	            }
+
+	            @Override
+	            public String nameOf(AudioBrush b) {
+	                return idOf(b);
+	            }
+
+	            @Override
+	            public boolean includeStyle(AudioBrush b) {
+	                return false;
+	            }
+	        };
+
+	    try {
+	        AudioBrushSessionIO.writeSession(
+	            sessionFile,
+	            allBrushes,
+	            adapter,
+	            meta,
+	            "gestures",
+	            "configs"
+	        );
+	        println("-- Saved session to " + sessionFile.getAbsolutePath());
+	    }
+	    catch (IOException e) {
+	        println("--->> Error writing session JSON: " + e.getMessage());
+	    }
+	}
+	
+	void loadGestureJSON() {
+		oldIsAnimating = isAnimating;
+		isAnimating = false;
+		selectInput("Choose a JSON file: ", "jsonFileSelectedRead");
+	}
+	
+	public void jsonFileSelectedRead(File jsonFile) {
+		if (jsonFile == null) return;
+		try {
+			AudioBrushSessionLoader.LoadResult result = AudioBrushSessionLoader.load(jsonFile);
+			switch (result.type) {
+			case GESTURE:
+			case CONFIG: {
+				PACurveMaker curve = result.brush.curve;
+				GestureGranularConfig.Builder cfg = 
+						(result.brush.config != null) ? result.brush.config : gConfig.copy();
+				if (curve == null) {
+					println("-- No gesture data found in selected file or linked file.");
+					return;
+				}
+				makeBrush(curve, cfg, result.brush.instrumentType);
+				break;
+			}
+			case SESSION: {
+			    if (isReplaceBrushes) {
+			        granularBrushes.clear();
+			        samplerBrushes.clear();
+			    }
+				if (result.sessionMeta != null) {
+					audioFilePath = result.sessionMeta.audioFilePath;
+					audioFileName = result.sessionMeta.audioFileName;
+					audioFileTag = result.sessionMeta.audioFileTag;
+				}
+				for (AudioBrushSessionLoader.BrushData bd : result.brushes) {
+					if (bd.curve == null) continue;
+					GestureGranularConfig.Builder cfg =
+							(bd.config != null) ? bd.config : gConfig.copy();
+					makeBrush(bd.curve, cfg, bd.instrumentType);
+				}
+				break;
+			}
+			default:
+				println("-- Unsupported JSON type.");
+			}
+			if (activeBrush != null) {
+				if (activeBrush instanceof GranularBrush) {
+					setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+					controlWindow.setTitle("Granular Synth");	
+				}
+				else {
+					setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+					controlWindow.setTitle("Sampler Synth");				
+				}
+			}
+			// activeBrush = null;
+		}
+		catch (IOException e) {
+			println("--->> There was an error reading the JSON file " + jsonFile + ", " + e.getMessage());
+		}
+	}
+	
+	void chooseGestureLibraryFolder() {
+	    selectFolder("Choose a gesture library folder:", "gestureLibraryFolderSelected");
+	}
+	
+	public void gestureLibraryFolderSelected(File folder) {
+	    if (folder == null) {
+	        println("Folder selection cancelled.");
+	        return;
+	    }
+	    if (isReplaceBrushes) {
+	        granularBrushes.clear();
+	        samplerBrushes.clear();
+	    }
+	    AudioBrushLibraryLoader.LoadResult result =
+	        AudioBrushLibraryLoader.loadGestureLibrary(folder);
+	    int loadedCount = 0;
+	    for (AudioBrushLibraryLoader.BrushData bd : result.brushes) {
+	        if (bd.curve == null) continue;
+	        GestureGranularConfig.Builder cfg =
+	            (bd.config != null) ? bd.config : gConfig.copy();
+	        GestureGranularConfigIO.InstrumentType type =
+	            (bd.instrumentType != null)
+	                ? bd.instrumentType : GestureGranularConfigIO.InstrumentType.GRANULAR;
+	        makeBrush(bd.curve, cfg, type);
+	        loadedCount++;
+	    }
+	    println("-- Loaded " + loadedCount + " brush(es) from library folder: " + folder.getAbsolutePath());
+	    for (String msg : result.messages) {
+	        println("-- " + msg);
+	    }
 	}
 	
 	/*----------------------------------------------------------------*/
@@ -1929,36 +2246,72 @@ public class DeadBodyWorkFlow extends PApplet {
 		curveMaker.setEpsilon(epsilon);                   // control resolution of reduced points
 		curveMaker.setTimeOffset(millis() - startTime);   // time between first point and last point
 		curveMaker.calculateDerivedPoints();              // initialize all the useful structures up front
+		AudioBrush brush = makeBrushFromCurveMaker();
+		if (doPlayOnDraw && brush instanceof SamplerBrush sb) {
+			scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
+		}
+		if (doPlayOnDraw && brush instanceof GranularBrush gb) {
+			scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
+		}
+		return brush;
+	}
+
+	/**
+	 * @return
+	 */
+	public AudioBrush makeBrushFromCurveMaker() {
 		// reset some fields in gConfig
-		gConfig.resampleCount = 0;
-		gConfig.targetDurationMs = 0;
-		gConfig.pitchSemitones = 0.0f;
+		GestureGranularConfig.Builder cfg = gConfig.copy();
+		cfg.resampleCount = 0;
+		cfg.targetDurationMs = 0;
+		cfg.pitchSemitones = 0.0f;
+		return makeBrush(curveMaker, cfg);
+	}
+	
+	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config) {
 		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {             // TODO implement complete logic for mode, if mode is PLAY we should be here...
-			SamplerBrush sb = new SamplerBrush(curveMaker, gConfig.copy());
+			SamplerBrush sb = new SamplerBrush(curve, config.copy());
 			this.samplerBrushes.add(sb);                   // add new brush to sampler brush list
 			setActiveBrush(sb, samplerBrushes.size() - 1);
 			if (this.isAutoOptimize) optimizeActiveBrush();
-			if (doPlayOnDraw) {
-				scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
-			}
 			return sb;
 		}
 		else {
-			gConfig.warpShape = GestureGranularConfig.WarpShape.LINEAR;
-			GestureGranularConfig.Builder cfg = gConfig.copy();
+			GestureGranularConfig.Builder cfg = config.copy();
+			// cfg.warpShape = GestureGranularConfig.WarpShape.LINEAR;
 			cfg.curveSteps = Math.min(cfg.curveSteps, 32);     // simplest way to set curveSteps
 			cfg.env = envPreset("Fade");    // TODO calculate optimal envelope
-			GranularBrush gb = new GranularBrush(curveMaker, cfg);
+			GranularBrush gb = new GranularBrush(curve, cfg);
 			granularBrushes.add(gb);                           // add new brush to granular brush list
 			setActiveBrush(gb, granularBrushes.size() - 1);
 			if (this.isAutoOptimize) optimizeActiveBrush();
-			if (doPlayOnDraw) {
-				scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
-			}
 			if (isVerbose) println("----- new granular brush created");
 			return gb;
 		}
 	}
+	
+	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config,
+	        GestureGranularConfigIO.InstrumentType instrumentType) {
+	    if (instrumentType == GestureGranularConfigIO.InstrumentType.SAMPLER) {
+	        GestureGranularConfig.Builder cfg = config.copy();
+	        SamplerBrush sb = new SamplerBrush(curve, cfg);
+	        samplerBrushes.add(sb);
+	        setActiveBrush(sb, samplerBrushes.size() - 1);
+	        if (this.isAutoOptimize) optimizeActiveBrush();
+	        return sb;
+	    }
+	    else {
+	        GestureGranularConfig.Builder cfg = config.copy();
+	        cfg.curveSteps = Math.min(cfg.curveSteps, 32);
+	        cfg.env = envPreset("Fade");
+	        GranularBrush gb = new GranularBrush(curve, cfg);
+	        granularBrushes.add(gb);
+	        setActiveBrush(gb, granularBrushes.size() - 1);
+	        if (this.isAutoOptimize) optimizeActiveBrush();
+	        if (isVerbose) println("----- new granular brush created");
+	        return gb;
+	    }
+	}	
 	
 	boolean isBrushInteractable(AudioBrush b) {
 	    switch (drawingMode) {
