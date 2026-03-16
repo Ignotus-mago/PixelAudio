@@ -1,4 +1,4 @@
-package net.paulhertz.pixelaudio.curves;
+package net.paulhertz.pixelaudio.io;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.paulhertz.pixelaudio.curves.PACurveMaker;
 import processing.core.PVector;
 import processing.data.JSONArray;
 import processing.data.JSONObject;
@@ -82,7 +83,7 @@ public final class PACurveMakerIO {
         gesture.setInt("timeOffset", curve.getTimeOffset());
 
         gesture.setFloat("epsilon", curve.getEpsilon());
-        gesture.setInt("eventSteps", curve.getEventSteps());
+        gesture.setInt("curveSteps", curve.getCurveSteps());
         gesture.setInt("polySteps", curve.getPolySteps());
         gesture.setFloat("bezierBias", curve.getBezierBias());
         gesture.setFloat("brushSize", curve.getBrushSize());
@@ -147,7 +148,8 @@ public final class PACurveMakerIO {
 
         if (gesture.hasKey("timeOffset")) curve.setTimeOffset(gesture.getInt("timeOffset"));
         if (gesture.hasKey("epsilon")) curve.setEpsilon(gesture.getFloat("epsilon"));
-        if (gesture.hasKey("eventSteps")) curve.setEventSteps(gesture.getInt("eventSteps"));
+        if (gesture.hasKey("curveSteps")) curve.setEventSteps(gesture.getInt("curveSteps"));
+        else if (gesture.hasKey("eventSteps")) curve.setEventSteps(gesture.getInt("eventSteps"));
         if (gesture.hasKey("polySteps")) curve.setPolySteps(gesture.getInt("polySteps"));
         if (gesture.hasKey("bezierBias")) curve.setBezierBias(gesture.getFloat("bezierBias"));
         if (gesture.hasKey("brushSize")) curve.setBrushSize(gesture.getFloat("brushSize"));

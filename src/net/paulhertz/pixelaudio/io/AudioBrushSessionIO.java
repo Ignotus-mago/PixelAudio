@@ -1,4 +1,4 @@
-package net.paulhertz.pixelaudio.curves;
+package net.paulhertz.pixelaudio.io;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,11 +7,13 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.paulhertz.pixelaudio.curves.PACurveMaker;
 //import net.paulhertz.pixelaudio.curves.PACurveMaker;
 //import net.paulhertz.pixelaudio.curves.PACurveMakerIO;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
-import net.paulhertz.pixelaudio.granular.GestureGranularConfigIO;
-import net.paulhertz.pixelaudio.granular.GestureGranularConfigIO.InstrumentType;
+import net.paulhertz.pixelaudio.io.GestureGranularConfigIO.InstrumentType;
+import net.paulhertz.pixelaudio.io.PACurveMakerIO.Meta;
+import net.paulhertz.pixelaudio.io.PACurveMakerIO.Result;
 import processing.data.JSONArray;
 import processing.data.JSONObject;
 
@@ -98,15 +100,17 @@ public final class AudioBrushSessionIO {
         if (!gestureDir.exists()) gestureDir.mkdirs();
         if (!configDir.exists()) configDir.mkdirs();
 
+        String sessionStem = sessionStem(sessionFile);
+
         JSONArray arr = new JSONArray();
 
+        int index = 0;
         for (B brush : brushes) {
             String id = safeId(adapter.idOf(brush));
-            String baseName = id;
-
             InstrumentType instrumentType = adapter.instrumentTypeOf(brush);
-            String gestureFileName = baseName + "_gesture.json";
-            String configFileName = baseName + "_" + instrumentType.name().toLowerCase() + "_config.json";
+
+            String gestureFileName = sessionStem + "_gesture_" + index + ".json";
+            String configFileName  = sessionStem + "_config_" + index + ".json";
 
             File gestureFile = new File(gestureDir, gestureFileName);
             File configFile = new File(configDir, configFileName);
@@ -139,9 +143,12 @@ public final class AudioBrushSessionIO {
             putIfPresent(item, "description", adapter.descriptionOf(brush));
             putIfPresent(item, "notes", adapter.notesOf(brush));
             arr.append(item);
+
+            index++;
         }
 
         JSONObject root = new JSONObject();
+
         JSONObject header = new JSONObject();
         header.setString("format", FORMAT);
         header.setInt("version", VERSION);
@@ -162,7 +169,7 @@ public final class AudioBrushSessionIO {
 
         Files.writeString(sessionFile.toPath(), root.toString(), StandardCharsets.UTF_8);
     }
-
+    
     public static <B> SessionData<B> readSession(File sessionFile, BrushFactory<B> factory) throws IOException {
         if (sessionFile == null) throw new IllegalArgumentException("sessionFile cannot be null");
         if (factory == null) throw new IllegalArgumentException("factory cannot be null");
@@ -219,6 +226,17 @@ public final class AudioBrushSessionIO {
         return new SessionData<>(meta, brushes, records);
     }
 
+    private static String sessionStem(File sessionFile) {
+        String name = sessionFile.getName();
+        if (name.endsWith(".json")) {
+            name = name.substring(0, name.length() - 5);
+        }
+        if (name.endsWith("_session")) {
+            name = name.substring(0, name.length() - 8);
+        }
+        return name;
+    }
+    
     private static String relativize(File baseDir, File target) {
         return baseDir.toPath().toAbsolutePath().normalize()
                 .relativize(target.toPath().toAbsolutePath().normalize())

@@ -1,4 +1,4 @@
-package net.paulhertz.pixelaudio.granular;
+package net.paulhertz.pixelaudio.io;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,6 +6,12 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.Builder;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.HopMode;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.PathMode;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.TimeTransform;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.WarpShape;
 import net.paulhertz.pixelaudio.sampler.ADSRParams;
 import processing.data.JSONObject;
 
