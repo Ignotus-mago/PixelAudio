@@ -1260,7 +1260,18 @@ public class PACurveMaker implements PAGesture {
 		this.eventPointsSize = eventPointsSize;
 	}
 	
-
+	public String curveInfo() {
+	    StringBuffer sb = new StringBuffer("curve info:\n");
+	    sb.append("  epsilon = " + getEpsilon() + "\n");
+	    sb.append("  curveSteps = " + getCurveSteps() + "\n");
+	    sb.append("  polySteps = " + getPolySteps() + "\n");
+	    sb.append("  timeOffset = " + getTimeOffset() + "\n");
+	    sb.append("  drag points count = " + getDragPoints().size() + "\n");
+	    sb.append("  drag times count = " + getDragTimes().length + "\n");
+	    sb.append("  reduced points count = " + getReducedPoints().size() + "\n");
+	    sb.append("  curve points count = " + getCurvePoints().size() + "\n\n");
+	    return sb.toString();
+	}
 	/************************************************
 	 *                                              *
 	 * ------------- DRAWING METHODS -------------  *
