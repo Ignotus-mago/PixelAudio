@@ -1499,7 +1499,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			return;
 		}
 		String fileName = selection.getAbsolutePath();
-		if (selection.getName().indexOf(".wav") != selection.getName().length() - 4) {
+		if (!selection.getName().endsWith(".wav")) {
 			fileName += ".wav";
 		}
 		try {
