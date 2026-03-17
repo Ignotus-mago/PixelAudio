@@ -1,0 +1,39 @@
+{
+  "header": {
+    "format": "net.paulhertz.pixelaudio.brushconfig",
+    "type": "GestureGranularConfig.Builder",
+    "version": 1
+  },
+  "config": {
+    "timingMode": "RAW_GESTURE",
+    "instrumentType": "SAMPLER",
+    "basePointCount": 0,
+    "baseDurationMs": 0,
+    "autoBurstGainComp": false,
+    "rdpEpsilon": 4,
+    "curveSteps": 2,
+    "hopMode": "GESTURE",
+    "targetDurationMs": 0,
+    "env": {
+      "amplitude": 1,
+      "attack": 0.019999999552965164,
+      "release": 0.25,
+      "decay": 0.6000000238418579,
+      "sustain": 0.15000000596046448
+    },
+    "hopLengthSamples": 512,
+    "pitchSemitones": 0,
+    "useArcLengthTime": false,
+    "warpShape": "LINEAR",
+    "burstGrains": 1,
+    "gainDb": -6,
+    "resampleCount": 0,
+    "name": "sampler_23",
+    "pathMode": "CURVE_POINTS",
+    "grainLengthSamples": 2048,
+    "curveBias": 0,
+    "id": "sampler_23",
+    "warpExponent": 2,
+    "linkedGesture": {"path": "gestures/dbwf_01_gesture_23.json"}
+  }
+}

@@ -1,0 +1,185 @@
+{
+  "session": {
+    "audioFileTag": "wav",
+    "name": "dbwf_01",
+    "description": "DeadBodyWorkFlow session",
+    "audioFileName": "workflow_48Khz",
+    "id": "dbwf_01",
+    "audioFilePath": "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/workflow_48Khz.wav"
+  },
+  "header": {
+    "format": "net.paulhertz.pixelaudio.session",
+    "type": "AudioBrushSession",
+    "version": 1
+  },
+  "brushes": [
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_0.json",
+      "name": "sampler_0",
+      "configPath": "configs/dbwf_01_config_0.json",
+      "id": "sampler_0"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_1.json",
+      "name": "sampler_1",
+      "configPath": "configs/dbwf_01_config_1.json",
+      "id": "sampler_1"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_2.json",
+      "name": "sampler_2",
+      "configPath": "configs/dbwf_01_config_2.json",
+      "id": "sampler_2"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_3.json",
+      "name": "sampler_3",
+      "configPath": "configs/dbwf_01_config_3.json",
+      "id": "sampler_3"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_4.json",
+      "name": "sampler_4",
+      "configPath": "configs/dbwf_01_config_4.json",
+      "id": "sampler_4"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_5.json",
+      "name": "sampler_5",
+      "configPath": "configs/dbwf_01_config_5.json",
+      "id": "sampler_5"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_6.json",
+      "name": "sampler_6",
+      "configPath": "configs/dbwf_01_config_6.json",
+      "id": "sampler_6"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_7.json",
+      "name": "sampler_7",
+      "configPath": "configs/dbwf_01_config_7.json",
+      "id": "sampler_7"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_8.json",
+      "name": "sampler_8",
+      "configPath": "configs/dbwf_01_config_8.json",
+      "id": "sampler_8"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_9.json",
+      "name": "sampler_9",
+      "configPath": "configs/dbwf_01_config_9.json",
+      "id": "sampler_9"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_10.json",
+      "name": "sampler_10",
+      "configPath": "configs/dbwf_01_config_10.json",
+      "id": "sampler_10"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_11.json",
+      "name": "sampler_11",
+      "configPath": "configs/dbwf_01_config_11.json",
+      "id": "sampler_11"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_12.json",
+      "name": "sampler_12",
+      "configPath": "configs/dbwf_01_config_12.json",
+      "id": "sampler_12"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_13.json",
+      "name": "sampler_13",
+      "configPath": "configs/dbwf_01_config_13.json",
+      "id": "sampler_13"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_14.json",
+      "name": "sampler_14",
+      "configPath": "configs/dbwf_01_config_14.json",
+      "id": "sampler_14"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_15.json",
+      "name": "sampler_15",
+      "configPath": "configs/dbwf_01_config_15.json",
+      "id": "sampler_15"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_16.json",
+      "name": "sampler_16",
+      "configPath": "configs/dbwf_01_config_16.json",
+      "id": "sampler_16"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_17.json",
+      "name": "sampler_17",
+      "configPath": "configs/dbwf_01_config_17.json",
+      "id": "sampler_17"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_18.json",
+      "name": "sampler_18",
+      "configPath": "configs/dbwf_01_config_18.json",
+      "id": "sampler_18"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_19.json",
+      "name": "sampler_19",
+      "configPath": "configs/dbwf_01_config_19.json",
+      "id": "sampler_19"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_20.json",
+      "name": "sampler_20",
+      "configPath": "configs/dbwf_01_config_20.json",
+      "id": "sampler_20"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_21.json",
+      "name": "sampler_21",
+      "configPath": "configs/dbwf_01_config_21.json",
+      "id": "sampler_21"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_22.json",
+      "name": "sampler_22",
+      "configPath": "configs/dbwf_01_config_22.json",
+      "id": "sampler_22"
+    },
+    {
+      "instrumentType": "SAMPLER",
+      "gesturePath": "gestures/dbwf_01_gesture_23.json",
+      "name": "sampler_23",
+      "configPath": "configs/dbwf_01_config_23.json",
+      "id": "sampler_23"
+    }
+  ]
+}

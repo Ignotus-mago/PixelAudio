@@ -1,0 +1,70 @@
+{
+  "header": {
+    "format": "net.paulhertz.pixelaudio.gesture",
+    "type": "PACurveMaker",
+    "version": 1
+  },
+  "gesture": {
+    "dragTimes": [
+      0,
+      84,
+      123,
+      168,
+      209,
+      251,
+      293,
+      335,
+      416
+    ],
+    "bezierBias": 0.390524297952652,
+    "brushIsCustom": false,
+    "linkedConfig": {"path": "configs/dbwf_01_config_10.json"},
+    "timeOffset": 416,
+    "curveSteps": 2,
+    "polySteps": 8,
+    "epsilon": 4,
+    "brushSize": 24,
+    "name": "sampler_10",
+    "dragPoints": [
+      {
+        "x": 534,
+        "y": 393
+      },
+      {
+        "x": 534,
+        "y": 395
+      },
+      {
+        "x": 541,
+        "y": 405
+      },
+      {
+        "x": 547,
+        "y": 414
+      },
+      {
+        "x": 555,
+        "y": 426
+      },
+      {
+        "x": 568,
+        "y": 442
+      },
+      {
+        "x": 575,
+        "y": 451
+      },
+      {
+        "x": 580,
+        "y": 457
+      },
+      {
+        "x": 580,
+        "y": 458
+      }
+    ],
+    "startTime": 156227,
+    "id": "sampler_10",
+    "drawWeighted": false
+  }
+}
