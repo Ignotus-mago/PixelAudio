@@ -197,6 +197,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         float targetNorm = (activeCount > 1)
                 ? 1f / (float)Math.sqrt(activeCount)
                 : 1f;
+//        float targetNorm = 1f;
 
         // smoothing: alpha 0.05..0.2
         float alpha = 0.12f;

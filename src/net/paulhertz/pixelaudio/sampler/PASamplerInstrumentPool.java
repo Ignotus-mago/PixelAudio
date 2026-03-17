@@ -164,6 +164,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     	// Prefer the least-busy instrument (lets its tails finish if possible).
     	if (leastBusy != null) return leastBusy;
     	// Fallback: smooth-steal the first instrument (should be rare)
+    	// System.out.println("-- sampler pool fallback: releasing all voices on victim instrument");
     	PASamplerInstrument victim = pool.get(0);
     	victim.releaseAllVoices(); // smooth release instead of hard stop
     	return victim;

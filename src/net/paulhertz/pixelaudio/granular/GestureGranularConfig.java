@@ -137,7 +137,26 @@ public final class GestureGranularConfig {
         this.gainDb = gainDb;
         return this;
     }
-    
+ 
+    /**
+     * Makes explicit to the caller that the envelope is being set for GRANULAR synthesis.
+     * @param env    an ADSRParams instance to set the envelope
+     * @return this
+     */
+    public Builder granularEnvelope(ADSRParams env) {
+    	this.env = env;
+    	return this;
+    }
+
+    /**
+     * Makes explicit to the caller that the envelope is beigd set for SAMPLER synthesis.
+     * @param env    an ADSRParams instance to set the envelope, nominally for sampler synthesis
+     * @return this
+     */
+    public Builder samplerEnvelope(ADSRParams env) {
+    	this.env = env;
+    	return this;
+    }
 
     /** Build an immutable snapshot safe to pass into scheduler/renderer threads. */
     public GestureGranularConfig build() {
