@@ -179,7 +179,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  * 
  * <p>
  * <pre>
- * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
+ * Press UP ARROW to increase audio output volume by 3.0 dB.
+ * Press DOWN ARROW to decrease audio output volume by 3.0 dB.
+ * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.
  * Press 'c' or 'C' to print the current configuration status to the console.
  * Press 't' to switch between Granular and Sampler editing and playing.
  * Press 'z' to change the drawing mode of the hover brush.
@@ -188,13 +190,16 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
- * Press 'f' or 'F' to toggle verbose output to the console.
- * Press 'o' to open an audio file.
- * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.
+ * Press 'f' or 'F' to open a folder with JSON brush data and load all files.
+ * Press 'j' to save the active brush curve and config to JSON files.
+ * Press 'J' to save all brushes curve and config to JSON Session file.
+ * Press 'o' to open an audio file, image file, or JSON file.
+ * Press 'm' to toggle doMagicClick: play top brushstroke within a rectangular division of the display.
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
+ * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
- * Press 'h' or 'H' to print help.
+ * Press 'h' or 'H' to show this help message in the console.
  * </pre>
  * </p>
  * 
@@ -252,7 +257,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	Minim minim;					// library that handles audio 
 	AudioOutput audioOut;			// line out to sound hardware
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset
-	float sampleRate = 44100;       // target audio engine rate used to configure audioOut
+	float sampleRate = 48000;       // target audio engine rate used to configure audioOut
 	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
 	float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
 	float[] audioSignal;			// the audio signal as an array of floats
@@ -261,8 +266,8 @@ public class DeadBodyWorkFlow extends PApplet {
 	int audioLength;				// length of the audioSignal, same as the number of pixels in the display image
 
 	// ADSR and its parameters
-	ADSRParams samplerEnv;			// good old attack, decay, sustain, release for Sampler instrument
-	ADSRParams granularEnv;         // envelope for a granular-style series of samples
+	ADSRParams samplerEnv;			// good old attack, decay, sustain, release for individual Sampler events
+	ADSRParams granularEnv;         // envelope for a sequence of Granular events
 	float maxAmplitude = 0.75f;     // 0..1
 	float attackTime = 0.4f;        // seconds
 	float decayTime = 0.0f;         // seconds, no decay
@@ -279,14 +284,14 @@ public class DeadBodyWorkFlow extends PApplet {
 	// ====== Sampler Synth ====== //
 
 	// SampleInstrument setup
-	int noteDuration = 1000;        // average sample synth note duration, milliseconds
-	int samplelen;                  // calculated sample synth note length, samples
-	float samplerGain = 0.95f;      // linear gain setting for Sampler instrument
+	int noteDuration = 1000;          // average sample synth note duration, milliseconds
+	int samplelen;                    // calculated sample synth note length, samples
+	float samplerGain = 0.95f;        // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
-	float outputGain = -6.0f;       // gain setting for audio output, decibels
+	float outputGain = -6.0f;         // gain setting for audio output, decibels
 	boolean isMuted = false;
-	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
-	int sMaxVoices = 64;            // number of voices to allocate to pool or synth
+	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
+	int sMaxVoices = 256;              // number of voices to allocate to pool or synth
 
     // ====== Granular Synth ====== //
 
@@ -295,8 +300,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public int curveSteps = 16;
 	public int granLength = 4096;
 	public int granHop = 1024;
-	public int gMaxVoices = 256;
-	public ADSRParams granEnvelope = new ADSRParams(1.0f, 0.02f, 0.06f, 0.9f, 0.10f);
+	public int gMaxVoices = 512;
 	
 	String currentGranStatus = "";
 	
@@ -490,7 +494,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
-	boolean isRunWordGame = true;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
+	boolean isRunWordGame = false;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
 	boolean doPlayOnDraw = false;       // play audio when a curve is drawn
 	boolean isAutoOptimize = false;     // optimize the freshly drawn curve before playing it 
 	boolean isSaveSession = true;       // save the session brushes ('J' key commend)
@@ -657,11 +661,13 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * and for sampler synthesis, defaultSampConfig.
 	 */
 	public void initConfig() {
+		granularEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.9f, 0.025f);
 		defaultGranConfig.grainLengthSamples = granLength;
 		defaultGranConfig.hopLengthSamples = granHop;
 		defaultGranConfig.curveSteps = curveSteps;
-		defaultGranConfig.env = envPreset("Triangle");
-		defaultSampConfig.env = envPreset("Pluck");
+		defaultGranConfig.granularEnvelope(granularEnv);
+		samplerEnv = envPreset("Pad");
+		defaultSampConfig.samplerEnvelope(samplerEnv);
 	}
 	
 	/**
@@ -978,10 +984,6 @@ public class DeadBodyWorkFlow extends PApplet {
 			doPlayOnDraw = !doPlayOnDraw;
 			println("-- play on draw is "+ doPlayOnDraw);
 			break;
-		case 'u': // toggle isAutoOptimize
-			isAutoOptimize = !isAutoOptimize;
-			println("-- isAutoOptimize is "+ isAutoOptimize);
-			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -1031,6 +1033,10 @@ public class DeadBodyWorkFlow extends PApplet {
 			}
 			optimizeActiveBrush();
 			break;
+		case 'u': // toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation
+			isAutoOptimize = !isAutoOptimize;
+			println("-- isAutoOptimize is "+ isAutoOptimize);
+			break;
 		case 'x': // delete the current active brush shape or the oldest brush shape
 			if (hoverBrush != null) {
 				removeHoverBrush();
@@ -1056,7 +1062,9 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
-		println(" * Press ' ' spacebar to trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
+		println(" * Press UP ARROW to increase audio output volume by 3.0 dB.");
+		println(" * Press DOWN ARROW to decrease audio output volume by 3.0 dB.");
+		println(" * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
 		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
 		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
@@ -1065,13 +1073,17 @@ public class DeadBodyWorkFlow extends PApplet {
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
 		println(" * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
-		println(" * Press 'f' or 'F' to toggle verbose output to the console.");
-		println(" * Press 'o' to open an audio file.");
-		println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
+		println(" * Press 'f' or 'F' to open a folder with JSON brush data and load all files.");
+		println(" * Press 'j' to save the active brush curve and config to JSON files.");
+		println(" * Press 'J' to save all brushes curve and config to JSON Session file.");
+		println(" * Press 'o' to open an audio file, image file, or JSON file.");
+		println(" * Press 'm' to toggle doMagicClick: play top brushstroke within a rectangular division of the display.");
+		// println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
+		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
-		println(" * Press 'h' or 'H' to print help.");
+		println(" * Press 'h' or 'H' to show this help message in the console.");
 	}
 
 	/**
@@ -1098,7 +1110,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		switch (drawingMode) {
 		case DRAW_EDIT_GRANULAR: 
 			nextActive = activeGranularBrush;
-			gConfig.env = granEnvelope;
+			gConfig.env = granularEnv;
 			break;
 		case DRAW_EDIT_SAMPLER:  
 			nextActive = activeSamplerBrush;
@@ -1588,16 +1600,17 @@ public class DeadBodyWorkFlow extends PApplet {
 			        granularBrushes.clear();
 			        samplerBrushes.clear();
 			    }
-				if (result.sessionMeta != null) {
-					audioFilePath = result.sessionMeta.audioFilePath;
-					audioFileName = result.sessionMeta.audioFileName;
-					audioFileTag = result.sessionMeta.audioFileTag;
-				}
 				for (AudioBrushSessionLoader.BrushData bd : result.brushes) {
 					if (bd.curve == null) continue;
 					GestureGranularConfig.Builder cfg =
 							(bd.config != null) ? bd.config : gConfig.copy();
 					makeBrush(bd.curve, cfg, bd.instrumentType);
+				}
+				if (result.sessionMeta != null) {
+					audioFilePath = result.sessionMeta.audioFilePath;
+					audioFileName = result.sessionMeta.audioFileName;
+					audioFileTag = result.sessionMeta.audioFileTag;
+					println("----->>> Audio file for "+ jsonFile.getName() +" is "+ audioFileName +"."+ audioFileTag);
 				}
 				break;
 			}
@@ -1677,9 +1690,6 @@ public class DeadBodyWorkFlow extends PApplet {
 		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
 		granSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
 		this.audioLength = audioSignal.length;
-		// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-		samplerEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-		granularEnv = ADSRUtils.fitEnvelopeToDuration(samplerEnv, grainDuration);
 		// initialize event animation tracking arrays
 		initTimedEventLists();   
 	}
@@ -1980,7 +1990,10 @@ public class DeadBodyWorkFlow extends PApplet {
 	void ensureSamplerReady() {
 		if (playBuffer == null) return;
 	    if (pool != null) pool.setBuffer(playBuffer);
-	    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 1, sMaxVoices, audioOut, samplerEnv); 
+	    else { 
+	    	pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 16, 64, audioOut, samplerEnv); 
+	    	println("-- initilialized pool sampler synth");
+	    }
     	pool.setGain(samplerGain);
 	}
 	
@@ -2269,24 +2282,11 @@ public class DeadBodyWorkFlow extends PApplet {
 	}
 	
 	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config) {
-		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {             // TODO implement complete logic for mode, if mode is PLAY we should be here...
-			SamplerBrush sb = new SamplerBrush(curve, config.copy());
-			this.samplerBrushes.add(sb);                   // add new brush to sampler brush list
-			setActiveBrush(sb, samplerBrushes.size() - 1);
-			if (this.isAutoOptimize) optimizeActiveBrush();
-			return sb;
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {             
+			return makeBrush(curve, config, GestureGranularConfigIO.InstrumentType.SAMPLER);
 		}
 		else {
-			GestureGranularConfig.Builder cfg = config.copy();
-			// cfg.warpShape = GestureGranularConfig.WarpShape.LINEAR;
-			cfg.curveSteps = Math.min(cfg.curveSteps, 32);     // simplest way to set curveSteps
-			cfg.env = envPreset("Fade");    // TODO calculate optimal envelope
-			GranularBrush gb = new GranularBrush(curve, cfg);
-			granularBrushes.add(gb);                           // add new brush to granular brush list
-			setActiveBrush(gb, granularBrushes.size() - 1);
-			if (this.isAutoOptimize) optimizeActiveBrush();
-			if (isVerbose) println("----- new granular brush created");
-			return gb;
+			return makeBrush(curve, config, GestureGranularConfigIO.InstrumentType.GRANULAR);
 		}
 	}
 	
@@ -2298,12 +2298,16 @@ public class DeadBodyWorkFlow extends PApplet {
 	        samplerBrushes.add(sb);
 	        setActiveBrush(sb, samplerBrushes.size() - 1);
 	        if (this.isAutoOptimize) optimizeActiveBrush();
+	        syncEnvelopeMenu(cfg.env);
+	        if (isVerbose) println("----- new sampler brush created");
 	        return sb;
 	    }
 	    else {
 	        GestureGranularConfig.Builder cfg = config.copy();
 	        cfg.curveSteps = Math.min(cfg.curveSteps, 32);
-	        cfg.env = envPreset("Fade");
+	        // Granular events use a stable envelope profile.
+	        // We do not fit ADSR to gesture duration; onset shape matters more than total span.
+	        cfg.env = granularEnv;
 	        GranularBrush gb = new GranularBrush(curve, cfg);
 	        granularBrushes.add(gb);
 	        setActiveBrush(gb, granularBrushes.size() - 1);
@@ -2317,7 +2321,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	    switch (drawingMode) {
 	        case DRAW_EDIT_SAMPLER: return b instanceof SamplerBrush;
 	        case DRAW_EDIT_GRANULAR: return b instanceof GranularBrush;
-	        case PLAY_ONLY: return true; // both playable
+	        case PLAY_ONLY: return true; // both playable  
 	        default: return false;
 	    }
 	}
@@ -2328,21 +2332,18 @@ public class DeadBodyWorkFlow extends PApplet {
 
 	void setActiveBrush(AudioBrush brush, int idx) {
 		if (brush == null) return;
+		activeBrush = brush;
+		gConfig = brush.cfg();
 		if (brush instanceof GranularBrush gb) {
-			activeBrush = gb;
 			activeGranularBrush = gb;
 			activeGranularIndex = idx;
-			activeSamplerBrush = null;
-			activeSamplerIndex = -1;
 		}
 		else if (brush instanceof SamplerBrush sb) {
-			activeBrush = sb;
 			activeSamplerBrush = sb;
 			activeSamplerIndex = idx;
-			activeGranularBrush = null;
-			activeGranularIndex = -1;
+			// samplerEnv = (gConfig.env != null) ? gConfig.env : defaultSampConfig.env;
+			samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Pluck");
 		}
-		gConfig = brush.cfg();
 		recomputeUIBaselinesFromActiveBrush();
 		syncGuiFromConfig();
 	}
@@ -2847,7 +2848,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		PVector startPoint = sched.points.get(0);
 		int clickPos = mapper.lookupSignalPos(clickX, clickY);
 		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
-		if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
+		// if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	}
 
 	public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
@@ -2908,8 +2909,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		    + " cfg.targetDurationMs=" + snap.targetDurationMs
 		    + " cfg.pathMode=" + snap.pathMode
 		    + " warp=" + snap.warpShape);
-	    }
-	    
+	    }	    
 	    boolean isGesture = gb.cfg().hopMode == HopMode.GESTURE;
 		GestureGranularParams gParams = gb.cfg().build().toParams();
 		// GestureSchedule sched = getScheduleForBrush(gb); 
@@ -2918,7 +2918,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		PVector startPoint = sched.points.get(0);
 		int clickPos = mapper.lookupSignalPos(clickX, clickY);
 		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
-		if (isVerbose) println("-- granular brush event "+ signalPos +", clickPos = "+ clickPos);
+		// if (isVerbose) println("-- granular brush event "+ signalPos +", clickPos = "+ clickPos);
 	}	
 
 	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
@@ -3163,11 +3163,13 @@ public class DeadBodyWorkFlow extends PApplet {
 	GLabel envelopeLabel; 
 	GDropList envelopeMenu; 
 
+	static final String ENV_CUSTOM = "Custom";
+	String[] adsrItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad", ENV_CUSTOM};
+	GLabel envelopeValuesLabel;
 	
 	GTextArea commentsField;    // testing
 
-	String[] adsrItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad"};
-
+	
 	/**
 	 * Create all the GUI controls. 
 	 */
@@ -3438,11 +3440,16 @@ public class DeadBodyWorkFlow extends PApplet {
 		envelopeLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
 		envelopeLabel.setText("Sampler\nEnvelope");
 		envelopeLabel.setOpaque(true);
-		envelopeMenu = new GDropList(controlWindow, 100, yPos, 120, 80, 3, 10);
+		envelopeMenu = new GDropList(controlWindow, 100, yPos, 120, 80, 4, 10);
 		envelopeMenu.setItems(adsrItems, 0);
 		envelopeMenu.addEventHandler(this, "envelopeMenu_clicked");
-		// arc length time option3
+		// ADSR label
+		envelopeValuesLabel = new GLabel(controlWindow, 230, yPos, 210, 40);
+		envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
+		envelopeValuesLabel.setOpaque(false);
+		envelopeValuesLabel.setText("");
 		
+		// arc length time option3		
 		arcLengthTimeOption = new GOption(controlWindow, 280, yPos, 120, 20);
 		arcLengthTimeOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
 		arcLengthTimeOption.setText("Arc Length Time");
@@ -3519,6 +3526,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		// envelope
 		controlPanel.addControl(envelopeLabel);
 		controlPanel.addControl(envelopeMenu);
+		controlPanel.addControl(envelopeValuesLabel);
 		controlPanel.setCollapsed(false);
 		// arcLengthTime
 		controlPanel.addControl(arcLengthTimeOption);
@@ -3814,10 +3822,21 @@ public class DeadBodyWorkFlow extends PApplet {
 		}
 		// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
 		int itemHit = source.getSelectedIndex();
+		if (itemHit < 0 || itemHit >= adsrItems.length) return;
+
 		String itemName = adsrItems[itemHit];
+		if (ENV_CUSTOM.equals(itemName)) {
+			// Read-only sentinel for loaded / non-preset envelopes.
+			// Do not overwrite gConfig.env.
+			return;
+		}
 		println("-- envelope "+ itemName +" selected");
-		gConfig.env = envPreset(itemName);
-		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = envPreset(itemName);
+		ADSRParams env = envPreset(itemName);
+		gConfig.env = env;
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = env;
+		if (envelopeValuesLabel != null) {
+			envelopeValuesLabel.setText(formatEnv(gConfig.env));
+		}
 		// println("envelopeMenu - GDropList >> GEvent." + event + " @ " + millis());
 	} 
 	
@@ -3844,6 +3863,45 @@ public class DeadBodyWorkFlow extends PApplet {
 		case "Pad"        : return new ADSRParams(1.0f, 1.40f, 0.60f, 0.85f, 1.80f);
 		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);
 		}
+	}
+	
+	static boolean nearlyEqual(float a, float b) {
+		return Math.abs(a - b) < 0.0001f;
+	}
+
+	static boolean envEquals(ADSRParams a, ADSRParams b) {
+		if (a == b) return true;
+		if (a == null || b == null) return false;
+		return nearlyEqual(a.getMaxAmp(), b.getMaxAmp())
+			&& nearlyEqual(a.getAttack(),   b.getAttack())
+			&& nearlyEqual(a.getDecay(),    b.getDecay())
+			&& nearlyEqual(a.getSustain(), b.getSustain())
+			&& nearlyEqual(a.getRelease(),  b.getRelease());
+	}
+
+	String envNameFor(ADSRParams env) {
+		if (env == null) return ENV_CUSTOM;
+		for (int i = 0; i < adsrItems.length; i++) {
+			String name = adsrItems[i];
+			if (ENV_CUSTOM.equals(name)) continue;
+			if (envEquals(env, envPreset(name))) return name;
+		}
+		return ENV_CUSTOM;
+	}
+
+	int envMenuIndex(String name) {
+		for (int i = 0; i < adsrItems.length; i++) {
+			if (adsrItems[i].equals(name)) return i;
+		}
+		return adsrItems.length - 1; // Custom
+	}
+
+	String formatEnv(ADSRParams env) {
+		if (env == null) return "A --   D --   S --   R --";
+		return "A " + nf(env.getAttack(),   0, 3)
+			 + "  D " + nf(env.getDecay(),    0, 3)
+			 + "  S " + nf(env.getSustain(), 0, 3)
+			 + "  R " + nf(env.getRelease(),  0, 3);
 	}
 
 	/** Quantize an integer to the nearest multiple of step. */
@@ -3902,6 +3960,14 @@ public class DeadBodyWorkFlow extends PApplet {
 			shownDur = clampInt(shownDur, 50, 10000);
 			durationSlider.setLimits(shownDur, 50, 16000);
 			durationField.setText("" + shownDur);
+			
+			// envelope settings
+			ADSRParams envToShow = gConfig.env;
+			String envName = envNameFor(envToShow);
+			envelopeMenu.setSelected(envMenuIndex(envName));
+			if (envelopeValuesLabel != null) {
+				envelopeValuesLabel.setText(formatEnv(envToShow));
+			}
 
 			// warp radio + exponent
 			linearWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.LINEAR);
@@ -3924,6 +3990,31 @@ public class DeadBodyWorkFlow extends PApplet {
 		finally {
 			guiSyncing = false;
 		}
+	}
+	
+	void syncEnvelopeMenu(ADSRParams env) {
+	    if (env == null || envelopeMenu == null) return;
+	    for (int i = 0; i < adsrItems.length; i++) {
+	        String name = adsrItems[i];
+	        if (ENV_CUSTOM.equals(name)) continue;
+	        ADSRParams preset = envPreset(name);
+	        if (preset.equals(env)) {
+	            envelopeMenu.setSelected(i);
+	            envelopeValuesLabel.setText(formatEnv(env));
+	            return;
+	        }
+	    }
+	    // no preset match → custom
+	    int customIndex = findCustomIndex();
+	    if (customIndex >= 0) envelopeMenu.setSelected(customIndex);
+	    envelopeValuesLabel.setText(formatEnv(env));
+	}
+	
+	int findCustomIndex() {
+	    for (int i = 0; i < adsrItems.length; i++) {
+	        if (ENV_CUSTOM.equals(adsrItems[i])) return i;
+	    }
+	    return -1;
 	}
 
 	static int clampInt(int v, int lo, int hi) {
