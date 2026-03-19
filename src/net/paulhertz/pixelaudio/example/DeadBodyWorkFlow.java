@@ -329,6 +329,7 @@ public class DeadBodyWorkFlow extends PApplet {
     // animation, but the hooks for handling it are all here
     
     int shift = 1024;                    // number of pixels to shift the animation
+    int leap = 65536;                    // a big shift 
     int totalShift = 0;                  // cumulative shift
     boolean isAnimating = false;         // do we run animation or not?
     boolean oldIsAnimating;              // keep track of animation state when opening a file
@@ -336,7 +337,7 @@ public class DeadBodyWorkFlow extends PApplet {
     // animation variables
     int animSteps = 720;                 // how many steps in an animation loop
     boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
-    int videoFrameRate = 24;             // fps, frames per second
+    int videoFrameRate = 120;             // fps, frames per second
     int step;                            // number of current step in animation loop
     VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
     
@@ -435,7 +436,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	/* ------------------------------------------------------------------ */
 		
 	// configuration for the GUI to control, also part of the audio synthesis chain
-	GestureGranularConfig.Builder gConfig = new GestureGranularConfig.Builder();
+	GestureGranularConfig.Builder gConfig = new GestureGranularConfig.Builder(); 
 	// for reset to default configuration, optionally set to non-default values
 	final GestureGranularConfig.Builder defaultGranConfig = new GestureGranularConfig.Builder().gainDb(0.0f); 
 	final GestureGranularConfig.Builder defaultSampConfig  = new GestureGranularConfig.Builder().gainDb(-6.0f);
@@ -488,7 +489,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isSaveConfig = true;
 	
 	/* ------------------------------------------------------------------ */
-	/*                       DEBUGGING & LOCAL SETTINGS                   */
+	/*                       DEBUGGING & STATE SETTINGS                   */
 	/* ------------------------------------------------------------------ */
 	
 	boolean isVerbose = true;
@@ -501,9 +502,12 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isReplaceBrushes = true;    // do we replace current brushes when we load a session or library folder?
 	boolean doMagicClick = false;
 	
+	boolean isBrushTransformTest = false;
+	boolean isBrushTransformFrozen = false;
+	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
 	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
-	String daFilename = "audioBlend.wav";
+	String daFilename = "Bag_1_Gest_1-echo_mono.wav";    // "audioBlend.wav";
 
 	
 	//------------- APPLICATION CODE -------------//
@@ -520,8 +524,10 @@ public class DeadBodyWorkFlow extends PApplet {
 	}
 	
 	public void setup() {
-		// set a standard animation framerate
-		frameRate(24);
+		// set a standard animation framerate -- in most example sketches we use 44100
+		// but in performance sketches like DeadBodyWorkFlow we use 48000
+		frameRate = 48000;    // could be a little redundant, but I'm too lazy to scroll up to the top
+		frameRate(frameRate);
 		surface.setTitle("Granular Playground");
 		surface.setLocation(60, 20);
 		// 1) initialize our library
@@ -639,7 +645,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void initImages() {
 		mapImage = createImage(width, height, ARGB);
 		mapImage.loadPixels();
-		mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
+		mapper.plantPixels(colors, mapImage.pixels, 0, mapper.getSize()); // load colors to mapImage following signal path
 		mapImage.updatePixels();
 		baseImage = mapImage.copy();
 	}
@@ -668,6 +674,8 @@ public class DeadBodyWorkFlow extends PApplet {
 		defaultGranConfig.granularEnvelope(granularEnv);
 		samplerEnv = envPreset("Pad");
 		defaultSampConfig.samplerEnvelope(samplerEnv);
+		defaultSampConfig.rdpEpsilon = 8.0f;
+		defaultSampConfig.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
 	}
 	
 	/**
@@ -710,6 +718,8 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * tracks and generates animation and audio events. 
 	 */
 	public void handleDrawing() {	
+		// 0) any animation of brushes goes first
+	    updateAnimatedBrushes();  
 	    // 1) draw existing brushes
 		drawBrushShapes();
 	    // 2) update hover state (pure state update, no action)
@@ -936,6 +946,7 @@ public class DeadBodyWorkFlow extends PApplet {
 			if (hoverBrush != null) {
 				if (hoverBrush instanceof SamplerBrush sb) {
 					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
+					println("----->> frame rate = "+ frameRate);
 				}
 				else if (hoverBrush instanceof GranularBrush gb) {
 					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
@@ -1023,7 +1034,14 @@ public class DeadBodyWorkFlow extends PApplet {
 			doMagicClick = !doMagicClick;
 			println(doMagicClick ? "-- doMagicClick is true" : "-- doMagicClick is false");
 			break;
-		case 'r': case 'R': // reset synths to defaults -- TODO may be dropped
+		case 'r': 
+		    if (activeBrush != null && activeBrush.hasTransform()) {
+		        activeBrush.restoreTransform();
+		        activeBrush.transform().resetTransform();
+		        println("-- restored active brush transform");
+		    }
+			break;
+		case 'R': // reset synths to defaults -- TODO may be dropped
 			resetToDefaults(); 
 			break;
 		case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
@@ -1037,6 +1055,34 @@ public class DeadBodyWorkFlow extends PApplet {
 			isAutoOptimize = !isAutoOptimize;
 			println("-- isAutoOptimize is "+ isAutoOptimize);
 			break;
+		case 'g': // create a beatBrush
+			GranularBrush gBeatBrush = generateGranularBeatBrush(256, 117);
+			this.granularBrushes.add(gBeatBrush);
+			setActiveBrush(gBeatBrush);
+			break;
+		case 'G': // create a beatBrush
+			SamplerBrush sBeatBrush = generateSamplerBeatBrush(256, 117);
+			this.samplerBrushes.add(sBeatBrush);
+			setActiveBrush(sBeatBrush);
+			break;
+		case 'y':   // toggle transform animation test
+		    isBrushTransformTest = !isBrushTransformTest;
+		    if (isBrushTransformTest) {
+		        if (activeBrush != null) {
+		            initBrushTransform(activeBrush);
+		        }
+		        println("-- brush transform test ON");
+		    } else {
+		        if (activeBrush != null && activeBrush.hasTransform()) {
+		            activeBrush.restoreTransform();
+		        }
+		        println("-- brush transform test OFF");
+		    }
+		    break;
+		case 'Y':   // freeze / unfreeze
+		    isBrushTransformFrozen = !isBrushTransformFrozen;
+		    println("-- brush transform frozen = " + isBrushTransformFrozen);
+		    break;
 		case 'x': // delete the current active brush shape or the oldest brush shape
 			if (hoverBrush != null) {
 				removeHoverBrush();
@@ -1047,6 +1093,10 @@ public class DeadBodyWorkFlow extends PApplet {
 			break;
 		case 'X': // delete the most recent brush shape
 			removeNewestBrush();
+			break;
+		case '≈': // option-x on MacOS keyboard, clear all brushes
+			granularBrushes.clear();
+			samplerBrushes.clear();
 			break;
 		case 'h': case 'H': // show help message
 			showHelp();
@@ -1110,8 +1160,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		switch (drawingMode) {
 		case DRAW_EDIT_GRANULAR: 
 			nextActive = activeGranularBrush;
-			gConfig.env = granularEnv;
-			break;
+    			break;
 		case DRAW_EDIT_SAMPLER:  
 			nextActive = activeSamplerBrush;
 			break;
@@ -1161,6 +1210,70 @@ public class DeadBodyWorkFlow extends PApplet {
 			// gConfig = defaultGranularConfig.copy();
 		}
 		syncGuiFromConfig();    // enable or disable controls, depending on the drawing mode
+	}
+
+	
+	public SamplerBrush generateSamplerBeatBrush(int count, int intervalMs) {
+		ArrayList<Integer> times = new ArrayList<>();
+		ArrayList<PVector> points = new ArrayList<>();
+		int xCtr = width/2;
+		int yCtr = height/2;
+		int rad = height/2 - 32;
+		float theta = PI/64.0f;
+		float dec = (rad * 0.5f)/count;
+		PVector p0 = new PVector(xCtr, yCtr + rad);
+		points.add(p0);
+		times.add(0);
+		for (int i = 1; i < count; i++) {
+			times.add(i * intervalMs);
+			PVector nextPoint = PACurveUtility.rotateCoordAroundPoint(xCtr, yCtr + rad, xCtr, yCtr, theta * i);
+			points.add(nextPoint);
+			rad -= dec;
+		}
+		PACurveMaker curve = PACurveMaker.buildCurveMaker(points, times, millis());
+		GestureGranularConfig.Builder cfg = new GestureGranularConfig.Builder().gainDb(-12.0f);
+		cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+		cfg.rdpEpsilon = 8.0f;
+		cfg.curveSteps = 8;
+		ADSRParams env = new ADSRParams(1.0f, 0.025f, 0.02f, 0.025f, 0.05f);
+		cfg.env = env;
+		SamplerBrush beatBrush = new SamplerBrush(curve, cfg);
+		return beatBrush;
+	}
+	
+	public GranularBrush generateGranularBeatBrush(int count, int intervalMs) {
+		ArrayList<Integer> times = new ArrayList<>();
+		ArrayList<PVector> points = new ArrayList<>();
+		int xCtr = width/2;
+		int yCtr = height/2;
+		int rad = height/2 - 32;
+		float theta = PI/64.0f;
+		float dec = (rad * 0.5f)/count;
+		PVector p0 = new PVector(xCtr, yCtr + rad);
+		points.add(p0);
+		times.add(0);
+		for (int i = 1; i < count; i++) {
+			times.add(i * intervalMs);
+			PVector nextPoint = PACurveUtility.rotateCoordAroundPoint(xCtr, yCtr + rad, xCtr, yCtr, theta * i);
+			points.add(nextPoint);
+			rad -= dec;
+		}
+		PACurveMaker curve = PACurveMaker.buildCurveMaker(points, times, millis());
+		GestureGranularConfig.Builder cfg = new GestureGranularConfig.Builder().gainDb(-3.0f);
+		cfg.hopLengthSamples = 512;
+		cfg.grainLengthSamples = 2048;
+		cfg.burstGrains = 4;
+		cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+		cfg.rdpEpsilon = 8.0f;
+		cfg.curveSteps = 8;
+		// we can use the default envelope,
+		// granularEnv: ADSRParams(1.0f, 0.005f, 0.02f, 0.9f, 0.025f);
+		cfg.env = granularEnv;
+		// or not
+		// ADSRParams env = new ADSRParams(1.0f, 0.025f, 0.25f, 1.0f, 0.25f);
+		// cfg.env = env;
+		GranularBrush beatBrush = new GranularBrush(curve, cfg);
+		return beatBrush;
 	}
 
 	
@@ -1237,37 +1350,31 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void loadAudioFile(File audFile) {
 		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
 		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
-		if (fileSampleRate > 0) {
-			if (fileSampleRate != audioOut.sampleRate()) {
-				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
-				buff.setBufferSize(resampled.length);
-				buff.setChannel(0, resampled);
-				bufferSampleRate = sampleRate;
-			}
-			else {
-				bufferSampleRate = fileSampleRate;
-			}
-			this.audioFileLength = buff.getBufferSize();
-			println("---- file sample rate = "+ this.fileSampleRate 
-					+", buffer sample rate = "+ bufferSampleRate
-					+", audio output sample rate = "+ audioOut.sampleRate());
-		}
-		else {
+		if (fileSampleRate <= 0) {
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
 			return;
 		}
-		// adjust buffer size to mapper.getSize()
-		if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
-		playBuffer = buff;
-		// ensureSamplerReady will load playBuffer to the Sampler synth "pool"
+
+		float sig[];
+		if (fileSampleRate != audioOut.sampleRate()) {
+			sig = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+			bufferSampleRate = sampleRate;
+		}
+		else {
+	        sig = Arrays.copyOf(buff.getChannel(0), buff.getBufferSize());
+	        bufferSampleRate = fileSampleRate;
+		}
+		
+		this.audioFileLength = sig.length;
+		println("---- file sample rate = "+ this.fileSampleRate 
+				+", buffer sample rate = "+ bufferSampleRate
+				+", audio output sample rate = "+ audioOut.sampleRate());
+
 		ensureSamplerReady();
-		// playBuffer is used directly by PASamplerInstrumentPool and should not change, so we copy its signal data
-		// TODO consider if PASamplerInstrumentPool should copy the buffer
-		float[] newSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		audioSignal = newSignal;
-		granSignal = newSignal;
-		audioLength = audioSignal.length;
+		updateAudioChain(sig);
+
 		if (isLoadToBoth) {
+			println("---- loading to both ----");
 			writeAudioToImage(audioSignal, mapper, mapImage, chan);
 			commitMapImageToBaseImage();
 		}
@@ -1317,7 +1424,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		}
 		if (isLoadToBoth) {
 		    // prepare to copy image data to audio variables
-		    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
+		    // resize the buffer to canonical mapper.getSize(), if necessary -- signal will not be overwritten
 		    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
 		    audioSignal = playBuffer.getChannel(0);
 		    renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
@@ -1328,8 +1435,8 @@ public class DeadBodyWorkFlow extends PApplet {
 		    ensureSamplerReady();
 		    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
 		    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
-		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
-		    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
+		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapper.getSize()
+		    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapper.getSize());
 		    granSignal = audioSignal;
 		    audioLength = audioSignal.length;
 		}
@@ -1686,6 +1793,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		println("---- audio out gain is "+ nf(audioOut.getGain(), 0, 2) +", sample rate is "+ sampleRate);
 		// create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
 		// the buffer will not have any audio data -- you'll need to open a file for that
+		mapSize = mapper.getSize();
 		this.playBuffer = new MultiChannelBuffer(mapSize, 1);
 		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
 		granSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
@@ -1719,7 +1827,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	  // calculate how much animation has shifted the indices into the buffer
 	  // totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
 	  // return (pos + totalShift) % mapSize;
-	  return pos;
+	  return pos;    // just return pos if we don't use pixel shift animation in this sketch
 	}
 
 	/**
@@ -1988,13 +2096,11 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * Prepares Sampler instruments and assets
 	 */
 	void ensureSamplerReady() {
-		if (playBuffer == null) return;
-	    if (pool != null) pool.setBuffer(playBuffer);
-	    else { 
+		if (pool == null) { 
 	    	pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 16, 64, audioOut, samplerEnv); 
 	    	println("-- initilialized pool sampler synth");
+	    	pool.setGain(samplerGain);
 	    }
-    	pool.setGain(samplerGain);
 	}
 	
 	/**
@@ -2045,34 +2151,33 @@ public class DeadBodyWorkFlow extends PApplet {
 	}
 
 		
-	// ---- NEW METHOD FROM TutorialOneDrawing ---- //
-	
-	/**
-	 * Updates the various audio buffers when we load a new signal, typically from a file. 
+	// TODO retro-apply loadAudioFile and updateAudioChain logic to GesturePlayground and other example sketches
+ 	/**
+	 * Bottleneck method that updates the various audio buffers when we load a
+	 * new signal, typically from a file. updateAudioChain(float[] sig) is the
+	 * _only_ method that should resize/pad/truncate the canonical signal and
+	 * propagate it to playBuffer, audioSignal, granSignal, and sampler pool.
+	 * 
 	 * @param sig    an audio signal
 	 */
 	void updateAudioChain(float[] sig) {
 	    // 0) Decide target length (make this a single source of truth)
-	    int targetSize = mapper.getSize();          // or mapSize, but pick one canonical TODO
+	    int targetSize = mapper.getSize();
 	    if (targetSize <= 0) return;
 	    // 1) Ensure playBuffer matches target
-	    if (playBuffer.getBufferSize() != targetSize) {
-	        playBuffer.setBufferSize(targetSize);
-	    }
-	    // 2) Copy sig into a temp array of exactly targetSize (pad/truncate deterministically)
-	    float[] tmp = new float[targetSize];
+	    float[] canonical = new float[targetSize];
 	    if (sig != null) {
-	        System.arraycopy(sig, 0, tmp, 0, Math.min(sig.length, targetSize));
+	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
 	    }
-	    // 3) Store into playBuffer
-	    playBuffer.setChannel(0, tmp);
-	    // 4) Snapshot arrays used elsewhere
-	    audioSignal = tmp;                 // already correct size
-	    granSignal = audioSignal;          // alias intentionally (or copy if you want independent)
+	    audioSignal = canonical;
+	    granSignal = audioSignal;
 	    audioLength = targetSize;
-	    // 5) Propagate into synths (examples — adjust to your actual API)
-	    pool.setBuffer(playBuffer);
-	    // granularDirector doesn't track an audio buffer with a field
+	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+	        playBuffer = new MultiChannelBuffer(targetSize, 1);
+	    }
+	    playBuffer.setChannel(0, canonical);
+	    // Propagate into synths (adjust to your actual API)
+	    if (pool != null) pool.setBuffer(playBuffer);
 	}
 	
 
@@ -2468,6 +2573,46 @@ public class DeadBodyWorkFlow extends PApplet {
 		}
 	}
 
+	
+	// ------------- TRANSFORMS ------------- //
+	
+	void initBrushTransform(AudioBrush b) {
+	    if (b == null) return;
+	    GestureTransformState st = b.ensureTransform();
+	    st.enabled = true;
+	    st.captureRestPoints(b.curve().copyAllPoints());
+	    st.resetTransform();
+	}
+	
+	void updateAnimatedBrushes() {
+	    if (!isBrushTransformTest) return;
+	    if (isBrushTransformFrozen) return;
+	    if (activeBrush == null) return;
+
+	    GestureTransformState st = activeBrush.ensureTransform();
+	    if (!st.hasRestPoints()) {
+	        st.captureRestPoints(activeBrush.curve().copyAllPoints());
+	    }
+	    st.enabled = true;
+
+	    float t = millis() * 0.001f;
+
+	    // --- simple first test: pulse + spin + small orbit ---
+	    st.rotation = 0.6f * t;
+
+	    float pulse = 1.0f + 0.18f * sin(2.0f * t);
+	    st.scaleX = pulse;
+	    st.scaleY = pulse;
+
+	    st.translateX = 28.0f * cos(0.8f * t);
+	    st.translateY = 18.0f * sin(1.1f * t);
+
+	    // Optional reflection test every few seconds
+	    //st.flipHorizontal = ((int)(t * 0.25f) % 2) == 1;
+	    //st.flipVertical = false;
+
+	    activeBrush.applyTransform();
+	}
 
 	/*             END DRAWING METHODS              */
 	
@@ -2866,7 +3011,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		Collections.sort(samplerTimeLocs);
 	}
 
-	public synchronized void runSamplerBrushEvents() {
+	public synchronized void runSamplerBrushEvents() { 
 	    if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
 	    int currentTime = millis();
 	    samplerTimeLocs.forEach(tl -> {
@@ -3957,7 +4102,7 @@ public class DeadBodyWorkFlow extends PApplet {
 
 			int baseDurSafe = Math.max(50, baselineDurationMs);     // slider min is 50
 			int shownDur = (gConfig.targetDurationMs == 0) ? baseDurSafe : gConfig.targetDurationMs;
-			shownDur = clampInt(shownDur, 50, 10000);
+			shownDur = clampInt(shownDur, 50, 16000);
 			durationSlider.setLimits(shownDur, 50, 16000);
 			durationField.setText("" + shownDur);
 			
@@ -4109,12 +4254,15 @@ public class DeadBodyWorkFlow extends PApplet {
 	
 	void resetToDefaults() {
 		if (!isEditable()) return;
-		// Reset global
-		gConfig.copyFrom(defaultGranConfig);
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			gConfig.copyFrom(defaultGranConfig);			
+		}
+		else {
+			gConfig.copyFrom(defaultSampConfig);
+		}
 		// If a stroke is active, reset its per-stroke cfg too
 		if (activeBrush != null) {
-			activeBrush.cfg().copyFrom(defaultGranConfig);
-			gConfig = activeBrush.cfg();
+			activeBrush.cfg().copyFrom(gConfig);
 			recomputeUIBaselinesFromActiveBrush();
 		} 
 		else {
