@@ -20,6 +20,8 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 public abstract class AudioBrush {
 	private final PACurveMaker curve;
 	private final GestureGranularConfig.Builder cfg;
+    private GestureTransformState transformState;
+
 
 	protected AudioBrush(PACurveMaker curve, GestureGranularConfig.Builder cfg) {
 		this.curve = Objects.requireNonNull(curve, "curve");
@@ -41,5 +43,43 @@ public abstract class AudioBrush {
 	public GestureGranularConfig snapshot() {
 	    return cfg.build();
 	}
+	
+    public GestureTransformState transform() {
+        return transformState;
+    }
+
+    public void setTransform(GestureTransformState state) {
+        this.transformState = state;
+    }
+
+    public boolean hasTransform() {
+        return transformState != null;
+    }
+
+    public GestureTransformState ensureTransform() {
+        if (transformState == null) {
+            transformState = curve.createTransformState();
+        } else if (!transformState.hasRestPoints()) {
+            transformState.captureRestPoints(curve.copyAllPoints());
+        }
+        return transformState;
+    }
+
+    public void captureRestPoints() {
+        ensureTransform().captureRestPoints(curve.copyAllPoints());
+    }
+
+    public void applyTransform() {
+        if (transformState != null) {
+            curve.applyTransform(transformState);
+        }
+    }
+
+    public void restoreTransform() {
+        if (transformState != null) {
+            curve.restoreTransform(transformState);
+        }
+    }
+
 
 }

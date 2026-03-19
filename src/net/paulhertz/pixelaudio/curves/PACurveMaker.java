@@ -617,6 +617,30 @@ public class PACurveMaker implements PAGesture {
 	public interface PointsMutator {
 	    void apply(ArrayList<PVector> pts);
 	}
+	
+	/**
+	 * Copies the current dragPoints into a new GestureTransformState as restPoints.
+	 */
+	public GestureTransformState createTransformState() {
+	    GestureTransformState state = new GestureTransformState();
+	    state.captureRestPoints(copyAllPoints());
+	    return state;
+	}
+
+	/**
+	 * Applies a transform state to this curve.
+	 */
+	public void applyTransform(GestureTransformState state) {
+	    PACurveUtility.applyTransformToCurve(this, state);
+	}
+
+	/**
+	 * Restores this curve from a transform state's rest pose, if present.
+	 */
+	public void restoreTransform(GestureTransformState state) {
+	    PACurveUtility.restoreCurveRestPoints(this, state);
+	}	
+	
 
 	/** Call after mutating dragPoints contents or order (or changing dragTimes length). */
 	public void markDirtyAll() {

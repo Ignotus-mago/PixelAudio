@@ -631,8 +631,419 @@ public class PACurveUtility {
 		return pathLength;
 	}
 
+	
+	/************************************************
+	 *                                              *
+	 * ---------- GEOMETRIC TRANSFORMS -----------  *
+	 *                                              *
+	 ************************************************/
+
+	/**
+	 * Calculates the boundary rectangle of a list of points and returns it as an array of floats.
+	 * @return	[xMin, yMin, xMax, yMax]
+	 */
+	public static float[] bounds(ArrayList<PVector> points) {
+	    if (points == null || points.isEmpty()) return null;
+		PVector vec = points.get(0);
+		float xMin = vec.x;
+		float yMin = vec.y;
+		float xMax = xMin;
+		float yMax = yMin;
+		for (int i = 1; i < points.size(); i++) {
+			vec = points.get(i);
+			float x = vec.x;
+			float y = vec.y;
+			if (x < xMin) xMin = x;
+			if (y < yMin) yMin = y;
+			if (x > xMax) xMax = x;
+			if (y > yMax) yMax = y;
+		}
+		return new float[] {xMin, yMin, xMax, yMax};
+	} 
+	
+	public static PVector getBoundsCenter(ArrayList<PVector> points) {
+		float[] b = bounds(points);
+		return new PVector((b[0] + b[2]) * 0.5f, (b[1] + b[3]) * 0.5f);	
+	}
+
+	/**
+	 * Translates a point by xOffset and yOffset, returns a new point.
+	 * 
+	 * @param x         x coordinate of point
+	 * @param y         y coordinate of point
+	 * @param xOffset   distance to translate on x-xis
+	 * @param yOffset   distance to translate on y-axis
+	 * @return          a new translated point
+	 */
+	public static PVector translateCoord(float x, float y, float xOffset, float yOffset) {
+		return new PVector(x + xOffset, y + yOffset);
+	}
+
+	/**
+	 * Scales a point by xScale and yScale around a point (xctr, yctr), returns a new point.
+	 * 
+	 * @param x        x coordinate of point
+	 * @param y        y coordinate of point
+	 * @param xScale   scaling on x-axis
+	 * @param yScale   scaling on y-axis
+	 * @param xctr     x coordinate of center of transformation
+	 * @param yctr     y coordinate of center of transformation
+	 * @return         a new scaled point as a PVector
+	 */
+	public static PVector scaleCoordAroundPoint(float x, float y, float xScale, float yScale, float xctr, float yctr) {
+		float xout = xctr + (x - xctr) * xScale;
+		float yout = yctr + (y - yctr) * yScale;
+		return new PVector(xout, yout);
+	}
+	
+	/**
+	 * Rotates a point theta radians around a point (xctr, yctr), returns a new point.
+	 * rotation is counterclockwise for positive theta in Cartesian system, 
+	 * clockwise in screen display coordinate system
+	 * 
+	 * @param x       x coordinate of point
+	 * @param y       y coordinate of point
+	 * @param xctr    x coordinate of center of rotation
+	 * @param yctr    y coordinate of center of rotation
+	 * @param theta   angle to rotate, in radians
+	 * @return        a new rotated point
+	 */
+	public static PVector rotateCoordAroundPoint(float x, float y, float xctr, float yctr, float theta) {
+		double sintheta = Math.sin(theta);
+		double costheta = Math.cos(theta);
+		PVector pt = translateCoord(x, y, -xctr, -yctr);
+		pt.set((float)(pt.x * costheta - pt.y * sintheta), (float)(pt.x * sintheta + pt.y * costheta));
+		return translateCoord(pt.x, pt.y, xctr, yctr);
+	}
+		
+	public static PVector flipHorizontal(float x, float y, float xctr) {
+	    return new PVector(xctr - (x - xctr), y);
+	}
+
+	public static PVector flipVertical(float x, float y, float yctr) {
+	    return new PVector(x, yctr - (y - yctr));
+	}
 
 
+	// ------------- Some basic geometric transforms on an ArrayList<PVector> ------------- //
+
+	/**
+	 * Translates points in x and y directions, in place.
+	 * 
+	 * @param points    list of points to translate
+	 * @param xTrans    translation in x direction
+	 * @param yTrans    translation in y direction
+	 */
+	public void translatePoints(ArrayList<PVector> points, float xTrans, float yTrans) {
+		ListIterator<PVector> it = points.listIterator();
+		while (it.hasNext()) {
+			PVector pt = it.next();
+			pt.set(pt.x + xTrans, pt.y + yTrans);
+		}
+	}
+	
+	/**
+	 * Scales points around a given point, in place. 
+	 * 
+	 * @param points    list of points to scale
+	 * @param xScale    scaling on x-axis
+	 * @param yScale    scaling on y-axis
+	 * @param x0        x-coordinate of the center point
+	 * @param y0        y-coordinate of the center point
+	 * TODO for xScale or yScale very near 0, insure correct scaling.
+	 */
+	public void scalePoints(ArrayList<PVector> points, float xScale, float yScale, float x0, float y0) {
+		ListIterator<PVector> it = points.listIterator();
+		while (it.hasNext()) {
+			PVector pt = it.next();
+			pt.set(x0 + (pt.x - x0) * xScale, y0 + (pt.y - y0) * yScale);
+		}
+	}
+		
+	/**
+	 * Rotates this shape around a supplied center point, in place.
+	 * 
+	 * @param points    list of points to rotate
+	 * @param xctr      x-coordinate of the center point
+	 * @param yctr      y-coordinate of the center point
+	 * @param theta     degrees to rotate (in radians)
+	 * TODO for theta very near PI, 0, or TWO_PI, insure correct rotation.  
+	 */
+	public void rotatePoints(ArrayList<PVector> points, float xctr, float yctr, float theta) {
+		// PVector pt = rotateCoordAroundPoint(this.x(), this.y(), xctr, yctr, theta);
+		ListIterator<PVector> it = points.listIterator();
+		while (it.hasNext()) {
+			PVector pt = it.next();
+			float x = (float)(xctr + (pt.x - xctr) * Math.cos(theta) - (pt.y - yctr) * Math.sin(theta));
+			float y = (float)(yctr + (pt.x - xctr) * Math.sin(theta) + (pt.y - yctr) * Math.cos(theta));
+			pt.set(x, y);
+		}
+	}
+	
+	/**
+	 * Translates points in x and y directions, returning a new list.
+	 * 
+	 * @param points   the points to be translated
+	 * @param xTrans   translation in x direction
+	 * @param yTrans   translation in y direction
+	 * @return the translated points
+	 */
+	public static ArrayList<PVector> translatePointsCopy(ArrayList<PVector> points, float xTrans, float yTrans) {
+		ArrayList<PVector> translatedPoints = new ArrayList<PVector>(points.size());
+		ListIterator<PVector> it = points.listIterator();
+		while (it.hasNext()) {
+			PVector pt = it.next();
+			translatedPoints.add(new PVector(pt.x + xTrans, pt.y + yTrans));
+		}
+		return translatedPoints;
+	}
+	
+	/**
+	 * Scales points around a given point, returning a new list. 
+	 * 
+	 * @param points   the points to be scaled
+	 * @param xScale   scaling on x-axis
+	 * @param yScale   scaling on y-axis
+	 * @param x0       center of scaling on x-axis
+	 * @param y0       center of scaling on y-axis
+	 * @return the scaled points
+	 * TODO for xScale or yScale very near 0, insure correct scaling.
+	 */
+	public static ArrayList<PVector> scalePointsCopy(ArrayList<PVector> points, float xScale, float yScale, float x0, float y0) {
+		ArrayList<PVector> scaledPoints = new ArrayList<PVector>(points.size());
+		ListIterator<PVector> it = points.listIterator();
+		while (it.hasNext()) {
+			PVector pt = it.next();
+			scaledPoints.add(new PVector(x0 + (pt.x - x0) * xScale, y0 + (pt.y - y0) * yScale));
+		}
+		return scaledPoints;
+	}
+		
+	/**
+	 * Rotates this shape around a supplied center point, returning a new list.
+	 * 
+	 * @param points   the points to be rotated
+	 * @param xctr     center of rotation on x-axis
+	 * @param yctr     center of rotation on y-axis
+	 * @param theta    degrees to rotate (in radians)
+	 * TODO for theta very near PI, 0, or TWO_PI, insure correct rotation.  
+	 */
+	public static ArrayList<PVector> rotatePointsCopy(ArrayList<PVector> points, float xctr, float yctr, float theta) {
+		// PVector pt = rotateCoordAroundPoint(this.x(), this.y(), xctr, yctr, theta);
+		ArrayList<PVector> rotatedPoints = new ArrayList<PVector>(points.size());
+		ListIterator<PVector> it = points.listIterator();
+		while (it.hasNext()) {
+			PVector pt = it.next();
+			float x = (float)(xctr + (pt.x - xctr) * Math.cos(theta) - (pt.y - yctr) * Math.sin(theta));
+			float y = (float)(yctr + (pt.x - xctr) * Math.sin(theta) + (pt.y - yctr) * Math.cos(theta));
+			rotatedPoints.add(new PVector(x, y));
+		}
+		return rotatedPoints;
+	}
+
+	// ------------- Composite transform ------------- //
+	
+	/**
+	 * Applies flip/scale, then rotation, then translation to a point.
+	 * Flip/scale and rotation are performed around (xctr, yctr).
+	 *
+	 * @param x               source x
+	 * @param y               source y
+	 * @param xctr            pivot x
+	 * @param yctr            pivot y
+	 * @param scaleX          scale in x
+	 * @param scaleY          scale in y
+	 * @param flipHorizontal  mirror left/right around pivot
+	 * @param flipVertical    mirror up/down around pivot
+	 * @param theta           rotation in radians
+	 * @param xTrans          translation in x
+	 * @param yTrans          translation in y
+	 * @return transformed point
+	 */
+	public static PVector transformCoord(
+	        float x, float y,
+	        float xctr, float yctr,
+	        float scaleX, float scaleY,
+	        boolean flipHorizontal,
+	        boolean flipVertical,
+	        float theta,
+	        float xTrans, float yTrans) {
+
+	    float sx = flipHorizontal ? -scaleX : scaleX;
+	    float sy = flipVertical ? -scaleY : scaleY;
+
+	    float xs = xctr + (x - xctr) * sx;
+	    float ys = yctr + (y - yctr) * sy;
+
+	    double sinTheta = Math.sin(theta);
+	    double cosTheta = Math.cos(theta);
+
+	    float dx = xs - xctr;
+	    float dy = ys - yctr;
+
+	    float xr = (float)(xctr + dx * cosTheta - dy * sinTheta);
+	    float yr = (float)(yctr + dx * sinTheta + dy * cosTheta);
+
+	    return new PVector(xr + xTrans, yr + yTrans);
+	}
+	
+	/**
+	 * Applies flip/scale, then rotation, then translation to a point.
+	 * Flip/scale and rotation are performed around (xctr, yctr).
+	 * Returns a new ArrayList<PVector>.
+	 * 
+	 * @param points
+	 * @param xctr
+	 * @param yctr
+	 * @param scaleX
+	 * @param scaleY
+	 * @param flipHorizontal
+	 * @param flipVertical
+	 * @param theta
+	 * @param xTrans
+	 * @param yTrans
+	 * @return
+	 */
+	public static ArrayList<PVector> transformPointsCopy(
+	        ArrayList<PVector> points,
+	        float xctr, float yctr,
+	        float scaleX, float scaleY,
+	        boolean flipHorizontal,
+	        boolean flipVertical,
+	        float theta,
+	        float xTrans, float yTrans) {
+
+	    ArrayList<PVector> out = new ArrayList<>(points.size());
+	    for (PVector pt : points) {
+	        out.add(transformCoord(
+	                pt.x, pt.y,
+	                xctr, yctr,
+	                scaleX, scaleY,
+	                flipHorizontal, flipVertical,
+	                theta,
+	                xTrans, yTrans));
+	    }
+	    return out;
+	}
+	
+	/**
+	 * Applies flip/scale, then rotation, then translation to a point.
+	 * Flip/scale and rotation are performed around (xctr, yctr).
+	 * Performs the transform in place.
+	 * 
+	 * @param points
+	 * @param xctr
+	 * @param yctr
+	 * @param scaleX
+	 * @param scaleY
+	 * @param flipHorizontal
+	 * @param flipVertical
+	 * @param theta
+	 * @param xTrans
+	 * @param yTrans
+	 */
+	public static void transformPoints(
+	        ArrayList<PVector> points,
+	        float xctr, float yctr,
+	        float scaleX, float scaleY,
+	        boolean flipHorizontal,
+	        boolean flipVertical,
+	        float theta,
+	        float xTrans, float yTrans) {
+
+	    float sx = flipHorizontal ? -scaleX : scaleX;
+	    float sy = flipVertical ? -scaleY : scaleY;
+
+	    double sinTheta = Math.sin(theta);
+	    double cosTheta = Math.cos(theta);
+
+	    ListIterator<PVector> it = points.listIterator();
+	    while (it.hasNext()) {
+	        PVector pt = it.next();
+
+	        float xs = xctr + (pt.x - xctr) * sx;
+	        float ys = yctr + (pt.y - yctr) * sy;
+
+	        float dx = xs - xctr;
+	        float dy = ys - yctr;
+
+	        float xr = (float)(xctr + dx * cosTheta - dy * sinTheta);
+	        float yr = (float)(yctr + dx * sinTheta + dy * cosTheta);
+
+	        pt.set(xr + xTrans, yr + yTrans);
+	    }
+	}
+	
+	/**
+	 * Applies a GestureTransformState to a PACurveMaker using the curve's live dragPoints.
+	 *
+	 * Uses state.restPoints if available; otherwise uses a copy of curve.copyAllPoints()
+	 * taken at call time.
+	 *
+	 * Transform order:
+	 *   1) flip/scale about pivot
+	 *   2) rotate about pivot
+	 *   3) translate
+	 *   
+	 * @param curve    PACurveMaker instance
+	 * @param state    GestureTransformState instance with transform parameters
+	 */
+	public static void applyTransformToCurve(PACurveMaker curve, GestureTransformState state) {
+	    if (curve == null || state == null) return;
+
+	    ArrayList<PVector> src = state.hasRestPoints() ? state.restPoints : curve.copyAllPoints();
+	    if (src == null || src.isEmpty()) return;
+
+	    PVector ctr = (state.pivot != null) ? state.pivot : getBoundsCenter(src);
+	    if (ctr == null) return;
+
+	    final float xctr = ctr.x;
+	    final float yctr = ctr.y;
+	    final float sx = state.flipHorizontal ? -state.scaleX : state.scaleX;
+	    final float sy = state.flipVertical ? -state.scaleY : state.scaleY;
+	    final float theta = state.rotation;
+	    final float tx = state.translateX;
+	    final float ty = state.translateY;
+
+	    final double sinTheta = Math.sin(theta);
+	    final double cosTheta = Math.cos(theta);
+
+	    curve.mutateAllPoints(pts -> {
+	        int n = Math.min(pts.size(), src.size());
+	        for (int i = 0; i < n; i++) {
+	            PVector s = src.get(i);
+	            PVector d = pts.get(i);
+
+	            float xs = xctr + (s.x - xctr) * sx;
+	            float ys = yctr + (s.y - yctr) * sy;
+
+	            float dx = xs - xctr;
+	            float dy = ys - yctr;
+
+	            float xr = (float)(xctr + dx * cosTheta - dy * sinTheta);
+	            float yr = (float)(yctr + dx * sinTheta + dy * cosTheta);
+
+	            d.set(xr + tx, yr + ty);
+	        }
+	    });
+	}
+	
+	/**
+	 * Restores curve points from state.restPoints, if present.
+	 */
+	public static void restoreCurveRestPoints(PACurveMaker curve, GestureTransformState state) {
+	    if (curve == null || state == null || !state.hasRestPoints()) return;
+
+	    final ArrayList<PVector> src = state.restPoints;
+	    curve.mutateAllPoints(pts -> {
+	        int n = Math.min(pts.size(), src.size());
+	        for (int i = 0; i < n; i++) {
+	            pts.get(i).set(src.get(i));
+	        }
+	    });
+	}
+	
+	
 	/************************************************
 	 *                                              *
 	 * ------------- DRAWING METHODS -------------  *
