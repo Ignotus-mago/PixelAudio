@@ -144,6 +144,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             }
         }
         if (oldest != null) {
+            // System.out.println("-- sampler voice recycle: stealing oldest voice " + oldest.getVoiceId());
             if (smoothSteal) oldest.release();
             else oldest.stop();
             return oldest;
@@ -197,7 +198,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         float targetNorm = (activeCount > 1)
                 ? 1f / (float)Math.sqrt(activeCount)
                 : 1f;
-//        float targetNorm = 1f;
+        // float targetNorm = 1f;    // debugging
 
         // smoothing: alpha 0.05..0.2
         float alpha = 0.12f;

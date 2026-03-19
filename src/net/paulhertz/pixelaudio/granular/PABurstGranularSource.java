@@ -161,6 +161,13 @@ public final class PABurstGranularSource implements PASource {
         java.util.Arrays.fill(wsum, 0f);
     }
     
+    /**
+     * Reads interpolated value at pos in buf and returns it.
+     * 
+     * @param buf    the audio buffer we use to generate grains
+     * @param pos    current position in the buffer
+     * @return linear interpolated value at pos in buf
+     */
     private static float readLinear(float[] buf, float pos) {
         int i0 = (int) pos;
         float frac = pos - i0;

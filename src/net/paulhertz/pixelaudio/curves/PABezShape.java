@@ -27,8 +27,6 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.ListIterator;
 
-import net.paulhertz.aifile.AIFileWriter;
-import net.paulhertz.aifile.Vertex2DINF;
 import net.paulhertz.pixelaudio.PixelAudioMapper;
 
 /**

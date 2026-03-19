@@ -20,7 +20,6 @@ package net.paulhertz.pixelaudio.curves;
 
 import java.io.PrintWriter;
 
-import net.paulhertz.aifile.AIFileWriter;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
