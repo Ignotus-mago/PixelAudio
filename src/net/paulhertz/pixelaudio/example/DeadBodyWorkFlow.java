@@ -489,26 +489,110 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isSaveConfig = true;
 	
 	/* ------------------------------------------------------------------ */
-	/*                       DEBUGGING & STATE SETTINGS                   */
+	/*                    DEBUGGING + PERFORMANCE SETTINGS                */
 	/* ------------------------------------------------------------------ */
 	
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
-	boolean isRunWordGame = false;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
+	boolean isRunWordGame = true;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
 	boolean doPlayOnDraw = false;       // play audio when a curve is drawn
 	boolean isAutoOptimize = false;     // optimize the freshly drawn curve before playing it 
 	boolean isSaveSession = true;       // save the session brushes ('J' key commend)
 	boolean isReplaceBrushes = true;    // do we replace current brushes when we load a session or library folder?
 	boolean doMagicClick = false;
 	
-	boolean isBrushTransformTest = false;
-	boolean isBrushTransformFrozen = false;
+	boolean isBrushTransformTest = false;      // testing animation feature (key 'y')
+	boolean isBrushTransformFrozen = false;    // freeze animation (key 'Y')
 	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
 	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
 	String daFilename = "Bag_1_Gest_1-echo_mono.wav";    // "audioBlend.wav";
+	
+	/* ------------------------------------------------------------------ */
+	/*                                CUE LIST                            */
+	/* ------------------------------------------------------------------ */
 
+	// CueListDBWF
+	enum PerformancePreset {
+	    DURATION_4SEC('1') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+	        	int newDurationMs = 4000;
+	            cfg.targetDurationMs = newDurationMs;
+	            return new CueResult(curve, cfg);
+	        }
+	    },
+	    SIXTEENTHS('2') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+	            int bpm = 128;
+	            int stepMs = Math.round(60000f / bpm / 4f);   // 117 ms
+	            // we can calculate new points and times using the total gesture time
+	            int totalMs = Math.max(stepMs, curve.getTimeOffset());
+	            if (cfg.targetDurationMs > 0) {
+	                totalMs = cfg.targetDurationMs;
+	            }	
+	            int count = 1 + Math.max(1, Math.round(totalMs / (float) stepMs));
+	            PAGestureParametric tweener = new PAGestureParametric(curve.getAllPoints(), curve.getAllTimes());
+	            ArrayList<PVector> newPoints = new ArrayList<>(count);
+	            ArrayList<Integer> newTimes = new ArrayList<>(count);
+	            // 
+	            for (int i = 0; i < count; i++) {
+	                float u = (count <= 1) ? 0f : i / (float)(count - 1);
+	                PAGestureParametric.Sample s = tweener.sample(u);
+	                newPoints.add(new PVector(s.x, s.y));
+	                newTimes.add(i * stepMs);
+	            }
+	            // create a new curve, don't try to edit the original
+	            PACurveMaker newCurve = PACurveMaker.buildCurveMaker(newPoints, newTimes, curve.timeStamp);
+	            // preserve visual / geometric settings you care about
+	            newCurve.setEpsilon(curve.getEpsilon());
+	            newCurve.setCurveSteps(curve.getCurveSteps());
+	            newCurve.setBrushSize(curve.getBrushSize());
+	            newCurve.setBrushColor(curve.getBrushColor());
+	            newCurve.setActiveBrushColor(curve.getActiveBrushColor());
+	            newCurve.calculateDerivedPoints();
+	            // config adjustments
+	            cfg.targetDurationMs = newTimes.get(newTimes.size() - 1);
+	            return new CueResult(newCurve, cfg);
+	        }
+	    },
+	    DURATION_X2('3') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+	        	println("-- CUE: adjusting targetDurationMs from curve.getTimeOffset() = "+ curve.getTimeOffset());	        	
+	        	cfg.targetDurationMs = curve.getTimeOffset() * 4;
+	            return new CueResult(curve, cfg);
+	        }
+	    };
+
+	    final char key;
+
+	    PerformancePreset(char key) {
+	        this.key = key;
+	    }
+
+	    static PerformancePreset fromKey(char k) {
+	        for (PerformancePreset c : values()) {
+	            if (c.key == k) return c;
+	        }
+	        return null;
+	    }
+	    
+	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app);
+	}
+	
+	ArrayList<PerformancePreset> presetStack = new ArrayList<>();
+	
+	static class CueResult {
+	    final PACurveMaker curve;
+	    final GestureGranularConfig.Builder cfg;
+	    CueResult(PACurveMaker curve, GestureGranularConfig.Builder cfg) {
+	        this.curve = curve;
+	        this.cfg = cfg;
+	    }
+	}
 	
 	//------------- APPLICATION CODE -------------//
 	
@@ -526,8 +610,8 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void setup() {
 		// set a standard animation framerate -- in most example sketches we use 44100
 		// but in performance sketches like DeadBodyWorkFlow we use 48000
-		frameRate = 48000;    // could be a little redundant, but I'm too lazy to scroll up to the top
-		frameRate(frameRate);
+		sampleRate = 48000;    // could be a little redundant, but I'm too lazy to scroll up to the top
+		frameRate(120);
 		surface.setTitle("Granular Playground");
 		surface.setLocation(60, 20);
 		// 1) initialize our library
@@ -667,7 +751,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * and for sampler synthesis, defaultSampConfig.
 	 */
 	public void initConfig() {
-		granularEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.9f, 0.025f);
+		granularEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.975f, 0.025f);
 		defaultGranConfig.grainLengthSamples = granLength;
 		defaultGranConfig.hopLengthSamples = granHop;
 		defaultGranConfig.curveSteps = curveSteps;
@@ -933,6 +1017,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	 */
 	public void parseKey(char key, int keyCode) {
 		String msg;
+		if ("0123456789".contains("" + key)) {numericKey(key);}
 		switch(key) {
 		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
 			if (doMagicClick) {
@@ -945,8 +1030,8 @@ public class DeadBodyWorkFlow extends PApplet {
 			}
 			if (hoverBrush != null) {
 				if (hoverBrush instanceof SamplerBrush sb) {
-					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
-					println("----->> frame rate = "+ frameRate);
+					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY)); 
+					println("----->> frame rate = "+ this.frameRate);
 				}
 				else if (hoverBrush instanceof GranularBrush gb) {
 					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
@@ -1105,7 +1190,21 @@ public class DeadBodyWorkFlow extends PApplet {
 			break;
 		}
 	}
-
+	
+	void numericKey(char key) {
+	    PerformancePreset cue = PerformancePreset.fromKey(key);
+	    if (cue != null) {
+	        if (presetStack.contains(cue)) {
+	            presetStack.remove(cue);
+	        } else {
+	            presetStack.add(cue);
+	        }
+	    } else if (key == '0') {
+	        presetStack.clear();
+	    }
+	    println("-- cues: " + presetStack);
+	}
+	
 	/**
 	 * to generate help output, run RegEx search/replace on parseKey case lines with:
 	 * // case ('.'): // (.+)
@@ -2395,32 +2494,65 @@ public class DeadBodyWorkFlow extends PApplet {
 		}
 	}
 	
+	/**
+	 * End point for all makeBrush(...) calls, applies cues and special fx.
+	 * 
+	 * @param curve
+	 * @param config
+	 * @param instrumentType
+	 * @return
+	 */
 	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config,
 	        GestureGranularConfigIO.InstrumentType instrumentType) {
+		// prepare
+        GestureGranularConfig.Builder cfg = config.copy();
+		PACurveMaker useCurve = curve;
+		// handle cues
+		CueResult r = applyPresetStack(cfg, curve);
+		cfg = r.cfg;
+		useCurve = r.curve;
+		// now make brushes
 	    if (instrumentType == GestureGranularConfigIO.InstrumentType.SAMPLER) {
-	        GestureGranularConfig.Builder cfg = config.copy();
-	        SamplerBrush sb = new SamplerBrush(curve, cfg);
+	        SamplerBrush sb = new SamplerBrush(useCurve, cfg);
 	        samplerBrushes.add(sb);
 	        setActiveBrush(sb, samplerBrushes.size() - 1);
 	        if (this.isAutoOptimize) optimizeActiveBrush();
 	        syncEnvelopeMenu(cfg.env);
 	        if (isVerbose) println("----- new sampler brush created");
 	        return sb;
-	    }
-	    else {
-	        GestureGranularConfig.Builder cfg = config.copy();
+	    } else {
 	        cfg.curveSteps = Math.min(cfg.curveSteps, 32);
 	        // Granular events use a stable envelope profile.
 	        // We do not fit ADSR to gesture duration; onset shape matters more than total span.
 	        cfg.env = granularEnv;
-	        GranularBrush gb = new GranularBrush(curve, cfg);
+	        GranularBrush gb = new GranularBrush(useCurve, cfg);
 	        granularBrushes.add(gb);
 	        setActiveBrush(gb, granularBrushes.size() - 1);
 	        if (this.isAutoOptimize) optimizeActiveBrush();
 	        if (isVerbose) println("----- new granular brush created");
 	        return gb;
 	    }
-	}	
+	}
+
+//	public void applyCue(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+//	    if (dbCue != null) dbCue.apply(cfg, curve, this);
+//	}
+	
+	public CueResult applyPresetStack(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+	    if (presetStack == null || presetStack.isEmpty()) {
+	        return new CueResult(curve, cfg);
+	    }
+	    PACurveMaker curCurve = curve;
+	    GestureGranularConfig.Builder curCfg = cfg;
+	    for (PerformancePreset cue : presetStack) {
+	        CueResult r = cue.apply(curCfg, curCurve, this);
+	        if (r != null) {
+	            if (r.cfg != null) curCfg = r.cfg;
+	            if (r.curve != null) curCurve = r.curve;
+	        }
+	    }
+	    return new CueResult(curCurve, curCfg);
+	}
 	
 	boolean isBrushInteractable(AudioBrush b) {
 	    switch (drawingMode) {
