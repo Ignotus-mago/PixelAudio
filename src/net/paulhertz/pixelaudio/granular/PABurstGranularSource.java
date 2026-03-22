@@ -121,7 +121,7 @@ public final class PABurstGranularSource implements PASource {
             }
         }
 
-        // OLA normalization (in-place, safe in your architecture)
+        // OLA normalization (Overlap-Add normalization, in-place)
         final float eps = 1e-12f;
         for (int i = 0; i < blockSize; i++) {
             float den = wsum[i];

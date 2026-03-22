@@ -159,10 +159,9 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     @Override
     protected synchronized void uGenerate(float[] channels) {
         Arrays.fill(channels, 0f);
-
         int activeCount = 0;
-
-        Iterator<PASamplerVoice> it = voices.iterator();
+        
+        Iterator<PASamplerVoice> it = voices.iterator();  
         while (it.hasNext()) {
             PASamplerVoice v = it.next();
 
@@ -176,13 +175,11 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
             if (v.isActive() || v.isReleasing()) {
                 activeCount++;
-
                 float pan = v.getPan(); // [-1, +1]
                 // constant-power panning
                 float theta = (pan + 1f) * (float)(Math.PI * 0.25); // 0..pi/2
                 float leftGain  = (float)Math.cos(theta);
                 float rightGain = (float)Math.sin(theta);
-
                 channels[0] += sample * leftGain;
                 if (channels.length > 1) channels[1] += sample * rightGain;
             }
@@ -202,6 +199,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
         // smoothing: alpha 0.05..0.2
         float alpha = 0.12f;
+        // 1-pole low-pass filter
         mixNorm += alpha * (targetNorm - mixNorm);
 
         float g = mixNorm * masterGain;
