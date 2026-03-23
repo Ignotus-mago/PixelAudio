@@ -183,7 +183,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press DOWN ARROW to decrease audio output volume by 3.0 dB.
  * Numeric keys are reserved for presets which affect new brushes. See the PerformancePreset enum
  *   If you are using presets with PerformancePreset, '0' is reserved for clearing the preset stack.
- * Press ' ' (spacebar) to trigger a brush if you're hovering over a brush, or to trigger a point event.
+ * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
  * Press 'c' or 'C' to print the current configuration status to the console.
  * Press 't' to switch between Granular and Sampler editing and playing.
  * Press 'z' to change the drawing mode of the hover brush.
@@ -203,6 +203,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'g' to create a beatBrush.
  * Press 'G' to create a beatBrush.
+ * Press 'l' to loop hovered granular brush 4 times.
+ * Press 'L' to infinite loop on hovered granular brush.
+ * Press ';' to stop loop for hovered brush.
+ * Press ':' to stop all loops.
  * Press 'y' to toggle transform animation test.
  * Press 'Y' to freeze / unfreeze.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
@@ -210,7 +214,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press '≈' to option-x on MacOS keyboard, clear all brushes.
  * Press '`' to fade out all instruments.
  * Press 'h' or 'H' to show help message.
-  * </pre>
+ * </pre>
  * </p>
  * 
  * </DIV>
@@ -605,6 +609,46 @@ public class DeadBodyWorkFlow extends PApplet {
 	    }
 	}
 	
+	/* ------------------------------------------------------------------ */
+	/*                                LOOPING                             */
+	/* ------------------------------------------------------------------ */
+	
+	static class InstrumentLoop {
+		final AudioBrush brush;     // optional owner, useful later for hover/cancel
+		final Runnable playAction;
+		final Runnable stopAction;
+
+		final int durationMs;       // one cycle duration
+		final int gapMs;            // silence between cycles
+		int repeatsRemaining;       // -1 = infinite
+		long nextStartMillis;       // next trigger time
+		boolean active = true;
+
+		InstrumentLoop(AudioBrush brush,
+		               Runnable playAction,
+		               Runnable stopAction,
+		               int durationMs,
+		               int gapMs,
+		               int repeatsRemaining,
+		               long nextStartMillis) {
+			this.brush = brush;
+			this.playAction = playAction;
+			this.stopAction = stopAction;
+			this.durationMs = Math.max(1, durationMs);
+			this.gapMs = Math.max(0, gapMs);
+			this.repeatsRemaining = repeatsRemaining;
+			this.nextStartMillis = nextStartMillis;
+		}
+
+		void stop() {
+			active = false;
+			if (stopAction != null) stopAction.run();
+		}
+	}
+	
+	final ArrayList<InstrumentLoop> activeLoops = new ArrayList<>();
+
+	
 	//------------- APPLICATION CODE -------------//
 	
 	/**
@@ -828,6 +872,8 @@ public class DeadBodyWorkFlow extends PApplet {
 				PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
 			}
 		}
+		// 3.5) loooooooping
+		updateInstrumentLoops();
 		// 4) depending on your event dispatching model, run scheduled events
 	    runSamplerBrushEvents();
 	    runPointEvents();
@@ -1108,7 +1154,7 @@ public class DeadBodyWorkFlow extends PApplet {
 			baseImage.updatePixels();
 			refreshMapImageFromBase();
 			break;
-		case 'l': case 'L': // toggle loading data to both image and audio buffers when you open either an image or an audio file
+		case 'b': case 'B': // toggle loading data to both image and audio buffers when you open either an image or an audio file
 			isLoadToBoth = !isLoadToBoth;
 			println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
 			break;
@@ -1156,12 +1202,46 @@ public class DeadBodyWorkFlow extends PApplet {
 			this.granularBrushes.add(gBeatBrush);
 			setActiveBrush(gBeatBrush);
 			break;
+		// LOOPING
 		case 'G': // create a beatBrush
 			SamplerBrush sBeatBrush = generateSamplerBeatBrush(256, 117);
 			this.samplerBrushes.add(sBeatBrush);
 			setActiveBrush(sBeatBrush);
 			break;
-		case 'y':   // toggle transform animation test
+		case 'l': // loop hovered granular brush 4 times
+			if (hoverBrush instanceof GranularBrush gb) {
+				loopGranularBrush(gb, 4, 150);
+				println("-- started granular loop x4");
+			}
+			else if (activeBrush instanceof GranularBrush gb) {
+				loopGranularBrush(gb, 4, 150);
+				println("-- started granular loop x4");
+			}
+			break;
+		case 'L': // infinite loop on hovered granular brush
+			if (hoverBrush instanceof GranularBrush gb) {
+				loopGranularBrush(gb, -1, 150);
+				println("-- started infinite granular loop");
+			}
+			else if (activeBrush instanceof GranularBrush gb) {
+				loopGranularBrush(gb, -1, 150);
+				println("-- started infinite granular loop");
+			}
+			break;
+		case ';': // stop loop for hovered brush
+			if (hoverBrush != null) {
+				stopLoopsForBrush(hoverBrush);
+				println("-- stopped loops for hover brush");
+			}
+			else if (activeBrush != null) {
+				stopLoopsForBrush(activeBrush);
+				println("-- stopped loops for active brush");
+			}
+			break;
+		case ':': // stop all loops
+			stopAllLoops();
+			println("-- stopped all loops");
+			break;		case 'y':   // toggle transform animation test
 		    isBrushTransformTest = !isBrushTransformTest;
 		    if (isBrushTransformTest) {
 		        if (activeBrush != null) {
@@ -1175,6 +1255,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		        println("-- brush transform test OFF");
 		    }
 		    break;
+		// BRUSH ANIMATON
 		case 'Y':   // freeze / unfreeze
 		    isBrushTransformFrozen = !isBrushTransformFrozen;
 		    println("-- brush transform frozen = " + isBrushTransformFrozen);
@@ -1252,6 +1333,10 @@ public class DeadBodyWorkFlow extends PApplet {
 		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
 		println(" * Press 'g' to create a beatBrush.");
 		println(" * Press 'G' to create a beatBrush.");
+		println(" * Press 'l' to loop hovered granular brush 4 times.");
+		println(" * Press 'L' to infinite loop on hovered granular brush.");
+		println(" * Press ';' to stop loop for hovered brush.");
+		println(" * Press ':' to stop all loops.");
 		println(" * Press 'y' to toggle transform animation test.");
 		println(" * Press 'Y' to freeze / unfreeze.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
@@ -1986,6 +2071,112 @@ public class DeadBodyWorkFlow extends PApplet {
 	}
 	
 	
+	public synchronized void updateInstrumentLoops() {
+		if (activeLoops.isEmpty()) return;
+		long now = millis();
+		for (InstrumentLoop loop : activeLoops) {
+			if (!loop.active) continue;
+			if (now >= loop.nextStartMillis) {
+				loop.playAction.run();
+				if (loop.repeatsRemaining > 0) {
+					loop.repeatsRemaining--;
+					if (loop.repeatsRemaining == 0) {
+						loop.active = false;
+						continue;
+					}
+				}
+				loop.nextStartMillis = now + loop.durationMs + loop.gapMs;
+			}
+		}
+		activeLoops.removeIf(loop -> !loop.active);
+	}
+
+	public synchronized void stopAllLoops() {
+		for (InstrumentLoop loop : activeLoops) {
+			loop.stop();
+		}
+		activeLoops.clear();
+	}
+
+	public synchronized void stopLoopsForBrush(AudioBrush brush) {
+		if (brush == null || activeLoops.isEmpty()) return;
+		for (InstrumentLoop loop : activeLoops) {
+			if (loop.brush == brush) {
+				loop.stop();
+			}
+		}
+		activeLoops.removeIf(loop -> !loop.active);
+	}
+
+	public synchronized boolean hasLoopForBrush(AudioBrush brush) {
+		if (brush == null) return false;
+		for (InstrumentLoop loop : activeLoops) {
+			if (loop.active && loop.brush == brush) return true;
+		}
+		return false;
+	}
+	
+	public int estimateLoopDurationMs(GestureSchedule sched, GestureGranularParams params) {
+		if (sched == null || sched.size() == 0) return 1;
+		int schedMs = Math.max(1, Math.round(sched.durationMs()));
+		int grainTailMs = 0;
+		if (params != null) {
+			grainTailMs = (int) Math.max(0, Math.round(AudioUtility.samplesToMillis(params.grainLengthSamples, sampleRate)));
+		}
+		return schedMs + grainTailMs;
+	}
+	
+	public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
+			float[] buf, 
+			GestureSchedule sched,
+			GestureGranularParams params,
+			GestureEventParams eventParams,
+			int repeats,
+			int gapMs,
+			boolean animate) {
+		if (gb == null || buf == null || sched == null || params == null || eventParams == null) return null;
+		int durationMs = estimateLoopDurationMs(sched, params);
+		long startMs = millis();
+
+		Runnable playAction = () -> {
+			playGranularGesture(buf, sched, params, eventParams);
+			if (animate) {
+				storeGranularCurveTL(sched, millis() + 10, false);
+			}
+		};
+
+		Runnable stopAction = () -> {
+			if (grainTimeLocs != null) {
+				for (TimedLocation tl : grainTimeLocs) {
+					tl.setStale(true);
+				}
+				grainTimeLocs.removeIf(TimedLocation::isStale);
+			}
+			if (gDir != null) {
+				gDir.cancelAndReleaseAll();
+			}
+		};
+
+		InstrumentLoop loop = new InstrumentLoop(gb, playAction, stopAction, 
+				durationMs, gapMs, repeats, startMs);
+		activeLoops.add(loop);
+		return loop;
+	}
+	
+	public InstrumentLoop loopGranularBrush(GranularBrush gb, int repeats, int gapMs) {
+	    if (gb == null) return null;
+	    ensureGranularReady();
+	    GestureGranularConfig.Builder cfg = gb.cfg().copy();
+	    CueResult result = applyPresets(cfg, gb.curve());
+	    PACurveMaker curve = result.curve;
+	    GestureGranularConfig snap = result.cfg.build();
+	    GestureSchedule sched = scheduleBuilder.build(curve, snap, audioOut.sampleRate());
+	    if (sched == null || sched.size() == 0) return null;
+	    GestureGranularParams params = snap.toParams();
+	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
+	    GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
+	}
 	
 	// -------------- METHODS TO PLAY SAMPLING OR GRANULAR SYNTH ------------- //
 		
