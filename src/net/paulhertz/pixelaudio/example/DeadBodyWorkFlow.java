@@ -181,7 +181,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <pre>
  * Press UP ARROW to increase audio output volume by 3.0 dB.
  * Press DOWN ARROW to decrease audio output volume by 3.0 dB.
- * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.
+ * Numeric keys are reserved for presets which affect new brushes. See the PerformancePreset enum
+ *   If you are using presets with PerformancePreset, '0' is reserved for clearing the preset stack.
+ * Press ' ' (spacebar) to trigger a brush if you're hovering over a brush, or to trigger a point event.
  * Press 'c' or 'C' to print the current configuration status to the console.
  * Press 't' to switch between Granular and Sampler editing and playing.
  * Press 'z' to change the drawing mode of the hover brush.
@@ -189,18 +191,26 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
- * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
+ * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio
  * Press 'f' or 'F' to open a folder with JSON brush data and load all files.
  * Press 'j' to save the active brush curve and config to JSON files.
  * Press 'J' to save all brushes curve and config to JSON Session file.
  * Press 'o' to open an audio file, image file, or JSON file.
- * Press 'm' to toggle doMagicClick: play top brushstroke within a rectangular division of the display.
+ * Press 'm' to toggle doMagicClick .
+ * Press 'r' to reset configuration of active brush.
+ * Press 'R' to reset synths to defaults.
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
  * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
+ * Press 'g' to create a beatBrush.
+ * Press 'G' to create a beatBrush.
+ * Press 'y' to toggle transform animation test.
+ * Press 'Y' to freeze / unfreeze.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
- * Press 'h' or 'H' to show this help message in the console.
- * </pre>
+ * Press '≈' to option-x on MacOS keyboard, clear all brushes.
+ * Press '`' to fade out all instruments.
+ * Press 'h' or 'H' to show help message.
+  * </pre>
  * </p>
  * 
  * </DIV>
@@ -430,6 +440,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	ArrayList<TimedLocation> grainTimeLocs;      // a list of timed events for Granular brushes
 	
 	boolean pointEventUseSampler = true;
+	boolean runningFadeOut = true;
 	
 	/* ------------------------------------------------------------------ */
 	/*                  GRAPHIC USER INTERFACE VARIABLES                  */
@@ -1119,14 +1130,14 @@ public class DeadBodyWorkFlow extends PApplet {
 			doMagicClick = !doMagicClick;
 			println(doMagicClick ? "-- doMagicClick is true" : "-- doMagicClick is false");
 			break;
-		case 'r': 
+		case 'r': // reset configuration of active brush
 		    if (activeBrush != null && activeBrush.hasTransform()) {
 		        activeBrush.restoreTransform();
 		        activeBrush.transform().resetTransform();
 		        println("-- restored active brush transform");
 		    }
 			break;
-		case 'R': // reset synths to defaults -- TODO may be dropped
+		case 'R': // reset synths to defaults 
 			resetToDefaults(); 
 			break;
 		case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
@@ -1183,6 +1194,12 @@ public class DeadBodyWorkFlow extends PApplet {
 			granularBrushes.clear();
 			samplerBrushes.clear();
 			break;
+		case '`': // fade out all instruments
+			suspendScheduledEvents();
+			if (pool != null) pool.fadeOutAll();
+			if (gDir != null) gDir.cancelAndReleaseAll();
+			println("-- fade out all");
+			break;
 		case 'h': case 'H': // show help message
 			showHelp();
 			break;
@@ -1213,7 +1230,9 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void showHelp() {
 		println(" * Press UP ARROW to increase audio output volume by 3.0 dB.");
 		println(" * Press DOWN ARROW to decrease audio output volume by 3.0 dB.");
-		println(" * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
+		println(" * Numeric keys are reserved for presets which affect new brushes. See the PerformancePreset enum");
+		println(" *   If you are using presets with PerformancePreset, '0' is reserved for clearing the preset stack.");
+		println(" * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.");
 		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
 		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
@@ -1221,18 +1240,25 @@ public class DeadBodyWorkFlow extends PApplet {
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
-		println(" * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
+		println(" * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio");
 		println(" * Press 'f' or 'F' to open a folder with JSON brush data and load all files.");
 		println(" * Press 'j' to save the active brush curve and config to JSON files.");
 		println(" * Press 'J' to save all brushes curve and config to JSON Session file.");
 		println(" * Press 'o' to open an audio file, image file, or JSON file.");
-		println(" * Press 'm' to toggle doMagicClick: play top brushstroke within a rectangular division of the display.");
-		// println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
+		println(" * Press 'm' to toggle doMagicClick .");
+		println(" * Press 'r' to reset configuration of active brush.");
+		println(" * Press 'R' to reset synths to defaults.");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
 		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
+		println(" * Press 'g' to create a beatBrush.");
+		println(" * Press 'G' to create a beatBrush.");
+		println(" * Press 'y' to toggle transform animation test.");
+		println(" * Press 'Y' to freeze / unfreeze.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
-		println(" * Press 'h' or 'H' to show this help message in the console.");
+		println(" * Press '≈' to option-x on MacOS keyboard, clear all brushes.");
+		println(" * Press '`' to fade out all instruments.");
+		println(" * Press 'h' or 'H' to show help message.");
 	}
 
 	/**
@@ -1309,6 +1335,27 @@ public class DeadBodyWorkFlow extends PApplet {
 			// gConfig = defaultGranularConfig.copy();
 		}
 		syncGuiFromConfig();    // enable or disable controls, depending on the drawing mode
+	}
+	
+	public synchronized void fadeOutGranularNow() {
+		if (gDir != null) gDir.cancelAndReleaseAll();
+	}
+
+	public synchronized void stopGranularNow() {
+		if (gDir != null) gDir.cancelAndStopAll();
+	}
+	
+	public synchronized void suspendScheduledEvents() {
+	    for (TimedLocation tl : this.pointTimeLocs) {
+	        tl.setStale(true);
+	    }
+	    for (TimedLocation tl : this.samplerTimeLocs) {
+	        tl.setStale(true);
+	    }
+	    for (TimedLocation tl : this.grainTimeLocs) {
+	        tl.setStale(true);
+	    }
+	    grainTimeLocs.removeIf(TimedLocation::isStale);		// necessary on fade-out
 	}
 
 	
@@ -2001,102 +2048,47 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * @param params    core parameters for granular synthesis
 	 */
 	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
-		// get the position of each grain we're going to play as an array of indices into the audio buffer
-		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
-		//println("---> startIndices[0] = "+ startIndices[0] +" for "+ sched.points.get(0).x, sched.points.get(0).y, totalShift, mapper.getSize());
-		// calculate the panning for each grain and save it to an array of float with range (-1.0, 1.0)
-		float[] panPerGrain = new float[sched.size()];
-		for (int i = 0; i < sched.size(); i++) {
-		    PVector p = sched.points.get(i);
-		    // use the x-coordinate for left to right stereo field mapping
-		    panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
-		}
-		println("\n----->>> playGranularGesture()");
-		//debugIndexHeadroom(buf, startIndices, params);
-		//debugTimesMs(sched);
-		//println("\n");
-		// we can can set start pitch and gain for each grain, but we need to create a GestureEventParams
-		// object to do that. We don't both with a gain array here. 
-		if (usePitchedGrains) {
-			float[] pitch = generateJitterPitch(sched.size(), 0.0167f);
-            GestureEventParams eventParams = GestureEventParams.builder(sched.size())
-                .startIndices(startIndices)
-                .pan(panPerGrain)
-                .pitchRatio(pitch)
-                .build();
-            // this is the playGestureNow() command with maximum control over individual grains
-			gDir.playGestureNow(buf, sched, params, eventParams);
-			println("-- pitch jitter -- "+ pitch[0]);
-			return;
-		}
-		// there's a version of playGestureNow that accepts a array of buffer indices and and array panning values
-		gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
+		GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+		playGranularGesture(buf, sched, params, eventParams);
 	}
 	
-	// debugging -- TODO drop in release
-	static void debugIndexHeadroom(float[] buf, int[] startIndices, GestureGranularParams ggp) {
-	    int bufLen = buf.length;
-	    int grainLen = Math.max(1, ggp.grainLengthSamples);
-	    int hop = Math.max(1, ggp.hopLengthSamples);
-	    int burst = Math.max(1, ggp.burstGrains);
-	    float pitch = (ggp.pitchRatio > 0f) ? ggp.pitchRatio : 1.0f;
-
-	    int indexHop = hop; // your current semantics
-	    int need = (int)Math.ceil((grainLen - 1) * pitch) + (burst - 1) * indexHop;
-
-	    int maxStart = bufLen - 2 - need;
-	    if (maxStart < 0) maxStart = 0;
-
-	    int over = 0;
-	    int maxIdx = Integer.MIN_VALUE;
-	    int minIdx = Integer.MAX_VALUE;
-
-	    for (int idx : startIndices) {
-	        if (idx > maxStart) over++;
-	        if (idx > maxIdx) maxIdx = idx;
-	        if (idx < minIdx) minIdx = idx;
-	    }
-
-	    System.out.println("-- bufLen=" + bufLen
-	        + " grainLen=" + grainLen
-	        + " burst=" + burst
-	        + " hop=" + hop
-	        + " pitch=" + pitch
-	        + " need=" + need
-	        + " maxStart=" + maxStart);
-	    System.out.println("-- startIndices: min=" + minIdx + " max=" + maxIdx
-	        + " overMaxStart=" + over + "/" + startIndices.length);
+	/**
+	 * Primary method for playing a granular synthesis audio event.
+	 * 
+	 * @param buf            an audio signal as a array of float
+	 * @param sched          GestureSchedule (points + times) for grains
+	 * @param params         core parameters for granular synthesis
+	 * @param eventParams    event parameters for granular synthesis
+	 */
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params, GestureEventParams eventParams) {       
+		gDir.playGestureNow(buf, sched, params, eventParams);
 	}
 
-	// debugging -- TODO drop in release
-	static void debugTimesMs(GestureSchedule s) {
-	    int n = s.size();
-	    if (n <= 1 || s.timesMs == null) return;
-
-	    float[] t = s.timesMs;
-	    float t0 = t[0];
-	    float tLast = t[n - 1];
-
-	    float minDt = Float.POSITIVE_INFINITY;
-	    float maxDt = Float.NEGATIVE_INFINITY;
-	    int nonInc = 0;
-	    int tiny = 0;
-
-	    for (int i = 1; i < n; i++) {
-	        float dt = t[i] - t[i - 1];
-	        if (dt <= 0f) nonInc++;
-	        if (dt >= 0f && dt < 0.1f) tiny++; // <0.1ms buckets into same ~4 samples at 44.1k
-	        if (dt < minDt) minDt = dt;
-	        if (dt > maxDt) maxDt = dt;
-	    }
-
-	    System.out.println("-- sched n=" + n
-	        + " spanMs=" + (tLast - t0)
-	        + " t0=" + t0 + " tLast=" + tLast);
-	    System.out.println("-- dtMs min=" + minDt
-	        + " max=" + maxDt
-	        + " nonInc=" + nonInc
-	        + " tiny(<0.1ms)=" + tiny);
+	public GestureEventParams prepareGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
+		GestureEventParams eventParams;
+		// get the position of each grain we're going to play as an array of indices into the audio buffer
+		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
+		float[] panPerGrain = new float[sched.size()];
+		for (int i = 0; i < sched.size(); i++) {
+			PVector p = sched.points.get(i);
+			// use the x-coordinate for left to right stereo field mapping
+			panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
+		}
+		if (usePitchedGrains) {
+			float[] pitch = generateJitterPitch(sched.size(), 0.0167f);
+			eventParams = GestureEventParams.builder(sched.size())
+					.startIndices(startIndices)
+					.pan(panPerGrain)
+					.pitchRatio(pitch)
+					.build();
+		}
+		else {
+			eventParams = GestureEventParams.builder(sched.size())
+					.startIndices(startIndices)
+					.pan(panPerGrain)
+					.build();
+		}
+		return eventParams;
 	}
 	
 	/**
@@ -2508,7 +2500,7 @@ public class DeadBodyWorkFlow extends PApplet {
         GestureGranularConfig.Builder cfg = config.copy();
 		PACurveMaker useCurve = curve;
 		// handle cues
-		CueResult r = applyPresetStack(cfg, curve);
+		CueResult r = applyPresets(cfg, curve);
 		cfg = r.cfg;
 		useCurve = r.curve;
 		// now make brushes
@@ -2538,7 +2530,7 @@ public class DeadBodyWorkFlow extends PApplet {
 //	    if (dbCue != null) dbCue.apply(cfg, curve, this);
 //	}
 	
-	public CueResult applyPresetStack(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+	public CueResult applyPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
 	    if (presetStack == null || presetStack.isEmpty()) {
 	        return new CueResult(curve, cfg);
 	    }
@@ -2768,6 +2760,8 @@ public class DeadBodyWorkFlow extends PApplet {
 
 	/**
 	 * Reinitializes audio and clears event lists. If isClearCurves is true, clears brushShapesList.
+	 * There's no key command to trigger this, yet. TODO decide if you want a key command. 
+	 * 
 	 * @param isClearCurves
 	 */
 	public void reset(boolean isClearCurves) {
@@ -3241,7 +3235,7 @@ public class DeadBodyWorkFlow extends PApplet {
 				}
 			}
 		}
-		// grainLocsArray.removeIf(TimedLocation::isStale);		// not necessary if we remove in loop
+		// grainTimeLocs.removeIf(TimedLocation::isStale);		// necessary on fade-out, otherwise iteration does pruning
 	}
 
 	/**

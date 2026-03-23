@@ -260,7 +260,26 @@ public class PAGranularInstrument {
         stopAll();
         // sampler is a UGen patched to out — optionally leave patch on
     }
+    
+    // fade or stop
+    
+    public void clearScheduled() {
+        if (sampler != null) sampler.clearScheduled();
+    }
 
+    public void releaseAll() {
+        if (sampler != null) sampler.releaseAll();
+    }
+
+    public void cancelAndStopAll() {
+        if (sampler != null) sampler.cancelAndStopAll();
+    }
+
+    public void cancelAndReleaseAll() {
+        if (sampler != null) sampler.cancelAndReleaseAll();
+    }
+
+    
     // ------------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------------

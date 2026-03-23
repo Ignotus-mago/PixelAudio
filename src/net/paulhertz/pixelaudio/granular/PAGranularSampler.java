@@ -358,6 +358,48 @@ public class PAGranularSampler extends UGen {
             for (PAGranularVoice v : voices) v.stop();
         }
     }
+    
+    /**
+     * Remove all pending scheduled starts that have not yet been launched.
+     * Does not affect currently active voices.
+     */
+    public synchronized void clearScheduled() {
+        scheduler.clear();
+    }
+
+    /**
+     * Release all currently active or releasing voices.
+     * Useful for a musical stop after clearing pending scheduled starts.
+     */
+    public synchronized void releaseAll() {
+        for (PAGranularVoice v : voices) {
+            if (v.isActive() || v.isReleasing()) {
+                v.release();
+            }
+        }
+    }
+
+    /**
+     * Clear pending scheduled starts and immediately stop all active voices.
+     */
+    public synchronized void cancelAndStopAll() {
+        scheduler.clear();
+        for (PAGranularVoice v : voices) {
+            v.stop();
+        }
+    }
+
+    /**
+     * Clear pending scheduled starts and release currently sounding voices.
+     */
+    public synchronized void cancelAndReleaseAll() {
+        scheduler.clear();
+        for (PAGranularVoice v : voices) {
+            if (v.isActive() || v.isReleasing()) {
+                v.release();
+            }
+        }
+    }
 
     public void setMaxVoices(int maxVoices) {
         this.maxVoices = Math.max(1, maxVoices);

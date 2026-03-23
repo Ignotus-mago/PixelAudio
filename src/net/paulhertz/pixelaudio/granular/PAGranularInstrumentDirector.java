@@ -27,6 +27,8 @@ public final class PAGranularInstrumentDirector {
     private GestureGranularParams lastOffsetsParamsRef = null;
     private GestureSchedule lastTransformedScheduleRef = null;
     private GestureSchedule lastOffsetsScheduleRef = null;
+    
+    // Performance fade state
 
 
     private static final WindowFunction DEFAULT_GRAIN_WINDOW = new HannWindow();
@@ -407,5 +409,26 @@ public final class PAGranularInstrumentDirector {
 		if (p >  1f) return  1f;
 		return p;
 	}
+	
+ 
+    // ------------------------------------------------------------------------
+    // Performance fade methods
+    // ------------------------------------------------------------------------
+	
+    public synchronized void clearScheduled() {
+        if (instrument != null) instrument.clearScheduled();
+    }
 
+    public synchronized void releaseAll() {
+        if (instrument != null) instrument.releaseAll();
+    }
+
+    public synchronized void cancelAndStopAll() {
+        if (instrument != null) instrument.cancelAndStopAll();
+    }
+
+    public synchronized void cancelAndReleaseAll() {
+        if (instrument != null) instrument.cancelAndReleaseAll();
+    }
+    
 }

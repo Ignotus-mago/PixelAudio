@@ -144,6 +144,21 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	public void stop() {
 		if (sampler != null) sampler.stopAll();
 	}
+	
+	/** 
+	 * Smoothly stop all active voices by triggering their envelope release.
+	 * This is the preferred performance stop.
+	 */
+	public void fadeToStop() {
+		releaseAllVoices();
+	}
+
+	/**
+	 * Alias for fadeToStop(), useful when calling from UI or pool code.
+	 */
+	public void fadeOutAll() {
+		fadeToStop();
+	}	
 
 	// ------------------------------------------------------------------------
 	// Core playback - legacy playSample() overloads
@@ -294,8 +309,8 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/** Smoothly release all active voices (used only if we must recycle an instrument). */
 	public void releaseAllVoices() {
-	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
-	    for (PASamplerVoice v : s.getVoices()) {
+		if (!(getSampler() instanceof PASharedBufferSampler s)) return;
+		for (PASamplerVoice v : s.getVoices()) {
 	        if (v.isActive() || v.isReleasing()) v.release();
 	    }
 	}

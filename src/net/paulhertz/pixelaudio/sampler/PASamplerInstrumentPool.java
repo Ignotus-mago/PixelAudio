@@ -221,6 +221,23 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     public synchronized void stopAll() {
         stop();
     }
+    
+    /**
+     * Smoothly release all active voices on all instruments.
+     * Preferred for live transitions and endings.
+     */
+    public synchronized void fadeOutAll() {
+        for (PASamplerInstrument inst : pool) {
+            if (inst != null) inst.fadeToStop();
+        }
+    }
+
+    /**
+     * Alias for fadeOutAll(), if you prefer the same naming style as instruments.
+     */
+    public synchronized void releaseAll() {
+        fadeOutAll();
+    }   
 
     // ------------------------------------------------------------------------
     // Backward-compatible playSample(...) overloads
