@@ -65,7 +65,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing, 
  * a brushstroke appears when you release the mouse. TutorialOne_03_Drawing gave you limited control over
  * the attributes of the brushstroke and its associated audio parameters. In GesturePlayground, you can
- * control nearly all the available parameters with the control palette.</li> 
+ * control nearly all the available parameters with the control palette. Building on GesturePlayground,
+ * DeadBodyWorkFlow provides a framework for live performance. It is named after one of the first works
+ * I performed using the PixelAudio library, at Experimental Sound Studio, Chicago, 2023. You can probably 
+ * use it "right out of the box" by just supplying your own audio and image files.</li> 
  * 
  * <li>At the top of the control palette, you'll find Path Source radio buttons and sliders for setting 
  * the geometry of the brush curve. When the curve is set to Reduced Points or Curve Points, the epsilon 
@@ -108,8 +111,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   </ol>
  * </ol>
  * <p>
- * <h2>About GesturePlayground</h2>
- * <b>GesturePlayground</b> uses a GUI to provide a tour of the usage and properties of the <code>AudioBrush</code> 
+ * <h2>About DeadBodyWorkFlow</h2>
+ * <b>DeadBodyWorkFlow</b> uses a GUI to provide a tour of the usage and properties of the <code>AudioBrush</code> 
  * subclasses <code>GranularBrush</code> and <code>SamplerBrush</code>, the <code>GestureSchedule</code> class, and the
  * Sampler and Granular audio synthesis instruments <code>PASamplerInstrumentPool</code> and <code>PAGranularInstrumentDirector</code>.
  * An AudioBrush combines a <code>PACurveMaker</code> and a <code>GestureGranularConfig.Builder</code>. PACurveMaker
@@ -126,7 +129,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * are possibilities in each that the other cannot realize. As you might expect, GranularBrush implements granular synth
  * events and SamplerBrush implements sampler synth events. Both rely on PACUrveMaker which, in addition to capturing
  * the raw gesture of drawing a line, provides methods to reduce points / times and create Bezier paths. PACurveMaker 
- * data can also be modified by changing duration, interpolating samples, or non-linear time warping. GesturePlayground uses 
+ * data can also be modified by changing duration, interpolating samples, or non-linear time warping. DeadBodyWorkFlow uses 
  * <code>GestureScheduleBuilder</code> to interpolate and warp time and point lists. 
  * </p>
  * <p>The parameters for gesture modeling, granular and sampling synthesis, time and sample interpolation, and audio events are
@@ -333,6 +336,7 @@ public class DeadBodyWorkFlow extends PApplet {
     int maxBurstGrains = 4;
     int burstGrains = 1;
     boolean usePitchedGrains = false;
+    float pitchJitter = 0.0167f;
 
 	
 	/* ------------------------------------------------------------------ */
@@ -442,6 +446,9 @@ public class DeadBodyWorkFlow extends PApplet {
 	ArrayList<TimedLocation> pointTimeLocs;      // a list of timed events for mouse clicks
     ArrayList<TimedLocation> samplerTimeLocs;    // a list of timed events for Sampler brushes
 	ArrayList<TimedLocation> grainTimeLocs;      // a list of timed events for Granular brushes
+	final Object pointTimeLocsLock   = new Object();    // dedicated lock for pointTimeLocs access
+	final Object samplerTimeLocsLock = new Object();    // dedicated lock for samplerTimeLocsLock access
+	final Object grainTimeLocsLock   = new Object();    // dedicated lock for grainTimeLocsLock access
 	
 	boolean pointEventUseSampler = true;
 	boolean runningFadeOut = true;
@@ -510,7 +517,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
-	boolean isRunWordGame = true;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
+	boolean isRunWordGame = false;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
 	boolean doPlayOnDraw = false;       // play audio when a curve is drawn
 	boolean isAutoOptimize = false;     // optimize the freshly drawn curve before playing it 
 	boolean isSaveSession = true;       // save the session brushes ('J' key commend)
@@ -520,15 +527,18 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isBrushTransformTest = false;      // testing animation feature (key 'y')
 	boolean isBrushTransformFrozen = false;    // freeze animation (key 'Y')
 	
+	boolean isBrushSelectionModal = false;
+	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
 	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
-	String daFilename = "Bag_1_Gest_1-echo_mono.wav";    // "audioBlend.wav";
+	String daFilename = "bag_1_gest_1_tail.wav";    // "audioBlend.wav";
 	
 	/* ------------------------------------------------------------------ */
-	/*                                CUE LIST                            */
+	/*                              PRESET LIST                           */
 	/* ------------------------------------------------------------------ */
 
-	// CueListDBWF
+	// Presets for DeadBodyWorkFlow. Each performance of a work can have its own presets,
+	// without a need to alter the application framework. 
 	enum PerformancePreset {
 	    DURATION_4SEC('1') {
 	        @Override
@@ -580,6 +590,36 @@ public class DeadBodyWorkFlow extends PApplet {
 	        	cfg.targetDurationMs = curve.getTimeOffset() * 4;
 	            return new CueResult(curve, cfg);
 	        }
+	    },
+	    GLITCH_CORTO('4') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+	        	curve.setBezierBias(2.0f);
+	        	curve.setDrawWeighted(true);
+	        	cfg.rdpEpsilon = 8.0f;
+	        	cfg.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
+	        	cfg.hopLengthSamples = 256;
+	        	cfg.grainLengthSamples = 1024;
+	        	cfg.burstGrains = 4;
+	        	app.usePitchedGrains = true;
+	        	app.pitchJitter = 0.1f;
+	            return new CueResult(curve, cfg);
+	        }
+	    },
+	    GLITCH_LARGO('5') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+	        	curve.setBezierBias(0.5f);
+	        	curve.setDrawWeighted(true);
+	        	cfg.rdpEpsilon = 40.0f;
+	        	cfg.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
+	        	cfg.hopLengthSamples = 128;
+	        	cfg.grainLengthSamples = 512;
+	        	cfg.burstGrains = 16;
+	        	app.usePitchedGrains = true;
+	        	app.pitchJitter = 0.2f;
+	            return new CueResult(curve, cfg);
+	        }	    
 	    };
 
 	    final char key;
@@ -887,17 +927,33 @@ public class DeadBodyWorkFlow extends PApplet {
 		// Decide z-order: check the list you draw last *first*,
 		// so topmost brushes win.
 		// granular on top here, descending for loop means most recent brushes are on top
-		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
-			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
-				GranularBrush b = granularBrushes.get(i);
+		/* MODAL SELECTION */
+		if (isBrushSelectionModal) {
+			if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER || drawingMode == DrawingMode.PLAY_ONLY) {
+				for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+					SamplerBrush b = samplerBrushes.get(i);
+					if (mouseInPoly(b.curve().getBrushPoly())) {
+						return new BrushHit(b, i);
+					}
+				}
+			}
+			if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
+				for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+					GranularBrush b = granularBrushes.get(i);
+					if (mouseInPoly(b.curve().getBrushPoly())) {
+						return new BrushHit(b, i);
+					}
+				}
+			}
+		} else {
+			for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+				SamplerBrush b = samplerBrushes.get(i);
 				if (mouseInPoly(b.curve().getBrushPoly())) {
 					return new BrushHit(b, i);
 				}
 			}
-		}
-		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER || drawingMode == DrawingMode.PLAY_ONLY) {
-			for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
-				SamplerBrush b = samplerBrushes.get(i);
+			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+				GranularBrush b = granularBrushes.get(i);
 				if (mouseInPoly(b.curve().getBrushPoly())) {
 					return new BrushHit(b, i);
 				}
@@ -1021,7 +1077,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		int y = this.clipToHeight(mouseY);
 		BrushHit hit = findHoverHit();
 		if (hit != null) {
-			setActiveBrush(hit.brush);      // flag the hit brush as the activeBrush
+			openBrushEditor(hit.brush);      // flag the hit brush as the activeBrush
 			if (hit.brush instanceof SamplerBrush sb) {
 				scheduleSamplerBrushClick(sb, x, y);
 			}
@@ -1034,6 +1090,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		if (isVerbose) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
 		handleClickOutsideBrush(x, y);
 	}
+	
 	
 	/**
      * built-in keyPressed handler, forwards events to parseKey.
@@ -1054,7 +1111,6 @@ public class DeadBodyWorkFlow extends PApplet {
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == RIGHT) {
-
 			}
 			else if (keyCode == LEFT) {
 
@@ -1076,6 +1132,9 @@ public class DeadBodyWorkFlow extends PApplet {
 		String msg;
 		if ("0123456789".contains("" + key)) {numericKey(key);}
 		switch(key) {
+		case TAB:
+			if (isEditable() && hoverBrush !=  null) openBrushEditor(hoverBrush);
+			break;
 		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
 			if (doMagicClick) {
 				BrushHit hit = getBrushInRect(clipToWidth(mouseX), clipToHeight(mouseY), genWidth, genHeight/4);
@@ -1139,6 +1198,7 @@ public class DeadBodyWorkFlow extends PApplet {
 			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
+			pitchJitter = 0.0167f;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
 			println("-- Play granular synth with "+ msg);
 			break;
@@ -1158,7 +1218,7 @@ public class DeadBodyWorkFlow extends PApplet {
 			isLoadToBoth = !isLoadToBoth;
 			println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
 			break;
-		case 'f': case'F': // open a folder with JSON brush data and load all files
+		case 'f': case 'F': // open a folder with JSON brush data and load all files
 			chooseGestureLibraryFolder();
 			break;
 		case 'j': // save the active brush curve and config to JSON files
@@ -1209,24 +1269,41 @@ public class DeadBodyWorkFlow extends PApplet {
 			setActiveBrush(sBeatBrush);
 			break;
 		case 'l': // loop hovered granular brush 4 times
-			if (hoverBrush instanceof GranularBrush gb) {
-				loopGranularBrush(gb, 4, 150);
-				println("-- started granular loop x4");
-			}
-			else if (activeBrush instanceof GranularBrush gb) {
-				loopGranularBrush(gb, 4, 150);
-				println("-- started granular loop x4");
-			}
+			int loops = 4;
+		    if (hoverBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, loops, 150);
+		        println("-- started granular loop x4");
+		    }
+		    else if (hoverBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, loops, 150);
+		        println("-- started sampler loop x4");
+		    }
+		    else if (activeBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, loops, 150);
+		        println("-- started granular loop x4");
+		    }
+		    else if (activeBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, loops, 150);
+		        println("-- started sampler loop x4");
+		    }
 			break;
 		case 'L': // infinite loop on hovered granular brush
-			if (hoverBrush instanceof GranularBrush gb) {
-				loopGranularBrush(gb, -1, 150);
-				println("-- started infinite granular loop");
-			}
-			else if (activeBrush instanceof GranularBrush gb) {
-				loopGranularBrush(gb, -1, 150);
-				println("-- started infinite granular loop");
-			}
+		    if (hoverBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, -1, 150);
+		        println("-- started infinite granular loop");
+		    }
+		    else if (hoverBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, -1, 150);
+		        println("-- started infinite sampler loop");
+		    }
+		    else if (activeBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, -1, 150);
+		        println("-- started infinite granular loop");
+		    }
+		    else if (activeBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, -1, 150);
+		        println("-- started infinite sampler loop");
+		    }
 			break;
 		case ';': // stop loop for hovered brush
 			if (hoverBrush != null) {
@@ -1289,20 +1366,6 @@ public class DeadBodyWorkFlow extends PApplet {
 		}
 	}
 	
-	void numericKey(char key) {
-	    PerformancePreset cue = PerformancePreset.fromKey(key);
-	    if (cue != null) {
-	        if (presetStack.contains(cue)) {
-	            presetStack.remove(cue);
-	        } else {
-	            presetStack.add(cue);
-	        }
-	    } else if (key == '0') {
-	        presetStack.clear();
-	    }
-	    println("-- cues: " + presetStack);
-	}
-	
 	/**
 	 * to generate help output, run RegEx search/replace on parseKey case lines with:
 	 * // case ('.'): // (.+)
@@ -1321,14 +1384,14 @@ public class DeadBodyWorkFlow extends PApplet {
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
-		println(" * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio");
+		println(" * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
 		println(" * Press 'f' or 'F' to open a folder with JSON brush data and load all files.");
 		println(" * Press 'j' to save the active brush curve and config to JSON files.");
 		println(" * Press 'J' to save all brushes curve and config to JSON Session file.");
 		println(" * Press 'o' to open an audio file, image file, or JSON file.");
 		println(" * Press 'm' to toggle doMagicClick .");
 		println(" * Press 'r' to reset configuration of active brush.");
-		println(" * Press 'R' to reset synths to defaults.");
+		println(" * Press 'R' to reset synths to defaults .");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
 		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
 		println(" * Press 'g' to create a beatBrush.");
@@ -1337,13 +1400,33 @@ public class DeadBodyWorkFlow extends PApplet {
 		println(" * Press 'L' to infinite loop on hovered granular brush.");
 		println(" * Press ';' to stop loop for hovered brush.");
 		println(" * Press ':' to stop all loops.");
-		println(" * Press 'y' to toggle transform animation test.");
-		println(" * Press 'Y' to freeze / unfreeze.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
 		println(" * Press '≈' to option-x on MacOS keyboard, clear all brushes.");
 		println(" * Press '`' to fade out all instruments.");
 		println(" * Press 'h' or 'H' to show help message.");
+	}
+
+	void numericKey(char key) {
+	    PerformancePreset cue = PerformancePreset.fromKey(key);
+	    if (cue != null) {
+	        if (presetStack.contains(cue)) {
+	            presetStack.remove(cue);
+	        } else {
+	            presetStack.add(cue);
+	        }
+	    } else if (key == '0') {
+	        presetStack.clear();
+	    }
+	    println("-- cues: " + presetStack);
+	}
+	
+	/**
+	 * 
+	 */
+	public void openBrushEditor(AudioBrush brush) {
+		setActiveBrush(brush);
+		syncDrawingModeToBrush(activeBrush);
 	}
 
 	/**
@@ -1431,16 +1514,22 @@ public class DeadBodyWorkFlow extends PApplet {
 	}
 	
 	public synchronized void suspendScheduledEvents() {
-	    for (TimedLocation tl : this.pointTimeLocs) {
-	        tl.setStale(true);
-	    }
-	    for (TimedLocation tl : this.samplerTimeLocs) {
-	        tl.setStale(true);
-	    }
-	    for (TimedLocation tl : this.grainTimeLocs) {
-	        tl.setStale(true);
-	    }
-	    grainTimeLocs.removeIf(TimedLocation::isStale);		// necessary on fade-out
+		synchronized (pointTimeLocsLock) {
+			for (TimedLocation tl : this.pointTimeLocs) {
+				tl.setStale(true);
+			}
+		}
+		synchronized (samplerTimeLocsLock) {
+			for (TimedLocation tl : this.samplerTimeLocs) {
+				tl.setStale(true);
+			}
+		}
+		synchronized (grainTimeLocsLock) {
+			for (TimedLocation tl : this.grainTimeLocs) {
+				tl.setStale(true);
+			}
+			grainTimeLocs.removeIf(TimedLocation::isStale);		// necessary on fade-out
+		}
 	}
 
 	
@@ -2126,6 +2215,20 @@ public class DeadBodyWorkFlow extends PApplet {
 		return schedMs + grainTailMs;
 	}
 	
+	public int estimateLoopDurationMs(GestureSchedule sched, ADSRParams env, int noteLenSamples) {
+	    if (sched == null || sched.size() == 0) return 1;
+	    int schedMs = Math.max(1, Math.round(sched.durationMs()));
+	    int tailMs = 0;
+	    if (noteLenSamples > 0) {
+	        tailMs = (int) Math.max(tailMs, Math.round(AudioUtility.samplesToMillis(noteLenSamples, sampleRate)));
+	    }
+	    if (env != null) {
+	        int envMs = Math.round((env.getAttack() + env.getDecay() + env.getRelease()) * 1000f);
+	        tailMs = Math.max(tailMs, envMs);
+	    }
+	    return schedMs + tailMs;
+	}
+	
 	public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
 			float[] buf, 
 			GestureSchedule sched,
@@ -2178,6 +2281,59 @@ public class DeadBodyWorkFlow extends PApplet {
 	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
 	}
 	
+	public synchronized InstrumentLoop startSamplerLoop(SamplerBrush sb, GestureSchedule sched,
+	        ADSRParams env, int noteLenSamples, int repeats, int gapMs, boolean animate) {
+	    if (sb == null || sched == null || sched.size() == 0) return null;
+	    int durationMs = estimateLoopDurationMs(sched, env, noteLenSamples);
+	    durationMs = (int)(durationMs * 0.8f);
+	    long startMs = millis();
+
+	    Runnable playAction = () -> {
+	        storeSamplerCurveTL(sched, millis() + 10);
+	    };
+
+	    Runnable stopAction = () -> {
+	    	synchronized (samplerTimeLocsLock) {
+	    		if (samplerTimeLocs != null) {
+	    			for (TimedLocation tl : samplerTimeLocs) {
+	    				tl.setStale(true);
+	    			}
+	    			samplerTimeLocs.removeIf(TimedLocation::isStale);
+	    		}
+	    	}
+	    	synchronized (pointTimeLocsLock) {
+	    		if (pointTimeLocs != null) {
+	    			for (TimedLocation tl : pointTimeLocs) {
+	    				tl.setStale(true);
+	    			}
+	    			pointTimeLocs.removeIf(TimedLocation::isStale);
+	    		}
+	    	}
+	    	if (pool != null) {
+	    		pool.fadeOutAll();
+	    	}
+	    };
+
+	    InstrumentLoop loop = new InstrumentLoop(sb, playAction, stopAction, durationMs, gapMs, repeats, startMs);
+	    activeLoops.add(loop);
+	    return loop;
+	}
+
+	public InstrumentLoop loopSamplerBrush(SamplerBrush sb, int repeats, int gapMs) {
+	    if (sb == null) return null;
+	    ensureSamplerReady();
+
+	    GestureGranularConfig snap = sb.snapshot();
+	    GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
+	    if (sched == null || sched.size() == 0) return null;
+
+	    ADSRParams env = (snap.env != null) ? snap.env : samplerEnv;
+	    int noteLenSamples = calcSampleLen();
+
+	    return startSamplerLoop(sb, sched, env, noteLenSamples, repeats, gapMs, true);
+	}
+	
+	
 	// -------------- METHODS TO PLAY SAMPLING OR GRANULAR SYNTH ------------- //
 		
 	/**
@@ -2192,8 +2348,8 @@ public class DeadBodyWorkFlow extends PApplet {
 		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
 		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
-		pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));		
-		if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
+		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
+		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
 	}
 
 	/**
@@ -2266,7 +2422,7 @@ public class DeadBodyWorkFlow extends PApplet {
 			panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
 		}
 		if (usePitchedGrains) {
-			float[] pitch = generateJitterPitch(sched.size(), 0.0167f);
+			float[] pitch = generateJitterPitch(sched.size(), pitchJitter);
 			eventParams = GestureEventParams.builder(sched.size())
 					.startIndices(startIndices)
 					.pan(panPerGrain)
@@ -2433,7 +2589,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	}
 
 		
-	// TODO retro-apply loadAudioFile and updateAudioChain logic to GesturePlayground and other example sketches
+	// TODO retro-apply loadAudioFile and updateAudioChain logic to DeadBodyWorkFlow and other example sketches
  	/**
 	 * Bottleneck method that updates the various audio buffers when we load a
 	 * new signal, typically from a file. updateAudioChain(float[] sig) is the
@@ -2757,12 +2913,16 @@ public class DeadBodyWorkFlow extends PApplet {
 		if (brush instanceof GranularBrush gb) {
 			activeGranularBrush = gb;
 			activeGranularIndex = idx;
+			activeSamplerBrush = null;
+			activeSamplerIndex = -1;
 		}
 		else if (brush instanceof SamplerBrush sb) {
 			activeSamplerBrush = sb;
 			activeSamplerIndex = idx;
 			// samplerEnv = (gConfig.env != null) ? gConfig.env : defaultSampConfig.env;
-			samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Pluck");
+			samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Fade");
+			activeGranularBrush = null;
+			activeGranularIndex = -1;
 		}
 		recomputeUIBaselinesFromActiveBrush();
 		syncGuiFromConfig();
@@ -3307,48 +3467,63 @@ public class DeadBodyWorkFlow extends PApplet {
 		GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
 		// GestureSchedule sched = getScheduleForBrush(sb);  // just the brush settings here
 		storeSamplerCurveTL(sched, millis() + 10);
-		PVector startPoint = sched.points.get(0);
-		int clickPos = mapper.lookupSignalPos(clickX, clickY);
-		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+		// PVector startPoint = sched.points.get(0);
+		// int clickPos = mapper.lookupSignalPos(clickX, clickY);
+		// int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
 		// if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	}
 
-	public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
+	public void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
 		if (this.samplerTimeLocs == null) samplerTimeLocs = new ArrayList<>();
 		int i = 0;
 		startTime = millis() + 5;
-		// we store the point and the current time + time offset, where timesMs[0] == 0
-		for (PVector loc : sched.points) {
-			int x = Math.round(loc.x);
-			int y = Math.round(loc.y);
-			int t = startTime + Math.round(sched.timesMs[i++]);
-			int d = 200;
-			this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
+		synchronized (samplerTimeLocsLock) {
+			// we store the point and the current time + time offset, where timesMs[0] == 0
+			for (PVector loc : sched.points) {
+				int x = Math.round(loc.x);
+				int y = Math.round(loc.y);
+				int t = startTime + Math.round(sched.timesMs[i++]);
+				int d = 200;
+				this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
+			}
+			Collections.sort(samplerTimeLocs);
 		}
-		Collections.sort(samplerTimeLocs);
 	}
 
-	public synchronized void runSamplerBrushEvents() { 
-	    if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
-	    int currentTime = millis();
-	    samplerTimeLocs.forEach(tl -> {
-	        if (tl.eventTime() < currentTime) {
-	            int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-	            int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
-	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-	            int pos = getSamplePos(sampleX, sampleY);
-                playSample(pos, calcSampleLen(), samplerGain, panning);
-        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
-	            tl.setStale(true);
-	        } 
-	        else {
-	            return;
-	        }
-	    });
-	    samplerTimeLocs.removeIf(TimedLocation::isStale);
+	/**
+	 * Runs sampler brush events in the samplerTimeLocs list.
+	 * TODO move audio events into a sample-accurate (or at least block-accurate) schedule
+	 */
+	public void runSamplerBrushEvents() { 
+		if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
+		int currentTime = millis();
+		synchronized (samplerTimeLocsLock) {
+			samplerTimeLocs.forEach(tl -> {
+				if (tl.eventTime() < currentTime) {
+					int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
+					int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
+					float panning = map(sampleX, 0, width, -0.8f, 0.8f);
+					int pos = getSamplePos(sampleX, sampleY);
+					playSample(pos, calcSampleLen(), samplerGain, panning);
+					pointTimeLocsAddPoint(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
+					tl.setStale(true);
+				} 
+				else {
+					return;
+				}
+			});
+			samplerTimeLocs.removeIf(TimedLocation::isStale);
+		}
 	}
 		
-	void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
+	/**
+	 * Schedules a response to a mouse click or hover + spacebar on a granular brush.
+	 * 
+	 * @param gb        a GranularBrush
+	 * @param clickX    x-coordinate of point of activation
+	 * @param clickY    y-coordinate of point of activation
+	 */
+	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
 	    if (gb == null) return;
 	    ArrayList<PVector> pts = getPathPoints(gb);
 	    if (pts == null || pts.size() < 2) return;
@@ -3377,52 +3552,57 @@ public class DeadBodyWorkFlow extends PApplet {
 		// GestureSchedule sched = getScheduleForBrush(gb); 
 	    playGranularGesture(buf, sched, gParams);
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
-		PVector startPoint = sched.points.get(0);
-		int clickPos = mapper.lookupSignalPos(clickX, clickY);
-		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+		// PVector startPoint = sched.points.get(0);
+		// int clickPos = mapper.lookupSignalPos(clickX, clickY);
+		// int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
 		// if (isVerbose) println("-- granular brush event "+ signalPos +", clickPos = "+ clickPos);
 	}	
 
-	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
+	/**
+	 * Stores granular gesture time/location events in grainTimeLocs. 
+	 * 
+	 * @param sched        a GestureSchedule, the times when things happen and where they happen
+	 * @param startTime    time when a gesture starts
+	 * @param isGesture    is the timing gesture-based or fixed? ignored, for now
+	 */
+	public void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
 		if (this.grainTimeLocs == null) grainTimeLocs = new ArrayList<>();
 		int i = 0;
-		//int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		//int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
-		// we store the point and the current time + time offset, where timesMs[0] == 0
-		for (PVector loc : sched.points) {
-			int x = Math.round(loc.x);
-			int y = Math.round(loc.y);
-			// we can rely on sched for accurate times -- TODO drop in next iteration
-			// int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
-			// int d = (isGesture) ? 200 : durMsFixed;
-			int t = startTime + Math.round(sched.timesMs[i++]);
-			int d = 200;
-			this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
+		synchronized (grainTimeLocsLock) {
+			for (PVector loc : sched.points) {
+				int x = Math.round(loc.x);
+				int y = Math.round(loc.y);
+				int t = startTime + Math.round(sched.timesMs[i++]);
+				int d = 200;
+				this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
+			}
+			Collections.sort(grainTimeLocs);
 		}
-		Collections.sort(grainTimeLocs);
 	}
 		
 	/**
 	 * Tracks and runs TimedLocation events in the grainLocsArray list, which is 
 	 * associated with granular synthesis gestures.
 	 */
-	public synchronized void runGrainEvents() {
-	    if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;	
-	    int t = millis();
-		for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
-			TimedLocation tl = iter.next();
-			int low = tl.eventTime();
-			int high = (tl.eventTime() + tl.getDurationMs());
-			if (t >= low && t < high) { // event in the interval between low and high
-				drawCircle(tl.getX(), tl.getY());
-			}
-			else {
-				if (t >= high) {        // event in the past
-					tl.setStale(true);
-					iter.remove();
+	public void runGrainEvents() {
+		if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;	
+		int t = millis();
+		synchronized (grainTimeLocsLock) {
+			for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
+				TimedLocation tl = iter.next();
+				int low = tl.eventTime();
+				int high = (tl.eventTime() + tl.getDurationMs());
+				if (t >= low && t < high) { // event in the interval between low and high
+					drawCircle(tl.getX(), tl.getY());
 				}
-				if (t < low) {          // event in the future
-					break;
+				else {
+					if (t >= high) {        // event in the past
+						tl.setStale(true);
+						iter.remove();
+					}
+					if (t < low) {          // event in the future
+						break;
+					}
 				}
 			}
 		}
@@ -3432,17 +3612,30 @@ public class DeadBodyWorkFlow extends PApplet {
 	/**
 	 * Tracks and runs TimedLocation events in the timeLocsArray list, which is 
 	 * associated with mouse clicks that trigger audio a the click point.
+	 * TODO java.util.ConcurrentModificationException BUG
 	 */
-	public synchronized void runPointEvents() {
+	public void runPointEvents() {
 		int currentTime = millis();
-		for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
-			TimedLocation tl = iter.next();
-			tl.setStale(tl.eventTime() < currentTime);
-			if (!tl.isStale()) {
-				drawCircle(tl.getX(), tl.getY());
+		synchronized (pointTimeLocsLock) {
+			for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
+				TimedLocation tl = iter.next();
+				tl.setStale(tl.eventTime() < currentTime);
+				if (!tl.isStale()) {
+					drawCircle(tl.getX(), tl.getY());
+				}
 			}
+			pointTimeLocs.removeIf(TimedLocation::isStale);
+		}	
+	}
+	
+	/**
+	 * Adds a TimedLocation to the pointTimeLocs list. 
+	 * @param tl    a TimedLocation
+	 */
+	public void pointTimeLocsAddPoint(TimedLocation tl) {
+		synchronized (pointTimeLocsLock) {
+			pointTimeLocs.add(tl);
 		}
-		pointTimeLocs.removeIf(TimedLocation::isStale);		
 	}
 	
 	/**
@@ -4023,11 +4216,19 @@ public class DeadBodyWorkFlow extends PApplet {
 	  appc.background(color(212, 220, 228));
 	}
 	
+	boolean isGuiTyping() {
+		if (pitchShiftText != null && pitchShiftText.hasFocus()) {
+			return true;
+		}
+	    return false;
+	}
+
 	// respond to key in window
 	public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
-		if (evt.getAction() == KeyEvent.RELEASE) parseKey(evt.getKey(), evt.getKeyCode());
-	}
-	
+	    if (evt.getAction() != KeyEvent.RELEASE) return;
+	    if (isGuiTyping()) return;
+	    parseKey(evt.getKey(), evt.getKeyCode());
+	}	
 
 	public void controlPanel_hit(GPanel source, GEvent event) { 
 		// println("controlPanel - GPanel >> GEvent." + event + " @ " + millis());
@@ -4036,8 +4237,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void allOption_clicked(GOption source, GEvent event) { 
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		/// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// if (activeBrush == null) return;
 		gConfig.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
 		recomputeUIBaselinesFromActiveBrush();
 		syncGuiFromConfig();
@@ -4047,8 +4247,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void rdpOption_clicked(GOption source, GEvent event) { 
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		/// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// if (activeBrush == null) return;
 		gConfig.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
 		recomputeUIBaselinesFromActiveBrush();
 		syncGuiFromConfig();
@@ -4058,8 +4257,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void curveOption_clicked(GOption source, GEvent event) { 
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		/// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// if (activeBrush == null) return;
 		gConfig.pathMode = GestureGranularConfig.PathMode.CURVE_POINTS;
 		recomputeUIBaselinesFromActiveBrush();
 		syncGuiFromConfig();
@@ -4069,8 +4267,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void rdpEpsilonSlider_changed(GSlider source, GEvent event) { 
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		/// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// if (activeBrush == null) return;
 		gConfig.rdpEpsilon = source.getValueF();
 		if (event == GEvent.RELEASED) {
 			recomputeUIBaselinesFromActiveBrush();
@@ -4082,8 +4279,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void curvePointsSlider_changed(GSlider source, GEvent event) { 
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		/// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// if (activeBrush == null) return;
 		gConfig.curveSteps = source.getValueI();
 		if (event == GEvent.RELEASED) {
 			recomputeUIBaselinesFromActiveBrush();
@@ -4107,7 +4303,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		if (!isEditable()) return;
 		if (guiSyncing) return;
 		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// if (activeBrush == null) return;
 		gConfig.hopMode = GestureGranularConfig.HopMode.FIXED;
 		recomputeUIBaselinesFromActiveBrush();
 		syncGuiFromConfig();
@@ -4118,7 +4314,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		if (!isEditable()) return;
 		if (guiSyncing) return;
 		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// if (activeBrush == null) return;
 		int v = source.getValueI();
 		gConfig.burstGrains = v;
 		if (event == GEvent.RELEASED) {
@@ -4130,8 +4326,8 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void resampleSlider_changed(GSlider source, GEvent event) { 
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
-		if (activeBrush == null) return;
+		// resample is set on an active brush, changing it without a brush will have no effect
+		// if (activeBrush == null) return;
 		int v = source.getValueI();
 		if (v == baselineCount) {
 			gConfig.resampleCount = 0;
@@ -4147,7 +4343,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void durationSlider_changed(GSlider source, GEvent event) {
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
+		// gesture duration is set by the activeBrush, changing it without a brush will have no effect
 		if (activeBrush == null) return;
 		int v = source.getValueI();
 		if (v == baselineDurationMs) {
@@ -4208,6 +4404,8 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void pitchShiftText_changed(GTextField source, GEvent event) { 
 		if (!isEditable()) return;
 		if (guiSyncing) return;
+		
+			
 		// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
 		float v = source.getValueF();
 		if (v != gConfig.pitchSemitones) {
@@ -4271,7 +4469,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void arcLengthTimeOption_clicked(GOption source, GEvent event) {
 		if (!isEditable()) return;
 		if (guiSyncing) return;
-		gConfig.useArcLengthTime  = source.isSelected();
+		gConfig.useArcLengthTime = source.isSelected();
 		// gConfig.useArcLengthTime = ;
 		
 	}
@@ -4282,7 +4480,6 @@ public class DeadBodyWorkFlow extends PApplet {
 		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
 			return;
 		}
-		// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
 		int itemHit = source.getSelectedIndex();
 		if (itemHit < 0 || itemHit >= adsrItems.length) return;
 
