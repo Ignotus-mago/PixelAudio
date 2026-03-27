@@ -171,8 +171,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * In <code>scheduleSamplerBrushClick()</code> we get array of points on the curve with <code>getPathPoints(sb)</code> and then
  * use <code>sb.snapshot()</code> and <code>scheduleBuilder.build()</code> to build a <code>GestureSchedule</code> <br>
  * 
- * Finally, we pass the schedule and a small time offset to <code>storeSamplerCurveTL()</code>, an array of 
- * <code>TimedLocation</code> objects that is checked at every pass through the <code>draw()</code> loop and posts
+ * Finally, we pass the schedule, snapshot and start time to <code>storeSamplerBrushEvents()</code>, an array of 
+ * <code>SamplerBrushEvent</code> objects that is checked at every pass through the <code>draw()</code> loop and posts
  * both Sampler instrument triggers and animation events. Unlike the Granular instrument, which requires very accurate
  * timing, the Sampler synth requires less precision, so we can handle it through the UI frames. Sample-accurate 
  * timing is a topic for another as-yet-unreleased example sketch. <br>
@@ -219,6 +219,19 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'h' or 'H' to show help message.
  * </pre>
  * </p>
+ * 
+ * MacOS AUDIO TO MAX SETUP
+ * 
+ * In MacOS: 
+ *   Ignore Sound.inputDevice() and Sound.outputDevice(), use the System Settings instead.
+ *   Set Output to BlackHole 16ch
+ *   Set Input to your external audio hardware, for an external mic: mine is Volt2
+ *   
+ * Then in Max Audio Status control panel:
+ *   Set Input Device to BlackHole 16ch
+ *   Set Output Device to your external audio hardware, e.g. Volt2
+ *   Create a patcher that gets signals from an adc~, route the adc~ to some sort of effects 
+ *   and out to a dac~.
  * 
  * </DIV>
  * 
@@ -308,7 +321,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	float outputGain = -6.0f;         // gain setting for audio output, decibels
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
-	int sMaxVoices = 256;              // number of voices to allocate to pool or synth
+	int sMaxVoices = 256;             // number of voices to allocate to pool or synth
 
     // ====== Granular Synth ====== //
 
@@ -337,7 +350,12 @@ public class DeadBodyWorkFlow extends PApplet {
     int burstGrains = 1;
     boolean usePitchedGrains = false;
     float pitchJitter = 0.0167f;
-
+    
+    boolean isAddDynamics = false;
+    // dynamics for sampler and granular gestures
+    PAControlCurve dynamics = new PAKeyframeControlCurve (
+		new float[] {0.0f, 0.5f, 1.0f},
+		new float[] {0.1f, 1.0f, 0.1f} ); 
 	
 	/* ------------------------------------------------------------------ */
 	/*                   ANIMATION AND VIDEO VARIABLES                    */
@@ -444,10 +462,10 @@ public class DeadBodyWorkFlow extends PApplet {
 	
     // TimedLocation events
 	ArrayList<TimedLocation> pointTimeLocs;      // a list of timed events for mouse clicks
-    ArrayList<TimedLocation> samplerTimeLocs;    // a list of timed events for Sampler brushes
+	ArrayList<SamplerBrushEvent> samplerBrushEvents;    // a list of sampler brush events
 	ArrayList<TimedLocation> grainTimeLocs;      // a list of timed events for Granular brushes
 	final Object pointTimeLocsLock   = new Object();    // dedicated lock for pointTimeLocs access
-	final Object samplerTimeLocsLock = new Object();    // dedicated lock for samplerTimeLocsLock access
+	final Object samplerBrushEventsLock = new Object(); // dedicated lock for samplerBrushEvents
 	final Object grainTimeLocsLock   = new Object();    // dedicated lock for grainTimeLocsLock access
 	
 	boolean pointEventUseSampler = true;
@@ -528,6 +546,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isBrushTransformFrozen = false;    // freeze animation (key 'Y')
 	
 	boolean isBrushSelectionModal = false;
+	boolean isPlayOnDrag = false;
 	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
 	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
@@ -540,10 +559,10 @@ public class DeadBodyWorkFlow extends PApplet {
 	// Presets for DeadBodyWorkFlow. Each performance of a work can have its own presets,
 	// without a need to alter the application framework. 
 	enum PerformancePreset {
-	    DURATION_4SEC('1') {
+	    DURATION_5SEC('1') {
 	        @Override
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-	        	int newDurationMs = 4000;
+	        	int newDurationMs = 5000;
 	            cfg.targetDurationMs = newDurationMs;
 	            return new CueResult(curve, cfg);
 	        }
@@ -618,6 +637,21 @@ public class DeadBodyWorkFlow extends PApplet {
 	        	cfg.burstGrains = 16;
 	        	app.usePitchedGrains = true;
 	        	app.pitchJitter = 0.2f;
+	            return new CueResult(curve, cfg);
+	        }	    
+	    }, 
+	    DYNAMICS_1('6') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+	        	app.isAddDynamics = true;
+	        	float[] timesMs = new float[] {0, 500, 2500, 4000};
+	        	float dur = timesMs[timesMs.length - 1];
+	        	float[] values = new float[] {0.1f, 1.0f, 1.0f, 0.1f};
+	        	float[] times = new float[timesMs.length];
+	        	for (int i = 0; i < times.length; i++) {
+	        		times[i] =  map(timesMs[i], 0f, dur, 0f, 1f);
+	        	}
+	        	app.dynamics = new PAKeyframeControlCurve (times, values); 
 	            return new CueResult(curve, cfg);
 	        }	    
 	    };
@@ -906,15 +940,15 @@ public class DeadBodyWorkFlow extends PApplet {
 	    // 3) if in the process of drawing, accumulate points while mouse is held down
 		if (isEditable()) {
 			if (mousePressed) {
-	            addPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+	            addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
 			}
 			if (allPoints != null && allPoints.size() > 2) {
 				PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
 			}
 		}
-		// 3.5) loooooooping
+		// 4) loooooooping
 		updateInstrumentLoops();
-		// 4) depending on your event dispatching model, run scheduled events
+		// 5) depending on your event dispatching model, run scheduled events
 	    runSamplerBrushEvents();
 	    runPointEvents();
 	    runGrainEvents();
@@ -1052,6 +1086,9 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void mousePressed() {
 		if (isEditable()) {
 			initAllPoints();
+			if (isPlayOnDrag) {
+				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+			};
 		} 
 		// expand here to call a handler for mousePressed when editing is not on (mode == PLAY_ONLY)
 	}
@@ -1078,11 +1115,12 @@ public class DeadBodyWorkFlow extends PApplet {
 		BrushHit hit = findHoverHit();
 		if (hit != null) {
 			openBrushEditor(hit.brush);      // flag the hit brush as the activeBrush
+			PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
 			if (hit.brush instanceof SamplerBrush sb) {
-				scheduleSamplerBrushClick(sb, x, y);
+				scheduleSamplerBrushClick(sb, x, y, gainCurve);
 			}
 			else if (hit.brush instanceof GranularBrush gb) {
-				scheduleGranularBrushClick(gb, x, y);
+				scheduleGranularBrushClick(gb, x, y, gainCurve);
 			}
 			return;
 		}
@@ -1111,6 +1149,7 @@ public class DeadBodyWorkFlow extends PApplet {
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == RIGHT) {
+				
 			}
 			else if (keyCode == LEFT) {
 
@@ -1145,12 +1184,13 @@ public class DeadBodyWorkFlow extends PApplet {
 				}
 			}
 			if (hoverBrush != null) {
+				PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
 				if (hoverBrush instanceof SamplerBrush sb) {
-					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY)); 
+					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve); 
 					println("----->> frame rate = "+ this.frameRate);
 				}
 				else if (hoverBrush instanceof GranularBrush gb) {
-					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
+					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 				}
 			}
 			else {
@@ -1258,15 +1298,20 @@ public class DeadBodyWorkFlow extends PApplet {
 			println("-- isAutoOptimize is "+ isAutoOptimize);
 			break;
 		case 'g': // create a beatBrush
-			GranularBrush gBeatBrush = generateGranularBeatBrush(256, 117);
-			this.granularBrushes.add(gBeatBrush);
-			setActiveBrush(gBeatBrush);
+			isAddDynamics = !isAddDynamics;
+			println("-- isAddDynamics = "+ isAddDynamics);
 			break;
 		// LOOPING
 		case 'G': // create a beatBrush
-			SamplerBrush sBeatBrush = generateSamplerBeatBrush(256, 117);
-			this.samplerBrushes.add(sBeatBrush);
-			setActiveBrush(sBeatBrush);
+			if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+				GranularBrush gBeatBrush = generateGranularBeatBrush(256, 117);
+				this.granularBrushes.add(gBeatBrush);
+				setActiveBrush(gBeatBrush);
+			} else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+				SamplerBrush sBeatBrush = generateSamplerBeatBrush(256, 117);
+				this.samplerBrushes.add(sBeatBrush);
+				setActiveBrush(sBeatBrush);
+			} // for PLAY_ONLY, do nothing
 			break;
 		case 'l': // loop hovered granular brush 4 times
 			int loops = 4;
@@ -1519,10 +1564,8 @@ public class DeadBodyWorkFlow extends PApplet {
 				tl.setStale(true);
 			}
 		}
-		synchronized (samplerTimeLocsLock) {
-			for (TimedLocation tl : this.samplerTimeLocs) {
-				tl.setStale(true);
-			}
+		synchronized (samplerBrushEventsLock) {
+			samplerBrushEvents.clear();
 		}
 		synchronized (grainTimeLocsLock) {
 			for (TimedLocation tl : this.grainTimeLocs) {
@@ -2128,7 +2171,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	 */
 	public void initTimedEventLists() {
 		pointTimeLocs = new ArrayList<TimedLocation>();      // events outside a brush
-	    samplerTimeLocs = new ArrayList<TimedLocation>();    // events in a Sampler brush
+		samplerBrushEvents = new ArrayList<SamplerBrushEvent>();    // events in a Sampler brush
 		grainTimeLocs = new ArrayList<TimedLocation>();      // events in a Granular brush
 	}
 
@@ -2158,7 +2201,311 @@ public class DeadBodyWorkFlow extends PApplet {
 		int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
 		return new PVector(xy[0], xy[1]);
 	}
+		
+	// -------------- METHODS TO PLAY SAMPLING OR GRANULAR SYNTH ------------- //
+		
+	/**
+	 * Plays a sample and animates a point
+	 * @param x    x-coordinate of event
+	 * @param y    y-coordinate of event
+	 */
+	void runSamplerPointEvent(int x, int y) {
+		ensureSamplerReady();
+		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
+		float panning = map(x, 0, width, -0.875f, 0.875f);
+		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
+		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
+		int durationMS = (int)(samplelen / sampleRate * 1000);
+		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
+		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
+	}
+
+	/**
+	 * Plays a granular burst and animates a point
+	 * @param x    x-coordinate of event
+	 * @param y    y-coordinate of event
+	 */
+	void runGranularPointEvent(int x, int y) {
+		ensureGranularReady();
+		float hopMsF = Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+		int dur = isPlayOnDrag ? 256 : noteDuration;
+		final int grainCount = useLongBursts ?  8 * (int) Math.round(dur/hopMsF) : (int) Math.round(dur/hopMsF);
+		if (isVerbose) println("-- granular burst with grainCount = "+ grainCount +", hopMsF = "+ hopMsF);
+		ArrayList<PVector> path = new ArrayList<>(grainCount);
+		int[] timing = new int[grainCount];
+		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
+		for (int i = 0; i < grainCount; i++) {
+			if (useLongBursts) {
+				path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
+			}
+			else {
+				path.add(this.jitterCoord(x, y, 3));
+			}
+			timing[i] = Math.round(i * hopMsF);
+		}
+		int startTime = millis() + 10;
+		PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+		curve.setDragTimes(timing);
+		curve.setTimeStamp(startTime);
+		GestureSchedule sched = curve.getAllPointsSchedule();
+		float[] buf = (granSignal != null) ? granSignal : audioSignal;
+	    playGranularGesture(buf, sched, gParamsFixed);
+	    storeGranularCurveTL(sched, startTime, false);
+		if (isVerbose) println("----- granular point event, signalPos = " + signalPos);
+		return;
+	}
+
 	
+	/**
+	 * Primary method for playing a granular synthesis audio event.
+	 * 
+	 * @param buf       an audio signal as a array of float
+	 * @param sched     GestureSchedule (points + times) for grains
+	 * @param params    core parameters for granular synthesis
+	 */
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
+		GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+		playGranularGesture(buf, sched, params, eventParams);
+	}
+	
+	/**
+	 * Primary method for playing a granular synthesis audio event.
+	 * 
+	 * @param buf            an audio signal as a array of float
+	 * @param sched          GestureSchedule (points + times) for grains
+	 * @param params         core parameters for granular synthesis
+	 * @param eventParams    event parameters for granular synthesis
+	 */
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params, GestureEventParams eventParams) {       
+		gDir.playGestureNow(buf, sched, params, eventParams);
+	}
+
+	public GestureEventParams prepareGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
+		return prepareGranularGesture(buf, sched, params, null);
+	}
+	
+	public GestureEventParams prepareGranularGesture(float buf[], GestureSchedule sched, 
+			GestureGranularParams params, PAControlCurve gainCurve) {
+		GestureEventParams eventParams;
+		// map gesture points to array of indices into the audio buffer
+		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
+		float[] panPerGrain = new float[sched.size()];
+		for (int i = 0; i < sched.size(); i++) {
+			PVector p = sched.points.get(i);
+			// use the x-coordinate for left to right stereo field mapping
+			panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
+		}
+		// optional per-grain dynamics
+		float[] gainPerGrain = null;
+		if (gainCurve != null) {
+			gainPerGrain = PAKeyframeControlCurve.expandToSchedule(gainCurve, sched);
+		}
+		GestureEventParams.Builder builder = GestureEventParams.builder(sched.size())
+				.startIndices(startIndices)
+				.pan(panPerGrain);
+		if (gainPerGrain != null) {
+			builder.gain(gainPerGrain);
+		}
+		if (usePitchedGrains) {
+			float[] pitch = generateJitterPitch(sched.size(), params.pitchRatio, pitchJitter);
+			builder.pitchRatio(pitch);
+		}
+		eventParams = builder.build();
+		return eventParams;	
+	}
+	
+	float[] generateJitterPitch(int length, float basePitch, float deviationPitch) {
+		float[] pitch = new float[length];
+		double variance = deviationPitch * deviationPitch;
+		for (int i = 0; i < pitch.length; i++) {
+			pitch[i] = basePitch * (float) PixelAudio.gauss(1, variance);
+		}
+		return pitch;
+	}
+	
+	/**
+	 * Calculate an envelope of length totalSamples. 
+	 * @param gainDb          desired gain in dB, currently ignored
+	 * @param totalSamples    number of samples the envelope should cover
+	 * @param sampleRate      sample rate of the audio buffer the envelope is applied to
+	 * @return and ADSRParams envelope
+	 */
+	public ADSRParams calculateEnvelopeDb(float gainDb, int totalSamples, float sampleRate) {
+		float linear = AudioUtility.dbToLinear(gainDb);
+		return calculateEnvelopeLinear(linear, totalSamples * 1000f / sampleRate);
+	}
+
+	/**
+	 * Calculate an envelope of length totalSamples. 
+	 * @param gainDb     desired gain in dB, currently ignored
+	 * @param totalMs    desired duration of the envelope in milliseconds
+	 * @return an ADSRParams envelope
+	 */
+	public ADSRParams calculateEnvelopeLinear(float linear, float totalMs) {
+		float attackMS = Math.min(50, totalMs * 0.1f);
+		float releaseMS = Math.min(200, totalMs * 0.3f);
+		float envGain = 1.0f;    // or = linear;
+		ADSRParams env = new ADSRParams(envGain, attackMS / 1000f, 0.01f, 0.8f, releaseMS / 1000f);
+		return env;
+	}
+
+	
+	/*----------------------------------------------------------------*/
+	/*       See PASamplerInstrument and PASamplerInstrumentPool      */
+	/*       for all the ways you can play a Sampler instrument.      */
+	/*       The ones listed here are the most useful of them.        */
+	/*----------------------------------------------------------------*/
+
+	/**
+	 * Plays an audio sample with default envelope and stereo pan.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @return the calculated sample length in samples
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
+		return playSample(samplePos, samplelen, amplitude, samplerEnv, 1.0f, pan);
+	}
+
+	/**
+	 * Plays an audio sample with a custom envelope and stereo pan.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param env          an ADSR envelope for the sample
+	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
+	 * @return the calculated sample length in samples
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
+		return playSample(samplePos, samplelen, amplitude, env, 1.0f, pan);
+	}
+	
+	/**
+	 * Plays an audio sample with  with a custom envelope, pitch and stereo pan.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param env          an ADSR envelope for the sample
+	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher 
+	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
+	 * @return
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
+		println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
+		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+	}
+
+	/**
+	 * @return a length in samples with some Gaussian variation
+	 */
+	public int calcSampleLen(int dur, float mean, float variance) {
+		float vary = 0; 
+		// skip the fairly rare negative numbers
+		while (vary <= 0) {
+			vary = (float) PixelAudio.gauss(mean, variance);
+		}
+		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
+		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		return samplelen;
+	}
+	
+	public int calcSampleLen() {
+		return calcSampleLen(noteDuration, 1.0f, 0.0625f);
+	}
+
+	/**
+	 * Prepares Sampler instruments and assets
+	 */
+	void ensureSamplerReady() {
+		if (pool == null) { 
+	    	pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 16, 64, audioOut, samplerEnv); 
+	    	println("-- initilialized pool sampler synth");
+	    	pool.setGain(samplerGain);
+	    }
+	}
+	
+	/**
+	 * Prepares Granular instruments and assets
+	 */
+	void ensureGranularReady() {
+	    if (gSynth == null) {
+	    	ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.875f, 0.025f);
+	    	gSynth = buildGranSynth(audioOut, granEnv, gMaxVoices);
+	    }
+	    if (granSignal == null) {
+	        granSignal = (audioSignal != null) ? audioSignal : playBuffer.getChannel(0);
+	    }
+	    if (gParamsFixed == null) {
+	    	initGranularParams();
+	    }
+	    if (gDir == null) {
+	    	gDir = new PAGranularInstrumentDirector(gSynth);
+	    }
+	}
+	
+	/**
+	 * Initializes a PAGranularInstrument.
+	 * @param out          AudioOutput for this application
+	 * @param env          an ADSRParams envelope
+	 * @param numVoices    number of voices for the synth
+	 * @return a PAGranularInstrument
+	 */
+	public PAGranularInstrument buildGranSynth(AudioOutput out, ADSRParams env, int numVoices) {
+		PAGranularInstrument inst = new PAGranularInstrument(out, env, numVoices);
+		return inst;
+	}
+
+	/**
+	 * Initializes gParamsFixed, a GestureGranularParams instances used for granular point events.
+	 */
+	public void initGranularParams() {
+		ADSRParams env = this.calculateEnvelopeLinear(granularGain, 1000);
+		gParamsFixed = GestureGranularParams.builder()
+				.grainLengthSamples(granSamples)
+				.hopLengthSamples(hopSamples)
+				.gainLinear(granularPointGain)
+				.looping(false)
+				.env(env)
+				.hopMode(GestureGranularParams.HopMode.FIXED)
+				.burstGrains(burstGrains)
+				.build();
+	}
+
+		
+	// TODO retro-apply loadAudioFile and updateAudioChain logic to DeadBodyWorkFlow and other example sketches
+ 	/**
+	 * Bottleneck method that updates the various audio buffers when we load a
+	 * new signal, typically from a file. updateAudioChain(float[] sig) is the
+	 * _only_ method that should resize/pad/truncate the canonical signal and
+	 * propagate it to playBuffer, audioSignal, granSignal, and sampler pool.
+	 * 
+	 * @param sig    an audio signal
+	 */
+	void updateAudioChain(float[] sig) {
+	    // 0) Decide target length (make this a single source of truth)
+	    int targetSize = mapper.getSize();
+	    if (targetSize <= 0) return;
+	    // 1) Ensure playBuffer matches target
+	    float[] canonical = new float[targetSize];
+	    if (sig != null) {
+	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
+	    }
+	    audioSignal = canonical;
+	    granSignal = audioSignal;
+	    audioLength = targetSize;
+	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+	        playBuffer = new MultiChannelBuffer(targetSize, 1);
+	    }
+	    playBuffer.setChannel(0, canonical);
+	    // Propagate into synths (adjust to your actual API)
+	    if (pool != null) pool.setBuffer(playBuffer);
+	}
+	
+	
+	// ------------- LOOPING ------------- //
 	
 	public synchronized void updateInstrumentLoops() {
 		if (activeLoops.isEmpty()) return;
@@ -2287,18 +2634,16 @@ public class DeadBodyWorkFlow extends PApplet {
 	    int durationMs = estimateLoopDurationMs(sched, env, noteLenSamples);
 	    durationMs = (int)(durationMs * 0.8f);
 	    long startMs = millis();
+		PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
 
 	    Runnable playAction = () -> {
-	        storeSamplerCurveTL(sched, millis() + 10);
+	        storeSamplerBrushEvents(sched, sb.snapshot(), millis() + 10, gainCurve);
 	    };
 
 	    Runnable stopAction = () -> {
-	    	synchronized (samplerTimeLocsLock) {
-	    		if (samplerTimeLocs != null) {
-	    			for (TimedLocation tl : samplerTimeLocs) {
-	    				tl.setStale(true);
-	    			}
-	    			samplerTimeLocs.removeIf(TimedLocation::isStale);
+	    	synchronized (samplerBrushEventsLock) {
+	    		if (samplerBrushEvents != null) {
+	    			samplerBrushEvents.clear();
 	    		}
 	    	}
 	    	synchronized (pointTimeLocsLock) {
@@ -2333,291 +2678,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	    return startSamplerLoop(sb, sched, env, noteLenSamples, repeats, gapMs, true);
 	}
 	
-	
-	// -------------- METHODS TO PLAY SAMPLING OR GRANULAR SYNTH ------------- //
-		
-	/**
-	 * Plays a sample and animates a point
-	 * @param x    x-coordinate of event
-	 * @param y    y-coordinate of event
-	 */
-	void runSamplerPointEvent(int x, int y) {
-		ensureSamplerReady();
-		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
-		float panning = map(x, 0, width, -0.8f, 0.8f);
-		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
-		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
-		int durationMS = (int)(samplelen / sampleRate * 1000);
-		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
-		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
-	}
 
-	/**
-	 * Plays a granular burst and animates a point
-	 * @param x    x-coordinate of event
-	 * @param y    y-coordinate of event
-	 */
-	void runGranularPointEvent(int x, int y) {
-		ensureGranularReady();
-		float hopMsF = Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		final int grainCount = useLongBursts ?  8 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
-		if (isVerbose) println("-- granular point burst with grainCount = "+ grainCount);
-		ArrayList<PVector> path = new ArrayList<>(grainCount);
-		int[] timing = new int[grainCount];
-		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
-		for (int i = 0; i < grainCount; i++) {
-			if (useLongBursts) {
-				path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
-			}
-			else {
-				path.add(this.jitterCoord(x, y, 3));
-			}
-			timing[i] = Math.round(i * hopMsF);
-		}
-		int startTime = millis() + 10;
-		PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
-		curve.setDragTimes(timing);
-		curve.setTimeStamp(startTime);
-		GestureSchedule sched = curve.getAllPointsSchedule();
-		float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    playGranularGesture(buf, sched, gParamsFixed);
-	    storeGranularCurveTL(sched, startTime, false);
-		if (isVerbose) println("----- granular point event, signalPos = " + signalPos);
-		return;
-	}
-
-	
-	/**
-	 * Primary method for playing a granular synthesis audio event.
-	 * 
-	 * @param buf       an audio signal as a array of float
-	 * @param sched     GestureSchedule (points + times) for grains
-	 * @param params    core parameters for granular synthesis
-	 */
-	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
-		GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
-		playGranularGesture(buf, sched, params, eventParams);
-	}
-	
-	/**
-	 * Primary method for playing a granular synthesis audio event.
-	 * 
-	 * @param buf            an audio signal as a array of float
-	 * @param sched          GestureSchedule (points + times) for grains
-	 * @param params         core parameters for granular synthesis
-	 * @param eventParams    event parameters for granular synthesis
-	 */
-	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params, GestureEventParams eventParams) {       
-		gDir.playGestureNow(buf, sched, params, eventParams);
-	}
-
-	public GestureEventParams prepareGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
-		GestureEventParams eventParams;
-		// get the position of each grain we're going to play as an array of indices into the audio buffer
-		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
-		float[] panPerGrain = new float[sched.size()];
-		for (int i = 0; i < sched.size(); i++) {
-			PVector p = sched.points.get(i);
-			// use the x-coordinate for left to right stereo field mapping
-			panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
-		}
-		if (usePitchedGrains) {
-			float[] pitch = generateJitterPitch(sched.size(), pitchJitter);
-			eventParams = GestureEventParams.builder(sched.size())
-					.startIndices(startIndices)
-					.pan(panPerGrain)
-					.pitchRatio(pitch)
-					.build();
-		}
-		else {
-			eventParams = GestureEventParams.builder(sched.size())
-					.startIndices(startIndices)
-					.pan(panPerGrain)
-					.build();
-		}
-		return eventParams;
-	}
-	
-	/**
-	 * Calculate an envelope of length totalSamples. 
-	 * @param gainDb          desired gain in dB, currently ignored
-	 * @param totalSamples    number of samples the envelope should cover
-	 * @param sampleRate      sample rate of the audio buffer the envelope is applied to
-	 * @return and ADSRParams envelope
-	 */
-	public ADSRParams calculateEnvelopeDb(float gainDb, int totalSamples, float sampleRate) {
-		float linear = AudioUtility.dbToLinear(gainDb);
-		return calculateEnvelopeLinear(linear, totalSamples * 1000f / sampleRate);
-	}
-
-	/**
-	 * Calculate an envelope of length totalSamples. 
-	 * @param gainDb     desired gain in dB, currently ignored
-	 * @param totalMs    desired duration of the envelope in milliseconds
-	 * @return an ADSRParams envelope
-	 */
-	public ADSRParams calculateEnvelopeLinear(float linear, float totalMs) {
-		float attackMS = Math.min(50, totalMs * 0.1f);
-		float releaseMS = Math.min(200, totalMs * 0.3f);
-		float envGain = 1.0f;    // or = linear;
-		ADSRParams env = new ADSRParams(envGain, attackMS / 1000f, 0.01f, 0.8f, releaseMS / 1000f);
-		return env;
-	}
-
-	
-	/*----------------------------------------------------------------*/
-	/*       See PASamplerInstrument and PASamplerInstrumentPool      */
-	/*       for all the ways you can play a Sampler instrument.      */
-	/*       The ones listed here are the most useful of them.        */
-	/*----------------------------------------------------------------*/
-
-	/**
-	 * Plays an audio sample with default envelope and stereo pan.
-	 * 
-	 * @param samplePos    position of the sample in the audio buffer
-	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
-	 * @return the calculated sample length in samples
-	 */
-	public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
-		return playSample(samplePos, samplelen, amplitude, samplerEnv, 1.0f, pan);
-	}
-
-	/**
-	 * Plays an audio sample with a custom envelope and stereo pan.
-	 * 
-	 * @param samplePos    position of the sample in the audio buffer
-	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
-	 * @param env          an ADSR envelope for the sample
-	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
-	 * @return the calculated sample length in samples
-	 */
-	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
-		return playSample(samplePos, samplelen, amplitude, env, 1.0f, pan);
-	}
-
-	/**
-	 * Plays an audio sample with  with a custom envelope, pitch and stereo pan.
-	 * 
-	 * @param samplePos    position of the sample in the audio buffer
-	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
-	 * @param env          an ADSR envelope for the sample
-	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher 
-	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
-	 * @return
-	 */
-	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-	}
-
-	/**
-	 * @return a length in samples with some Gaussian variation
-	 */
-	public int calcSampleLen(int dur, float mean, float variance) {
-		float vary = 0; 
-		// skip the fairly rare negative numbers
-		while (vary <= 0) {
-			vary = (float) PixelAudio.gauss(mean, variance);
-		}
-		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
-		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
-		return samplelen;
-	}
-	
-	public int calcSampleLen() {
-		return calcSampleLen(noteDuration, 1.0f, 0.0625f);
-	}
-
-	/**
-	 * Prepares Sampler instruments and assets
-	 */
-	void ensureSamplerReady() {
-		if (pool == null) { 
-	    	pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 16, 64, audioOut, samplerEnv); 
-	    	println("-- initilialized pool sampler synth");
-	    	pool.setGain(samplerGain);
-	    }
-	}
-	
-	/**
-	 * Prepares Granular instruments and assets
-	 */
-	void ensureGranularReady() {
-	    if (gSynth == null) {
-	    	ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.875f, 0.025f);
-	    	gSynth = buildGranSynth(audioOut, granEnv, gMaxVoices);
-	    }
-	    if (granSignal == null) {
-	        granSignal = (audioSignal != null) ? audioSignal : playBuffer.getChannel(0);
-	    }
-	    if (gParamsFixed == null) {
-	    	initGranularParams();
-	    }
-	    if (gDir == null) {
-	    	gDir = new PAGranularInstrumentDirector(gSynth);
-	    }
-	}
-	
-	/**
-	 * Initializes a PAGranularInstrument.
-	 * @param out          AudioOutput for this application
-	 * @param env          an ADSRParams envelope
-	 * @param numVoices    number of voices for the synth
-	 * @return a PAGranularInstrument
-	 */
-	public PAGranularInstrument buildGranSynth(AudioOutput out, ADSRParams env, int numVoices) {
-		PAGranularInstrument inst = new PAGranularInstrument(out, env, numVoices);
-		return inst;
-	}
-
-	/**
-	 * Initializes gParamsFixed, a GestureGranularParams instances used for granular point events.
-	 */
-	public void initGranularParams() {
-		ADSRParams env = this.calculateEnvelopeLinear(granularGain, 1000);
-		gParamsFixed = GestureGranularParams.builder()
-				.grainLengthSamples(granSamples)
-				.hopLengthSamples(hopSamples)
-				.gainLinear(granularPointGain)
-				.looping(false)
-				.env(env)
-				.hopMode(GestureGranularParams.HopMode.FIXED)
-				.burstGrains(burstGrains)
-				.build();
-	}
-
-		
-	// TODO retro-apply loadAudioFile and updateAudioChain logic to DeadBodyWorkFlow and other example sketches
- 	/**
-	 * Bottleneck method that updates the various audio buffers when we load a
-	 * new signal, typically from a file. updateAudioChain(float[] sig) is the
-	 * _only_ method that should resize/pad/truncate the canonical signal and
-	 * propagate it to playBuffer, audioSignal, granSignal, and sampler pool.
-	 * 
-	 * @param sig    an audio signal
-	 */
-	void updateAudioChain(float[] sig) {
-	    // 0) Decide target length (make this a single source of truth)
-	    int targetSize = mapper.getSize();
-	    if (targetSize <= 0) return;
-	    // 1) Ensure playBuffer matches target
-	    float[] canonical = new float[targetSize];
-	    if (sig != null) {
-	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
-	    }
-	    audioSignal = canonical;
-	    granSignal = audioSignal;
-	    audioLength = targetSize;
-	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
-	        playBuffer = new MultiChannelBuffer(targetSize, 1);
-	    }
-	    playBuffer.setChannel(0, canonical);
-	    // Propagate into synths (adjust to your actual API)
-	    if (pool != null) pool.setBuffer(playBuffer);
-	}
-	
 
 	/*----------------------------------------------------------------*/
 	/*                                                                */
@@ -2691,7 +2752,7 @@ public class DeadBodyWorkFlow extends PApplet {
 		allPoints = new ArrayList<PVector>();
 		allTimes = new ArrayList<Integer>();
 		startTime = millis();
-		addPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+		addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
 	}
 	
 	/**
@@ -2738,12 +2799,15 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * accumulates new points to allPoints and event times to allTimes. Coordinates should be 
 	 * constrained to display window bounds. 
 	 */
-	public void addPoint(int x, int y) {
+	public void addDrawingPoint(int x, int y) {
 		// we do some very basic point thinning to eliminate successive duplicate points
 		if (x != currentPoint.x || y != currentPoint.y) {
 			currentPoint = new PVector(x, y);
 			allPoints.add(currentPoint);
 			allTimes.add(millis() - startTime);   // store time offset, not absolute time, in allTimes
+			if (isPlayOnDrag) {
+				handleClickOutsideBrush(x, y);
+			};
 		}
 	}
 	
@@ -2771,15 +2835,6 @@ public class DeadBodyWorkFlow extends PApplet {
 	    return new PVector(nx, ny);
 	}
 	
-	float[] generateJitterPitch(int length, float deviationPitch) {
-		float[] pitch = new float[length];
-		double variance = deviationPitch * deviationPitch;
-		for (int i = 0; i < pitch.length; i++) {
-			pitch[i] = (float) PixelAudio.gauss(1, variance);
-		}
-		return pitch;
-	}
-
 	public GestureSchedule loadGestureSchedule(PACurveMaker brush, GestureGranularConfig snap) {
 	    if (brush == null || snap == null) return null;
 	    GestureSchedule schedule = scheduleBuilder.build(brush, snap, audioOut.sampleRate());
@@ -2803,11 +2858,12 @@ public class DeadBodyWorkFlow extends PApplet {
 		curveMaker.setTimeOffset(millis() - startTime);   // time between first point and last point
 		curveMaker.calculateDerivedPoints();              // initialize all the useful structures up front
 		AudioBrush brush = makeBrushFromCurveMaker();
+		PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
 		if (doPlayOnDraw && brush instanceof SamplerBrush sb) {
-			scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
+			scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 		}
 		if (doPlayOnDraw && brush instanceof GranularBrush gb) {
-			scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
+			scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 		}
 		return brush;
 	}
@@ -3459,63 +3515,103 @@ public class DeadBodyWorkFlow extends PApplet {
 	// ------------- STANDARD SAMPLER AND GRANULAR BRUSH SCHEDULING ------------- //
 
 	void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
-		if (sb == null) return;
-		ArrayList<PVector> pts = getPathPoints(sb);
-		if (pts == null || pts.size() < 2) return;
-		ensureSamplerReady();
-		GestureGranularConfig snap = sb.snapshot();
-		GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
-		// GestureSchedule sched = getScheduleForBrush(sb);  // just the brush settings here
-		storeSamplerCurveTL(sched, millis() + 10);
-		// PVector startPoint = sched.points.get(0);
-		// int clickPos = mapper.lookupSignalPos(clickX, clickY);
-		// int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
-		// if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
+		scheduleSamplerBrushClick(sb, clickX, clickY, null);
 	}
 
-	public void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
-		if (this.samplerTimeLocs == null) samplerTimeLocs = new ArrayList<>();
-		int i = 0;
-		startTime = millis() + 5;
-		synchronized (samplerTimeLocsLock) {
-			// we store the point and the current time + time offset, where timesMs[0] == 0
-			for (PVector loc : sched.points) {
-				int x = Math.round(loc.x);
-				int y = Math.round(loc.y);
-				int t = startTime + Math.round(sched.timesMs[i++]);
-				int d = 200;
-				this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
-			}
-			Collections.sort(samplerTimeLocs);
-		}
+	void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY, PAControlCurve gainCurve) {
+	    if (sb == null) return;
+	    ArrayList<PVector> pts = getPathPoints(sb);
+	    if (pts == null || pts.size() < 2) return;
+	    ensureSamplerReady();
+	    GestureGranularConfig snap = sb.snapshot();
+	    GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
+	    if (sched == null || sched.isEmpty()) return;
+	    storeSamplerBrushEvents(sched, snap, millis() + 10, gainCurve);
+	    if (isDebugging) {
+	    	PVector startPoint = sched.points.get(0);
+	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
+	    	int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+	    	println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
+	    }
 	}
-
+	
+	public void storeSamplerBrushEvents(GestureSchedule sched, GestureGranularConfig snap, int startTime, PAControlCurve gainCurve) {
+	    if (sched == null || sched.points == null || sched.timesMs == null) return;
+	    if (samplerBrushEvents == null) samplerBrushEvents = new ArrayList<>();
+	    // check sizes
+	    final int pointCount = sched.points.size();
+	    final int timeCount = sched.timesMs.length;
+	    final int n = Math.min(pointCount, timeCount);
+	    if (n == 0) return;
+	    if (pointCount != timeCount) {
+	        System.err.println("storeSamplerBrushEvents(): point/time mismatch: points="
+	                + pointCount + ", times=" + timeCount + ", using n=" + n);
+	    }
+	    // good to go
+	    final float baseGain = snap.gainLinear();
+	    final float[] gainPerEvent =
+	            (gainCurve != null) ? PAKeyframeControlCurve.expandToSchedule(gainCurve, sched) : null;
+	    final float pitch = snap.pitchRatio();
+	    final ADSRParams baseEnv = (snap.env != null) ? snap.env.copy() : samplerEnv;
+	    synchronized (samplerBrushEventsLock) {
+	        for (int i = 0; i < n; i++) {
+	            PVector loc = sched.points.get(i);
+	            int x = Math.round(loc.x);
+	            int y = Math.round(loc.y);
+	            int pos = mapper.lookupSignalPos(x, y);
+	            int len = calcSampleLen();
+	            int t = startTime + Math.round(sched.timesMs[i]);
+	            float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+	            float gain = baseGain;
+	            if (gainPerEvent != null && i < gainPerEvent.length) {
+	                gain *= gainPerEvent[i];
+	            }
+	            samplerBrushEvents.add(
+	                new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, baseEnv.copy(), pan)
+	            );
+	            if (isDebugging) {
+	                println("-- sampler evt i=" + i
+	                    + " dt=" + sched.timesMs[i]
+	                    + " eventTime=" + t
+	                    + " pos=" + pos
+	                    + " len=" + len
+	                    + " gain=" + gain
+	                    + " pan=" + pan);
+	            }
+	        }
+	        samplerBrushEvents.sort((a, b) -> Integer.compare(a.eventTimeMs, b.eventTimeMs));
+	    }
+	}
+	
 	/**
 	 * Runs sampler brush events in the samplerTimeLocs list.
 	 * TODO move audio events into a sample-accurate (or at least block-accurate) schedule
 	 */
-	public void runSamplerBrushEvents() { 
-		if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
-		int currentTime = millis();
-		synchronized (samplerTimeLocsLock) {
-			samplerTimeLocs.forEach(tl -> {
-				if (tl.eventTime() < currentTime) {
-					int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-					int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
-					float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-					int pos = getSamplePos(sampleX, sampleY);
-					playSample(pos, calcSampleLen(), samplerGain, panning);
-					pointTimeLocsAddPoint(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
-					tl.setStale(true);
-				} 
-				else {
-					return;
-				}
-			});
-			samplerTimeLocs.removeIf(TimedLocation::isStale);
-		}
+	public void runSamplerBrushEvents() {
+	    if (samplerBrushEvents == null || samplerBrushEvents.isEmpty()) return;
+	    int currentTime = millis();
+	    synchronized (samplerBrushEventsLock) {
+	        Iterator<SamplerBrushEvent> it = samplerBrushEvents.iterator();
+	        while (it.hasNext()) {
+	            SamplerBrushEvent evt = it.next();
+	            if (evt.eventTimeMs > currentTime) {
+	                // list is sorted, so we can stop early
+	                break;
+	            }
+	            playSample(evt.samplePos, evt.sampleLen, evt.gain, evt.env, evt.pitchRatio, evt.pan);
+	            int sampleX = PixelAudio.constrain(evt.x, 0, width - 1);
+	            int sampleY = PixelAudio.constrain(evt.y, 0, height - 1);
+	            pointTimeLocsAddPoint(new TimedLocation(sampleX, sampleY, 200 + millis()));
+	            it.remove();
+	        }
+	    }
 	}
-		
+	
+	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
+		scheduleGranularBrushClick(gb, clickX, clickY, null);
+	}
+
+	
 	/**
 	 * Schedules a response to a mouse click or hover + spacebar on a granular brush.
 	 * 
@@ -3523,7 +3619,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * @param clickX    x-coordinate of point of activation
 	 * @param clickY    y-coordinate of point of activation
 	 */
-	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
+	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY, PAControlCurve gainCurve) {
 	    if (gb == null) return;
 	    ArrayList<PVector> pts = getPathPoints(gb);
 	    if (pts == null || pts.size() < 2) return;
@@ -3539,7 +3635,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	    // apply resample/duration/warp via scheduleBuilder
 	    GestureSchedule sched = scheduleBuilder.build(gb.curve(), snap, audioOut.sampleRate());
 	    if (sched == null || sched.isEmpty()) return;
-	    if (isVerbose) {
+	    if (isDebugging) {
 		    println("sched.size=" + sched.size()
 		    + " durationMs=" + sched.durationMs()
 		    + " cfg.resampleCount=" + snap.resampleCount
@@ -3549,13 +3645,15 @@ public class DeadBodyWorkFlow extends PApplet {
 	    }	    
 	    boolean isGesture = gb.cfg().hopMode == HopMode.GESTURE;
 		GestureGranularParams gParams = gb.cfg().build().toParams();
-		// GestureSchedule sched = getScheduleForBrush(gb); 
-	    playGranularGesture(buf, sched, gParams);
+		GestureEventParams eventParams = prepareGranularGesture(buf, sched, gParams, gainCurve);
+		playGranularGesture(buf, sched, gParams, eventParams);
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
-		// PVector startPoint = sched.points.get(0);
-		// int clickPos = mapper.lookupSignalPos(clickX, clickY);
-		// int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
-		// if (isVerbose) println("-- granular brush event "+ signalPos +", clickPos = "+ clickPos);
+	    if (isDebugging) {
+	    	PVector startPoint = sched.points.get(0);
+	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
+	    	int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+	    	println("-- granular brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
+	    }
 	}	
 
 	/**
@@ -3566,20 +3664,29 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * @param isGesture    is the timing gesture-based or fixed? ignored, for now
 	 */
 	public void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
-		if (this.grainTimeLocs == null) grainTimeLocs = new ArrayList<>();
-		int i = 0;
-		synchronized (grainTimeLocsLock) {
-			for (PVector loc : sched.points) {
-				int x = Math.round(loc.x);
-				int y = Math.round(loc.y);
-				int t = startTime + Math.round(sched.timesMs[i++]);
-				int d = 200;
-				this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
-			}
-			Collections.sort(grainTimeLocs);
-		}
-	}
-		
+	    if (sched == null || sched.points == null || sched.timesMs == null) return;
+	    if (this.grainTimeLocs == null) grainTimeLocs = new ArrayList<>();
+	    int pointCount = sched.points.size();
+	    int timeCount = sched.timesMs.length;
+	    int n = Math.min(pointCount, timeCount);
+	    if (n == 0) return;
+	    if (pointCount != timeCount) {
+	        System.err.println("storeGranularCurveTL(): point/time mismatch: points="
+	                + pointCount + ", times=" + timeCount + ", using n=" + n);
+	    }
+	    synchronized (grainTimeLocsLock) {
+	        for (int i = 0; i < n; i++) {
+	            PVector loc = sched.points.get(i);
+	            int x = Math.round(loc.x);
+	            int y = Math.round(loc.y);
+	            int t = startTime + Math.round(sched.timesMs[i]);
+	            int d = 200;
+	            this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
+	        }
+	        Collections.sort(grainTimeLocs);
+	    }
+	}		
+	
 	/**
 	 * Tracks and runs TimedLocation events in the grainLocsArray list, which is 
 	 * associated with granular synthesis gestures.
@@ -3634,6 +3741,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	 */
 	public void pointTimeLocsAddPoint(TimedLocation tl) {
 		synchronized (pointTimeLocsLock) {
+			if (pointTimeLocs == null) pointTimeLocs = new ArrayList<>();
 			pointTimeLocs.add(tl);
 		}
 	}

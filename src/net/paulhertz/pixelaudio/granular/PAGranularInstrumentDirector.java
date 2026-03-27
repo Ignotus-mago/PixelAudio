@@ -188,7 +188,8 @@ public final class PAGranularInstrumentDirector {
             if (idx >= monoBuf.length) idx = monoBuf.length - 1;
 
             final float pan = (evtParams.pan != null) ? clampPan(evtParams.pan[i]) : defaultPan;
-            final float gain = (evtParams.gain != null) ? Math.max(0f, evtParams.gain[i]) : defaultGain;
+            final float dynamics = (evtParams.gain != null) ? Math.max(0f, evtParams.gain[i]) : 1.0f;
+            final float gain = defaultGain * dynamics;
             final float pitchRatio = (evtParams.pitchRatio != null)
                     ? Math.max(1e-6f, evtParams.pitchRatio[i])
                     : defaultPitch;
