@@ -345,6 +345,7 @@ public class DeadBodyWorkFlow extends PApplet {
     int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
     int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
     GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED, for granular point event
+    GestureGranularParams gParamsDraw;          // granular parameters when drawing
     boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
     int maxBurstGrains = 4;
     int burstGrains = 1;
@@ -527,6 +528,20 @@ public class DeadBodyWorkFlow extends PApplet {
 	/* ------------------------------------------------------------------ */
 
 	boolean isSaveConfig = true;
+
+	/* ------------------------------------------------------------------ */
+	/*                           PLAY WHILE DRAWING                       */
+	/* ------------------------------------------------------------------ */
+
+	// ----- lightweight granular preview while drawing -----
+	int drawPreviewIntervalMs = 30;      // minimum time between preview triggers
+	float drawPreviewMinDist = 6.0f;     // minimum mouse movement before retrigger
+	int drawPreviewDurationMs = 96;      // short preview burst
+	int drawPreviewMaxGrains = 12;       // hard cap on grains per preview
+	int drawPreviewBurstGrains = 1;      // keep preview cheap
+
+	int lastDrawPreviewMs = -100000;
+	PVector lastDrawPreviewPoint = null;
 	
 	/* ------------------------------------------------------------------ */
 	/*                    DEBUGGING + PERFORMANCE SETTINGS                */
@@ -535,8 +550,8 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
-	boolean isRunWordGame = false;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
-	boolean doPlayOnDraw = false;       // play audio when a curve is drawn
+	boolean isRunWordGame = true;       // load DeadBodyWorkFlow audio at 48KHz sampleRate
+	boolean doPlayOnNewBrush = false;   // play audio when a curve is drawn
 	boolean isAutoOptimize = false;     // optimize the freshly drawn curve before playing it 
 	boolean isSaveSession = true;       // save the session brushes ('J' key commend)
 	boolean isReplaceBrushes = true;    // do we replace current brushes when we load a session or library folder?
@@ -546,7 +561,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	boolean isBrushTransformFrozen = false;    // freeze animation (key 'Y')
 	
 	boolean isBrushSelectionModal = false;
-	boolean isPlayOnDrag = false;
+	boolean doPlayWhileDrawing = true;               // play audio events while drawing, or not
 	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
 	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
@@ -556,7 +571,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	/*                              PRESET LIST                           */
 	/* ------------------------------------------------------------------ */
 
-	// Presets for DeadBodyWorkFlow. Each performance of a work can have its own presets,
+	// Presets for Bagatelle 1. Each performance of a work can have its own presets,
 	// without a need to alter the application framework. 
 	enum PerformancePreset {
 	    DURATION_5SEC('1') {
@@ -1086,9 +1101,6 @@ public class DeadBodyWorkFlow extends PApplet {
 	public void mousePressed() {
 		if (isEditable()) {
 			initAllPoints();
-			if (isPlayOnDrag) {
-				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
-			};
 		} 
 		// expand here to call a handler for mousePressed when editing is not on (mode == PLAY_ONLY)
 	}
@@ -1125,7 +1137,7 @@ public class DeadBodyWorkFlow extends PApplet {
 			return;
 		}
 		// in other sketches we called audioMousePressed(), handleClickOutsideBrush() does the same sort of things
-		if (isVerbose) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
+		if (isDebugging) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
 		handleClickOutsideBrush(x, y);
 	}
 	
@@ -1187,7 +1199,6 @@ public class DeadBodyWorkFlow extends PApplet {
 				PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
 				if (hoverBrush instanceof SamplerBrush sb) {
 					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve); 
-					println("----->> frame rate = "+ this.frameRate);
 				}
 				else if (hoverBrush instanceof GranularBrush gb) {
 					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
@@ -1229,12 +1240,16 @@ public class DeadBodyWorkFlow extends PApplet {
 			    syncDrawingModeToBrush(changed);
 		    }
 		    else {
-		        handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+		        // handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 		    }
 		    break;
 		case 'd': // toggle doPlayOnDraw to play when a drawing gesture ends or not
-			doPlayOnDraw = !doPlayOnDraw;
-			println("-- play on draw is "+ doPlayOnDraw);
+			doPlayOnNewBrush = !doPlayOnNewBrush;
+			println("-- play on new brush is "+ doPlayOnNewBrush);
+			break;
+		case 'D': // toggle doPlayOnDraw to play when a drawing gesture ends or not
+			doPlayWhileDrawing = !doPlayWhileDrawing;
+			println("-- play while drawing is "+ doPlayWhileDrawing);
 			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
@@ -1276,14 +1291,17 @@ public class DeadBodyWorkFlow extends PApplet {
 			doMagicClick = !doMagicClick;
 			println(doMagicClick ? "-- doMagicClick is true" : "-- doMagicClick is false");
 			break;
-		case 'r': // reset configuration of active brush
+		case 'R': // reset configuration of active brush TODO test and refactor
 		    if (activeBrush != null && activeBrush.hasTransform()) {
 		        activeBrush.restoreTransform();
 		        activeBrush.transform().resetTransform();
-		        println("-- restored active brush transform");
+		        println("-- restored hover brush transform");
+		    }
+		    else {
+		    	resetToDefaults(); 
 		    }
 			break;
-		case 'R': // reset synths to defaults 
+		case 'r': // reset synths to defaults 
 			resetToDefaults(); 
 			break;
 		case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
@@ -1425,7 +1443,8 @@ public class DeadBodyWorkFlow extends PApplet {
 		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
 		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
-		println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.");
+		println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends, if true.");
+		println(" * Press 'D' to toggle doPlayWhileDrawing to play while drawing a gesture, if true.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
@@ -1435,8 +1454,8 @@ public class DeadBodyWorkFlow extends PApplet {
 		println(" * Press 'J' to save all brushes curve and config to JSON Session file.");
 		println(" * Press 'o' to open an audio file, image file, or JSON file.");
 		println(" * Press 'm' to toggle doMagicClick .");
-		println(" * Press 'r' to reset configuration of active brush.");
-		println(" * Press 'R' to reset synths to defaults .");
+		println(" * Press 'R' to reset transform of active brush.");
+		println(" * Press 'r' to reset synths to defaults .");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
 		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
 		println(" * Press 'g' to create a beatBrush.");
@@ -2227,10 +2246,10 @@ public class DeadBodyWorkFlow extends PApplet {
 	 */
 	void runGranularPointEvent(int x, int y) {
 		ensureGranularReady();
-		float hopMsF = Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		int dur = isPlayOnDrag ? 256 : noteDuration;
+		float hopMsF = (float)(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+		int dur = noteDuration;
 		final int grainCount = useLongBursts ?  8 * (int) Math.round(dur/hopMsF) : (int) Math.round(dur/hopMsF);
-		if (isVerbose) println("-- granular burst with grainCount = "+ grainCount +", hopMsF = "+ hopMsF);
+		// if (isVerbose) println("-- granular burst with grainCount = "+ grainCount +", hopMsF = "+ hopMsF);
 		ArrayList<PVector> path = new ArrayList<>(grainCount);
 		int[] timing = new int[grainCount];
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
@@ -2251,8 +2270,13 @@ public class DeadBodyWorkFlow extends PApplet {
 		float[] buf = (granSignal != null) ? granSignal : audioSignal;
 	    playGranularGesture(buf, sched, gParamsFixed);
 	    storeGranularCurveTL(sched, startTime, false);
-		if (isVerbose) println("----- granular point event, signalPos = " + signalPos);
-		return;
+        if (isVerbose) println("-- point event: "
+        		+ " hopSamples = "+ hopSamples
+        		+ ", hopMsF = "+ hopMsF
+        		+ ", grainCount = "+ grainCount
+        		+ ", duration = " + sched.durationMs()
+        		+ ", eventTime = " + startTime
+        		+ ", buffer index = "+ signalPos);
 	}
 
 	
@@ -2394,7 +2418,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * @return
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
+		if (isDebugging) println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
 		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
 	}
 
@@ -2471,6 +2495,15 @@ public class DeadBodyWorkFlow extends PApplet {
 				.env(env)
 				.hopMode(GestureGranularParams.HopMode.FIXED)
 				.burstGrains(burstGrains)
+				.build();
+		gParamsDraw = GestureGranularParams.builder()
+				.grainLengthSamples(512)
+				.hopLengthSamples(128)
+				.gainLinear(0.02f)
+				.looping(false)
+				.env(granularEnv)
+				.hopMode(GestureGranularParams.HopMode.FIXED)
+				.burstGrains(4)
 				.build();
 	}
 
@@ -2780,6 +2813,106 @@ public class DeadBodyWorkFlow extends PApplet {
 		}		
 	}
 	
+	/**
+	 * Respond to mousePressed and addDrawingPoint when isPlayOnDraw is true.
+	 */
+	/*
+	public void handlePlayOnDraw(int x, int y) {
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			boolean playSmooth = (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER);
+			ensureGranularReady();
+			float hopMsF = (float)(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+			int durMs = doPlayWhileDrawing ? 256 : noteDuration;
+			final int grainCount = (int) Math.round(durMs/hopMsF);
+			ArrayList<PVector> path = new ArrayList<>(grainCount);
+			int[] timing = new int[grainCount];
+			for (int i = 0; i < grainCount; i++) {
+				if (playSmooth) {
+					path.add(this.jitterCoord(x, y, 1));
+				}
+				else {
+					path.add(this.jitterCoord(x, y, 3));
+				}
+				timing[i] = Math.round(i * hopMsF);
+			}
+			int startTime = millis();
+			PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+			curve.setDragTimes(timing);
+			curve.setTimeStamp(startTime);
+			GestureSchedule sched = curve.getAllPointsSchedule();
+			float[] buf = (granSignal != null) ? granSignal : audioSignal;
+		    playGranularGesture(buf, sched, gParamsDraw);
+		    storeGranularCurveTL(sched, startTime, false);
+			int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
+			// if (isVerbose) println("----- granular point event, signalPos = " + signalPos);
+	        if (isVerbose) println("-- drawing: "
+	        		+ " hopSamples = "+ hopSamples
+	        		+ ", hopMsF = "+ hopMsF
+	        		+ ", grainCount = "+ grainCount
+	                + ", duration = " + sched.durationMs()
+	                + ", eventTime = " + startTime
+	                + ", buffer index = "+ signalPos);
+		}		
+	}
+	*/
+	
+	public void handlePlayOnDraw(int x, int y) {
+	    if (!(drawingMode == DrawingMode.DRAW_EDIT_GRANULAR
+	            || drawingMode == DrawingMode.DRAW_EDIT_SAMPLER)) {
+	        return;
+	    }
+	    ensureGranularReady();
+	    // Keep preview deliberately cheap.
+	    final boolean playSmooth = (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER);
+	    final float hopMsF = (float) AudioUtility.samplesToMillis(hopSamples, sampleRate);
+	    final int durMs = drawPreviewDurationMs;
+	    // Guard against bad hop conversion
+	    if (hopMsF <= 0f) return;
+	    // Keep preview grain count small no matter what hopSamples is.
+	    int grainCount = Math.max(4, Math.round(durMs / hopMsF));
+	    grainCount = Math.min(grainCount, drawPreviewMaxGrains);
+	    ArrayList<PVector> path = new ArrayList<>(grainCount);
+	    int[] timing = new int[grainCount];
+	    for (int i = 0; i < grainCount; i++) {
+	        path.add(playSmooth ? jitterCoord(x, y, 0) : jitterCoord(x, y, 2));
+	        timing[i] = Math.round(i * hopMsF);
+	    }
+	    int previewStartTime = millis();
+	    PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+	    curve.setDragTimes(timing);
+	    curve.setTimeStamp(previewStartTime);
+	    GestureSchedule sched = curve.getAllPointsSchedule();
+	    if (sched == null || sched.isEmpty()) return;
+	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
+	    if (buf == null || buf.length == 0) return;
+	    // Create a lightweight preview params object instead of reusing the heavier draw preset.
+	    GestureGranularParams previewParams = GestureGranularParams.builder()
+	            .grainLengthSamples(Math.min(shortSample, 512))
+	            .hopLengthSamples(hopSamples)
+	            .gainLinear(0.2f)   // conservative preview gain
+	            .looping(false)
+	            .env(granularEnv)
+	            .hopMode(GestureGranularParams.HopMode.FIXED)
+	            .burstGrains(drawPreviewBurstGrains)
+	            .build();
+	    playGranularGesture(buf, sched, previewParams);
+
+	    // Optional: comment this out if the UI dot animation itself feels too busy while drawing.
+	    storeGranularCurveTL(sched, previewStartTime, false);
+
+	    if (isDebugging) {
+	        int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
+	        println("-- drawing preview:"
+	                + " hopSamples = " + hopSamples
+	                + ", hopMsF = " + hopMsF
+	                + ", grainCount = " + grainCount
+	                + ", duration = " + sched.durationMs()
+	                + ", eventTime = " + previewStartTime
+	                + ", buffer index = " + signalPos);
+	    }
+	}
+
+	
 	// NOT USED
 	boolean isOverAnyBrush(int x, int y) {
 	    // optionally gate by mode; or check both lists always
@@ -2799,17 +2932,47 @@ public class DeadBodyWorkFlow extends PApplet {
 	 * accumulates new points to allPoints and event times to allTimes. Coordinates should be 
 	 * constrained to display window bounds. 
 	 */
+	/*
 	public void addDrawingPoint(int x, int y) {
 		// we do some very basic point thinning to eliminate successive duplicate points
 		if (x != currentPoint.x || y != currentPoint.y) {
 			currentPoint = new PVector(x, y);
 			allPoints.add(currentPoint);
 			allTimes.add(millis() - startTime);   // store time offset, not absolute time, in allTimes
-			if (isPlayOnDrag) {
-				handleClickOutsideBrush(x, y);
+			if (doPlayWhileDrawing) {
+				handlePlayOnDraw(x, y);
 			};
 		}
 	}
+	*/
+	
+	public void addDrawingPoint(int x, int y) {
+	    // basic point thinning: skip duplicate successive points
+	    if (x == currentPoint.x && y == currentPoint.y) return;
+	    currentPoint = new PVector(x, y);
+	    allPoints.add(currentPoint);
+	    allTimes.add(millis() - startTime);   // store time offset, not absolute time
+	    if (!doPlayWhileDrawing) return;
+	    // preview only while drawing in editable synth modes
+	    if (!(drawingMode == DrawingMode.DRAW_EDIT_GRANULAR
+	            || drawingMode == DrawingMode.DRAW_EDIT_SAMPLER)) {
+	        return;
+	    }
+	    final int now = millis();
+	    // throttle by time
+	    if (now - lastDrawPreviewMs < drawPreviewIntervalMs) return;
+	    // throttle by movement distance
+	    if (lastDrawPreviewPoint != null) {
+	        float dx = x - lastDrawPreviewPoint.x;
+	        float dy = y - lastDrawPreviewPoint.y;
+	        float d2 = dx * dx + dy * dy;
+	        if (d2 < drawPreviewMinDist * drawPreviewMinDist) return;
+	    }
+	    lastDrawPreviewMs = now;
+	    lastDrawPreviewPoint = new PVector(x, y);
+	    handlePlayOnDraw(x, y);
+	}
+	
 	
 	/**
 	 * @param x    a value to constrain to the current window width
@@ -2859,10 +3022,10 @@ public class DeadBodyWorkFlow extends PApplet {
 		curveMaker.calculateDerivedPoints();              // initialize all the useful structures up front
 		AudioBrush brush = makeBrushFromCurveMaker();
 		PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
-		if (doPlayOnDraw && brush instanceof SamplerBrush sb) {
+		if (doPlayOnNewBrush && brush instanceof SamplerBrush sb) {
 			scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 		}
-		if (doPlayOnDraw && brush instanceof GranularBrush gb) {
+		if (doPlayOnNewBrush && brush instanceof GranularBrush gb) {
 			scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 		}
 		return brush;
@@ -2924,7 +3087,7 @@ public class DeadBodyWorkFlow extends PApplet {
 	        granularBrushes.add(gb);
 	        setActiveBrush(gb, granularBrushes.size() - 1);
 	        if (this.isAutoOptimize) optimizeActiveBrush();
-	        if (isVerbose) println("----- new granular brush created");
+	        if (isVerbose) println("----- new granular brush created, framerate = "+ frameRate);
 	        return gb;
 	    }
 	}
