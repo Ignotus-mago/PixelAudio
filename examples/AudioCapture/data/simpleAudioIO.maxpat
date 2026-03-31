@@ -4,12 +4,12 @@
         "appversion": {
             "major": 9,
             "minor": 1,
-            "revision": 2,
+            "revision": 3,
             "architecture": "x64",
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 42.0, 681.0, 880.0, 467.0 ],
+        "rect": [ 838.0, -632.0, 502.0, 489.0 ],
         "boxes": [
             {
                 "box": {
@@ -112,8 +112,8 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "signal" ],
-                    "patching_rect": [ 370.0, 182.0, 85.0, 22.0 ],
-                    "text": "cverb~ 256"
+                    "patching_rect": [ 370.0, 182.0, 75.0, 22.0 ],
+                    "text": "cverb~ 1920"
                 }
             },
             {
@@ -149,8 +149,8 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "signal" ],
-                    "patching_rect": [ 91.0, 219.0, 84.0, 22.0 ],
-                    "text": "*~ 0.5"
+                    "patching_rect": [ 91.0, 219.0, 47.0, 22.0 ],
+                    "text": "*~ 0.25"
                 }
             },
             {
@@ -194,8 +194,8 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "signal" ],
-                    "patching_rect": [ 156.0, 187.0, 85.0, 22.0 ],
-                    "text": "cverb~ 256"
+                    "patching_rect": [ 156.0, 187.0, 75.0, 22.0 ],
+                    "text": "cverb~ 2048"
                 }
             },
             {
@@ -210,18 +210,6 @@
                     "numoutlets": 0,
                     "patching_rect": [ 151.0, 79.5, 95.0, 37.0 ],
                     "text": "pass signals to reverb"
-                }
-            },
-            {
-                "box": {
-                    "fontsize": 18.0,
-                    "id": "obj-9",
-                    "linecount": 11,
-                    "maxclass": "comment",
-                    "numinlets": 1,
-                    "numoutlets": 0,
-                    "patching_rect": [ 563.0, 8.0, 314.0, 228.0 ],
-                    "text": "To send audio over a network, jit.ndi seems to be the current solution: \nhttps://github.com/pixsper/jit.ndi \n\nIt replaces rtpsendreceive~:\nhttps://cycling74.com/projects/mc-rtpsendreceive~ \n\nThese both replace the legacy netsend~ and netreceive~ Max objects."
                 }
             },
             {
