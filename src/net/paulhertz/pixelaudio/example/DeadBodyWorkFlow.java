@@ -580,49 +580,26 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	/*                              PRESET LIST                           */
 	/* ------------------------------------------------------------------ */
 
-	/* Presets for Bagatelle 1. 
-     *    1. measure 5, first gesture file, bag_1_gest_1_tail.wav, 5 seconds long, with swell and fall-off in dynamics, begin drawing at m3
-     *    2. measure 7 begin drawing at trill, release at m11 downbeat, second file, bag_1_gest_2_tail.wav, how long? any dynamics?
-     *    3. from measure 12 to measure 19 first beat, third file, bag_1_crackle.wav, glitches, wisps, crackles
-     *    4. begin drawing at m37, release at m43, 8 seconds 16th notes until m58 1st beat — which file?
-     *    5. m66, Macabre, effects control via UDP	
+	/* Presets for DeadBodyWorkFlow 
+     *    1. Drone on open, 'a' to animate, '.' for raindrops begin .. end 
+     *    2. When raindrops end, load DBWF audio + image, voice + bass clarinet enter
+     *    3. -- PixelAudio improv
+     *    4. -- PixelAudio improv
+     *    5. REPRISE, load file "dbwf_02_session.json", 'm' for magic, play
+     *    6. CLOSE, group improv once through the 16-bar section, all but b.c. dropping out in last 4 measures,
+     *       voice sotto voce, with FX, "dead body work flow busy word game play".
+     *    TODO brush color variations1
 	 */ 
 	enum PerformancePreset {
-	    DURATION_5SEC_SWELL('1') {
+	    DRONE_RAINDROPS('1') {
 	        @Override
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-	        	int newDurationMs = 5000;
-	            cfg.targetDurationMs = newDurationMs;
-	            cfg.rdpEpsilon = 2;
-	            cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
-	            cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
-	            cfg.burstGrains = 8;
-	            cfg.grainLengthSamples = 2560;
-	            cfg.hopLengthSamples = 640;
-	            app.doPlayOnNewBrush = true;
-	            app.doPlayWhileDrawing = false;
-	            app.isAutoOptimize = true;
-	        	app.isAddDynamics = true;
-	        	float[] timesMs = new float[] {0, 500, 2500, 5000};
-	        	float dur = timesMs[timesMs.length - 1];
-	        	float[] values = new float[] {0.1f, 1.0f, 1.0f, 0.1f};
-	        	float[] times = new float[timesMs.length];
-	        	for (int i = 0; i < times.length; i++) {
-	        		times[i] =  map(timesMs[i], 0f, dur, 0f, 1f);
-	        	}
-	        	app.dynamics = new PAKeyframeControlCurve (times, values); 
 	            return new CueResult(curve, cfg);
 	        }
 	    },
-	    LONG_ECHO('2') {
+	    VOICE_AND_MELODY('2') {
 	        @Override
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-	        	println("-- CUE 2: ");
-	        	app.isLoadToBoth = true;
-	        	app.isAddDynamics = false;
-	            cfg.grainLengthSamples = 1024;
-	            cfg.hopLengthSamples = 256;
-	        	cfg.targetDurationMs = curve.getTimeOffset() * 2;
 	            return new CueResult(curve, cfg);
 	        }
 	    },
@@ -636,6 +613,8 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	        	cfg.hopLengthSamples = 256;
 	        	cfg.grainLengthSamples = 1024;
 	        	cfg.burstGrains = 4;
+	            app.doPlayOnNewBrush = true;
+	            app.doPlayWhileDrawing = true;
 	        	app.usePitchedGrains = true;
 	        	app.pitchJitter = 0.1f;
 	            return new CueResult(curve, cfg);
@@ -651,59 +630,23 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	        	cfg.hopLengthSamples = 128;
 	        	cfg.grainLengthSamples = 512;
 	        	cfg.burstGrains = 16;
+	        	cfg.pitchSemitones = -12.0f;
+	            app.doPlayOnNewBrush = true;
+	            app.doPlayWhileDrawing = true;
 	        	app.usePitchedGrains = true;
-	        	app.pitchJitter = 0.2f;
+	        	app.pitchJitter = 0.5f;
 	            return new CueResult(curve, cfg);
 	        }	    
-	    }, 
-	    SIXTEENTHS('5') {
-	        @Override
-	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-	        	app.resetPerformanceState();
-	            int bpm = 128;
-	            int stepMs = Math.round(60000f / bpm / 4f);   // 117 ms
-	            // we can calculate new points and times using the total gesture time
-	            int totalMs = Math.max(stepMs, curve.getTimeOffset());
-	            if (cfg.targetDurationMs > 0) {
-	                totalMs = cfg.targetDurationMs;
-	            }	
-	            int count = 1 + Math.max(1, Math.round(totalMs / (float) stepMs));
-	            PAGestureParametric tweener = new PAGestureParametric(curve.getAllPoints(), curve.getAllTimes());
-	            ArrayList<PVector> newPoints = new ArrayList<>(count);
-	            ArrayList<Integer> newTimes = new ArrayList<>(count);
-	            // 
-	            for (int i = 0; i < count; i++) {
-	                float u = (count <= 1) ? 0f : i / (float)(count - 1);
-	                PAGestureParametric.Sample s = tweener.sample(u);
-	                newPoints.add(new PVector(s.x, s.y));
-	                newTimes.add(i * stepMs);
-	            }
-	            // create a new curve, don't try to edit the original
-	            PACurveMaker newCurve = PACurveMaker.buildCurveMaker(newPoints, newTimes, curve.timeStamp);
-	            // preserve visual / geometric settings you care about
-	            newCurve.setEpsilon(curve.getEpsilon());
-	            newCurve.setCurveSteps(curve.getCurveSteps());
-	            newCurve.setBrushSize(curve.getBrushSize());
-	            newCurve.setBrushColor(curve.getBrushColor());
-	            newCurve.setActiveBrushColor(curve.getActiveBrushColor());
-	            newCurve.calculateDerivedPoints();
-	            // config adjustments
-	            cfg.targetDurationMs = newTimes.get(newTimes.size() - 1);
-	            return new CueResult(newCurve, cfg);
-	        }
 	    },
-	    DYNAMICS_1('6') {
+	    REPRISE('5') {
 	        @Override
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-	        	app.isAddDynamics = true;
-	        	float[] timesMs = new float[] {0, 500, 2500, 5000};
-	        	float dur = timesMs[timesMs.length - 1];
-	        	float[] values = new float[] {0.1f, 1.0f, 1.0f, 0.1f};
-	        	float[] times = new float[timesMs.length];
-	        	for (int i = 0; i < times.length; i++) {
-	        		times[i] =  map(timesMs[i], 0f, dur, 0f, 1f);
-	        	}
-	        	app.dynamics = new PAKeyframeControlCurve (times, values); 
+	            return new CueResult(curve, cfg);
+	        }	    
+	    },
+	    CLOSE('6') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
 	            return new CueResult(curve, cfg);
 	        }	    
 	    };
@@ -744,31 +687,31 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	
 	// performance state
 	
-	boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
+	boolean isRunWordGame = true;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
 	boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
 	boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
 	boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
-	boolean isSaveSession = true;        // save the session brushes ('J' key commend)
-	boolean isReplaceBrushes = true;     // do we replace current brushes when we load a session or library folder?
-	boolean doMagicClick = false;
-	
+	boolean doMagicClick = false;        // find a brush that starts in a selected rectangle and play it
     boolean usePitchedGrains = false;    // jitter granular pitch if true
     float pitchJitter = 0.0167f;         // amount of jitter
+	boolean applyColorMapOnLoad = true;  // if true, apply the color map when a file is loaded
+
+	boolean isReplaceBrushes = true;     // if true, replace current brushes when we load a session or library folder
+	boolean isSaveSession = true;        // save the session brushes ('J' key commend)	
+
+	boolean isRaining = false;           // if true, run random audio/animation point events
 	
-	boolean isBrushTransformTest = false;      // testing animation feature (key 'y')
+    boolean isAddDynamics = false;       // add dynamics curve to gestures
+    // dynamics for sampler and granular gestures
+    PAControlCurve dynamics = new PAKeyframeControlCurve (
+			new float[] {0.0f, 0.5f, 1.0f},      // times
+			new float[] {0.1f, 1.0f, 0.1f} );    // values
+ 
+    boolean isBrushTransformTest = false;      // testing animation feature (key 'y')
 	boolean isBrushTransformFrozen = false;    // freeze animation (key 'Y')
 	
 	boolean isBrushSelectionModal = false;     // if false, select all brushes, otherwise, select by active mode
 	
-	boolean applyColorMapOnLoad = true;        // apply the color map when a file is loaded
-	
-	boolean isRaining = false;
-	
-    boolean isAddDynamics = false;
-    // dynamics for sampler and granular gestures
-    PAControlCurve dynamics = new PAKeyframeControlCurve (
-		new float[] {0.0f, 0.5f, 1.0f},
-		new float[] {0.1f, 1.0f, 0.1f} ); 
 
 	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
@@ -776,9 +719,15 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	String daFilename = "audioBlend.wav";    // "audioBlend.wav";
 	ArrayList<String> daFilelist = new ArrayList<>();
 	
-	// network communications
+	// *****>>> NETWORKING <<<***** //
 	NetworkDelegate nd;
 	boolean isUseNetworkDelegate = false;
+	boolean isNetSendDrawingPoints = true;
+	boolean isNetSendOutsideBrushPoints = true;
+	boolean isNetSendBrushTriggers = false;
+	boolean isNetSendFileInfo = false;
+	boolean isNetSendGestures = false;
+	
 
 	
 	//------------- APPLICATION CODE -------------//
@@ -1426,11 +1375,11 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 		        println("-- restored hover brush transform");
 		    }
 		    else {
-		    	resetToDefaults(); 
+		    	resetConfigToDefaults(); 
 		    }
 			break;
 		case 'r': // reset synths to defaults 
-			resetToDefaults(); 
+			resetConfigToDefaults(); 
 			break;
 		case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
 			if (activeBrush instanceof SamplerBrush) {
@@ -1603,12 +1552,19 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 		println(" * Press 'h' or 'H' to show help message.");
 	}
 
+	
+	/*----------------------------------------------------------------*/
+	/*                  BEGIN PREFORMANCE METHODS                     */
+	/*----------------------------------------------------------------*/
+	
 	/**
 	 * @param key
 	 */
 	void numericKey(char key) {
+		// load a function that modifies the next brush when it is created by makeBrush()
 	    runPerformancePreset(PerformancePreset.fromKey(key), key);
-	    runCustomSetting(key);
+	    // execute cues in anticipation of the preset immediately (load files, etc.)
+	    runPerformanceCue(key);
 	}
 
 	/**
@@ -1627,39 +1583,90 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	    println("-- cues: " + presetStack);
 	}
 	
-	void runCustomSetting(char key) {
+	/**
+	 * @param key
+	 */
+	void runPerformanceCue(char key) {
 		if (isRunWordGame) {
 			switch (key) {
-			case '1':
+			case '1': // DRONE_RAINDROPS
+				isLoadToBoth = true;
+				applyColorMapOnLoad = true;
+				setAudioGain(-24.0f);
+				loadAudioFile(new File(daPath + "D-flat2_bassClar_window..wav"));
 				break;
-			case '2':
+			case '2': // VOICE_AND_MELODY
+				isLoadToBoth = false;
+				isAnimating = false;
+				setAudioGain(-6.0f);
+				daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Body/";   
+				daFilename = "workflow_48Khz.wav";
+				loadAudioFile(new File(daPath + daFilename));
+				daFilename = "workFlowPanel.png";    			
+				preloadFiles(daPath, daFilename);
+				break;
+			case '3':
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = true;
+				break;
+			case '4':
+				break;
+			case '5': // REPRISE
+				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
 				break;
 			}
 		} else {
 			applyColorMapOnLoad = true;
 			isLoadToBoth = true;
 			switch (key) {
-			case '1':
-				// DURATION_5SEC_SWELL
+			case '1': // preset = DURATION_5SEC_SWELL('1')
+				loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
 				break;
-			case '2':
-				// LONG_ECHO
+			case '2': // preset = LONG_ECHO('2')
 				loadAudioFile(new File(daPath + "bag_1_gest_2_tail.wav"));
 				break;
-			case '3':
-				// GLITCH_CORTO
+			case '3': // preset = GLITCH_CORTO('3')
 				loadAudioFile(new File(daPath + "bag _1_crackle.wav"));
+				doPlayWhileDrawing = true;
 				break;
-			case '4':
-				// GLITCH_LARGO
+			case '4': // preset = GLITCH_LARGO('4')
 				break;
-			case '5':
-				// SIXTEENTHS
+			case '5': // preset = SIXTEENTHS('5')
+				loadAudioFile(new File(daPath + "bag_1_gest_2_tail.wav"));
 				break;
 			default:
 			}	
 		}
 	}
+	
+	void resetPerformanceState() {
+		doPlayOnNewBrush = false;    // play audio when a curve is drawn
+		doPlayWhileDrawing = false;  // play audio events while drawing, or not
+		isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
+		doMagicClick = false;        // find a brush that starts in a selected rectangle and play it
+		usePitchedGrains = false;    // jitter granular pitch if true
+		pitchJitter = 0.0167f;       // amount of jitter
+		applyColorMapOnLoad = true;  // if true, apply the color map when a file is loaded
+		isReplaceBrushes = true;     // if true, replace current brushes when we load a session or library folder
+		isSaveSession = true;        // save the session brushes ('J' key commend)	
+		isRaining = false;           // if true, run random audio/animation point events
+
+		isAddDynamics = false;       // add dynamics curve to gestures
+		// dynamics for sampler and granular gestures
+		dynamics = new PAKeyframeControlCurve (
+				new float[] {0.0f, 0.5f, 1.0f},      // times
+				new float[] {0.1f, 1.0f, 0.1f} );    // values
+
+		isBrushTransformTest = false;      // testing animation feature (key 'y')
+		isBrushTransformFrozen = false;    // freeze animation (key 'Y')
+
+		isBrushSelectionModal = false;     // if false, select all brushes, otherwise, select by active mode
+		
+	}
+	
+	/*----------------------------------------------------------------*/
+	/*                   END PREFORMANCE METHODS                      */
+	/*----------------------------------------------------------------*/
 	
 	
 	/**
@@ -1858,30 +1865,28 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	public void raindrops() {
 	  int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
 	  int[] coords = mapper.lookupImageCoordShifted(signalPos, totalShift);
-	  this.runSamplerPointEvent(coords[0], coords[1]);  
+	  this.runRaindropPointEvent(coords[0], coords[1]);  
 	}
 	
-	void resetPerformanceState() {
-	    doPlayOnNewBrush = false;
-	    doPlayWhileDrawing = false;
-	    isAutoOptimize = false;
-	    isSaveSession = true;
-	    isReplaceBrushes = true;
-	    doMagicClick = false;
+	/**
+	 * Plays a sample and animates a point
+	 * @param x    x-coordinate of event
+	 * @param y    y-coordinate of event
+	 */
+	void runRaindropPointEvent(int x, int y) {
+		ensureSamplerReady();
+		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
+		float panning = map(x, 0, width, -0.875f, 0.875f);
+		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
+		// playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
+		// TODO vary gain and pitch, combine with granular jitter point events (eerie)
+		float pitchRatio = AudioUtility.semitonesToRatio(-9.0f);
+		samplelen = playSample(signalPos, len, samplerPointGain, envPreset("Swell"), pitchRatio, panning);
+		int durationMS = (int)(samplelen / sampleRate * 1000);
+		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
+		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
+	}
 
-	    usePitchedGrains = false;    // jitter granular pitch if true
-	    pitchJitter = 0.0167f;       // amount of jitter
-
-	    isBrushTransformTest = false;
-	    isBrushTransformFrozen = false;
-	    isBrushSelectionModal = false;
-
-	    applyColorMapOnLoad = true;
-	    
-	    isAddDynamics = false;
-
-	    isRaining = false;
-	 }
 	
 	
 	/*----------------------------------------------------------------*/
@@ -1925,7 +1930,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 						+ filePath.substring(0, filePath.length() - fileName.length()));
 				loadAudioFile(audioFile);
 				// *****>>> NETWORKING <<<***** //
-			    if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
+			    if (nd != null && isNetSendFileInfo) nd.oscSendFileInfo(filePath, fileName, fileTag);
 			} 
 			else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
 					|| fileTag.equalsIgnoreCase("jpeg")) {
@@ -3034,8 +3039,6 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 		int x = clipToWidth(mouseX);
 		int y = clipToHeight(mouseY);
 		addDrawingPoint(x, y);
-		// *****>>> NETWORKING <<<***** //
-		if (nd != null) nd.oscSendMousePressed(x, y, getSamplePos(x, y));
 	}
 	
 	/**
@@ -3062,7 +3065,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 			
 		}
 		// *****>>> NETWORKING <<<***** //
-	    if (nd != null) nd.oscSendMousePressed(x, y, pos);
+	    if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMousePressed(x, y, pos);
 		return pos;
 	}
 	
@@ -3224,15 +3227,16 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	    currentPoint = new PVector(x, y);
 	    allPoints.add(currentPoint);
 	    allTimes.add(millis() - startTime);   // store time offset, not absolute time
+
+	    // *****>>> NETWORKING <<<***** //
+		if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));	    
 	    
-	    if (!doPlayWhileDrawing) return;
-	    
+	    if (!doPlayWhileDrawing) return;	    
 	    // preview only while drawing in editable synth modes
 	    if (!(drawingMode == DrawingMode.DRAW_EDIT_GRANULAR
 	            || drawingMode == DrawingMode.DRAW_EDIT_SAMPLER)) {
 	        return;
 	    }
-	    
 	    handlePlayOnDraw(x, y);
 	}
 	
@@ -3292,7 +3296,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 			scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 		}
 		// *****>>> NETWORKING <<<***** //
-		if (nd != null) {
+		if (nd != null && isNetSendGestures) {
 			int x = clipToWidth(mouseX);
 			int y = clipToHeight(mouseY);
 			nd.oscSendMousePressed(x, y, getSamplePos(x, y));
@@ -3962,7 +3966,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	    if (sched == null || sched.isEmpty()) return;
 	    storeSamplerBrushEvents(sched, snap, millis() + 10, gainCurve);
 		// *****>>> NETWORKING <<<***** //
-		if (nd != null) nd.oscSendTrig(samplerBrushes.indexOf(sb));    // TODO handle calls from Max
+		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(samplerBrushes.indexOf(sb)); 
 	    if (isDebugging) {
 	    	PVector startPoint = sched.points.get(0);
 	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
@@ -4078,12 +4082,14 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 		    + " cfg.targetDurationMs=" + snap.targetDurationMs
 		    + " cfg.pathMode=" + snap.pathMode
 		    + " warp=" + snap.warpShape);
-	    }	    
+	    }
 	    boolean isGesture = gb.cfg().hopMode == HopMode.GESTURE;
 		GestureGranularParams gParams = gb.cfg().build().toParams();
 		GestureEventParams eventParams = prepareGranularGesture(buf, sched, gParams, gainCurve);
 		playGranularGesture(buf, sched, gParams, eventParams);
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
+		// *****>>> NETWORKING <<<***** //
+		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(granularBrushes.indexOf(gb)); 
 	    if (isDebugging) {
 	    	PVector startPoint = sched.points.get(0);
 	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
@@ -4195,117 +4201,6 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	}
 
 	
-	
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-
-	// ----- BEGIN OLD LISTENER-STYLE CODE ----- //	
-	
-	// TODO revise
-	/**
-	 * Sets up sample-accurate AudioListener called from the Minim audio processing loop.
-	 * We use the samples() methods in the AudioListener interface to call our processAudioBlock()
-	 * method. The audio samples don't concern us, just the regular interval over which they are processed:
-	 * essentially, we have a timer that wakes up at a regular interval. 
-	 * 
-	 */
-	public void initListener() {
-		// define the AudioListener class instance inline
-		audioOut.addListener(new AudioListener() {
-
-			/**
-			 * we use the samples() methods  in the AudioListener interface to call processAudioBlock()
-			 * the audio samples don't concern us, just the regular interval over which they are processed
-			 */
-			@Override
-			public void samples(float[] samp) {
-				// mono callback (blockSize == samp.length)
-				processAudioBlock(samp.length);
-			}
-
-			@Override
-			public void samples(float[] left, float[] right) {
-				// stereo callback (blockSize == left.length)
-				processAudioBlock(left.length);
-			}
-
-			private void processAudioBlock(int blockSize) {
-				long blockStart = audioBlockStartSample.getAndAdd(blockSize);
-				long nextBlockStart = blockStart + blockSize;
-				audioNextBlockStartSample.set(nextBlockStart);
-
-				audioSched.processBlock(
-						blockStart,
-						blockSize,
-						(Happening h, int offsetInBlock) -> {
-							if (h instanceof SamplerPointHappening sph) {
-								playSample(sph.samplePos, sph.len, sph.gain, sph.env, sph.pitchRatio, sph.pan);
-							}
-							// We add an event for the draw() loop
-							// dotInbox.add(new ActiveDot(h.x(), h.y(), System.currentTimeMillis() + dotLifeMs));
-						},
-						null // span handler later
-						);
-			}
-		});
-		audioSched.setLatePolicy(AudioScheduler.LatePolicy.DROP);
-	}
-
-	// TODO revise or drop
-	static final class ActiveDot {
-		final int x, y;
-		final long expireMs;
-
-		ActiveDot(int x, int y, long expireMs) {
-			this.x = x;
-			this.y = y;
-			this.expireMs = expireMs;
-		}
-	}
-
-
-	// TODO revise or drop
-	// Happening at a point with PASamplerInstrument use
-	static final class SamplerPointHappening implements Happening {
-		final int x, y;
-		final int samplePos, len;
-		final float gain, pan;
-		final float pitchRatio;     // pitch scaling as rate multiplier
-		final ADSRParams env;
-		final float noteMs;
-
-		SamplerPointHappening(int x, int y,
-				int samplePos, int len,
-				float gain, float pan,
-				float pitch,
-				ADSRParams env, int noteMs) {
-			this.x = x; this.y = y;
-			this.samplePos = samplePos;
-			this.len = len;
-			this.gain = gain;
-			this.pan = pan;
-			this.pitchRatio = pitch;
-			this.env = env;
-			this.noteMs = noteMs;
-		}
-
-		@Override public int x() { return x; }
-		@Override public int y() { return y; }
-	}
-
-		
-	// ----- END OLD LISTENER-STYLE CODE ----- //
-	
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-
 	/*----------------------------------------------------------------*/
 	/*                                                                */
 	/*                        NETWORKING                              */
@@ -5628,14 +5523,12 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	    return (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) || (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER);
 	}
 	
-	void resetToDefaults() {
+	void resetConfigToDefaults() {
 		if (!isEditable()) return;
-		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
-			gConfig.copyFrom(defaultGranConfig);			
-		}
-		else {
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) 
+			gConfig.copyFrom(defaultGranConfig);
+		else 
 			gConfig.copyFrom(defaultSampConfig);
-		}
 		// If a stroke is active, reset its per-stroke cfg too
 		if (activeBrush != null) {
 			activeBrush.cfg().copyFrom(gConfig);
@@ -5811,6 +5704,120 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	static String fmt(float v, int decimals) {
 		return String.format("%." + decimals + "f", v);
 	}
+
+
+	
+	
+	
+
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
+
+		// ----- BEGIN OLD LISTENER-STYLE CODE ----- //	
+		
+		// TODO revise
+		/**
+		 * Sets up sample-accurate AudioListener called from the Minim audio processing loop.
+		 * We use the samples() methods in the AudioListener interface to call our processAudioBlock()
+		 * method. The audio samples don't concern us, just the regular interval over which they are processed:
+		 * essentially, we have a timer that wakes up at a regular interval. 
+		 * 
+		 */
+		public void initListener() {
+			// define the AudioListener class instance inline
+			audioOut.addListener(new AudioListener() {
+
+				/**
+				 * we use the samples() methods  in the AudioListener interface to call processAudioBlock()
+				 * the audio samples don't concern us, just the regular interval over which they are processed
+				 */
+				@Override
+				public void samples(float[] samp) {
+					// mono callback (blockSize == samp.length)
+					processAudioBlock(samp.length);
+				}
+
+				@Override
+				public void samples(float[] left, float[] right) {
+					// stereo callback (blockSize == left.length)
+					processAudioBlock(left.length);
+				}
+
+				private void processAudioBlock(int blockSize) {
+					long blockStart = audioBlockStartSample.getAndAdd(blockSize);
+					long nextBlockStart = blockStart + blockSize;
+					audioNextBlockStartSample.set(nextBlockStart);
+
+					audioSched.processBlock(
+							blockStart,
+							blockSize,
+							(Happening h, int offsetInBlock) -> {
+								if (h instanceof SamplerPointHappening sph) {
+									playSample(sph.samplePos, sph.len, sph.gain, sph.env, sph.pitchRatio, sph.pan);
+								}
+								// We add an event for the draw() loop
+								// dotInbox.add(new ActiveDot(h.x(), h.y(), System.currentTimeMillis() + dotLifeMs));
+							},
+							null // span handler later
+							);
+				}
+			});
+			audioSched.setLatePolicy(AudioScheduler.LatePolicy.DROP);
+		}
+
+		// TODO revise or drop
+		static final class ActiveDot {
+			final int x, y;
+			final long expireMs;
+
+			ActiveDot(int x, int y, long expireMs) {
+				this.x = x;
+				this.y = y;
+				this.expireMs = expireMs;
+			}
+		}
+
+
+		// TODO revise or drop
+		// Happening at a point with PASamplerInstrument use
+		static final class SamplerPointHappening implements Happening {
+			final int x, y;
+			final int samplePos, len;
+			final float gain, pan;
+			final float pitchRatio;     // pitch scaling as rate multiplier
+			final ADSRParams env;
+			final float noteMs;
+
+			SamplerPointHappening(int x, int y,
+					int samplePos, int len,
+					float gain, float pan,
+					float pitch,
+					ADSRParams env, int noteMs) {
+				this.x = x; this.y = y;
+				this.samplePos = samplePos;
+				this.len = len;
+				this.gain = gain;
+				this.pan = pan;
+				this.pitchRatio = pitch;
+				this.env = env;
+				this.noteMs = noteMs;
+			}
+
+			@Override public int x() { return x; }
+			@Override public int y() { return y; }
+		}
+
+			
+		// ----- END OLD LISTENER-STYLE CODE ----- //
+		
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
 
 
 
