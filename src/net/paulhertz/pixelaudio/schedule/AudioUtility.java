@@ -16,6 +16,11 @@ import ddf.minim.MultiChannelBuffer;
 /** Utility conversions for audio. */
 public final class AudioUtility {
     private AudioUtility() {}
+    /** Constant: 2^(1/12), the ratio of one semitone. */
+    public static final double SEMITONE_FAC = Math.pow(2.0, 1.0 / 12.0);
+    /** Precomputed log(2) for efficiency. */
+    private static final double LOG2 = Math.log(2.0);
+
 
     public static long millisToSamples(double millis, double sampleRate) {
         return (long) Math.floor((millis / 1000.0) * sampleRate + 0.5);
@@ -52,6 +57,62 @@ public final class AudioUtility {
     	return 20.0f * (float)Math.log10(x);
     }
    
+    // ------------------------------------------------------------------------
+    // Pitch / frequency utilities
+    // ------------------------------------------------------------------------
+
+    /**
+     * Convert semitone offset to frequency ratio.
+     *
+     * @param semitones number of semitones (can be fractional)
+     * @return frequency ratio (>0)
+     *
+     * Examples:
+     *   12  -> 2.0
+     *   0   -> 1.0
+     *  -12  -> 0.5
+     */
+    public static float semitonesToRatio(float semitones) {
+    	return (float) Math.pow(2.0, semitones / 12.0);
+    }
+
+    /**
+     * Convert frequency ratio to semitone offset.
+     *
+     * @param ratio frequency ratio (>0)
+     * @return semitone offset (can be fractional)
+     */
+    public static float ratioToSemitones(float ratio) {
+    	if (ratio <= 0f) {
+    		throw new IllegalArgumentException("ratio must be > 0");
+    	}
+    	return (float) (12.0 * Math.log(ratio) / LOG2);
+    }
+
+    /**
+     * Convert MIDI-style key number to frequency (A4 = 440 Hz, key 49).
+     */
+    public static float pianoKeyFrequency(float keyNumber) {
+    	return (float) (440.0 * Math.pow(2.0, (keyNumber - 49.0) / 12.0));
+    }
+
+    /**
+     * Convert frequency to fractional MIDI-style key number.
+     */
+    public static float frequencyPianoKey(float freq) {
+    	if (freq <= 0f) {
+    		throw new IllegalArgumentException("frequency must be > 0");
+    	}
+    	return 49.0f + 12.0f * (float) (Math.log(freq / 440.0) / LOG2);
+    }
+
+    /**
+     * Apply a semitone offset directly to a frequency.
+     */
+    public static float transposeFrequency(float freq, float semitones) {
+        return freq * semitonesToRatio(semitones);
+    }
+    
     
     // ------------- SIGNAL LEVELS -------------
     
