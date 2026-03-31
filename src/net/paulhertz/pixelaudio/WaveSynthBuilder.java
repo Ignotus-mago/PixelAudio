@@ -29,6 +29,8 @@ import net.paulhertz.pixelaudio.WaveData.WaveState;
 
 /**
  * Utilities for generating WaveSynth "instruments" and working with WaveSynth data. 
+ * TODO piano key methods and semitoneFac are in AudioUtility, maybe access them from here...
+ * 
  */
 public class WaveSynthBuilder {
 	public static final double semitoneFac = Math.pow(2, 1 / 12.0);
