@@ -188,18 +188,19 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'c' or 'C' to print the current configuration status to the console.
  * Press 't' to switch between Granular and Sampler editing and playing.
  * Press 'z' to change the drawing mode of the hover brush.
- * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.
+ * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends, if true.
+ * Press 'D' to toggle doPlayWhileDrawing to play while drawing a gesture, if true.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
- * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio
+ * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
  * Press 'f' or 'F' to open a folder with JSON brush data and load all files.
  * Press 'j' to save the active brush curve and config to JSON files.
  * Press 'J' to save all brushes curve and config to JSON Session file.
  * Press 'o' to open an audio file, image file, or JSON file.
  * Press 'm' to toggle doMagicClick .
- * Press 'r' to reset configuration of active brush.
- * Press 'R' to reset synths to defaults.
+ * Press 'R' to reset transform of active brush.
+ * Press 'r' to reset synths to defaults .
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
  * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'g' to create a beatBrush.
@@ -208,8 +209,6 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'L' to infinite loop on hovered granular brush.
  * Press ';' to stop loop for hovered brush.
  * Press ':' to stop all loops.
- * Press 'y' to toggle transform animation test.
- * Press 'Y' to freeze / unfreeze.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
  * Press '≈' to option-x on MacOS keyboard, clear all brushes.
@@ -313,10 +312,11 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 
 	// SampleInstrument setup
 	int noteDuration = 1000;          // average sample synth note duration, milliseconds
+	int oldNoteDuration = noteDuration;
 	int samplelen;                    // calculated sample synth note length, samples
 	float samplerGain = 0.95f;        // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
-	float outputGain = -6.0f;         // gain setting for audio output, decibels
+	float outputGain = 3.0f;         // gain setting for audio output, decibels
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
 	int sMaxVoices = 256;             // number of voices to allocate to pool or synth
@@ -606,17 +606,11 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	    GLITCH_CORTO('3') {
 	        @Override
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-	        	curve.setBezierBias(2.0f);
-	        	curve.setDrawWeighted(true);
-	        	cfg.rdpEpsilon = 8.0f;
-	        	cfg.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
+	        	cfg.rdpEpsilon = 12.0f;
+	        	cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
 	        	cfg.hopLengthSamples = 256;
 	        	cfg.grainLengthSamples = 1024;
 	        	cfg.burstGrains = 4;
-	            app.doPlayOnNewBrush = true;
-	            app.doPlayWhileDrawing = true;
-	        	app.usePitchedGrains = true;
-	        	app.pitchJitter = 0.1f;
 	            return new CueResult(curve, cfg);
 	        }
 	    },
@@ -625,7 +619,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
 	        	curve.setBezierBias(0.5f);
 	        	curve.setDrawWeighted(true);
-	        	cfg.rdpEpsilon = 40.0f;
+	        	cfg.rdpEpsilon = 2.0f;
 	        	cfg.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
 	        	cfg.hopLengthSamples = 128;
 	        	cfg.grainLengthSamples = 512;
@@ -736,8 +730,8 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		PApplet.main(new String[] { "--display=1", "--present", "--window-color=#000000", DeadBodyWorkFlow.class.getName() });
-		// PApplet.main(new String[] { DeadBodyWorkFlow.class.getName() });
+		//PApplet.main(new String[] { "--display=1", "--present", "--window-color=#000000", DeadBodyWorkFlow.class.getName() });
+		PApplet.main(new String[] { DeadBodyWorkFlow.class.getName() });
 	}
 	
 	public void settings() {
@@ -1237,10 +1231,12 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == RIGHT) {
-				
+				println("-- trig 1");
+				nd.oscSendTrig(1);				
 			}
 			else if (keyCode == LEFT) {
-
+				println("-- trig 0");
+				nd.oscSendTrig(0);
 			}
     	}
     }
@@ -1502,6 +1498,12 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 			if (gDir != null) gDir.cancelAndReleaseAll();
 			println("-- fade out all");
 			break;
+		case ']':
+			nd.oscSendTrig(1);
+			break;
+		case '[':
+			nd.oscSendTrig(0);
+			break;
 		case 'h': case 'H': // show help message
 			showHelp();
 			break;
@@ -1596,6 +1598,10 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 				loadAudioFile(new File(daPath + "D-flat2_bassClar_window..wav"));
 				break;
 			case '2': // VOICE_AND_MELODY
+				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+				controlWindow.setTitle("Sampler Synth");								
+				noteDuration = 432;
+				samplerEnv = envPreset("Percussion");
 				isLoadToBoth = false;
 				isAnimating = false;
 				setAudioGain(-6.0f);
@@ -1605,14 +1611,26 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 				daFilename = "workFlowPanel.png";    			
 				preloadFiles(daPath, daFilename);
 				break;
-			case '3':
-				this.doPlayOnNewBrush = true;
-				this.doPlayWhileDrawing = true;
+			case '3': // GLITCH_CORTO('3')
+				setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+	            this.doPlayOnNewBrush = true;
+	            this.doPlayWhileDrawing = true;
+	        	this.usePitchedGrains = true;
+	        	this.pitchJitter = 0.1f;
 				break;
-			case '4':
+			case '4': // GLITCH_LARGO('4')
 				break;
 			case '5': // REPRISE
+	            this.doPlayOnNewBrush = true;
+	            this.doPlayWhileDrawing = false;
+	        	this.usePitchedGrains = false;
+	        	this.pitchJitter = 0.1f;
 				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
+				resetConfigToDefaults(); 
+				break;
+			case '6': // CLOSE
+				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
+				resetConfigToDefaults(); 
 				break;
 			}
 		} else {
@@ -1626,13 +1644,16 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 				loadAudioFile(new File(daPath + "bag_1_gest_2_tail.wav"));
 				break;
 			case '3': // preset = GLITCH_CORTO('3')
-				loadAudioFile(new File(daPath + "bag _1_crackle.wav"));
-				doPlayWhileDrawing = true;
+				loadAudioFile(new File(daPath + "bag_1_crackle.wav"));
+				//doPlayWhileDrawing = true;
 				break;
 			case '4': // preset = GLITCH_LARGO('4')
 				break;
 			case '5': // preset = SIXTEENTHS('5')
-				loadAudioFile(new File(daPath + "bag_1_gest_2_tail.wav"));
+				loadAudioFile(new File(daPath + "Quarter-128.wav"));
+				break;
+			case '6': // preset = SIXTEENTHS('5')
+				loadAudioFile(new File(daPath + "High_Swells.wav"));
 				break;
 			default:
 			}	
@@ -1874,6 +1895,11 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	 * @param y    y-coordinate of event
 	 */
 	void runRaindropPointEvent(int x, int y) {
+		if (random(1.0f) > 0.5f) {
+			ensureGranularReady();
+			runGranularPointEvent(x, y);
+			return;
+		}
 		ensureSamplerReady();
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
 		float panning = map(x, 0, width, -0.875f, 0.875f);
@@ -1881,7 +1907,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 		// playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
 		// TODO vary gain and pitch, combine with granular jitter point events (eerie)
 		float pitchRatio = AudioUtility.semitonesToRatio(-9.0f);
-		samplelen = playSample(signalPos, len, samplerPointGain, envPreset("Swell"), pitchRatio, panning);
+		samplelen = playSample(signalPos, len, samplerPointGain, envPreset("Pluck"), pitchRatio, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
 		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
 		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
