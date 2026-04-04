@@ -579,7 +579,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	/* ------------------------------------------------------------------ */
 	/*                              PRESET LIST                           */
 	/* ------------------------------------------------------------------ */
-
+	
 	/* Presets for DeadBodyWorkFlow 
      *    1. Drone on open, 'a' to animate, '.' for raindrops begin .. end 
      *    2. When raindrops end, load DBWF audio + image, voice + bass clarinet enter
@@ -590,6 +590,14 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
      *       voice sotto voce, with FX, "dead body work flow busy word game play".
      *    TODO brush color variations1
 	 */ 
+	/**
+	 * Presets are applied to each new brush at the moment drawing is completed by 
+	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
+	 * all brush creation. Presets are best used just for brush modifications. If you
+	 * want to change application settings, use runPerformanceCue() with your own custom 
+	 * code. You can address the host application with the <code>app</app> parameter, 
+	 * but keep in mind that is is called on every brush. 
+	 */
 	enum PerformancePreset {
 	    DRONE_RAINDROPS('1') {
 	        @Override
@@ -658,6 +666,15 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	        return null;
 	    }
 	    
+	    /**
+	     * Abstract method for concrete apply() methods implemented by each enum constant. In the preset
+	     * logic, each constant is in effect its own function, which can be invoked by reference. 
+	     * 
+	     * @param cfg      configuration parameters for GestureGranularConfig, used to modify audio synthesis
+	     * @param curve    a PACurveMaker gesture, which can be modifed by the concrete apply() method
+	     * @param app      a reference to the host application, use with caution
+	     * @return         a reference to the concrete apply() method for an enum constant 
+	     */
 	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app);
 	}
 	
@@ -730,8 +747,8 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		//PApplet.main(new String[] { "--display=1", "--present", "--window-color=#000000", DeadBodyWorkFlow.class.getName() });
-		PApplet.main(new String[] { DeadBodyWorkFlow.class.getName() });
+		PApplet.main(new String[] { "--display=1", "--present", "--window-color=#000000", DeadBodyWorkFlow.class.getName() });
+		//PApplet.main(new String[] { DeadBodyWorkFlow.class.getName() });
 	}
 	
 	public void settings() {

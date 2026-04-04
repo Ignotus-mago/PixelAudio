@@ -316,7 +316,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	int samplelen;                    // calculated sample synth note length, samples
 	float samplerGain = 0.95f;        // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
-	float outputGain = 3.0f;         // gain setting for audio output, decibels
+	float outputGain = 0.0f;         // gain setting for audio output, decibels
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
 	int sMaxVoices = 256;             // number of voices to allocate to pool or synth
@@ -394,7 +394,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     public ArrayList<Integer> allTimes;                 // in-progress brushstroke times
     public int startTime;                               // in-progress brushstroke start time
 	
-	public int dragColor = color(110, 89, 76, 128);	    // color for initial drawing 
+	public int dragColor = color(220, 178, 152, 128);	    // color for initial drawing 
 	public float dragWeight = 8.0f;						// weight (brush diameter) of initial line drawing
 	
 	public int polySteps = 5;							// number of steps in polygon representation of a Bezier curve	
@@ -587,6 +587,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
      *    4. begin drawing at m37, release at m43, 8 seconds 16th notes until m58 1st beat — which file?
      *    5. m66, Macabre, effects control via UDP	
 	 */ 
+	/**
+	 * Presets are applied to each new brush at the moment drawing is completed by 
+	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
+	 * all brush creation. Presets are best used just for brush modifications. If you
+	 * want to change application settings, use runPerformanceCue() with your own custom 
+	 * code. You can address the host application with the <code>app</app> parameter, 
+	 * but keep in mind that is is called on every brush. 
+	 */
 	enum PerformancePreset {
 	    DURATION_5SEC_SWELL('1') {
 	        @Override
@@ -711,6 +719,15 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	        return null;
 	    }
 	    
+	    /**
+	     * Abstract method for concrete apply() methods implemented by each enum constant. In the preset
+	     * logic, each constant is in effect its own function, which can be invoked by reference. 
+	     * 
+	     * @param cfg      configuration parameters for GestureGranularConfig, used to modify audio synthesis
+	     * @param curve    a PACurveMaker gesture, which can be modifed by the concrete apply() method
+	     * @param app      a reference to the host application, use with caution
+	     * @return         a reference to the concrete apply() method for an enum constant 
+	     */
 	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app);
 	}
 	
@@ -1284,10 +1301,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == RIGHT) {
-				if (nd != null) nd.oscSendTrig(1);
+				if (nd != null) nd.oscSendSwitch(1, true);
 			}
 			else if (keyCode == LEFT) {
-				if (nd != null) nd.oscSendTrig(0);
+				if (nd != null) nd.oscSendSwitch(1, false);
 			}
     	}
     }
@@ -1549,11 +1566,27 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			if (gDir != null) gDir.cancelAndReleaseAll();
 			println("-- fade out all");
 			break;
-		case ']':
-			nd.oscSendTrig(1);
+		case ']': // UDP message to Max: reverb ON
+			if (nd != null) nd.oscSendSwitch(1, true);
 			break;
-		case '[':
-			nd.oscSendTrig(0);
+		case '[': // UDP message to Max: reverb OFF
+			if (nd != null) nd.oscSendSwitch(1, false);
+			break;
+		case 'v': // UDP message to Max: small reverb
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.125f);
+				nd.oscSendSetnum(2, 2048.0f);
+				nd.oscSendSetnum(3, 0.125f);
+				nd.oscSendSetnum(4, 2560.0f);
+			}
+			break;
+		case 'V': // UDP message to Max: big reverb
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.3f);
+				nd.oscSendSetnum(2, 4096.0f);
+				nd.oscSendSetnum(3, 0.3f);
+				nd.oscSendSetnum(4, 5120.0f);
+			}
 			break;
 		case 'h': case 'H': // show help message
 			showHelp();
@@ -1683,7 +1716,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			switch (key) {
 			case '1': // preset = DURATION_5SEC_SWELL('1')
 				if (nd != null) {
-					this.nd.oscSendTrig(1);
+					this.nd.oscSendSwitch(1, true);
 					println("-- trig 1 -- reverb ON");
 				}
 				loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
@@ -4555,6 +4588,20 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		  	
 		public void oscSendTrig(int index) {
 			OscMessage msg = new OscMessage("/trig");
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		public void oscSendSwitch(int index, boolean state) {
+			OscMessage msg = new OscMessage("/switch");
+			msg.add(index);
+			msg.add(state ? 1 : 0);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		public void oscSendSetnum(int index, float value) {
+			OscMessage msg = new OscMessage("/setnum");
+			msg.add(value);
 			msg.add(index);
 			osc.send(msg, this.remoteTo);
 		}
