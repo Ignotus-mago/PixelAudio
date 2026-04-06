@@ -1248,12 +1248,10 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == RIGHT) {
-				println("-- trig 1");
-				nd.oscSendTrig(1);				
+				if (nd != null) nd.oscSendOnOff(1, true);
 			}
 			else if (keyCode == LEFT) {
-				println("-- trig 0");
-				nd.oscSendTrig(0);
+				if (nd != null) nd.oscSendOnOff(1, false);
 			}
     	}
     }
@@ -1515,11 +1513,33 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 			if (gDir != null) gDir.cancelAndReleaseAll();
 			println("-- fade out all");
 			break;
-		case ']':
-			nd.oscSendTrig(1);
+		case ']': // UDP message to Max: reverb ON
+			if (nd != null) nd.oscSendOnOff(1, true);
 			break;
-		case '[':
-			nd.oscSendTrig(0);
+		case '[': // UDP message to Max: reverb OFF
+			if (nd != null) nd.oscSendOnOff(1, false);
+			break;
+		case '}':
+			if (nd != null) nd.oscSendOnOff(2, true);
+			break;
+		case '{':
+			if (nd != null) nd.oscSendOnOff(2, false);
+			break;
+		case 'v': // UDP message to Max: small reverb
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.125f);
+				nd.oscSendSetnum(2, 2048.0f);
+				nd.oscSendSetnum(3, 0.125f);
+				nd.oscSendSetnum(4, 2560.0f);
+			}
+			break;
+		case 'V': // UDP message to Max: big reverb
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.3f);
+				nd.oscSendSetnum(2, 4096.0f);
+				nd.oscSendSetnum(3, 0.3f);
+				nd.oscSendSetnum(4, 5120.0f);
+			}
 			break;
 		case 'h': case 'H': // show help message
 			showHelp();
@@ -1655,21 +1675,62 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 			isLoadToBoth = true;
 			switch (key) {
 			case '1': // preset = DURATION_5SEC_SWELL('1')
+				if (nd != null) {
+					this.nd.oscSendOnOff(1, true);
+					println("-- trig 1 -- reverb ON");
+				}
 				loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
+	            this.doPlayOnNewBrush = true;
+	            this.doPlayWhileDrawing = false;
+	            this.isAutoOptimize = true;
+	        	this.isAddDynamics = true;
+	        	float[] timesMs = new float[] {0, 500, 2500, 5000};
+	        	float dur = timesMs[timesMs.length - 1];
+	        	float[] values = new float[] {0.1f, 1.0f, 1.0f, 0.1f};
+	        	float[] times = new float[timesMs.length];
+	        	for (int i = 0; i < times.length; i++) {
+	        		times[i] =  map(timesMs[i], 0f, dur, 0f, 1f);
+	        	}
+	        	this.dynamics = new PAKeyframeControlCurve (times, values); 
 				break;
 			case '2': // preset = LONG_ECHO('2')
+				this.doPlayOnNewBrush = true;
+	            this.doPlayWhileDrawing = false;
+	            this.isAutoOptimize = true;
+	        	this.isAddDynamics = true;
 				loadAudioFile(new File(daPath + "bag_1_gest_2_tail.wav"));
 				break;
 			case '3': // preset = GLITCH_CORTO('3')
-				loadAudioFile(new File(daPath + "bag_1_crackle.wav"));
+				if (nd != null) {
+					this.nd.oscSendTrig(0);
+					println("-- trig 0 -- reverb OFF");
+				}
+	            this.doPlayOnNewBrush = false;
+	            this.doPlayWhileDrawing = true;
+	        	this.usePitchedGrains = true;
+	        	this.pitchJitter = 0.1f;
+	        	loadAudioFile(new File(daPath + "bag_1_crackle.wav"));
 				//doPlayWhileDrawing = true;
 				break;
 			case '4': // preset = GLITCH_LARGO('4')
+	            this.doPlayOnNewBrush = true;
+	            this.doPlayWhileDrawing = true;
+	        	this.usePitchedGrains = true;
+	        	this.pitchJitter = 0.5f;
 				break;
 			case '5': // preset = SIXTEENTHS('5')
-				loadAudioFile(new File(daPath + "Quarter-128.wav"));
+	        	this.doPlayOnNewBrush = false;
+	        	this.doPlayWhileDrawing = false;
+	        	this.isAutoOptimize = false;
+	        	this.usePitchedGrains = false;
+	        	this.isAddDynamics = true; // ???
+				loadAudioFile(new File(daPath + "bag_1_newSpiral.wav"));
 				break;
-			case '6': // preset = SIXTEENTHS('5')
+			case '6': // preset = DYNAMICS_1('6')
+	        	this.doPlayOnNewBrush = true;
+	        	this.doPlayWhileDrawing = false;
+	        	this.isAutoOptimize = true;
+	        	this.usePitchedGrains = false;
 				loadAudioFile(new File(daPath + "High_Swells.wav"));
 				break;
 			default:
@@ -4487,6 +4548,20 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 		  	
 		public void oscSendTrig(int index) {
 			OscMessage msg = new OscMessage("/trig");
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		public void oscSendOnOff(int index, boolean state) {
+			OscMessage msg = new OscMessage("/onoff");
+			msg.add(state ? 1 : 0);
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		public void oscSendSetnum(int index, float value) {
+			OscMessage msg = new OscMessage("/setnum");
+			msg.add(value);
 			msg.add(index);
 			osc.send(msg, this.remoteTo);
 		}

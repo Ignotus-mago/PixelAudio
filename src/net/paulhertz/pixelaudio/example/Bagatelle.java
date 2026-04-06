@@ -366,7 +366,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     int animSteps = 720;                 // how many steps in an animation loop
     boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
     int videoFrameRate = 120;             // fps, frames per second
-    int videoSteps = 720;
+    int videoSteps = 720;                // TODO seems redundant
     int step;                            // number of current step in animation loop
     VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
     
@@ -1301,10 +1301,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == RIGHT) {
-				if (nd != null) nd.oscSendSwitch(1, true);
+				if (nd != null) nd.oscSendOnOff(1, true);
 			}
 			else if (keyCode == LEFT) {
-				if (nd != null) nd.oscSendSwitch(1, false);
+				if (nd != null) nd.oscSendOnOff(1, false);
 			}
     	}
     }
@@ -1567,10 +1567,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			println("-- fade out all");
 			break;
 		case ']': // UDP message to Max: reverb ON
-			if (nd != null) nd.oscSendSwitch(1, true);
+			if (nd != null) nd.oscSendOnOff(1, true);
 			break;
 		case '[': // UDP message to Max: reverb OFF
-			if (nd != null) nd.oscSendSwitch(1, false);
+			if (nd != null) nd.oscSendOnOff(1, false);
+			break;
+		case '}':
+			if (nd != null) nd.oscSendOnOff(2, true);
+			break;
+		case '{':
+			if (nd != null) nd.oscSendOnOff(2, false);
 			break;
 		case 'v': // UDP message to Max: small reverb
 			if (nd != null) {
@@ -1674,49 +1680,56 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 */
 	void runPerformanceCue(char key) {
 		if (isRunWordGame) {
-//			switch (key) {
-//			case '1': // DRONE_RAINDROPS
-//				isLoadToBoth = true;
-//				applyColorMapOnLoad = true;
-//				setAudioGain(-24.0f);
-//				loadAudioFile(new File(daPath + "D-flat2_bassClar_window..wav"));
-//				break;
-//			case '2': // VOICE_AND_MELODY
-//				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
-//				controlWindow.setTitle("Sampler Synth");								
-//				noteDuration = 432;
-//				samplerEnv = envPreset("Percussion");
-//				isLoadToBoth = false;
-//				isAnimating = false;
-//				setAudioGain(-6.0f);
-//				daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Body/";   
-//				daFilename = "workflow_48Khz.wav";
-//				loadAudioFile(new File(daPath + daFilename));
-//				daFilename = "workFlowPanel.png";    			
-//				preloadFiles(daPath, daFilename);
-//				break;
-//			case '3': 
-//				this.doPlayOnNewBrush = true;
-//				this.doPlayWhileDrawing = true;
-//				break;
-//			case '4':
-//				break;
-//			case '5': // REPRISE
-//				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
-//				resetConfigToDefaults(); 
-//				break;
-//			case '6': // CLOSE
-//				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
-//				resetConfigToDefaults(); 
-//				break;
-//			}
+			switch (key) {
+			case '1': // DRONE_RAINDROPS
+				isLoadToBoth = true;
+				applyColorMapOnLoad = true;
+				setAudioGain(-24.0f);
+				loadAudioFile(new File(daPath + "D-flat2_bassClar_window..wav"));
+				break;
+			case '2': // VOICE_AND_MELODY
+				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+				controlWindow.setTitle("Sampler Synth");								
+				noteDuration = 432;
+				samplerEnv = envPreset("Percussion");
+				isLoadToBoth = false;
+				isAnimating = false;
+				setAudioGain(-6.0f);
+				daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Body/";   
+				daFilename = "workflow_48Khz.wav";
+				loadAudioFile(new File(daPath + daFilename));
+				daFilename = "workFlowPanel.png";    			
+				preloadFiles(daPath, daFilename);
+				break;
+			case '3': // GLITCH_CORTO('3')
+				setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+	            this.doPlayOnNewBrush = true;
+	            this.doPlayWhileDrawing = true;
+	        	this.usePitchedGrains = true;
+	        	this.pitchJitter = 0.1f;
+				break;
+			case '4': // GLITCH_LARGO('4')
+				break;
+			case '5': // REPRISE
+	            this.doPlayOnNewBrush = true;
+	            this.doPlayWhileDrawing = false;
+	        	this.usePitchedGrains = false;
+	        	this.pitchJitter = 0.1f;
+				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
+				resetConfigToDefaults(); 
+				break;
+			case '6': // CLOSE
+				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
+				resetConfigToDefaults(); 
+				break;
+			}
 		} else {
 			applyColorMapOnLoad = true;
 			isLoadToBoth = true;
 			switch (key) {
 			case '1': // preset = DURATION_5SEC_SWELL('1')
 				if (nd != null) {
-					this.nd.oscSendSwitch(1, true);
+					this.nd.oscSendOnOff(1, true);
 					println("-- trig 1 -- reverb ON");
 				}
 				loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
@@ -4592,10 +4605,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			osc.send(msg, this.remoteTo);
 		}
 		
-		public void oscSendSwitch(int index, boolean state) {
-			OscMessage msg = new OscMessage("/switch");
-			msg.add(index);
+		public void oscSendOnOff(int index, boolean state) {
+			OscMessage msg = new OscMessage("/onoff");
 			msg.add(state ? 1 : 0);
+			msg.add(index);
 			osc.send(msg, this.remoteTo);
 		}
 		
