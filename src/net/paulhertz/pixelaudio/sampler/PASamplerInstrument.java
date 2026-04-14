@@ -23,6 +23,7 @@ import net.paulhertz.pixelaudio.schedule.AudioUtility;
  *  - Global pitch scaling
  *  - Global stereo pan
  *  - Default ADSR envelope
+ *  - Linear trim (gain) per instrument
  *  - Compensation for differing buffer vs. output sample rates
  *  - Cached buffer size for efficiency
  *
@@ -128,6 +129,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * The primary play method, called by all playSample() methods, from PASamplerPlayable interface.
+	 *
 	 */
 	@Override
 	public int play(int samplePos, int sampleLen, float amplitude,
@@ -171,12 +173,12 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	/**
 	 * Trigger playback using all six standard per-voice parameters.
 	 *
-	 * @param samplePos  start position (samples)
-	 * @param sampleLen  playback length (samples)
-	 * @param amplitude  per-voice amplitude
-	 * @param env        ADSR envelope parameters
-	 * @param pitch      playback rate (1.0 = normal)
-	 * @param pan        stereo position (-1.0 = left, +1.0 = right)
+	 * @param samplePos    start position (samples)
+	 * @param sampleLen    playback length (samples)
+	 * @param amplitude    per-voice amplitude
+	 * @param env          ADSR envelope parameters
+	 * @param pitch        playback rate (1.0 = normal)
+	 * @param pan          stereo position (-1.0 = left, +1.0 = right)
 	 * @return the actual length of the audio event, in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude,

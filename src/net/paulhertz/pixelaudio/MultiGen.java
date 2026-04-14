@@ -195,10 +195,12 @@ public class MultiGen extends PixelMapGen {
 	
 	/**
 	 * This method creates a MultiGen consisting of a mix of zigzag and Hilbert curves
-	 * in 6 columns and 4 rows arranged to provide a continuous loop.
+	 * in 6 columns and 4 rows arranged to provide a continuous loop. The resulting
+	 * MultiGen will be 6 * genW wide by 4 * genH high, where genW == genH and genW 
+	 * is a power of 2 (required for Hilbert gens). 
 	 * 
-	 * @param genW
-	 * @param genH
+	 * @param genW    width of each gen, must be a power of 2 and equal to genW
+	 * @param genH    height of each gen, must be a power of 2 and equal to genW
 	 * @return
 	 */
 	public static MultiGen hilbertZigzagLoop6x4(int genW, int genH) {
