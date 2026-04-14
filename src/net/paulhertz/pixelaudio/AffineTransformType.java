@@ -18,10 +18,22 @@
 
 package net.paulhertz.pixelaudio;
 
+// TODO consider alternate names for transforms
+
 /**
- *  Standard orientation ("NADA") for PixelMapGen puts the start point at (0,0). A Hilbert curve starts at (0,0) and ends at (width-1, 0).
- *  A DiagonalZigzag curve starts at (0,0) and ends at (width, height). See the PixelMapGen child classes for details. 
- *  Naming follows computer graphics conventions where 0 degrees points right and positive rotation is counterclockwise.
+ * <p>
+ * The AffineTransformType enum defines the types of affine transformations that
+ * can be applied to bitmaps in the PixelAudio library using only rotation and
+ * reflection. PixelMapGen uses the AffineTransformType enum to specify the type
+ * of transformation to apply to the gen coordinates and LUTs. PixelMapGen's
+ * comments strongly suggest starting gen coordinates at (0,0) in the upper left
+ * corner, but this may vary with the signal path you want to create. The Moore
+ * curve, for example, begins at the top center of the bitmap. The 
+ * {@link BitmapTransform.java BitmapTransform class} applies the transformations 
+ * defined in this enum to bitmaps using lookup tables. 
+ * </p><p>
+ * Naming follows computer graphics conventions where 0 degrees points right and
+ * positive rotation is counterclockwise.</p>
  * 
  * 	<pre>
  *   NADA         no operation
