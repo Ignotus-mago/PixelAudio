@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+//Audio support from Java
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -32,75 +33,140 @@ import com.hamoid.*;
 
 /**
  * 
- * <p>This example application builds on TutorialOne_01_FileIO, which provided commands to 
- * open and display audio and image files, transcode image pixel data to audio samples,
- * transcode audio samples to image pixel data, and save audio and image files. 
- * TutorialOne_01_FileIO also introduced a Sampler instrument, PASamplerInstrument, which
- * responds to mouse clicks by playing the audio samples corresponding to the click location
- * in the display image. The other audio instrument, the Granular Synthesis instrument, 
- * will be introduced later on.</p> 
- *
- * <p>We add a very simple form of animation in this sketch. We also provide commands
- * for saving an animation to video. The animation consists of shifting pixels along
- * the Signal Path, which is managed by the PixelAudioMapper object <code>mapper</code>.
- * When the image we are animating is a representation of audio data or some other sort
- * of periodic pattern, pixel-shfting can result in hypnotic patterns. This is specifically
- * demonstrated by the the WaveSynth class and the WaveSynthEditor and ArgosyMixer sample sketches. 
- * When the pixels in the display image are shifted, the correspondence between pixel coordinates
- * and audio buffer index changes. This is particularly evident when the image is a visualization
- * of the audio buffer. If you are looking at an image that represents audio data, 
- * such as Saucer_mixdown.wav, you can see how animation changes the apparent position 
- * of the audio data. When animation is running, repeated clicks at the same location 
- * in the window will trigger different audio events. </p> 
+ * <p>
+ * This example sketch builds on TutorialOne_01_FileIO, which provided commands
+ * to open and display audio and image files, transcode image pixel data to
+ * audio samples, transcode audio samples to image pixel data, and save audio
+ * and image files. TutorialOne_01_FileIO also introduced a digital audio
+ * instrument, PASamplerInstrument, and provided an interface which responds to
+ * mouse clicks by playing the audio samples corresponding to the click location
+ * in the display image. In this sketch, we add panning and pitch control to
+ * PASamplerInstrument <code>playSample(...)</code> methods. The other audio
+ * instrument, the Granular Synthesis instrument, will be introduced later on.
+ * This sketch introduces the animation feature built-in to PixelAudioMapper,
+ * pixel-shifting along the Signal Path, which shifts pixels in the display 
+ * and changes the correspondence between screen coordinates and audio signal
+ * index position. The animation provides an analog to visual "audio streaming"
+ * and can be used to create a sort of "music box" audio player. 
+ * </p>
+ * <pre>
+ *   QUICK START
  * 
- * <p>We track the shifting with a variable, <code>totalShift</code>, that preserves the 
- * correspondence. The audio buffer itself is never shifted, nor is the canonic image 
- * <code>baseImage</code>. We just use totalShift to determine where to locate pixels or audio samples. 
- * Of course, if you only want to animate the image, you can just ignore the value of totalShift when 
- * accessing the audioBuffer. </p> 
- * 
- * <p>We continue to use Sampler instrument, showing how it can control the pitch and panning 
- * of an audio event. The playSample() methods in this sketch introduce the most complete 
- * audio triggering method available in PASamplerInstrument, one which can set sample start 
- * position, length, amplitude, ADSR-style envelope, pitch scaling and stereo pan location.</p>  
+ *   1. Launch the sketch and then press the 'o' key to open an image or audio
+ *      file. The "audioBlend.wav" file is good for experimenting. The audio
+ *      data in it will be transcoded to gray scale pixel data and displayed in
+ *      the window. Click on the display image to trigger audio events. To see
+ *      the signal path as a color overlay, press the 'K' key. 
+ *   
+ *   2. Press 'm' to run the "Music Box" routine, which triggers an audio event
+ *      every frame in the same location while animating the display image with
+ *      pixel shifting. Use the UP and DOWN arrow keys to change the amount of
+ *      pixel shifting, and the 'A' key to reverse the direction of shifting.
+ *      Use the 'p' and 'P' keys to change the pitch of the audio. Press 'r'
+ *      to turn random ADSR envelope selection on and off.
+ *      See below for more information.
+ * </pre>
+ * <p>
+ * We add a simple form of animation in this sketch, which consists of shifting
+ * the pixels in the display image along the Signal Path. This is a simple way
+ * to create an animation that is directly tied to the audio data. When the
+ * image we are animating is a representation of audio data or some other sort
+ * of periodic pattern, pixel-shfting can result in hypnotic animated patterns.
+ * This is demonstrated by the the WaveSynth class and the WaveSynthEditor and
+ * ArgosyMixer sample sketches. When the pixels in the display image are
+ * shifted, the correspondence between pixel coordinates and audio buffer index
+ * changes. This is particularly evident when the image is a visualization of
+ * the audio buffer. If you are looking at an image that represents audio data,
+ * such as Saucer_mixdown.wav, you can see how animation changes the apparent
+ * position of the audio data. When animation is running, repeated clicks at the
+ * same location in the window will trigger different audio events.
+ * </p><p>
+ * Pixel shifting animation works by moving the pixels in the display image
+ * <code>mapImage</code> once every frame by the number of pixels specified by
+ * the variable <code>shift</code>, and tracking the accummulated shifting with
+ * another variable, <code>totalShift</code>. The audio buffer itself is never
+ * shifted, nor is the canonic image <code>baseImage</code>. We just use
+ * totalShift to determine where to locate pixels or audio samples. The shifting
+ * is managed by the PixelAudioMapper object <code>mapper</code>, which provides
+ * methods for accessing pixel and audio data with shifting taken into account.
+ * Of course, if you only want to animate the image, you can just ignore the
+ * value of totalShift when accessing the audioBuffer.
+ * </p><p>
+ * The shift variable can be tied to the audio sample rate and the video frame
+ * rate in such a way that the animation is synchronized with the audio when we
+ * trigger an audio event once every frame. If the audio sample rate is 44100
+ * and the video frame rate is 24, as it is in this example, then we can set
+ * shift to 44100/24, which is about 1838 ('m' key). If we then trigger an audio
+ * event once every frame in the same location in the window, the audio events
+ * will advance through the buffer in sync with the animation, and the audio
+ * will play more or less as it would if it were streaming from a file. If you
+ * double the shift or cut it in half (UP ARROW or DOWN ARROW), the audio events
+ * will happen at double or half speed. If you reverse the sign of shift ('A'
+ * key), the animation will run backwards, and the audio events will also happen
+ * in reverse order. 
+ * </p><p>
+ * We also provide commands for saving an animation to video ('V' key) and saving
+ * the display image and audio buffer to files. To visualize the Signal Path, you
+ * can use the 'k' or 'K' keys to overlay a spectrum of color on the display
+ * image. The 'K' key will write the spectrum to <code>baseImage</code>, so that
+ * it will persist when running animation. The 'k' key will write color data to
+ * <code>mapImage</code> only.
+ * </p><p>
+ * We continue to use the Sampler instrument for audio events, showing how it
+ * can control the pitch and panning of an audio event. The playSample() methods
+ * in this sketch introduce the most complete audio triggering method available
+ * in PASamplerInstrument, one which can set sample start position, length,
+ * amplitude, ADSR-style envelope, pitch scaling and stereo pan location.
+ * </p>
  * <pre>
  *   samplelen = synth.playSample(samplePos, (int) samplelen, amplitude, env, pitchScaling, pan);
  * </pre>
- * <p>Pitch scaling by default is 1.0, which is to say that samples will be played back at 
- * the recorded frequency. Panning, if it is not supplied as an argument to playSample(), is
- * centered in the stereo field. </p> 
- *
- * <div>    
+ * <p>
+ * Pitch scaling by default is 1.0, which is to say that samples will be played
+ * back at the recorded frequency. Panning, if it is not supplied as an argument
+ * to playSample(), is centered in the stereo field. We calculate the panning
+ * value by mapping the x-coordinate of the mouse position to the stereo pan
+ * value.
+ * </p> * <div>    
  * Still to come, as the tutorial advances:<br>
  * -- drawing to trigger audio events<br>
  * -- the Granular Synthesis instruments<br>
  * -- UDP communication with Max and other media applications<br>
- * -- Windowed buffer use to load an audio file into memory and advance through it<br>
  * 
  * <p>The key commands:
  * <ul>
- * <li>Press ' ' to spacebar, play sample at current mouse position.</li>
+ * <li>Press UP ARROW to increment pixel shift.</li>
+ * <li>Press DOWN ARROW to decrement pixel shift.</li>
+ * <li>Press ' ' (spacebar) to play sample at current mouse position.</li>
  * <li>Press 'a' to turn animation on or off.</li>
  * <li>Press 'A' to change animation direction.</li>
- * <li> Press 'b' to rotate pixels by shift value.</li>
- * <li>Press 'm' to turn interactive setting of shift value on or off (drag to set).</li>
+ * <li>Press 'f' to rotate pixels by shift value .</li>
+ * <li>Press 'F' to rotate pixels by shift value .</li>
+ * <li>Press 'm' to play audio events synced to audio sample rate and video frame rate.</li>
  * <li>Press 'c' to apply color from image file to display image (mapImage) only.</li>
  * <li>Press 'C' to apply color from image file to base image and map image.</li>
- * <li>Press 'k' to apply the hue and saturation in the colors array to mapImage.</li>
- * <li>Press 'K' to apply hue and saturation in colors to baseImage and mapImage.</li>
+ * <li>Press 'k' to apply hue and saturation in the spectrum array to mapImage .</li>
+ * <li>Press 'K' to apply hue and saturation in the spectrum array to baseImage.</li>
  * <li>Press 'o' or 'O' to open an audio or image file.</li>
  * <li>Press 'p' to select low pitch scaling or default pitch scaling.</li>
  * <li>Press 'P' to select high pitch scaling or default pitch scaling.</li>
  * <li>Press 'd' or 'D' to turn rain on and off.</li>
- * <li>Press 'r' or 'R' to set isRandomADSR, to use default envelope or a random choice.</li>
+ * <li>Press 'r' or 'R' to toggle isRandomADSR, to use default envelope or a random choice.</li>
+ * <li>Press 's' to save display image to a PNG file.</li>
+ * <li>Press 'S' to save audio buffer to a .wav file.</li>
  * <li>Press 'V' to record a video from frame 0 to frame animSteps.</li>
+ * <li>Press 'w' to show data values in display.</li>
  * <li>Press 'h' or 'H' to show help message.</li>
  * </ul>
  * </p>
  * </div>
  */
 public class TutorialOne_02_Animation extends PApplet {
-	// PixelAudio vars and objects
+
+	/* ------------------------------------------------------------------ */
+	/*                       PIXELAUDIO VARIABLES                         */
+	/* ------------------------------------------------------------------ */
+
 	PixelAudio pixelaudio;     // our shiny new library
 	MultiGen multigen;         // a PixelMapGen that links together multiple PixelMapGens
 	int genWidth = 512;        // width of multigen PixelMapGens
@@ -111,8 +177,8 @@ public class TutorialOne_02_Animation extends PApplet {
 	PImage baseImage;          // unchanging source image
 	// mapImage can change, and often does so with reference to the stable baseImage, for example when animating
 	PImage mapImage;           // image for display, may be animated
-	PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
-	int[] colors;              // array of spectral colors
+	PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // color channel that receives pixel data
+	int[] spectrum;              // array of spectral colors
 	
 	/* ------------------------------------------------------------------ */
 	/*                        FILE I/O VARIABLES                          */
@@ -137,32 +203,26 @@ public class TutorialOne_02_Animation extends PApplet {
 	/* ------------------------------------------------------------------ */
 	/*                          AUDIO VARIABLES                           */
 	/* ------------------------------------------------------------------ */
-
-	/*
-	 * 
-	 * Audio playback support is added with the audio variables and audio methods 
-	 * (below, in Eclipse, in a tab, in Processing). You will also need the 
-	 * PASamplerInstrument and TimedLocation classes. In setup(), call initAudio(), then
-	 * add a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
-	 * and call runTimeArray() in your draw method. 
-	 * 
-	 */
 	 
 	/** Minim audio library */
 	Minim minim;                    // library that handles audio 
 	AudioOutput audioOut;           // output to sound hardware
-	boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-	float sampleRate = 44100;       // target audio engine rate used to configure audioOut
+	float audioGain = 0.0f;         // audio gain in dB
+
+	float sampleRate = 44100;       // target audio sampling rate used to configure audioOut
 	float fileSampleRate;           // sample rate of most recently opened file (before resampling, but may already == sampleRate)
 	float bufferSampleRate;         // sample rate of playBuffer, == fileSampleRate when we don't resample, == sampleRate when we do
+	boolean doResample = true;      // if true, resample audio from files whose sampling rate != audioOut.sampleRate()
+
 	float[] audioSignal;            // the audio signal as an array of floats
 	MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
-	int samplePos;                  // index into the audio signal, set when an audio event is triggered
 	int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
-	// SampleInstrument setup
+
+	// SamplerInstrument setup
 	int noteDuration = 1500;        // average sample synth note duration, milliseconds
-	int samplelen;                  // calculated sample synth note length, samples
 	PASamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
+	float samplerGain = -3.0f;      // synth gain in dB
+
 	// ADSR and its parameters
 	ADSRParams defaultEnv;          // wrapper for ADSR that keeps its values visible
 	float maxAmplitude = 0.7f;      // 0..1
@@ -181,27 +241,30 @@ public class TutorialOne_02_Animation extends PApplet {
 	ArrayList<TimedLocation> timeLocsArray;
 	int count = 0;  
 	int fileIndex = 0;
-	
-	
+
+
 	/* ------------------------------------------------------------------ */
 	/*                   ANIMATION AND VIDEO VARIABLES                    */
 	/* ------------------------------------------------------------------ */
 	  
 	int shift = 256;                     // number of pixels to shift the animation
+	int shiftInc = 16;                   // increment/decrement value for shift
 	int totalShift = 0;                  // cumulative shift
 	boolean isAnimating = false;         // do we run animation or not?
 	boolean oldIsAnimating;              // keep track of animation state when opening a file
-	boolean isTrackMouse = false;        // if true, drag the mouse to change shift value
-	boolean isRaining = false;           // set to true ('r' key) to automate audio events
 	// animation variables
-	int animSteps = 720;                 // how many steps in an animation loop
+	int animSteps = 768;                 // how many steps in an animation loop
 	boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
 	int videoFrameRate = 24;             // fps
 	int step;                            // number of current step in animation loop, used when recording video
 	VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
+	
+	// application settings
 
+	boolean isRaining = false;           // toggle to true to run random "raindrop" audio events ('d' key)
+	boolean isShowOverlay = false;       // toggle for overlay of text in display ('w' key)
+	boolean isPlayMusicBox = false;      // toggle to show how audio events can be tied to frame rate ('m' key)
 
-	// ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **	//
 
 	
 	public static void main(String[] args) {
@@ -213,24 +276,33 @@ public class TutorialOne_02_Animation extends PApplet {
 	}
 	
 	public void setup() {
-		frameRate(24);
-		// initialize our library
-		pixelaudio = new PixelAudio(this);
-		// create a PixelMapGen subclass such as MultiGen, with dimensions equal to the display window
-		// the call to hilbertLoop3x2 produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
-		// genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
-		multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
-		// create a PixelAudioMapper to handle the mapping of pixel colors to audio samples
+		frameRate(videoFrameRate);
+		// 1. initialize PixelAudio
+		pixelaudio = new PixelAudio(this);         
+		// 2. create a PixelMapGen object
+		multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);    
+		// 3. initialize a PixelAudioMapper object with the gen
 		mapper = new PixelAudioMapper(multigen);
 		// keep track of the area of the PixelAudioMapper
 		mapSize = mapper.getSize();
 		// create an array of rainbow colors with mapSize elements
-		colors = getColors(mapSize);
+		spectrum = getColors(mapSize);
+		// 4. create an image for display
 		initImages();
+		// 5. set up the audio environment and variables
 		initAudio();
+		// 6. show key commands in the console
 		showHelp();
 	}
 
+	/**
+	 * turn off audio processing when we exit
+	 */
+	public void stop() {
+		if (synth != null) synth.close();
+		if (minim != null) minim.stop();
+		super.stop();
+	}
 	
 	/**
 	 * Generates an array of rainbow colors using the HSB color space.
@@ -240,7 +312,7 @@ public class TutorialOne_02_Animation extends PApplet {
 	public int[] getColors(int size) {
 		int[] colorWheel = new int[size]; // an array for our colors
 		pushStyle(); // save styles
-		colorMode(HSB, colorWheel.length, 100, 100); // pop over to the HSB color space and give hue a very wide range
+		colorMode(HSB, colorWheel.length, 100, 100); // create colors in the HSB color space, giving hue a very wide range
 		for (int i = 0; i < colorWheel.length; i++) {
 			colorWheel[i] = color(i, 50, 70); // fill our array with colors, gradually changing hue
 		}
@@ -249,14 +321,14 @@ public class TutorialOne_02_Animation extends PApplet {
 	}
 	
 	/**
-	 * Initializes mapImage with the colors array. 
+	 * Initializes mapImage with the colors array, copies mapImage to baseImage.
 	 * MapImage handles the color data for mapper and also serves as our display image.
-	 * BaseImage is intended as a reference image that usually only changes when you open a new image file.
+	 * BaseImage is intended as a reference image that typically only changes when you load a new image.
 	 */
 	public void initImages() {
 	    mapImage = createImage(width, height, ARGB);
 	    mapImage.loadPixels();
-	    mapper.plantPixels(colors, mapImage.pixels, 0, mapSize);
+	    mapper.plantPixels(spectrum, mapImage.pixels, 0, mapSize);
 	    mapImage.updatePixels();
 	    baseImage = mapImage.copy();
 	}
@@ -267,10 +339,11 @@ public class TutorialOne_02_Animation extends PApplet {
 			doRain();
 		runTimeArray();    // animate audio event markers
 		if (isAnimating) {
+			if (isPlayMusicBox) audioMouseClick(width/2 - 32, height/2 - 32);
 			animate();
 		}
-		if (isTrackMouse && mousePressed) {
-			writeToScreen("shift = "+ shift, 16, 24, 24, false);
+		if (isShowOverlay) {
+			writeToScreen("shift = "+ shift, 64, 1000, 24, true);
 		}
 	}
 	
@@ -313,13 +386,19 @@ public class TutorialOne_02_Animation extends PApplet {
 	 * mapImage pixels, adjusting the index position of the copy using totalShift
 	 * i.e. we don't actually rotate the pixels, we just shift the position they're copied to
 	 * 
-	 * @param step   current animation step
+	 * @param isInverseShift   boolean, if true shift is negative
 	 */
-	public void renderFrame(int step) {
-		totalShift = PixelAudioMapper.wrap(totalShift + shift, mapSize);
+	public void renderFrame(int step, boolean isInverseShift) {
+		int signedShift = isInverseShift ? - shift : shift;
+		totalShift = PixelAudioMapper.wrap(totalShift + signedShift, mapSize);
 		mapImage.loadPixels();
 		mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
 		mapImage.updatePixels();
+	}
+	
+	public void renderFrame(int step) {
+		if (step < 0) renderFrame(step, true); 
+		else renderFrame(step, false);
 	}
 		  
 	/**
@@ -330,10 +409,11 @@ public class TutorialOne_02_Animation extends PApplet {
 	  int sampleLength = 256 * 256;
 	  int samplePos = (int) random(sampleLength, mapSize - sampleLength - 1);
 	  int[] coords = mapper.lookupImageCoord(samplePos);
-	  float panning = map(coords[0], 0, width, -0.8f, 0.8f);
-	  // println("----- Rain samplePos = "+ samplePos);
+	  int len = calcSampleLen();
+	  float rainGain = 0.4f;
 	  ADSRParams env = adsrList.get((int)random(3));
-	  playSample(samplePos, calcSampleLen(), 0.4f, env, panning);
+	  float panning = map(coords[0], 0, width, -0.875f, 0.875f);
+	  playSample(samplePos, len, rainGain, env, panning);
 	}
 
 	/**
@@ -369,31 +449,42 @@ public class TutorialOne_02_Animation extends PApplet {
 	
 	public void mouseClicked() {
 		// handle audio generation in response to a mouse click
-		audioMousePressed(clipToWidth(mouseX), clipToHeight(mouseY));
+		audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
 	}
 
 	public void mouseDragged() {
-	    if (isTrackMouse) {
-	      shift = abs(width/2 - mouseX);
-	      if (mouseY < height/2) {
-	        shift = -shift;
-	      }
-	      writeToScreen("shift = "+ shift, 16, 24, 24, false);
-	    }
+		// mouseDragged events
 	}
 
 	public void mouseReleased() {
-	  if (isAnimating && isTrackMouse) {
-	    println("----- animation shift = "+ shift);
-	  }
+		// mouseReleased events
 	}
 
 	/**
-	 * built-in keyPressed handler, forwards events to parseKey
-	 */
-	public void keyPressed() {
-	  parseKey(key, keyCode);    
-	}
+     * built-in keyPressed handler, forwards events to parseKey.
+     */
+    @Override
+    public void keyPressed() {
+    	if (key != CODED) {
+    		parseKey(key, keyCode);
+    	}
+    	else {
+    		int maxShift = 16384;
+    		int minShift = shiftInc;
+			if (keyCode == UP) { // increment shift value by shiftInc
+				shift = shift < maxShift ? shift + shiftInc : shift;
+			}
+			else if (keyCode == DOWN) { // decrement shift value by shiftInc
+				shift = shift > minShift ? shift - shiftInc : shift;
+			}
+			else if (keyCode == RIGHT) {
+
+			}
+			else if (keyCode == LEFT) {
+
+			}
+    	}
+    }
 
 	/**
 	 * Handles key press events passed on by the built-in keyPressed method. 
@@ -408,7 +499,7 @@ public class TutorialOne_02_Animation extends PApplet {
 	public void parseKey(char key, int keyCode) {
 		switch(key) {
 		case ' ': // spacebar, play sample at current mouse position
-			audioMousePressed(clipToWidth(mouseX), clipToHeight(mouseY));
+			audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
 			break;
 		case 'a': // turn animation on or off
 			isAnimating = !isAnimating;
@@ -418,12 +509,21 @@ public class TutorialOne_02_Animation extends PApplet {
 			shift = -shift;
 			println("-- animation is " + isAnimating +", shift = "+ shift);
 			break;
-		case 'b': // rotate pixels by shift value
+		case 'f': // rotate pixels by shift value 
 			renderFrame(step);
 			break;
-		case 'm': // turn interactive setting of shift value on or off (drag to set)
-			isTrackMouse = !isTrackMouse;
-			println("-- mouse tracking is " + isTrackMouse);
+		case 'F': // rotate pixels by shift value 
+			renderFrame(-step);
+			break;
+		case 'm': // play audio events synced to audio sample rate and video frame rate
+			isPlayMusicBox = !isPlayMusicBox;
+			if (isPlayMusicBox) {
+				isShowOverlay = true;
+				float rate = this.frameRate;    // system frame rate, we could use videoFrameRate instead
+				shift = Math.round(audioOut.sampleRate() / rate);
+				println("-- starting Music Box with shift = "+ shift +" at frame rate "+ rate);
+				isAnimating = true;
+			}
 			break;
 		case 'c': // apply color from image file to display image (mapImage) only
 			chooseColorImage();
@@ -431,17 +531,11 @@ public class TutorialOne_02_Animation extends PApplet {
 		case 'C': // apply color from image file to base image and map image
 			chooseColorImageAndStore();
 			break;
-		case 'k': // apply the hue and saturation in the colors array to mapImage 
-			refreshMapImageFromBase();
-			mapImage.loadPixels();
-			applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
-			mapImage.updatePixels();
+		case 'k': // apply hue and saturation in the spectrum array to mapImage 
+			applyColorMapToDisplay(false);
 			break;
-		case 'K': // apply hue and saturation in colors to baseImage and mapImage
-			baseImage.loadPixels();
-			applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
-			baseImage.updatePixels();
-			refreshMapImageFromBase();
+		case 'K': // apply hue and saturation in the spectrum array to baseImage
+			applyColorMapToDisplay(true);
 			break;
 		case 'o': case 'O': // open an audio or image file
 			chooseFile();
@@ -462,10 +556,16 @@ public class TutorialOne_02_Animation extends PApplet {
 			isRaining = !isRaining;
 			println(isRaining ? "It's raining" : "It's not raining");
 			break;
-		case 'r': case'R': // set isRandomADSR, to use default envelope or a random choice
+		case 'r': case 'R': // set isRandomADSR, to use default envelope or a random choice
 			isRandomADSR = !isRandomADSR;
 			String msg = isRandomADSR ? " synth uses a random ADSR" : " synth uses default ADSR";
 			println("---- isRandomADSR = "+ isRandomADSR +","+ msg);
+			break;
+		case 's': // save display image to a PNG file
+			saveToImage();
+			break;
+		case 'S': // save audio buffer to a .wav file
+			saveToAudio();
 			break;
 		case 'V': // record a video from frame 0 to frame animSteps
 			// records a complete video loop with following actions:
@@ -477,6 +577,9 @@ public class TutorialOne_02_Animation extends PApplet {
 			isRecordingVideo = true;
 			oldIsAnimating = isAnimating;
 			isAnimating = true;
+			break;
+		case 'w': // show data values in display
+			isShowOverlay = !isShowOverlay;
 			break;
 		case 'h': case 'H': // show help message
 			showHelp();
@@ -492,21 +595,27 @@ public class TutorialOne_02_Animation extends PApplet {
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
-		println(" * Press ' ' to spacebar, play sample at current mouse position.");
+		println(" * Press UP ARROW to increment pixel shift.");
+		println(" * Press DOWN ARROW to decrement pixel shift.");
+		println(" * Press ' ' (spacebar) to play sample at current mouse position.");
 		println(" * Press 'a' to turn animation on or off.");
 		println(" * Press 'A' to change animation direction.");
-		println(" * Press 'b' to rotate pixels by shift value.");
-		println(" * Press 'm' to turn interactive setting of shift value on or off (drag to set).");
+		println(" * Press 'f' to rotate pixels by shift value .");
+		println(" * Press 'F' to rotate pixels by shift value .");
+		println(" * Press 'm' to play audio events synced to audio sample rate and video frame rate.");
 		println(" * Press 'c' to apply color from image file to display image (mapImage) only.");
 		println(" * Press 'C' to apply color from image file to base image and map image.");
-		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
-		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
+		println(" * Press 'k' to apply hue and saturation in the spectrum array to mapImage .");
+		println(" * Press 'K' to apply hue and saturation in the spectrum array to baseImage.");
 		println(" * Press 'o' or 'O' to open an audio or image file.");
 		println(" * Press 'p' to select low pitch scaling or default pitch scaling.");
 		println(" * Press 'P' to select high pitch scaling or default pitch scaling.");
 		println(" * Press 'd' or 'D' to turn rain on and off.");
-		println(" * Press 'r' or 'R' to set isRandomADSR, to use default envelope or a random choice.");
+		println(" * Press 'r' or 'R' to toggle isRandomADSR, to use default envelope or a random choice.");
+		println(" * Press 's' to save display image to a PNG file.");
+		println(" * Press 'S' to save audio buffer to a .wav file.");
 		println(" * Press 'V' to record a video from frame 0 to frame animSteps.");
+		println(" * Press 'w' to show data values in display.");
 		println(" * Press 'h' or 'H' to show help message.");
 	}
 
@@ -521,25 +630,27 @@ public class TutorialOne_02_Animation extends PApplet {
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
 	 */
 	public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
-	  if (colorSource == null || graySource == null || lut == null) 
-	    throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
-	  if (colorSource.length != graySource.length || colorSource.length != lut.length) 
-	    throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
-	  // initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
-	  float[] hsbPixel = new float[3];
-	  for (int i = 0; i < graySource.length; i++) {
-	    graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
-	  }
-	  return graySource;
+		return applyColorShifted(colorSource, graySource, lut, 0);
 	}
 
-	public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 * 
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param pixelShift     total amount of pixel shifting in the image
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
+	public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int pixelShift) {
 	    if (colorSource == null || graySource == null || lut == null)
 	        throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
 	    if (colorSource.length != graySource.length || colorSource.length != lut.length)
 	        throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
 	    int n = graySource.length;
-	    int s = ((shift % n) + n) % n; // wrap + allow negative shifts
+	    int s = ((pixelShift % n) + n) % n; // wrap + allow negative shifts
 	    float[] hsbPixel = new float[3];
 	    for (int i = 0; i < n; i++) {
 	        int srcIdx = lut[i] + s;
@@ -548,6 +659,26 @@ public class TutorialOne_02_Animation extends PApplet {
 	    }
 	    return graySource;
 	}	
+
+	/**
+	 * Apply color map hue and saturation to mapImage or baseImage.
+	 *
+	 * @param updateBaseImage    if true, update baseImage, otherwise just update mapImage
+	 */
+	public void applyColorMapToDisplay(boolean updateBaseImage) {
+		if (updateBaseImage) {
+			baseImage.loadPixels();
+			applyColor(spectrum, baseImage.pixels, mapper.getImageToSignalLUT());
+			baseImage.updatePixels();
+			refreshMapImageFromBase();
+		} else {
+			refreshMapImageFromBase();
+			mapImage.loadPixels();
+			applyColorShifted(spectrum, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
+			mapImage.updatePixels();
+		}
+	}
+
 
 	/*----------------------------------------------------------------*/
 	/*                                                                */
@@ -635,6 +766,7 @@ public class TutorialOne_02_Animation extends PApplet {
 	}
 	
 	// -------- END FILE I/O FOR APPLYING COLOR --------- //
+    
     
     /*
      * Here is a section of "regular" file i/o methods for audio and image files.
@@ -724,15 +856,9 @@ public class TutorialOne_02_Animation extends PApplet {
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
 			return;
 		}
-		// adjust buffer size to mapper.getSize()
-		if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
-		playBuffer = buff;
-		// read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
-		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		audioLength = audioSignal.length;
-		// load the buffer of our PASamplerInstrument at the sample rate of the buffer
-		synth.setBuffer(playBuffer, bufferSampleRate);
-        // automatically write the signal to mapImage -- this will change in later tutorials
+		// update dependent audio sources
+		updateAudioChain(playBuffer.getChannel(0), fileSampleRate);
+		// automatically write the signal to mapImage -- this will change in later tutorials
         renderAudioToMapImage(chan, 0);
         commitMapImageToBaseImage();
 	}
@@ -795,34 +921,47 @@ public class TutorialOne_02_Animation extends PApplet {
 			mixImage.updatePixels();
 			mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
 		}
-		// prepare to copy image data to audio variables
-		// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-		if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-		audioSignal = playBuffer.getChannel(0);
-		writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-		totalShift = 0;    // reset animation shift
-		// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-		playBuffer.setChannel(0, audioSignal);
-		audioLength = audioSignal.length;
-		synth.setBuffer(playBuffer);
+		// create a new array for the audio signal
+		float[] sig = new float[mapper.getSize()];
+		audioSignal = sig;
+		// write transcoded pixel data from HSB Brightness channel to audioSignal
+		renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+		// update all dependent audio data
+		updateAudioChain(sig);
+		// update baseImage from mapImage
 		commitMapImageToBaseImage();
+		// uncomment next line to get automatic color overlay update on image file load
+		// applyColorMapToDisplay(true);
 	}
 
+	
 	/**
-	 * This method writes a color channel from the an image to playBuffer, fulfilling a 
+	 * This method writes a color channel from an image to playBuffer, fulfilling a 
 	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
 	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
 	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
 	 * @param sig       an target array of float in audio format 
 	 * @param chan      a color channel
+	 * @param shift     number of indices to shift 
 	 */
-	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
-		sig = mapper.mapImgToSig(img.pixels, sig, chan);
-	}		
+	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan, int shift) {
+		// If img is the *display* (shifted) image, commit its phase into audio:
+		sig = mapper.mapImgToSigShifted(img.pixels, sig, chan, shift);
+	}
 	
+	/**
+	 * Writes a specified channel of mapImage to audioSignal.
+	 * 
+	 * @param chan    the selected color channel
+	 */
+	public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
+		writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
+	}
+
 	public void commitMapImageToBaseImage() {
 	    baseImage = mapImage.copy();
 	    totalShift = 0;
@@ -840,6 +979,9 @@ public class TutorialOne_02_Animation extends PApplet {
 	    mapImage.updatePixels();
 	}
 		
+	
+	// -------- AUDIO AND IMAGE FILE OUTPUT --------- //
+
 	public void saveToAudio() {
 		// File folderToStartFrom = new File(dataPath("") + "/");
 		// selectOutput("Select an audio file to write to:", "audioFileSelectedWrite", folderToStartFrom);
@@ -916,6 +1058,7 @@ public class TutorialOne_02_Animation extends PApplet {
 		img.save(fileName);
 	}
 	
+	
 	/*----------------------------------------------------------------*/
 	/*                                                                */
 	/*                        AUDIO METHODS                           */
@@ -929,13 +1072,12 @@ public class TutorialOne_02_Animation extends PApplet {
 	public void initAudio() {
 		minim = new Minim(this);
 		// Use the getLineOut method of the Minim object to get an AudioOutput object.
-		// PixelAudio instruments require a STEREO output. 1024 is a standard number
-		// of samples for the output buffer to process at one time. You should usually
-		// set the output sampleRate to either 41500 or 48000, standards for digital 
-		// audio recordings.
+		// PixelAudio instruments require a STEREO output. 1024 is a standard number of
+		// samples for the output buffer to process at one time. You should usually set
+		// the output sampleRate to either 41500 or 48000, standards for digital audio.
 		this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
 		// reduce the output level by 6.0 dB.
-		audioOut.setGain(-6.0f);
+		audioOut.setGain(audioGain);
 		// create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
 		// playBuffer will not contain audio data until we load a file
 		this.playBuffer = new MultiChannelBuffer(mapSize, 1);
@@ -945,9 +1087,21 @@ public class TutorialOne_02_Animation extends PApplet {
 		defaultEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
 		initADSRList();
 		// create a PASamplerInstrument with 8 voices, adsrParams will be its default envelope
-		synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv);
+		ensureSamplerReady();
 		// initialize mouse event tracking array
 		timeLocsArray = new ArrayList<TimedLocation>();
+	}
+
+	/**
+	 * Prepares Sampler instruments and assets
+	 */
+	void ensureSamplerReady() {
+		if (synth == null) { 
+	    	synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv); 
+	    	println("-- initilialized audio sampler synth");
+	    	// set the synth gain with a linear value derived from a dB value
+	    	synth.setGain(AudioUtility.dbToLinear(samplerGain));
+	    }
 	}
 
 	public void initADSRList() {
@@ -979,37 +1133,27 @@ public class TutorialOne_02_Animation extends PApplet {
 	}
 
 	/**
-	 * Prepares audioSignal before it is used as an instrument source.
-	 * Modify as needed to prepare your audio signal data.
-	 */
-	public void renderSignals() {
-	  writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-	  playBuffer.setChannel(0, audioSignal);
-	  audioLength = audioSignal.length;
-	}
-
-	/**
 	 * Typically called from mousePressed with mouseX and mouseY, generates audio events.
 	 * 
 	 * @param x    x-coordinate within a PixelAudioMapper's width
 	 * @param y    y-coordinate within a PixelAudioMapper's height
 	 */
-	public void audioMousePressed(int x, int y) {
-		samplePos = getSamplePos(x,y);
-		float panning = map(x, 0, width, -0.8f, 0.8f);
-		// update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
-		// playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
-		if (audioSignal == null || isBufferStale) {
-			renderSignals();
-			isBufferStale = false;
-		}
+	public void audioMouseClick(int x, int y) {
+		ensureSamplerReady();
+		int samplePos = getSamplePos(x,y);
+		float panning = map(x, 0, width, -0.875f, 0.875f);
 		if (isRandomADSR) {
 			ADSRParams env = adsrList.get((int)random(adsrList.size()));
-			println("-- "+ env.toString());
-			playSample(samplePos, calcSampleLen(), 0.6f, env, panning);
+			int len = calcSampleLen();
+			// don't output envelope information for automated events
+			if (!isPlayMusicBox || isRaining) {
+				print("-- envelope: "+ env.toString());
+				println("; pos = "+ samplePos +", length = "+ len);
+			}
+			playSample(samplePos, len, 0.8f, env, panning);
 		}
 		else {
-			playSample(samplePos, calcSampleLen(), 0.6f, panning);
+			playSample(samplePos, calcSampleLen(), 0.8f, panning);
 		}
 	}
 
@@ -1083,10 +1227,64 @@ public class TutorialOne_02_Animation extends PApplet {
 	  while (vary <= 0) {
 	    vary = (float) PixelAudio.gauss(1.0, 0.0625);
 	  }
-	  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
+	  int samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
 	  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 	  return samplelen;
 	}
+	
+	/**
+	 * Bottleneck "commit" method for audio state. 
+     * 
+     * Takes an arbitrary input signal and installs it as the canonical audio signal
+     * used by the application. This method:
+     *
+     *  - Resizes/pads/truncates the input to mapper.getSize()
+     *  - Copies the data to ensure no external aliasing
+     *  - Updates audioSignal (canonical signal handled by application code)
+     *  - Updates playBuffer (audio buffer used by Minim audio library methods)
+     *  - Propagates the buffer to active instruments: edit for your own instruments
+     * 
+     * This is the ONLY method that should mutate the global audio signal state.
+     * 
+     * In PixelAudio examples, the signal is typically loaded from a file, but
+     * it could also be signal cached in memory, a signal generated by code, audio
+     * captured live, etc. 
+	 * 
+	 * @param sig                 an audio signal
+	 * @param bufferSampleRate    audio sample rate for sig, 
+	 *                            usually obtained when reading an audio file
+	 */
+	void updateAudioChain(float[] sig, float bufferSampleRate) {
+	    // 0) Decide target length (make this a single source of truth)
+	    int targetSize = mapper.getSize();
+	    if (targetSize <= 0) return;
+	    // 1) Ensure playBuffer matches target
+	    float[] canonical = new float[targetSize];
+	    if (sig != null) {
+	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
+	    }
+	    // 3) Set audioSignal and other audio arrays
+	    audioSignal = canonical;
+	    audioLength = targetSize;
+	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+	        playBuffer = new MultiChannelBuffer(targetSize, 1);
+	    }
+	    // 4) Set playBuffer
+	    playBuffer.setChannel(0, canonical);
+	    // 5) Propagate into synths (adjust to your actual API)
+	    if (synth != null) synth.setBuffer(playBuffer, bufferSampleRate);
+	}
+	
+	void updateAudioChain(float[] sig) {
+		updateAudioChain(sig, audioOut.sampleRate());
+	}
+
+
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                 TIME/LOCATION/ACTION METHODS                   */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
 
 	/**
 	 * Run the animation for audio events. 
@@ -1114,6 +1312,5 @@ public class TutorialOne_02_Animation extends PApplet {
 	  circle(x, y, 60);
 	}  
 
-	/*        END AUDIO METHODS                        */	
 
 }

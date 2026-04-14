@@ -194,7 +194,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * 
  * 
  */
-public class GesturePlayground extends PApplet {
+public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/* ------------------------------------------------------------------ */
 	/*                       PIXELAUDIO VARIABLES                         */
@@ -490,7 +490,7 @@ public class GesturePlayground extends PApplet {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		PApplet.main(new String[] { GesturePlayground.class.getName() });
+		PApplet.main(new String[] { TutorialOne_05_GesturePlayground.class.getName() });
 	}
 	
 	public void settings() {

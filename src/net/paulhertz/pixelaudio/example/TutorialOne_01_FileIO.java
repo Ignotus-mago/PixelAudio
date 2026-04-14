@@ -32,10 +32,22 @@ import ddf.minim.*;
 
 
 /*
- * TutorialOne_00_BeginHere showed the basics of loading the PixelAudio library and 
- * using it to display a rainbow array of colors along the signal path. It also provided
- * a simple response to mousePressed events. Tutorial_01_FileIO adds basic input and
- * output of audio and image files to the previous materials.
+ * If you are just starting to work with PixelAudio coding, I suggest looking through these
+ * sketches before doing the TutorialOne sequence:
+ * 
+ *   LookupTables: an introduction to a core concept in PixelAudio, lookup tables. Start here.
+ *   Starter: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
+ *   SimpleAnimation: a simple way to animate a bitmap using PixelAudioMapper.
+ *   MultiGenDemo: chain PixelMapGens together to generate a large image.
+ *   MultiGenLookupTables: lookup tables in MultiGens, a useful place to test your MultiGenCode. 
+ *   TransformPimage (optional): introduces the affine transforms available in the BitmapTransform class.
+ * 
+ * The opening sequence, above, shows the basics of loading the PixelAudio library and 
+ * using it to display a rainbow array of colors along the signal path. It also provides
+ * a close look at how to create MultiGen objects, which can use multiple PixelMapGen 
+ * objects to create a composite PixelMapGen class. You don't need to create your own
+ * custom MultiGen classes. The PixelMapGen subclasses HilbertGen, DiagonalZigzagGen, 
+ * and BoustropheGen include various static methods to generate MultiGen objects.
  * 
  * TutorialOne_01_FileIO can open and display audio and image files, transcode RGB pixel 
  * data to audio samples and transcode audio samples to RGB pixel data. It can also save audio
@@ -59,7 +71,7 @@ import ddf.minim.*;
  *      In the image created from Saucer_mixdown, high frequency sounds create fine-grained
  *      patterns and low frequency sounds create coarse-grained patterns. 
  *      
- *   3. Snowfence is loaded into mapImage and then transcoded from to the playBuffer and 
+ *   3. Snowfence.jpg is loaded into mapImage and then transcoded from to the playBuffer and 
  *      audioSignal variables. If you click in the image, you can hear the sound created 
  *      by reading the brightness levels of pixels along the signal path and changing 
  *      them into audio sample data. The sky, with very little variation in texture, is
@@ -78,9 +90,10 @@ import ddf.minim.*;
  *   4. Transcoding is automated in this tutorial, but we'll provide separate loading
  *      of audio and image in later tutorials. 
  *      
- *      Experiment with different image and audio files. Press 'r' turn selection of a  
- *      random ADSR envelope from adsrList on and off. Press 'c' to load only color 
- *      data (hue and saturation) from an image file. 
+ *   5. Experiment with different image and audio files. 
+ *      Press 'c' to load only color data (hue and saturation) from an image file. 
+ *      Click in the image or hover and press the spacebar to play an audio sample.
+ *      Press 'r' to toggle selection of a random ADSR envelope for the audio sample. 
  *
  * Audio events are generated through PASamplerInstrument. PASamplerInstrument lets
  * us add an ADSR (attack, decay, sustain, release) envelope to audio output from 
@@ -98,7 +111,7 @@ import ddf.minim.*;
  * sketch trigger sounds with a randomly selected envelope from adsrList. 
  * 
  * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.sampler
- * play an audio event with for the requested duration (samplelen) using the attack, decay,
+ * play an audio event for the requested duration (samplelen) using the attack, decay,
  * and sustain portion of the envelope. When the duration ends, the release portion of the 
  * envelope controls how the audio fades away. Calls to the instruments playSample() methods
  * return the amount of time the envelope will actually take, which is greater than or equal
@@ -137,8 +150,8 @@ import ddf.minim.*;
 	 PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
 	 int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
 	 PImage mapImage;           // image for display
-	 PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;
-	 int[] colors;              // array of spectral colors
+	 PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // color channel that receives pixel data
+	 int[] spectrum;            // array of spectral colors
 
 	 /* ------------------------------------------------------------------ */
 	 /*                        FILE I/O VARIABLES                          */
@@ -158,54 +171,54 @@ import ddf.minim.*;
 	 int imageFileWidth;
 	 int imageFileHeight;
 	 
-	 /** 
-	  * If doResample == true, resample audio from files with a sampling rate != audioOut.sampleRate(). 
-	  * For PixelAudio applications where we want the display pixels to correspond to the audio samples,
-	  * we should always resample. We'll do it automatically in most example code. */
-	 boolean doResample = true;      // 
-
+	 
 	 /* ------------------------------------------------------------------ */
 	 /*                          AUDIO VARIABLES                           */
 	 /* ------------------------------------------------------------------ */
 
 	 /*
-	  * Audio playback support is added with the audio variables and audio methods. 
+	  * Audio playback support is added with the audio variables and audio methods.
+	  * Minim audioOut and other globals are initialized in initAudio().
 	  */
 
 	 /** Minim audio library */
 	 Minim minim;                    // library that handles audio 
 	 AudioOutput audioOut;           // output to sound hardware
-	 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
-	 float sampleRate = 44100;       // target audio engine rate used to configure audioOut
+	 float audioGain = 0.0f;         // audio gain in dB
+
+	 float sampleRate = 44100;       // target audio sampling rate used to configure audioOut
 	 float fileSampleRate;           // sample rate of most recently opened file (before resampling, but may already == sampleRate)
 	 float bufferSampleRate;         // sample rate of playBuffer, == fileSampleRate when we don't resample, == sampleRate when we do
+	 boolean doResample = true;      // if true, resample audio from files whose sampling rate != audioOut.sampleRate()
+
 	 float[] audioSignal;            // the audio signal as an array of floats
 	 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
-	 int samplePos;                  // index into the audio signal, set when an audio event is triggered
 	 int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
-	 // SampleInstrument setup
+	 
+	 // SamplerInstrument setup
 	 int noteDuration = 1500;        // average sample synth note duration, milliseconds
-	 int samplelen;                  // calculated sample synth note length, samples
 	 PASamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
+	 float samplerGain = -3.0f;      // synth gain in dB
+	 
 	 // ADSR and its parameters
+	 // Typically, we want to set ADSR maxAmplitude to 1.0 and then change sampleGain 
+	 // or the gain value passed to playSample() to make a sample louder or softer when it plays
 	 ADSRParams defaultEnv;          // ADSRParams is a wrapper for Minim's ADSR that keeps its values visible
-	 float maxAmplitude = 0.7f;      // 0..1
+	 float maxAmplitude = 1.0f;      // 0..1 linear amplitude
 	 float attackTime = 0.1f;        // seconds
 	 float decayTime = 0.3f;         // seconds
-	 float sustainLevel = 0.25f;     // 0..1
+	 float sustainLevel = 0.5f;      // 0..1
 	 float releaseTime = 0.1f;       // seconds
 	 ArrayList<ADSRParams> adsrList; // list of ADSR values
 	 boolean isRandomADSR = false;   // choose a random envelope from adsrList, or not
 
 	 // interaction variables for audio
-	// int sampleX;                    // x-coordinate of audio event, set when an audio event is triggered
-	// int sampleY;                    // y-coordinate of audio event, set when an audio event is triggered
 	 ArrayList<TimedLocation> timeLocsArray;
 	 int count = 0;  
 	 int fileIndex = 0;
 
-
 	 /* ---------------- end audio variables ---------------- */
+	 
 
 	/**
 	 * @param args
@@ -220,20 +233,21 @@ import ddf.minim.*;
 
 	public void setup() {
 		frameRate(24);
-		// initialize our library
-		pixelaudio = new PixelAudio(this);
-		// create a PixelMapGen subclass such as MultiGen, with dimensions equal to our display window
-		// the call to hilbertLoop3x2() produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
-		// genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
-		multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
-		// create a PixelAudioMapper to handle the mapping of pixel colors to audio samples
+		// 1. initialize PixelAudio
+		pixelaudio = new PixelAudio(this);         
+		// 2. create a PixelMapGen object
+		multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);    
+		// 3. initialize a PixelAudioMapper object with the gen
 		mapper = new PixelAudioMapper(multigen);
 		// keep track of the area of the PixelAudioMapper
 		mapSize = mapper.getSize();
 		// create an array of rainbow colors with mapSize elements
-		colors = getColors(mapSize);
+		spectrum = getColors(mapSize);
+		// 4. create an image for display
 		initImages();
+		// 5. set up the audio environment and variables
 		initAudio();
+		// 6. show key commands in the console
 		showHelp();
 	}
 
@@ -268,7 +282,7 @@ import ddf.minim.*;
 	public void initImages() {
 		mapImage = createImage(width, height, ARGB);
 		mapImage.loadPixels();
-		mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
+		mapper.plantPixels(spectrum, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
 		mapImage.updatePixels();
 	}
 
@@ -286,7 +300,7 @@ import ddf.minim.*;
 	
 	public void mouseClicked() {
 		// handle audio generation in response to a mouse click
-		audioMousePressed(clipToWidth(mouseX), clipToHeight(mouseY));
+		audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
 	}
 
 	/**
@@ -311,20 +325,20 @@ import ddf.minim.*;
 	public void parseKey(char key, int keyCode) {
 		switch(key) {
 		case ' ': // spacebar, play sample at current mouse position
-			audioMousePressed(clipToWidth(mouseX), clipToHeight(mouseY));
+			audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
 			break;
 		case 'c': // apply color from image file to display image
 			chooseColorImage();
 			break;
 		case 'k': // apply the hue and saturation in the colors array to mapImage 
 			mapImage.loadPixels();
-			applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+			applyColor(spectrum, mapImage.pixels, mapper.getImageToSignalLUT());
 			mapImage.updatePixels();
 			break;
 		case 'o': case 'O': // open an audio or image file
 			chooseFile();
 			break;
-		case 'r': case'R': // set isRandomADSR, to use the default envelope or a random envelope from a list.
+		case 'r': case 'R': // set isRandomADSR, to use the default envelope or a random envelope from a list.
 			isRandomADSR = !isRandomADSR;
 			String msg = isRandomADSR ? " synth uses a random ADSR" : " synth uses default ADSR";
 			println("---- isRandomADSR = "+ isRandomADSR +","+ msg);
@@ -342,9 +356,9 @@ import ddf.minim.*;
 	}
 
 	/**
-	 * to generate help output, run RegEx search/replace on parseKey case lines with:
-	 * // case ('.'): // (.+)
-	 * // println(" * Press $1 to $2.");
+	 * To generate help output, run RegEx search/replace on parseKey case lines with:
+	 * find:    case ('.'): // (.+)
+	 * replace: println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
 		println(" * Press ' ' (spacebar) to play sample at current mouse position.");
@@ -352,6 +366,7 @@ import ddf.minim.*;
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage.");
 		println(" * Press 'o' or 'O' to open an audio or image file.");
 		println(" * Press 'r' or 'R' to use the default envelope or a random envelope from a list.");
+		println(" * Press 'd' to toggle doResample: if true, resample audio when fileSampleRate != audioOut.sampleRate()");
 		println(" * Press 'h' or 'H' to show help and key commands in console.");
 	}
 
@@ -509,62 +524,59 @@ import ddf.minim.*;
 			println("----- No audio or image file was selected.");
 		}
 	}
-
+	
 	/**
-	 * Attempts to load audio data from a selected file into playBuffer, then
-	 * calls writeAudioToImage() to transcode audio data and write it to mapImage
-	 * If the file does not use the default sample rate we set in initAudio(),
-	 * it will still play correctly. If we set doResample = true the file will be 
-	 * resampled to audioOut.sampleRate(), if necessary. 
-	 * 
-	 * In most PixelAudio examples, we provide built-in resampling. 
+	 * Attempts to load audio data from a selected file into playBuffer, then calls
+	 * writeAudioToImage() to transcode audio data and write it to mapImage.
+	 * Resamples files that are recorded with a different sample rate than the current audio output.
+	 * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
 	 * 
 	 * @param audFile    an audio file
 	 */
 	public void loadAudioFile(File audFile) {
 		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
 		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
-		if (fileSampleRate > 0) {
-			if (doResample && fileSampleRate != audioOut.sampleRate()) {
-				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
-				buff.setBufferSize(resampled.length);
-				buff.setChannel(0, resampled);
-				bufferSampleRate = audioOut.sampleRate();
-			}
-			else {
-				bufferSampleRate = fileSampleRate;
-			}
-			this.audioFileLength = buff.getBufferSize();
-			println("---- doResample = "+ doResample 
-					+", file sample rate = "+ this.fileSampleRate 
-					+", buffer sample rate = "+ bufferSampleRate
-					+", audio output sample rate = "+ audioOut.sampleRate());
-		}
-		else {
+		if (fileSampleRate <= 0) {
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
 			return;
 		}
-		// adjust buffer size to mapper.getSize()
-		if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
-		playBuffer = buff;
-		// read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
-		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		audioLength = audioSignal.length;
-		// load the buffer of our PASamplerInstrument at the sample rate of the buffer
-		synth.setBuffer(playBuffer, bufferSampleRate);
-		// write the signal to mapImage 
+		float sig[];
+		// load audio to sig, resampling it if required
+		if (fileSampleRate != audioOut.sampleRate() && doResample) {
+			sig = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+			bufferSampleRate = sampleRate;
+		}
+		else {
+	        sig = Arrays.copyOf(buff.getChannel(0), buff.getBufferSize());
+	        bufferSampleRate = fileSampleRate;
+		}		
+		this.audioFileLength = sig.length;
+		println("---- file sample rate = "+ this.fileSampleRate 
+				+", buffer sample rate = "+ bufferSampleRate
+				+", audio output sample rate = "+ audioOut.sampleRate());
+		// make sure the synth is ready (a precaution)
+		ensureSamplerReady();
+		// update the audio variables that depend on a newly loaded audio file
+		updateAudioChain(sig);
+		// write the signal to mapImage
+		// we do it automatically here, but that will change in later examples
 		writeAudioToImage(audioSignal, mapper, mapImage, chan);
+		//if (applyColorMapOnLoad) applyColorMapToDisplay(true);
 	}
+
 	
 	/**
 	 * Transcodes audio data in sig[] and writes it to color channel chan of mapImage 
 	 * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(), 
 	 * which will throw an IllegalArgumentException if sig.length != img.pixels.length
-	 * or sig.length != mapper.getSize(). 
+	 * or sig.length != mapper.getSize(). We typically use PixelAudioMapper.ChannelNames.ALL 
+	 * or PixelAudioMapper.ChannelNames.L as the chan value. Both result in gray values,
+	 * with PixelAudioMapper.ChannelNames.L maintaining previous hue and saturation color
+	 * values in the image. 
 	 * 
 	 * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
 	 * @param mapper      a PixelAudioMapper
-	 * @param img    a PImage
+	 * @param img         a PImage
 	 * @param chan        a color channel
 	 */
 	public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
@@ -602,22 +614,21 @@ import ddf.minim.*;
 			mixImage.updatePixels();
 			mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
 		}
-		// prepare to copy image data to audio variables
-		// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-		if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-		audioSignal = new float[mapSize];
-		writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-		// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-		playBuffer.setChannel(0, audioSignal);
-		synth.setBuffer(playBuffer);
-		audioLength = audioSignal.length;
+		// initialize a new buffer for audioSignal
+		float[] sig = new float[mapper.getSize()];
+		audioSignal = sig;
+		// render the HSB brightness channel (ChannelNames.L) to the audio signal as transcoded samples
+		renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+		// update all audio data structures that depend on audioSignal
+		updateAudioChain(sig);
 	}
 
 	/**
-	 * This method writes a color channel from the an image to playBuffer, fulfilling a 
+	 * This method writes a color channel from an image to playBuffer, fulfilling a 
 	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
 	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
 	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
@@ -625,8 +636,18 @@ import ddf.minim.*;
 	 * @param chan      a color channel
 	 */
 	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
+		// If img is the *display* (shifted) image, commit its phase into audio:
 		sig = mapper.mapImgToSig(img.pixels, sig, chan);
-	}    
+	}
+	
+	/**
+	 * Writes a specified channel of mapImage to audioSignal.
+	 * 
+	 * @param chan    the selected color channel
+	 */
+	public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
+		writeImageToAudio(mapImage, mapper, audioSignal, chan);
+	}
 
 
 	public void saveToAudio() {
@@ -724,8 +745,8 @@ import ddf.minim.*;
 		// set the output sampleRate to either 41500 or 48000, standards for digital 
 		// audio recordings.
 		this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
-		// reduce the output level by 6.0 dB.
-		audioOut.setGain(-6.0f);
+		// set the output level in dB
+		audioOut.setGain(audioGain);
 		// create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
 		// playBuffer will not contain audio data until we load a file
 		this.playBuffer = new MultiChannelBuffer(mapSize, 1);
@@ -734,10 +755,22 @@ import ddf.minim.*;
 		// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
 		defaultEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
 		initADSRList();
-		// create a PASamplerInstrument with 8 voices, adsrParams will be its default envelope
-		synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv);
+		// create a PASamplerInstrument
+		ensureSamplerReady();
 		// initialize mouse event tracking array
 		timeLocsArray = new ArrayList<TimedLocation>();
+	}
+	
+	/**
+	 * Prepares Sampler instruments and assets
+	 */
+	void ensureSamplerReady() {
+		if (synth == null) { 
+	    	synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv); 
+	    	println("-- initilialized audio sampler synth");
+	    	// set the synth gain with a linear value derived from a dB value
+	    	synth.setGain(AudioUtility.dbToLinear(samplerGain));
+	    }
 	}
 
 	// a list of ADSR envelopes. Feel free to edit and add more.
@@ -770,34 +803,60 @@ import ddf.minim.*;
 	}
 
 	/**
-	 * Prepares audioSignal before it is used as an instrument source.
-	 * Modify as needed to prepare your audio signal data.
+	 * Bottleneck "commit" method for audio state. 
+     * 
+     * Takes an arbitrary input signal and installs it as the canonical audio signal
+     * used by the system. This method:
+     *
+     *  - Resizes/pads/truncates the input to mapper.getSize()
+     *  - Copies the data to ensure no external aliasing
+     *  - Updates audioSignal (canonical signal handled by application code)
+     *  - Updates playBuffer (audio buffer used by Minim audio library methods)
+     *  - Propagates the buffer to active instruments: edit this part for your own code
+     * 
+     * >>> This is the ONLY method that should mutate the global audio signal state. <<<
+     * 
+     * In PixelAudio examples, the signal is typically loaded from a file, but
+     * it could also be signal cached in memory, a signal generated by code, audio
+     * captured live, etc. 
+	 * 
+	 * @param sig    an audio signal
 	 */
-	public void renderSignals() {
-		writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-		playBuffer.setChannel(0, audioSignal);
-		audioLength = audioSignal.length;
+	void updateAudioChain(float[] sig) {
+	    // Decide target length (make this a single source of truth)
+	    int targetSize = mapper.getSize();
+	    if (targetSize <= 0) return;
+	    // Ensure playBuffer matches target
+	    float[] canonical = new float[targetSize];
+	    if (sig != null) {
+	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
+	    }
+	    audioSignal = canonical;
+	    audioLength = targetSize;
+	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+	        playBuffer = new MultiChannelBuffer(targetSize, 1);
+	    }
+	    playBuffer.setChannel(0, canonical);
+	    // Propagate into audio instruments (adjust to your actual API)
+	    if (synth != null) synth.setBuffer(playBuffer);
 	}
 
 
 	/**
-	 * Typically called from mousePressed with mouseX and mouseY, generates audio events.
+	 * Typically called from mouseClicked with mouseX and mouseY, generates audio events.
 	 * 
 	 * @param x    x-coordinate within a PixelAudioMapper's width
 	 * @param y    y-coordinate within a PixelAudioMapper's height
 	 */
-	public void audioMousePressed(int x, int y) {
-		// update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
-		// playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
-		if (audioSignal == null || isBufferStale) {
-			renderSignals();
-			isBufferStale = false;
-		}
-		samplePos = getSamplePos(x, y);
+	public void audioMouseClick(int x, int y) {
+		ensureSamplerReady();
+		int samplePos = getSamplePos(x, y);
 		if (isRandomADSR) {
-			defaultEnv = adsrList.get((int)random(3));
-			println("-- "+ defaultEnv.toString());
-			playSample(samplePos, calcSampleLen(), 0.6f, defaultEnv);
+			ADSRParams env = adsrList.get((int)random(adsrList.size()));
+			int len = calcSampleLen();
+			print("-- envelope: "+ env.toString());
+			println("; pos = "+ samplePos +", length = "+ len);
+			playSample(samplePos, len, 0.8f, env);
 		}
 		else {
 			playSample(samplePos, calcSampleLen(), 0.6f);
@@ -822,12 +881,13 @@ import ddf.minim.*;
 	
 	/**
 	 * Calculate position of the image pixel within the signal path.
-	 * When we add animation in TutorialOne_03_Animation and windowed buffering
-	 * in MusicBoxBuffer, this gets more complicated.
+	 *
+	 * @param x     x-coordinate, must be clipped to window width
+	 * @param y     y-coordinate, must be clipped to window height
+	 * @return      index position in audio signal array corresponding to (x, y)
 	 */
 	public int getSamplePos(int x, int y) {
 		return mapper.lookupSignalPos(x, y);
-		// return mapper.lookupSample(x, y);
 	}
 
 
@@ -837,16 +897,20 @@ import ddf.minim.*;
 	 * 
 	 * @param samplePos    position of the sample in the audio buffer
 	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
+	 * @param amplitude    linear amplitude of the sample on playback
 	 * @param adsr         an ADSR envelope for the sample
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-		int[] coords = mapper.lookupImageCoord(samplePos);
+		// play the sample
 		samplelen = synth.playSample(samplePos, samplelen, amplitude, env);
+		// get the image coordinates that correspond to samplePos
+		int[] coords = mapper.lookupImageCoord(samplePos);
+		// samplelen is in samples, translate it to milliseconds
 		int durationMS = (int)(samplelen/sampleRate * 1000);
+		// prepare a little animation at the image coordinates
 		timeLocsArray.add(new TimedLocation(coords[0], coords[1], durationMS + millis()));
-		// return the length of the sample
+		// return the length of the audio event in samples
 		return samplelen;
 	}
 
@@ -855,25 +919,34 @@ import ddf.minim.*;
 	 * 
 	 * @param samplePos    position of the sample in the audio buffer
 	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
+	 * @param amplitude    linear amplitude of the sample on playback
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude) {
-		int[] coords = mapper.lookupImageCoord(samplePos);
+		// play the sample
 		samplelen = synth.playSample(samplePos, samplelen, amplitude);
+		// get the image coordinates that correspond to samplePos
+		int[] coords = mapper.lookupImageCoord(samplePos);
+		// samplelen is in samples, translate it to milliseconds
 		int durationMS = (int)(samplelen/sampleRate * 1000);
+		// prepare a little animation at the image coordinates
 		timeLocsArray.add(new TimedLocation(coords[0], coords[1], durationMS + millis()));
-		// return the length of the sample
+		// return the length of the audio event in samples
 		return samplelen;
 	}
 
+	/**
+	 * Calculates a numerical value using a Gaussian variable, with average value over time equal to noteDuration. 
+	 * 
+	 * @return a duration value in milliseconds that varies randomly from the global value noteDuration
+	 */
 	public int calcSampleLen() {
 		float vary = 0; 
 		// skip the fairly rare negative numbers
 		while (vary <= 0) {
 			vary = (float) PixelAudio.gauss(1.0, 0.0625);
 		}
-		samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
+		int samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
 		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
