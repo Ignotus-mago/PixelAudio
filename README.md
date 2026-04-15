@@ -20,9 +20,26 @@ In PixelAudio classes, 1D signals and 2D bitmaps are related to each other throu
 
 The `PixelAudioMapper` class and the `PixelMapGen` class and its subclasses provide the core functionality of the library and are abundantly commented. `PixelMapGen` provides a lightweight framework for creating mappings between audio sample and pixel data arrays. A `PixelMapGen` subclass ("gen" for short) generates the (x,y) coordinates of the signal path over the image, and creates the LUTs from the coordinates. `PixelMapGen` subclasses plug in to `PixelAudioMapper`, which can transcode pixel and audio data and write it to pixel or audio sample arrays while remaining independent of the actual audio and image formats. The one restriction (at the moment) is that color is encoded in RGB or RGBA format and audio is encoded as 16-bit floating point values over the interval (-1.0, 1.0). Audio values can exceed these limits in calculations, but should be normalized to the interval for playing audio or saving to file. `PixelAudioMapper` includes a trove of methods for color space operations, array shifting, LUT mapping, and transcoding. While it should be relatively easy to write your own `PixelMapGen` child class (you only need a list of coordinates for the signal map), there are many built-in child classes that can get you up and running.
 
-Other notable classes include the `WaveSynth` class, which uses `WaveData` objects for additive audio synthesis to create both a playable audio signal and an animated image that are generated in parallel. Some of the coding examples show how you can read and write JSON files of `WaveSynth` configurations. There is also a small but effective package of classes,`net.paulhertz.pixelaudio.curves.*` for point-reduction and curve-modeling.
+Other core classes include the `WaveSynth` class, which uses `WaveData` objects for additive audio synthesis to create both a playable audio signal and an animated image that are generated in parallel. Some of the coding examples show how you can read and write JSON files of `WaveSynth` configurations. The `Argosy` and `Lindenmayer` classes provide pattern-generation tools that can be used to create visual or audible rhythms, textures, and signals. An OpenSimplex implementation, `ScaledSimplex`, provides scaled random noise. 
 
-The examples currently provide a survey of features in the PixelAudio library, particularly for mapping audio signals and bitmaps, using JSON files for `WaveSynth` and `PixelMapGen` settings, capturing live audio, playing audio samples interactively, and mixing color channels. See the [Examples README](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples "Examples README") for descriptions of each example.
+The library includes packages for:
+- Curve-modeling
+- Gesture capture and transformation
+- Sampler-based audio synthesis
+- Granular synthesis
+- Event scheduling
+- File IO for curve and gesture data and audio synthesis settings
+
+Example sketches in Processing and Java provide a survey of PixelAudio features, particularly for:
+- mapping audio signals and bitmaps
+- drawing curves and capturing gestures
+- mixing color channels and audio samples
+- playing audio samples interactively
+- capturing live audio
+- adjusting audio synthesis settings
+- using JSON files for additive synthesis, gesture-modeling and audio synthesis settings
+
+Some sketches include graphical user interfaces and can be used directly in live performance. See the [Examples README](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples "Examples README") for descriptions of each example.
 
 ### Release Notes
 
@@ -34,7 +51,7 @@ Version 0.9.5-beta, November 12, 2025: A new package of classes to support digit
 
 Version 0.9.6-beta was created for a workshop in Chicago. It provides Gesture capture and playback classes plus thoroughly revised [Sampler](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/sampler) and [Granular Synthesis](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/granular) polyphonic audio instruments. The samples and JavaDocs are still being revised. The TutorialOne Sequence is fully refactored, with the exception of the TutorialOne_06_WindowBuffer. Revisions under the hood include speeding up WaveSynth calculations 2x and adding normalization to Sampler and Granular polyphonic voices. Sample and Granular audio chains have been regularized to such an extent that a number of classes are now slated to be dropped. We draw closer to publication.
 
-**TODO**: Revision of JavaDocs and other documentation. Addition of brushstroke animation example sketches. Code review. 
+As of mid-April 2026, I am advancing on a first public release, version 1.0. Nearly all planned features are in place. Revision of JavaDocs and other documentation is the largest unfinished task. There will be some interim releases: expect 0.9.7 by the end of April. 
 
 
 
