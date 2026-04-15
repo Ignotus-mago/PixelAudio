@@ -1,6 +1,6 @@
 ## PixelAudio
 
-PixelAudio is a Processing Library that maps arrays of audio samples onto arrays of pixel values, captures and transforms drawing gestures, and creates interactive audio and image events for live performance. You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a curve and record its timing information and then replay it with animation and a audio sampler or granular synthesis engine. You can create presets for drawing and audio synthesis and cue them in live performance. PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. There are several demos here: https://vimeo.com/user/11207883/folder/19091298, and an early performance/installation work, Campos | Temporales, here: https://vimeo.com/767814419. For some recent developments see this video: https://vimeo.com/1174072177.
+PixelAudio is a Processing Library that maps arrays of audio samples onto arrays of pixel values, captures and transforms drawing gestures, and creates interactive audio and image events for live performance. You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a curve and record its timing information and then replay it with animation and an audio sampler or granular synthesis engine. You can create presets for drawing and audio synthesis and cue them in live performance. PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. There are several demos here: https://vimeo.com/user/11207883/folder/19091298, and an early performance/installation work, Campos | Temporales, here: https://vimeo.com/767814419. For some recent developments see this video: https://vimeo.com/1174072177.
 
 ### Installing and Running PixelAudio
 
@@ -38,6 +38,7 @@ Example sketches in Processing and Java provide a survey of PixelAudio features,
 - capturing live audio
 - adjusting audio synthesis settings
 - using JSON files for additive synthesis, gesture-modeling and audio synthesis settings
+- communicaton with external applications via UDP
 
 Some sketches include graphical user interfaces and can be used directly in live performance. See the [Examples README](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples "Examples README") for descriptions of each example.
 
