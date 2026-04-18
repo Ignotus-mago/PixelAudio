@@ -34,6 +34,7 @@ import g4p_controls.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
+import net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing.AudioBrushLite;
 import net.paulhertz.pixelaudio.example.TutorialOne_04_Network.NetworkDelegate;
 import net.paulhertz.pixelaudio.schedule.*;
 import netP5.NetAddress;
@@ -314,11 +315,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	int noteDuration = 1000;          // average sample synth note duration, milliseconds
 	int oldNoteDuration = noteDuration;
 	int samplelen;                    // calculated sample synth note length, samples
-	float samplerGain = 0.95f;        // linear gain setting for Sampler instrument
+	float samplerGain = 0.5f;        // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
 	float outputGain = 0.0f;          // gain setting for audio output, decibels
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
+	int poolSize = 16;                 // number of sampler instruments for polyphony
 	int sMaxVoices = 256;             // number of voices to allocate to pool or synth
 
     // ====== Granular Synth ====== //
@@ -334,8 +336,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	// TODO -- ADD FOR REFACTOR  
     public PAGranularInstrumentDirector gDir;   // director of granular events
-    public float granularGain = 1.0f;           // gain for a granular gesture event
-    public float granularPointGain = 0.9f;      // gain for a granular point event ("granular burst")
+    public float granularGain = 1.0f;           // linear gain for a granular gesture event
+    public float granularPointGain = 0.9f;      // linear gain for a granular point event ("granular burst")
     // parameters for granular synthesis
     boolean useShortGrain = true;               // default to short grains, if true
     int longSample = 4096;                      // number of samples for a moderately long grain
@@ -749,6 +751,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
+	boolean shiftIsDown = false;         // flag for shift key down
+	
 	// performance state
 	
 	boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
@@ -776,7 +780,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	boolean isBrushSelectionModal = false;     // if false, select all brushes, otherwise, select by active mode
 	
-
+    PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+    PABoundsPolicy boundsPolicy;
 	
 	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
 	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
@@ -829,6 +834,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		mapper = new PixelAudioMapper(multigen);
 		mapSize = mapper.getSize();
 		scheduleBuilder = new GestureScheduleBuilder();
+		// initialize the boundary policy for keeping points and indices in bounds
+		boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
 		colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
 		initImages();                   // load baseImage and mapImage
 		initAudio();                    // set up Minima and our granular and sampling synths
@@ -1287,29 +1294,53 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
      */
     @Override
     public void keyPressed() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = true;
+            // println("-->> shiftIsDown " + shiftIsDown);
+            return;
+        }
     	if (key != CODED) {
     		parseKey(key, keyCode);
     	}
     	else {
-    		float g = audioOut.getGain();
 			if (keyCode == UP) {
-				setAudioGain(g + 3.0f);
-				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+				adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == DOWN) {
-				setAudioGain(g - 3.0f);
-				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+				adjustAudioGain(shiftIsDown ? -3.0f : -1.0f);
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
-			else if (keyCode == RIGHT) {
-				if (nd != null) nd.oscSendOnOff(1, true);
+			else if (keyCode == RIGHT) {				
+				if (!shiftIsDown) {
+					adjustPoolGain(3.0f);
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
 			else if (keyCode == LEFT) {
-				if (nd != null) nd.oscSendOnOff(1, false);
+				if (!shiftIsDown) {
+					adjustPoolGain(-3.0f);					
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(-3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
     	}
     }
 
-	/**
+    @Override
+    public void keyReleased() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = false;
+            // println("-->> shiftIsDown " + shiftIsDown);
+        }
+    }
+
+    /**
 	 * Handles key press events passed on by the built-in keyPressed method. 
 	 * By moving key event handling outside the built-in keyPressed method, 
 	 * we make it possible to post key commands without an actual key event.
@@ -1855,6 +1886,41 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		outputGain = audioOut.getGain();
 	}
 
+	/**
+	 * Sets audioOut.gain.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void adjustAudioGain(float g) {
+		float ag = audioOut.getGain();
+		ag += g;
+		if (ag > 12.0f || ag < -64.0f) return;
+		audioOut.setGain(ag);
+		outputGain = audioOut.getGain();
+	}
+
+	/**
+	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustPoolGain(float g) {
+		float pg = pool.getGainDb();
+		pg += g;
+		if (pg > 12.0f || pg < -64.0f) return;
+		pool.setGainDb(pg);
+	}
+	
+	/**
+	 * Sets Granular instrument gain in dB.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void adjustGranGain(float g) {		
+		float gg = gDir.getInstrument().getGlobalGainDb();
+		gg += g;
+		if (gg > 12.0f || gg < -64.0f) return;
+		gDir.getInstrument().setGlobalGainDb(gg);
+	}
+		
+	
 	/**
 	 * Sets the drawing mode.
 	 * @param newMode
@@ -2843,7 +2909,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 */
 	void ensureSamplerReady() {
 		if (pool == null) { 
-	    	pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 16, 64, audioOut, samplerEnv); 
+	    	pool = new PASamplerInstrumentPool(playBuffer, sampleRate, poolSize, sMaxVoices, audioOut, samplerEnv); 
 	    	println("-- initilialized pool sampler synth");
 	    	pool.setGain(samplerGain);
 	    }
@@ -3689,7 +3755,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * @param b    an AudioBrushLite instance
+	 * @param b    an AudioBrush instance
 	 * @return     GestureSchedule for the current pathMode of the brush
 	 */
 	public GestureSchedule getScheduleForBrush(AudioBrush b) {
@@ -3699,6 +3765,15 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			case ALL_POINTS: default: return b.curve().getAllPointsSchedule();
 		}
 	}
+
+	/**
+	 * @param b    an AudioBrushLIte instance
+	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
+	 */
+	GestureSchedule getPlaybackScheduleForBrush(AudioBrush b) {
+	    GestureSchedule sched = getScheduleForBrush(b);
+	    return boundsPolicy.applySchedule(sched);
+	}	
 
 	
 	// ------------- TRANSFORMS ------------- //
@@ -4121,6 +4196,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    ensureSamplerReady();
 	    GestureGranularConfig snap = sb.snapshot();
 	    GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
+	    // ***** LIMIT SCHED TO IN-BOUNDS POINTS ***** TODO cache GestureSchedule
+	    sched = boundsPolicy.applySchedule(sched);
 	    if (sched == null || sched.isEmpty()) return;
 	    storeSamplerBrushEvents(sched, snap, millis() + 10, gainCurve);
 		// *****>>> NETWORKING <<<***** //
@@ -4232,6 +4309,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		//   targetDurationMs <= 0 → keep natural duration
 	    // apply resample/duration/warp via scheduleBuilder
 	    GestureSchedule sched = scheduleBuilder.build(gb.curve(), snap, audioOut.sampleRate());
+	    // ***** LIMIT SCHED TO IN-BOUNDS POINTS ***** TODO cache GestureSchedule
+	    sched = boundsPolicy.applySchedule(sched);
 	    if (sched == null || sched.isEmpty()) return;
 	    if (isDebugging) {
 		    println("sched.size=" + sched.size()

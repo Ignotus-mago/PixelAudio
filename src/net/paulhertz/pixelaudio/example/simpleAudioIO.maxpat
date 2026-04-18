@@ -4,7 +4,7 @@
         "appversion": {
             "major": 9,
             "minor": 1,
-            "revision": 3,
+            "revision": 4,
             "architecture": "x64",
             "modernui": 1
         },
@@ -23,7 +23,7 @@
                         "appversion": {
                             "major": 9,
                             "minor": 1,
-                            "revision": 3,
+                            "revision": 4,
                             "architecture": "x64",
                             "modernui": 1
                         },
@@ -279,12 +279,12 @@
             {
                 "box": {
                     "id": "obj-49",
-                    "linecount": 6,
+                    "linecount": 5,
                     "maxclass": "comment",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 325.0, 16.0, 218.0, 87.0 ],
-                    "text": "This patcher works with the PixelAudio example \"Bagatelle\". If audio routing and UDP messaging are set up correctly, you can send audio to Max and control its output with key commands. See Bagatelle for details. "
+                    "patching_rect": [ 325.0, 16.0, 230.0, 74.0 ],
+                    "text": "This patcher works with the PixelAudio example \"Bagatelle\". If audio routing and UDP messaging are set up correctly, you can send audio to Max and control its output with key commands. "
                 }
             },
             {
@@ -522,7 +522,7 @@
                         "appversion": {
                             "major": 9,
                             "minor": 1,
-                            "revision": 3,
+                            "revision": 4,
                             "architecture": "x64",
                             "modernui": 1
                         },

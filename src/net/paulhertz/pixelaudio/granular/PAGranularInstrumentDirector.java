@@ -301,7 +301,7 @@ public final class PAGranularInstrumentDirector {
         if (rawSchedule == lastRawScheduleRef && params == lastOffsetsParamsRef && lastTransformedScheduleRef != null) {
             return lastTransformedScheduleRef;
         }
-   	// we need to get a new GestureSchedule and cache some references
+        // we need to get a new GestureSchedule and cache some references
     	GestureSchedule transformed = applyTimeTransform(rawSchedule, params);
     	lastRawScheduleRef = rawSchedule;
     	lastOffsetsParamsRef = params;
@@ -411,6 +411,13 @@ public final class PAGranularInstrumentDirector {
 		return p;
 	}
 	
+	// ------------------------------------------------------------------------
+    // Access to PAGranularInstrument
+    // ------------------------------------------------------------------------
+
+	public PAGranularInstrument getInstrument() {
+		return this.instrument;
+	}
  
     // ------------------------------------------------------------------------
     // Performance fade methods

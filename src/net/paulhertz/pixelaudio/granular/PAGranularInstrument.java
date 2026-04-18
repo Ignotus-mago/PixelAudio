@@ -4,6 +4,7 @@ import ddf.minim.AudioOutput;
 import ddf.minim.analysis.WindowFunction;
 
 import net.paulhertz.pixelaudio.sampler.ADSRParams;
+import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 /**
  * PAGranularInstrument
@@ -37,7 +38,7 @@ public class PAGranularInstrument {
 
     // Global modifiers
     private float globalPan  = 0f;   // -1..+1
-    private float globalGain = 1f;   // overall amplitude multiplier
+    private float globalGain = 1f;   // overall amplitude multiplier (linear)
 
     private boolean isClosed = false;
 
@@ -238,9 +239,13 @@ public class PAGranularInstrument {
 
     public float getGlobalPan() { return globalPan; }
 
-    public void setGlobalGain(float g) { this.globalGain = g; }
+    public void setGlobalGain(float gLinear) { this.globalGain = gLinear; }
 
     public float getGlobalGain() { return globalGain; }
+    
+    public void setGlobalGainDb(float gDb) { this.globalGain = AudioUtility.dbToLinear(gDb); }
+
+    public float getGlobalGainDb() { return AudioUtility.linearToDb(globalGain); }
     
     public float getSampleRate() { return this.out.sampleRate(); }
 

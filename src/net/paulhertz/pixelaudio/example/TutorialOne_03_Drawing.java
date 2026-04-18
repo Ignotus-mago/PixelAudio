@@ -32,7 +32,7 @@ import ddf.minim.*;
 //video export library
 import com.hamoid.*;
 
-// TODO play on release, optimize granular brush, check audio quality
+// TODO optimize granular brush
 
 /**
  * 
@@ -47,7 +47,7 @@ import com.hamoid.*;
  * This particular PixelMapGen reads time from top to bottom, left to right, in eight rows.</li> 
  * <li>Click on the image or press the spacebar with the cursor over the image to play 
  * a Sampler instrument sound.</i> 
- * <li>Press 'd' to enable drawing. Drag the mouse to draw a line. Try varying the speed of your gesture:
+ * <li>Press '/' to enable drawing. Drag the mouse to draw a line. Try varying the speed of your gesture:
  * it will be recorded to the PACurveMaker instance that records your actions. When you release the
  * mouse, a brushstroke appears.</li> 
  * <li>Click on the brushstroke. The Sampler instrument plays new brushstokes, by default, using the 
@@ -169,7 +169,7 @@ import com.hamoid.*;
  * Press 'r' to select long or short grain duration .
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
- * Press 'd' to turn drawing on or off.
+ * Press '/' to turn drawing on or off.
  * Press 'c' to apply color from image file to display image.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (shifted when animating).
  * Press 'K' to color display with spectrum and write to base image.
@@ -255,6 +255,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     
 	Minim minim;					// library that handles audio 
 	AudioOutput audioOut;			// line out to sound hardware
+	float outputGain = -3.0f;       // gain setting for audio output, decibels
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset, not used in TutorialOneDrawing
 	float sampleRate = 48000;       // target audio engine rate used to configure audioOut
 	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
@@ -269,13 +270,12 @@ public class TutorialOne_03_Drawing extends PApplet {
 	// SampleInstrument setup
 	int noteDuration = 1000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
-	float samplerGain = 0.875f;     // linear gain setting for gesture events with Sampler instrument, decimal value 0..1
+	float samplerGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for Sampler gesture event
 	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
-	float outputGain = -3.0f;       // gain setting for audio output, decibels
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
 	int poolSize = 8;               // number of sampler instruments for polyphony
-	int samplerMaxVoices = 64;      // number of voices for each sampler instrument
+	int samplerMaxVoices = 256;     // number of voices for each sampler instrument
 
 	// ADSR and its parameters
 	float maxAmplitude = 1.0f;          // set envelopes to 1.0f amplitude, then scale later with audio instrument gain
@@ -297,7 +297,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
     public PAGranularInstrument gSynth;         // granular synthesis instrument
     public PAGranularInstrumentDirector gDir;   // director of granular events
-    public float granularGain = 0.925f;         // linear gain for a granular gesture event
+    public float granularGain = AudioUtility.dbToLinear(0.0f);    // linear gain for a granular gesture event
     public float granularPointGain = 1.0f;      // linear gain for a granular point event
     // parameters for granular synthesis
     boolean useShortGrain = true;               // default to short grains, if true
@@ -393,8 +393,8 @@ public class TutorialOne_03_Drawing extends PApplet {
     int eventStep = 90;                                 // ms spacing for constant interval sampler “path events”
     int animatedCircleColor = color(233, 220, 199);     // color for animated circles when playing audio   
 
-    boolean isIgnoreOutsideBounds = true;               // not used in TutorialOneDrawing, regulates brushstroke drawing
-        
+    PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+    PABoundsPolicy boundsPolicy;
 
     /* ------------------------------------------------------------------ */
 	/*                       INTERACTION VARIABLES                        */
@@ -455,7 +455,11 @@ public class TutorialOne_03_Drawing extends PApplet {
         }
     }
     
-	
+	// application settings
+    
+    boolean doPlayOnNewBrush = true;
+	boolean shiftIsDown = false;
+
 
     // ---------------- APPLICATION ---------------- //
 	
@@ -486,6 +490,8 @@ public class TutorialOne_03_Drawing extends PApplet {
 		mapper = new PixelAudioMapper(multigen);
 		// area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
 		mapSize = mapper.getSize();
+		// initialize the boundary policy for keeping points and indices in bounds
+		boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
 		// create an array of rainbow colors with mapSize elements
 		spectrum = getColors(mapSize);
 		// 4. create image for display
@@ -743,33 +749,58 @@ public class TutorialOne_03_Drawing extends PApplet {
 		audioMouseClick(mouseX, mouseY);
 	}
 
-    /**
+		
+	/**
      * Built-in keyPressed handler, forwards events to parseKey.
      */
     @Override
     public void keyPressed() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = true;
+            // println("-->> shiftIsDown " + shiftIsDown);
+            return;
+        }
     	if (key != CODED) {
     		parseKey(key, keyCode);
     	}
     	else {
-    		float g = audioOut.getGain();
 			if (keyCode == UP) {
-				setAudioGain(g + 3.0f);
+				adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == DOWN) {
-				setAudioGain(g - 3.0f);
+				adjustAudioGain(shiftIsDown ? -3.0f : -1.0f);
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
-			else if (keyCode == RIGHT) {
-
+			else if (keyCode == RIGHT) {				
+				if (!shiftIsDown) {
+					adjustPoolGain(3.0f);
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
 			else if (keyCode == LEFT) {
-
+				if (!shiftIsDown) {
+					adjustPoolGain(-3.0f);					
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(-3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
     	}
     }
 
+    @Override
+    public void keyReleased() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = false;
+            // println("-->> shiftIsDown " + shiftIsDown);
+        }
+    }
+    
 	/**
 	 * Handles key press events passed on by the built-in keyPressed method. 
 	 * By moving key event handling outside the built-in keyPressed method, 
@@ -870,11 +901,15 @@ public class TutorialOne_03_Drawing extends PApplet {
 			isAnimating = !isAnimating;
 			println("-- animation is " + isAnimating);
 			break;
-		case 'd': // turn drawing on or off
+		case '/': // turn drawing on or off
 			// turn off animation (if you insist, you can try drawing with it on, just press the 'a' key)
 			isAnimating = false;
 			isDrawMode = !isDrawMode;
 			println(isDrawMode ? "----- Drawing is turned on" : "----- Drawing is turned off");
+			break;
+		case 'd': // toggle play audio on new brush 
+			doPlayOnNewBrush = !doPlayOnNewBrush;
+			println("-- play audio when creating a new brush is "+ (doPlayOnNewBrush ? "ON" : "OFF"));
 			break;
 		case 'c': // apply color from image file to display image
 			chooseColorImage();
@@ -989,7 +1024,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 		println(" * Press 'r' to select long or short grain duration .");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
-		println(" * Press 'd' to turn drawing on or off.");
+		println(" * Press '/' to turn drawing on or off.");
 		println(" * Press 'c' to apply color from image file to display image.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (shifted when animating).");
 		println(" * Press 'K' to color display with spectrum and write to base image.");
@@ -1010,11 +1045,37 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 * Sets audioOut.gain.
 	 * @param g   gain value for audioOut, in decibels
 	 */
-	public void setAudioGain(float g) {
-		audioOut.setGain(g);
+	public void adjustAudioGain(float g) {
+		float ag = audioOut.getGain();
+		ag += g;
+		if (ag > 12.0f || ag < -64.0f) return;
+		audioOut.setGain(ag);
 		outputGain = audioOut.getGain();
 	}
 
+	/**
+	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustPoolGain(float g) {
+		float pg = pool.getGainDb();
+		pg += g;
+		if (pg > 12.0f || pg < -64.0f) return;
+		pool.setGainDb(pg);
+	}
+	
+	/**
+	 * Sets Granular instrument gain in dB.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void adjustGranGain(float g) {		
+		float gg = gDir.getInstrument().getGlobalGainDb();
+		gg += g;
+		if (gg > 12.0f || gg < -64.0f) return;
+		gDir.getInstrument().setGlobalGainDb(gg);
+	}
+	
+	
 	/**
 	 * Utility method for applying hue and saturation values from a source array of RGB values
 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
@@ -2015,8 +2076,10 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 * While user is dragging the mouses and isDrawMode == true, accumulates new points
 	 * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
 	 * We constrain points outside the bounds of the display window. An alternative approach 
-	 * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural" 
-	 * appearance for fast drawing. 
+	 * is be to ignore them, which may give a more "natural" appearance for fast drawing. 
+	 *
+	 * @param x    x-coordinate of point to add to allPoints
+	 * @param y    y-coordinate of point to add to allPoints
 	 */
 	public void addPoint(int x, int y) {
 	    if (x != currentPoint.x || y != currentPoint.y) {
@@ -2028,16 +2091,16 @@ public class TutorialOne_03_Drawing extends PApplet {
 		
 	/**
 	 * Clips parameter i to the interval (0..width-1)
-	 * @param i
-	 * @return
+	 * @param i    integer to clip to width
+	 * @return     value within the range 0..width-1
 	 */
 	public int clipToWidth(int i) {
 		return min(max(0, i), width - 1);
 	}
 	/**
 	 * Clips parameter i to the interval (0..width-1)
-	 * @param i
-	 * @return
+	 * @param i    integer to clip to height
+	 * @return     value within the range 0..height-1
 	 */
 	public int clipToHeight(int i) {
 		return min(max(0, i), height - 1);
@@ -2093,13 +2156,20 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    BrushConfig cfg = new BrushConfig();
 	    cfg.rdpEpsilon = epsilon;
 	    cfg.curveSteps = curveSteps;
-	    cfg.pathMode = PathMode.ALL_POINTS; // tutorial default
+	    cfg.pathMode = PathMode.REDUCED_POINTS; // tutorial default
 	    // Default output for newly drawn strokes: SAMPLER (tutorial-centric)
 	    AudioBrushLite b = new AudioBrushLite(curveMaker, cfg, BrushOutput.SAMPLER, HopMode.GESTURE);
 	    b.cfg.pathMode = defaultPathModeFor(b.output());
 	    brushes.add(b);
 	    // Optionally auto-select the new brush
 	    activeBrush = b;
+	    if (this.doPlayOnNewBrush) {
+	    	if (b.output() == BrushOutput.GRANULAR) {
+	    		scheduleGranularBrushClick(b);
+	    	} else {
+	    		scheduleSamplerBrushClick(b);
+	    	}
+	    }
 	}
 
 	/**
@@ -2236,6 +2306,15 @@ public class TutorialOne_03_Drawing extends PApplet {
 	}
 	
 	/**
+	 * @param b    an AudioBrushLIte instance
+	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
+	 */
+	GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
+	    GestureSchedule sched = getScheduleForBrush(b);
+	    return boundsPolicy.applySchedule(sched);
+	}	
+	
+	/**
 	 * Schedule a Sampler brush audio / animation event.
 	 * 
 	 * @param b    an AudioBrushLite instance
@@ -2244,7 +2323,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 		if (b == null) return;
 		ArrayList<PVector> pts = getPathPoints(b);
 		if (pts == null || pts.size() < 2) return;
-		GestureSchedule sched = getScheduleForBrush(b);
+		GestureSchedule sched = getPlaybackScheduleForBrush(b);
 		storeSamplerCurveTL(sched, millis() + 10);
 	}
 
@@ -2276,8 +2355,9 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    int currentTime = millis();
 	    samplerTimeLocs.forEach(tl -> {
 	        if (tl.eventTime() < currentTime) {
-	            int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-	            int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
+	        	// sched points from storeSamplerCurveTL are already in bounds
+	            int sampleX = Math.round(tl.getX());
+	            int sampleY = Math.round(tl.getY());
 	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
 	            int pos = getSamplePos(sampleX, sampleY);
                 playSample(pos, calcSampleLen(), samplerGain, panning);
@@ -2304,7 +2384,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
 	    boolean isGesture = (b.hopMode() == HopMode.GESTURE);
 		GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
-		GestureSchedule sched = getScheduleForBrush(b); 
+		GestureSchedule sched = getPlaybackScheduleForBrush(b); 
 	    playGranularGesture(buf, sched, gParams);
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
 	}	
@@ -2324,9 +2404,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 		for (PVector loc : sched.points) {
 			int x = Math.round(loc.x);
 			int y = Math.round(loc.y);
-			// we can rely on sched for accurate times -- TODO drop in next iteration
-			// int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
-			// int d = (isGesture) ? 200 : durMsFixed;
 			int t = startTime + Math.round(sched.timesMs[i++]);
 			int d = 200;
 			this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
