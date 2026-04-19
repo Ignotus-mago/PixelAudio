@@ -805,8 +805,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		PApplet.main(new String[] { "--display=1", "--present", "--window-color=#000000", Bagatelle.class.getName() });
-		//PApplet.main(new String[] { Bagatelle.class.getName() });
+		//PApplet.main(new String[] { "--display=1", "--present", "--window-color=#000000", Bagatelle.class.getName() });
+		PApplet.main(new String[] { Bagatelle.class.getName() });
 	}
 	
 	public void settings() {
@@ -4208,6 +4208,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    	int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
 	    	println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	    }
+	}
+	
+	void debugSched(GestureSchedule sched) {
+		println("-- schedule number of points= "+ sched.points.size());
 	}
 	
 	public void storeSamplerBrushEvents(GestureSchedule sched, GestureGranularConfig snap, int startTime, PAControlCurve gainCurve) {
