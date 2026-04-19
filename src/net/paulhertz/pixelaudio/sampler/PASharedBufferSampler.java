@@ -41,7 +41,38 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     private volatile float masterGain = 1f; // linear >= 0
     
     protected boolean DEBUG = false;
-    
+ 
+    public enum MixProfile {
+        TRANSPARENT(0.50f, 0.08f, 1.35f, 1.00f),
+        BALANCED(0.60f, 0.10f, 1.60f, 0.60f),
+        PROTECTIVE(0.70f, 0.14f, 1.25f, 0.35f);
+
+        /** targetNorm = 1 / activeWeight^normExponent */
+        public final float normExponent;
+
+        /** smoothing coefficient for mixNorm */
+        public final float alpha;
+
+        /** drive for softClipSoftsign */
+        public final float drive;
+
+        /**
+         * How much a releasing voice contributes to density.
+         * 1.0 = count fully like active voices
+         * 0.0 = ignore release tails in density estimate
+         */
+        public final float releaseWeight;
+
+        MixProfile(float normExponent, float alpha, float drive, float releaseWeight) {
+            this.normExponent = normExponent;
+            this.alpha = alpha;
+            this.drive = drive;
+            this.releaseWeight = releaseWeight;
+        }
+    }
+
+    private volatile MixProfile mixProfile = MixProfile.BALANCED;
+   
 
     /**
      * Construct a sampler over a shared MultiChannelBuffer.
@@ -306,6 +337,13 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         return n;
     }
 
+    public void setMixProfile(MixProfile profile) {
+        if (profile != null) this.mixProfile = profile;
+    }
+
+    public MixProfile getMixProfile() {
+        return mixProfile;
+    }
 
     // ------------------------------------------------------------------------
     // Sample rate management
