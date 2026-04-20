@@ -47,6 +47,8 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
 	
 	private volatile float poolGain = 1f; // linear >= 0
 
+	private volatile PASharedBufferSampler.MixProfile mixProfile =
+	        PASharedBufferSampler.MixProfile.BALANCED;
 
     // ------------------------------------------------------------------------
     // Constructors
@@ -132,6 +134,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
             inst.setPitchScale(globalPitch);
             inst.setGlobalPan(globalPan);
             inst.setParentGain(poolGain);
+            inst.setMixProfile(mixProfile);
             pool.add(inst);
         }
     }
@@ -393,6 +396,37 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         }
     }
     
+    /**
+     * Set the sampler bus mix behavior for every instrument in the pool.
+     *
+     * @param profile desired PASharedBufferSampler mix profile
+     */
+    public synchronized void setMixProfile(PASharedBufferSampler.MixProfile profile) {
+        if (profile == null) return;
+        this.mixProfile = profile;
+        for (PASamplerInstrument inst : pool) {
+            inst.setMixProfile(profile);
+        }
+    }
+
+    /**
+     * @return the pool-wide sampler mix profile
+     */
+    public synchronized PASharedBufferSampler.MixProfile getMixProfile() {
+        return mixProfile;
+    }
+
+    /**
+     * Convenience: advance to the next mix profile and apply it pool-wide.
+     *
+     * @return the newly selected profile
+     */
+    public synchronized PASharedBufferSampler.MixProfile cycleMixProfile() {
+        PASharedBufferSampler.MixProfile[] vals = PASharedBufferSampler.MixProfile.values();
+        int i = (mixProfile.ordinal() + 1) % vals.length;
+        setMixProfile(vals[i]);
+        return mixProfile;
+    }
 
     public synchronized void setGlobalPitch(float pitch) { this.globalPitch = pitch; }
     public synchronized float getGlobalPitch() { return globalPitch; }
@@ -437,6 +471,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
                 inst.setPitchScale(globalPitch);
                 inst.setGlobalPan(globalPan);
                 inst.setParentGain(poolGain);
+                inst.setMixProfile(mixProfile);
                 pool.add(inst);
             }
         }
@@ -459,6 +494,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
             inst.setPitchScale(globalPitch);
             inst.setGlobalPan(globalPan);
             inst.setParentGain(poolGain);
+            inst.setMixProfile(mixProfile);
         }
     }
 

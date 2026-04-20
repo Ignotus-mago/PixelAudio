@@ -279,7 +279,45 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	    }
 	}
 
+	/**
+	 * Pass-through to the underlying PASharedBufferSampler mix behavior.
+	 * This lets a host application tune density normalization / soft clipping
+	 * without changing per-event gain or envelope settings.
+	 *
+	 * @param profile a PASharedBufferSampler mix profile
+	 */
+	public void setMixProfile(PASharedBufferSampler.MixProfile profile) {
+	    if (sampler instanceof PASharedBufferSampler sam && profile != null) {
+	        sam.setMixProfile(profile);
+	    }
+	}
 
+	/**
+	 * @return the current PASharedBufferSampler mix profile, or BALANCED if the
+	 *         sampler implementation is not PASharedBufferSampler.
+	 */
+	public PASharedBufferSampler.MixProfile getMixProfile() {
+	    if (sampler instanceof PASharedBufferSampler sam) {
+	        return sam.getMixProfile();
+	    }
+	    return PASharedBufferSampler.MixProfile.BALANCED;
+	}
+
+	/**
+	 * Convenience: cycle to the next available sampler mix profile.
+	 *
+	 * @return the newly selected profile
+	 */
+	public PASharedBufferSampler.MixProfile cycleMixProfile() {
+	    PASharedBufferSampler.MixProfile next = PASharedBufferSampler.MixProfile.BALANCED;
+	    if (sampler instanceof PASharedBufferSampler s) {
+	        PASharedBufferSampler.MixProfile[] vals = PASharedBufferSampler.MixProfile.values();
+	        int i = (s.getMixProfile().ordinal() + 1) % vals.length;
+	        next = vals[i];
+	        s.setMixProfile(next);
+	    }
+	    return next;
+	}
 
 	public boolean hasAvailableVoice() {
 	    if (sampler == null) return false;
@@ -318,8 +356,9 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	}
 
 	public PASampler getSampler() { return sampler; }
-	
+		
 	public MultiChannelBuffer getBuffer() { return buffer; }
+	
 	public int getBufferSize() { return bufferSize; }
 	
 	/**

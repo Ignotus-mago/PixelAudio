@@ -190,9 +190,11 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     @Override
     protected synchronized void uGenerate(float[] channels) {
         Arrays.fill(channels, 0f);
-        int activeCount = 0;
-        
-        Iterator<PASamplerVoice> it = voices.iterator();  
+
+        final MixProfile profile = this.mixProfile;
+        float activeWeight = 0f;
+
+        Iterator<PASamplerVoice> it = voices.iterator();
         while (it.hasNext()) {
             PASamplerVoice v = it.next();
 
@@ -204,45 +206,49 @@ public class PASharedBufferSampler extends UGen implements PASampler {
                 continue;
             }
 
-            if (v.isActive() || v.isReleasing()) {
-                activeCount++;
+            boolean isActive = v.isActive();
+            boolean isReleasing = v.isReleasing();
+
+            if (isActive || isReleasing) {
+                if (isActive) {
+                    activeWeight += 1.0f;
+                } else if (isReleasing) {
+                    activeWeight += profile.releaseWeight;
+                }
+
                 float pan = v.getPan(); // [-1, +1]
-                // constant-power panning
-                float theta = (pan + 1f) * (float)(Math.PI * 0.25); // 0..pi/2
-                float leftGain  = (float)Math.cos(theta);
-                float rightGain = (float)Math.sin(theta);
+                float theta = (pan + 1f) * (float) (Math.PI * 0.25); // 0..pi/2
+                float leftGain = (float) Math.cos(theta);
+                float rightGain = (float) Math.sin(theta);
+
                 channels[0] += sample * leftGain;
                 if (channels.length > 1) channels[1] += sample * rightGain;
             }
 
             if (v.isFinished()) {
                 v.resetPosition();
-                // (optional) if you truly want to shrink the list:
-                // it.remove();
             }
         }
 
-        // --- Power norm by active voices, smoothed to avoid pumping ---
-        float targetNorm = (activeCount > 1)
-                ? 1f / (float)Math.sqrt(activeCount)
+        // Density-based normalization
+        float targetNorm = (activeWeight > 1f)
+                ? 1f / (float) Math.pow(activeWeight, profile.normExponent)
                 : 1f;
-        // float targetNorm = 1f;    // debugging
 
-        // smoothing: alpha 0.05..0.2
-        float alpha = 0.12f;
-        // 1-pole low-pass filter
-        mixNorm += alpha * (targetNorm - mixNorm);
+        mixNorm += profile.alpha * (targetNorm - mixNorm);
 
         float g = mixNorm * masterGain;
         channels[0] *= g;
         if (channels.length > 1) channels[1] *= g;
 
-        // soft limiter
-        final float drive = 2.0f; // try 1.5..3.0
-        channels[0] = softClipSoftsign(channels[0], drive);
-        if (channels.length > 1) channels[1] = softClipSoftsign(channels[1], drive);
+        // Soft limiter
+        channels[0] = softClipSoftsign(channels[0], profile.drive);
+        if (channels.length > 1) {
+            channels[1] = softClipSoftsign(channels[1], profile.drive);
+        }
     }
-
+    
+    
     static float softClipSoftsign(float x, float drive) {
         float y = drive * x;
         return y / (1f + Math.abs(y));
@@ -343,6 +349,16 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     public MixProfile getMixProfile() {
         return mixProfile;
+    }
+    
+    public String getMixProfileName() {
+        return mixProfile.name();
+    }
+    
+    public void cycleMixProfile() {
+        MixProfile[] vals = MixProfile.values();
+        int i = (mixProfile.ordinal() + 1) % vals.length;
+        mixProfile = vals[i];
     }
 
     // ------------------------------------------------------------------------
