@@ -23,6 +23,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
+import net.paulhertz.pixelaudio.example.TutorialOne_04_Network.BrushOutput;
 import net.paulhertz.pixelaudio.schedule.*;
 import net.paulhertz.pixelaudio.granular.*;
 import net.paulhertz.pixelaudio.sampler.*;
@@ -267,8 +268,17 @@ public class TutorialOne_03_Drawing extends PApplet {
 
 	// ====== Sampler Synth ====== //
 
-	// SampleInstrument setup
-	int noteDuration = 1000;        // average sample synth note duration, milliseconds
+	// Sampler Instrument duration and envelopes
+	final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
+	int envDuration;                // current envelope duration
+	boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
+    String[] envPresets = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad", "default"};    // envelope presets
+    int presetIndex = envPresets.length - 1;    // current preset index
+    float overlapFactor = 3.0f;     // envelope overlap
+    int envMinDurationMs = 40;        // min envelope duration, milliseconds
+    int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
+    
+    // Sampler Instrument setup
 	int samplelen;                  // calculated sample synth note length, samples
 	float samplerGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for Sampler gesture event
 	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
@@ -858,7 +868,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 				println("-- hover brush hop mode is now " + hoverBrush.hopMode());
 			}
 			break;
-		case 'e': // select granular or sampler synth for click response
+		case 'y': // select granular or sampler synth for click response
 			useGranularSynth = !useGranularSynth;
 			String synth = (useGranularSynth) ? "granular." : "sampler.";
 			println("-- default synth for click events is "+ synth);
@@ -946,8 +956,18 @@ public class TutorialOne_03_Drawing extends PApplet {
 		case 'S': // save audio buffer to a .wav file
 			saveToAudio();
 			break;
-		case 'm': // copy the current display image to the baseImage
-			commitMapImageToBaseImage();
+		case 'm': // 
+			pool.cycleMixProfile();
+			println("-- mix profile is "+ pool.getMixProfile().name());
+			break;
+		case 'e': // change the envelope we're using 
+			presetIndex = (presetIndex + 1) % envPresets.length;
+			defaultEnv = envPreset(envPresets[presetIndex]);
+			println("-- default envelope is "+ envPresets[presetIndex] +", "+ defaultEnv.toString());
+			break;
+		case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
+			isAdjustEnvelope = !isAdjustEnvelope;
+			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
 			break;
 		case 'w': // write the image HSB Brightness channel to the audio buffer as transcoded sample values 
 			// TODO refactor with loadImageFile() and loadAudioFile() code
@@ -1644,6 +1664,8 @@ public class TutorialOne_03_Drawing extends PApplet {
 		ensureSamplerReady();
 		// set up the granular synth
 		ensureGranularReady();
+		// start envelope duration at noteDuration
+		envDuration = noteDuration;
 		// initialize mouse event tracking array
 		pointTimeLocs = new ArrayList<TimedLocation>();
 	}
@@ -1842,18 +1864,25 @@ public class TutorialOne_03_Drawing extends PApplet {
 	}
 	
 	
+    /**
+	 * @return a length in samples with some Gaussian variation
+	 */
+	public int calcSampleLen(int durMs, double mean, double variance) {
+		float vary = 0; 
+		// skip the fairly rare negative numbers
+		while (vary <= 0) {
+			vary = (float) PixelAudio.gauss(mean, variance);
+		}
+		samplelen = (int)(abs((vary * durMs) * sampleRate / 1000.0f));
+		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		return samplelen;
+	}
+
 	/**
 	 * @return a length in samples with some Gaussian variation
 	 */
 	public int calcSampleLen() {
-		float vary = 0; 
-		// skip the fairly rare negative numbers
-		while (vary <= 0) {
-			vary = (float) PixelAudio.gauss(1.0, 0.0625);
-		}
-		samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
-		return samplelen;
+		return calcSampleLen(envDuration, 1.0, 0.0625);
 	}
 
 	/**
@@ -1868,6 +1897,28 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    return new PAGranularInstrument(out, env, numVoices);
 	}
 	
+	/**
+	 * @param name   the name of the ADSRParams envelope to return
+	 * @return the specified ADSRParams envelope
+	 */
+	static ADSRParams envPreset(String name) {
+		switch (name) {
+        // sharp attack, fast decay to 0
+		case "Pluck"      : return new ADSRParams(1.0f, 0.005f, 0.18f, 0.0f, 0.12f);   
+        // medium fast attack, medium decay to 0.15, short tail 
+		case "Soft"       : return new ADSRParams(1.0f, 0.020f, 0.60f, 0.15f, 0.25f);   
+		// sharp attack, fast decay to 0.1, short tail
+        case "Percussion" : return new ADSRParams(1.0f, 0.002f, 0.20f, 0.10f, 0.18f);   
+        // trapezoid, medium tail
+		case "Fade"       : return new ADSRParams(1.0f, 0.05f, 0.0f, 1.0f, 0.50f);      
+        // soft attack, medium decay, medium long tail
+		case "Swell"      : return new ADSRParams(1.0f, 0.90f, 0.40f, 0.70f, 0.90f);    
+        // long attack, slight decay, long tail
+		case "Pad"        : return new ADSRParams(1.0f, 1.40f, 0.60f, 0.85f, 1.80f);    
+        // fast attack, fast decay to 0.75, medium tail
+		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);    
+		}
+	}
 	
 	/**
 	 * Bottleneck "commit" method for audio state. 
@@ -2311,8 +2362,40 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 */
 	GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
 	    GestureSchedule sched = getScheduleForBrush(b);
+	    if (b.output == BrushOutput.SAMPLER) {
+	    	// divide gesture duration by number of gesture intervals and multiply result a fixed value
+	    	envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
+	    	println("-- envelope duration = "+ envDuration);
+	    }
 	    return boundsPolicy.applySchedule(sched);
 	}	
+	
+	
+	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+	    int n = sched.points.size();
+	    if (n < 2) return fallbackMs;
+	    float avgStepMs = sched.durationMs() / (float)(n - 1);
+	    float factor;
+	    switch (envName) {
+	        case "Pluck":
+	        case "Percussion":
+	            factor = 4.0f;
+	            break;
+	        case "Soft":
+	        case "Fade":
+	            factor = 3.0f;
+	            break;
+	        case "Swell":
+	        case "Pad":
+	            factor = 2.0f;
+	            break;
+	        default:
+	            factor = 3.0f;
+	    }
+	    int minEnvMs = envMinDurationMs;
+	    int maxEnvMs = envMaxDurationMs;
+	    return PApplet.constrain(Math.round(avgStepMs * factor), minEnvMs, maxEnvMs);
+	}
 	
 	/**
 	 * Schedule a Sampler brush audio / animation event.

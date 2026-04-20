@@ -5526,13 +5526,20 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 */
 	static ADSRParams envPreset(String name) {
 		switch (name) {
-		case "Pluck"      : return new ADSRParams(1.0f, 0.005f, 0.18f, 0.0f, 0.12f);
-		case "Soft"       : return new ADSRParams(1.0f, 0.020f, 0.60f, 0.15f, 0.25f); // new
-		case "Percussion" : return new ADSRParams(1.0f, 0.002f, 0.20f, 0.10f, 0.18f);
-		case "Fade"       : return new ADSRParams(1.0f, 0.05f, 0.0f, 1.0f, 0.50f);   // your trapezoid
-		case "Swell"      : return new ADSRParams(1.0f, 0.90f, 0.40f, 0.70f, 0.90f);
-		case "Pad"        : return new ADSRParams(1.0f, 1.40f, 0.60f, 0.85f, 1.80f);
-		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);
+        // sharp attack, fast decay to 0
+		case "Pluck"      : return new ADSRParams(1.0f, 0.005f, 0.18f, 0.0f, 0.12f);   
+        // medium fast attack, medium decay to 0.15, short tail 
+		case "Soft"       : return new ADSRParams(1.0f, 0.020f, 0.60f, 0.15f, 0.25f);   
+		// sharp attack, fast decay to 0.1, short tail
+        case "Percussion" : return new ADSRParams(1.0f, 0.002f, 0.20f, 0.10f, 0.18f);   
+        // trapezoid, medium tail
+		case "Fade"       : return new ADSRParams(1.0f, 0.05f, 0.0f, 1.0f, 0.50f);      
+        // soft attack, medium decay, medium long tail
+		case "Swell"      : return new ADSRParams(1.0f, 0.90f, 0.40f, 0.70f, 0.90f);    
+        // long attack, slight decay, long tail
+		case "Pad"        : return new ADSRParams(1.0f, 1.40f, 0.60f, 0.85f, 1.80f);    
+        // fast attack, fast decay to 0.75, medium tail
+		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);    
 		}
 	}
 	
