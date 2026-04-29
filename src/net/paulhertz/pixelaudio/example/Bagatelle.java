@@ -34,6 +34,7 @@ import g4p_controls.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
+import net.paulhertz.pixelaudio.example.GesturePlayground_back.Mode;
 import net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing.AudioBrushLite;
 import net.paulhertz.pixelaudio.example.TutorialOne_04_Network.NetworkDelegate;
 import net.paulhertz.pixelaudio.schedule.*;
@@ -284,7 +285,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/** Minim audio library */
 	Minim minim;					  // library that handles audio 
 	AudioOutput audioOut;			  // line out to sound hardware
-	boolean isBufferStale = false;	  // flags that audioBuffer needs to be reset
 	float sampleRate = 48000;         // target audio engine rate used to configure audioOut
 	float fileSampleRate;             // sample rate of most recently opened file (before resampling)
 	float bufferSampleRate;           // sample rate of playBuffer, usually == audioOut.sampleRate()
@@ -293,32 +293,24 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	int samplePos;                    // an index into the audio signal, selected by a mouse click on the display image
 	int audioLength;				  // length of the audioSignal, same as the number of pixels in the display image
   
-	// ADSR and its parameters  
+	// ====== Envelopes ====== //
+	
 	ADSRParams samplerEnv;			  // good old attack, decay, sustain, release for individual Sampler events
 	ADSRParams granularEnv;           // envelope for a sequence of Granular events
-	float maxAmplitude = 0.75f;       // 0..1
-	float attackTime = 0.4f;          // seconds
-	float decayTime = 0.0f;           // seconds, no decay
-	float sustainLevel = 0.75f;       // 0..1, same as maxAmplitude
-	float releaseTime = 0.5f;         // seconds, same as attack
-	float pitchScaling = 1.0f;        // factor for changing pitch
-	float defaultPitchScaling = 1.0f; 
-	float lowPitchScaling = 0.5f; 
-	float highPitchScaling = 2.0f; 
-		 
-	boolean envIsGranular = false;    // if true, sets all envelopes to the same size, with 50% overlap when playing
-	int grainDuration = 120;          // granular envelope duration in milliseconds
-	 
+	final int noteDuration = 1000;    // average sample synth note duration, milliseconds, for reference
+	int envDuration = noteDuration;   // current envelope duration
+	boolean isAdjustEnvelope = true;  // if true, adjust envelope duration based on gesture duration
+    float overlapFactor = 3.0f;       // envelope overlap
+    int envMinDurationMs = 40;        // min envelope duration, milliseconds
+    int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
+	
 	// ====== Sampler Synth ====== //
-
-	// SampleInstrument setup
-	int noteDuration = 1000;          // average sample synth note duration, milliseconds
-	int oldNoteDuration = noteDuration;
+	
 	int samplelen;                    // calculated sample synth note length, samples
-	float samplerGain = 0.5f;        // linear gain setting for Sampler instrument
+	float samplerGain = 0.5f;         // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
 	float outputGain = 0.0f;          // gain setting for audio output, decibels
-	boolean isMuted = false;
+	boolean isMuted = false;          // global muting
 	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
 	int poolSize = 16;                 // number of sampler instruments for polyphony
 	int sMaxVoices = 256;             // number of voices to allocate to pool or synth
@@ -963,7 +955,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		defaultGranConfig.hopLengthSamples = granHop;
 		defaultGranConfig.curveSteps = curveSteps;
 		defaultGranConfig.granularEnvelope(granularEnv);
-		samplerEnv = envPreset("Pad");
+		samplerEnv = envPreset("Soft");
 		defaultSampConfig.samplerEnvelope(samplerEnv);
 		defaultSampConfig.rdpEpsilon = 8.0f;
 		defaultSampConfig.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
@@ -1312,22 +1304,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == RIGHT) {				
-				if (!shiftIsDown) {
-					adjustPoolGain(3.0f);
-					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
-				} else {
-					adjustGranGain(3.0f);
-					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
-				}
+				adjustInstrumentGain(3.0f);
+				float newGain = (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) ? 
+						pool.getGainDb() : gDir.getInstrument().getGlobalGainDb();
+				println("---- configuration gain is "+ nf(newGain, 0, 2) +"dB");
 			}
 			else if (keyCode == LEFT) {
-				if (!shiftIsDown) {
-					adjustPoolGain(-3.0f);					
-					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
-				} else {
-					adjustGranGain(-3.0f);
-					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
-				}
+				adjustInstrumentGain(-3.0f);
+				float newGain = (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) ? 
+						pool.getGainDb() : gDir.getInstrument().getGlobalGainDb();
+				println("---- configuration gain is "+ nf(newGain, 0, 2) +"dB");
 			}
     	}
     }
@@ -1350,14 +1336,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param key
 	 * @param keyCode
 	 */
-	public void parseKey(char key, int keyCode) {
+	public void parseKey(char key, int keyCode) { // TODO create auto-adjust Sampler note duration toggle
 		String msg;
 		if ("0123456789".contains("" + key)) {numericKey(key);}
 		switch(key) {
-		case TAB:
+		case TAB: // set brush to active, if cursor is over a brush
 			if (isEditable() && hoverBrush !=  null) openBrushEditor(hoverBrush);
 			break;
-		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
+		case ' ': // (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event
 			if (doMagicClick) {
 				BrushHit hit = getBrushInRect(clipToWidth(mouseX), clipToHeight(mouseY), genWidth, genHeight/4);
 				if (hit != null) {
@@ -1389,7 +1375,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				println("-- "+ activeBrush.curve().curveInfo());
 			}
 			break;
-		case 't': // switch between Granular and Sampler editing and playing
+		case 't': // switch between Granular, Sampler, and Play Only modes
 			if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
 				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
 				controlWindow.setTitle("Sampler Synth");				
@@ -1456,14 +1442,24 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		case 'o': // open an audio file, image file, or JSON file
 			chooseFile();
 			break;
-		case 'w':
+		case 'w': // write the map image to the audio buffer
 			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+			updateAudioChain(audioSignal);
+			break;
+		case 'W': // write the audio buffer to the display image
+			writeAudioToImage(audioSignal, mapper, mapImage, PixelAudioMapper.ChannelNames.L);
+			commitMapImageToBaseImage();
+			if (applyColorMapOnLoad) applyColorMapToDisplay(true);
 			break;
 		case 'm': // toggle doMagicClick 
 			doMagicClick = !doMagicClick;
 			println(doMagicClick ? "-- doMagicClick is true" : "-- doMagicClick is false");
 			break;
-		case 'R': // reset configuration of active brush TODO test and refactor
+		case 'n': // set noise reduction policy for Sampler instrument audio mix
+			pool.cycleMixProfile();
+			println("-- mix profile is "+ pool.getMixProfile().name());
+			break;
+		case 'R': // reset transform of active brush if it has a transform TODO clarify
 		    if (activeBrush != null && activeBrush.hasTransform()) {
 		        activeBrush.restoreTransform();
 		        activeBrush.transform().resetTransform();
@@ -1473,7 +1469,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		    	resetConfigToDefaults(); 
 		    }
 			break;
-		case 'r': // reset synths to defaults 
+		case 'r': // reset instrument configuration to defaults in GUI
 			resetConfigToDefaults(); 
 			break;
 		case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
@@ -1487,7 +1483,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			isAutoOptimize = !isAutoOptimize;
 			println("-- isAutoOptimize is "+ isAutoOptimize);
 			break;
-		case 'g': // create a beatBrush
+		case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
+			isAdjustEnvelope = !isAdjustEnvelope;
+			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+			break;
+		case 'g': // toggle use of dynamics in gainCurve with gesture 
 			isAddDynamics = !isAddDynamics;
 			println("-- isAddDynamics = "+ isAddDynamics);
 			break;
@@ -1503,7 +1503,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				setActiveBrush(sBeatBrush);
 			} // for PLAY_ONLY, do nothing
 			break;
-		case 'l': // loop hovered granular brush 4 times
+		case 'l': // loop hovered brush 4 times
 			int loops = 4;
 		    if (hoverBrush instanceof GranularBrush gb) {
 		        loopGranularBrush(gb, loops, 150);
@@ -1522,7 +1522,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		        println("-- started sampler loop x4");
 		    }
 			break;
-		case 'L': // infinite loop on hovered granular brush
+		case 'L': // run an infinite loop on hovered brush
 		    if (hoverBrush instanceof GranularBrush gb) {
 		        loopGranularBrush(gb, -1, 150);
 		        println("-- started infinite granular loop");
@@ -1597,19 +1597,19 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			if (gDir != null) gDir.cancelAndReleaseAll();
 			println("-- fade out all");
 			break;
-		case ']': // UDP message to Max: reverb ON
+		case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
 			if (nd != null) nd.oscSendOnOff(1, true);
 			break;
-		case '[': // UDP message to Max: reverb OFF
+		case '[': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
 			if (nd != null) nd.oscSendOnOff(1, false);
 			break;
-		case '}':
+		case '}': // send UDP message to Max (simpleAudioIO.maxpat): unused
 			if (nd != null) nd.oscSendOnOff(2, true);
 			break;
-		case '{':
+		case '{': // send UDP message to Max (simpleAudioIO.maxpat): unused
 			if (nd != null) nd.oscSendOnOff(2, false);
 			break;
-		case 'v': // UDP message to Max: small reverb
+		case 'v': // send UDP message to Max (simpleAudioIO.maxpat): small reverb settings
 			if (nd != null) {
 				nd.oscSendSetnum(1, 0.125f);
 				nd.oscSendSetnum(2, 2048.0f);
@@ -1617,7 +1617,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				nd.oscSendSetnum(4, 2560.0f);
 			}
 			break;
-		case 'V': // UDP message to Max: big reverb
+		case 'V': // send UDP message to Max (simpleAudioIO.maxpat): big reverb settings
 			if (nd != null) {
 				nd.oscSendSetnum(1, 0.3f);
 				nd.oscSendSetnum(2, 4096.0f);
@@ -1677,7 +1677,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	
 	/*----------------------------------------------------------------*/
-	/*                  BEGIN PREFORMANCE METHODS                     */
+	/*                  BEGIN PERFORMANCE METHODS                     */
 	/*----------------------------------------------------------------*/
 	
 	/**
@@ -1721,7 +1721,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			case '2': // VOICE_AND_MELODY
 				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
 				controlWindow.setTitle("Sampler Synth");								
-				noteDuration = 432;
+				envDuration = 432;
 				samplerEnv = envPreset("Percussion");
 				isLoadToBoth = false;
 				isAnimating = false;
@@ -1902,11 +1902,26 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * Sets Sampler instrument <code>pool</code> gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
-	public void adjustPoolGain(float g) {
+	public void adjustInstrumentGain(float g) {
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			adjustSamplerGain(g);
+        } else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+        	adjustGranGain(g);
+        } else {
+            return;
+        }
+    }
+
+	/**
+	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustSamplerGain(float g) {
 		float pg = pool.getGainDb();
 		pg += g;
 		if (pg > 12.0f || pg < -64.0f) return;
 		pool.setGainDb(pg);
+		gainSlider.setValue(pg);
 	}
 	
 	/**
@@ -1918,6 +1933,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		gg += g;
 		if (gg > 12.0f || gg < -64.0f) return;
 		gDir.getInstrument().setGlobalGainDb(gg);
+		gainSlider.setValue(gg);
 	}
 		
 	
@@ -2627,7 +2643,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		granSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
 		this.audioLength = audioSignal.length;
 		// initialize event animation tracking arrays
-		initTimedEventLists();   
+		initTimedEventLists();
+		ensureGranularReady();
+		ensureSamplerReady();
 	}
 
 	/**
@@ -2678,7 +2696,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		ensureSamplerReady();
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
 		float panning = map(x, 0, width, -0.875f, 0.875f);
-		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
+		int len = calcSampleLen(envDuration, 1.0f, 0.0625f);
 		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
 		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
@@ -2694,7 +2712,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		ensureSamplerReady();
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
 		float panning = map(x, 0, width, -0.875f, 0.875f);
-		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f)/4;
+		int len = calcSampleLen(envDuration, 1.0f, 0.0625f)/4;
 		ADSRParams env = envPreset("Pluck");
 		samplelen = playSample(signalPos, len, 0.5f, env, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
@@ -2711,7 +2729,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	void runGranularPointEvent(int x, int y) {
 		ensureGranularReady();
 		float hopMsF = (float)(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		int dur = noteDuration;
+		int dur = envDuration;
 		final int grainCount = useLongBursts ?  8 * (int) Math.round(dur/hopMsF) : (int) Math.round(dur/hopMsF);
 		// if (isVerbose) println("-- granular burst with grainCount = "+ grainCount +", hopMsF = "+ hopMsF);
 		ArrayList<PVector> path = new ArrayList<>(grainCount);
@@ -2901,7 +2919,33 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	public int calcSampleLen() {
-		return calcSampleLen(noteDuration, 1.0f, 0.0625f);
+		return calcSampleLen(envDuration, 1.0f, 0.0625f);
+	}
+
+	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+	    int n = sched.points.size();
+	    if (n < 2) return fallbackMs;
+	    float avgStepMs = sched.durationMs() / (float)(n - 1);
+	    float factor;
+	    switch (envName) {
+	        case "Pluck":
+	        case "Percussion":
+	            factor = 4.0f;
+	            break;
+	        case "Soft":
+	        case "Fade":
+	            factor = 3.0f;
+	            break;
+	        case "Swell":
+	        case "Pad":
+	            factor = 2.0f;
+	            break;
+	        default:
+	            factor = 3.0f;
+	    }
+	    int minEnvMs = envMinDurationMs;
+	    int maxEnvMs = envMaxDurationMs;
+	    return PApplet.constrain(Math.round(avgStepMs * factor), minEnvMs, maxEnvMs);
 	}
 
 	/**
@@ -3353,7 +3397,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    float pan = map(x, 0, width, -0.875f, 0.875f);
 
 	    // Keep the taste short and light.
-	    int len = calcSampleLen(noteDuration, 1.0f, 0.0625f) / 4;
+	    int len = calcSampleLen(envDuration, 1.0f, 0.0625f) / 4;
 	    ADSRParams env = envPreset("Percussion");
 
 	    samplelen = playSample(signalPos, len, 0.125f, env, pan);
@@ -3638,7 +3682,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			activeSamplerBrush = sb;
 			activeSamplerIndex = idx;
 			// samplerEnv = (gConfig.env != null) ? gConfig.env : defaultSampConfig.env;
-			samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Fade");
+			samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Soft");
 			activeGranularBrush = null;
 			activeGranularIndex = -1;
 		}
@@ -4113,7 +4157,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    // Keep resampleCount / targetDurationMs / pitchSemitones 
 	    // Envelope: supply a default if missing.
 	    if (cfg.env == null) {
-	        cfg.env = envPreset("Fade");
+	        cfg.env = envPreset("Soft");
 	    }
 	    
 	}
@@ -4238,6 +4282,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            int x = Math.round(loc.x);
 	            int y = Math.round(loc.y);
 	            int pos = mapper.lookupSignalPos(x, y);
+	            envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration ) : noteDuration;
 	            int len = calcSampleLen();
 	            int t = startTime + Math.round(sched.timesMs[i]);
 	            float pan = map(x, 0, width - 1, -0.875f, 0.875f);
@@ -4830,7 +4875,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	GDropList envelopeMenu; 
 
 	static final String ENV_CUSTOM = "Custom";
-	String[] adsrItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad", ENV_CUSTOM};
+	String[] envPresetItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad", ENV_CUSTOM};
+    int presetIndex = envPresetItems.length - 1;    // preset index
 	GLabel envelopeValuesLabel;
 	
 	GTextArea commentsField;    // testing
@@ -5108,7 +5154,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		envelopeLabel.setText("Sampler\nEnvelope");
 		envelopeLabel.setOpaque(true);
 		envelopeMenu = new GDropList(controlWindow, 100, yPos, 120, 80, 4, 10);
-		envelopeMenu.setItems(adsrItems, 0);
+		envelopeMenu.setItems(envPresetItems, 0);
 		envelopeMenu.addEventHandler(this, "envelopeMenu_clicked");
 		// ADSR label
 		envelopeValuesLabel = new GLabel(controlWindow, 230, yPos, 210, 40);
@@ -5493,9 +5539,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			return;
 		}
 		int itemHit = source.getSelectedIndex();
-		if (itemHit < 0 || itemHit >= adsrItems.length) return;
+		if (itemHit < 0 || itemHit >= envPresetItems.length) return;
 
-		String itemName = adsrItems[itemHit];
+		String itemName = envPresetItems[itemHit];
 		if (ENV_CUSTOM.equals(itemName)) {
 			// Read-only sentinel for loaded / non-preset envelopes.
 			// Do not overwrite gConfig.env.
@@ -5559,8 +5605,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	String envNameFor(ADSRParams env) {
 		if (env == null) return ENV_CUSTOM;
-		for (int i = 0; i < adsrItems.length; i++) {
-			String name = adsrItems[i];
+		for (int i = 0; i < envPresetItems.length; i++) {
+			String name = envPresetItems[i];
 			if (ENV_CUSTOM.equals(name)) continue;
 			if (envEquals(env, envPreset(name))) return name;
 		}
@@ -5568,10 +5614,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	int envMenuIndex(String name) {
-		for (int i = 0; i < adsrItems.length; i++) {
-			if (adsrItems[i].equals(name)) return i;
+		for (int i = 0; i < envPresetItems.length; i++) {
+			if (envPresetItems[i].equals(name)) return i;
 		}
-		return adsrItems.length - 1; // Custom
+		return envPresetItems.length - 1; // Custom
 	}
 
 	String formatEnv(ADSRParams env) {
@@ -5672,8 +5718,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	void syncEnvelopeMenu(ADSRParams env) {
 	    if (env == null || envelopeMenu == null) return;
-	    for (int i = 0; i < adsrItems.length; i++) {
-	        String name = adsrItems[i];
+	    for (int i = 0; i < envPresetItems.length; i++) {
+	        String name = envPresetItems[i];
 	        if (ENV_CUSTOM.equals(name)) continue;
 	        ADSRParams preset = envPreset(name);
 	        if (preset.equals(env)) {
@@ -5689,8 +5735,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	int findCustomIndex() {
-	    for (int i = 0; i < adsrItems.length; i++) {
-	        if (ENV_CUSTOM.equals(adsrItems[i])) return i;
+	    for (int i = 0; i < envPresetItems.length; i++) {
+	        if (ENV_CUSTOM.equals(envPresetItems[i])) return i;
 	    }
 	    return -1;
 	}

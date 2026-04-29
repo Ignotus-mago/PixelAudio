@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 1537.0, -672.0, 611.0, 629.0 ],
+        "rect": [ 1523.0, -845.0, 611.0, 629.0 ],
         "boxes": [
             {
                 "box": {
@@ -211,7 +211,7 @@
                     "numoutlets": 2,
                     "outlettype": [ "", "bang" ],
                     "parameter_enable": 0,
-                    "patching_rect": [ 507.0, 115.0, 42.0, 22.0 ]
+                    "patching_rect": [ 507.0, 113.0, 42.0, 22.0 ]
                 }
             },
             {
@@ -222,7 +222,7 @@
                     "numoutlets": 2,
                     "outlettype": [ "", "bang" ],
                     "parameter_enable": 0,
-                    "patching_rect": [ 446.0, 115.0, 42.0, 22.0 ]
+                    "patching_rect": [ 446.0, 113.0, 42.0, 22.0 ]
                 }
             },
             {
@@ -232,7 +232,7 @@
                     "numinlets": 1,
                     "numoutlets": 2,
                     "outlettype": [ "int", "int" ],
-                    "patching_rect": [ 336.0, 142.0, 67.0, 22.0 ],
+                    "patching_rect": [ 334.0, 146.0, 67.0, 22.0 ],
                     "text": "unpack 0 0"
                 }
             },
@@ -295,7 +295,7 @@
                     "numinlets": 0,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 334.0, 115.0, 42.0, 22.0 ],
+                    "patching_rect": [ 334.0, 113.0, 42.0, 22.0 ],
                     "text": "r onoff"
                 }
             },
@@ -442,7 +442,7 @@
                     "numinlets": 2,
                     "numoutlets": 3,
                     "outlettype": [ "", "", "" ],
-                    "patching_rect": [ 446.0, 142.0, 80.0, 22.0 ],
+                    "patching_rect": [ 446.0, 146.0, 80.0, 22.0 ],
                     "text": "gate 3"
                 }
             },
@@ -999,7 +999,7 @@
                     "numinlets": 1,
                     "numoutlets": 2,
                     "outlettype": [ "signal", "signal" ],
-                    "patching_rect": [ 58.0, 115.0, 242.0, 22.0 ],
+                    "patching_rect": [ 58.0, 113.0, 242.0, 22.0 ],
                     "text": "adc~"
                 }
             },
