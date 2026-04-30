@@ -31,7 +31,7 @@ import ddf.minim.*;
 //video export library
 import com.hamoid.*;
 
-// TODO optimize granular brush 'q' command
+// TODO optimize granular brush 'q' command (may not be necessary for a demo
 
 /**
  * 
@@ -135,10 +135,12 @@ import com.hamoid.*;
  * <li>Some adjustments will make the granular samples sound more like the underlying buffer.
  * Longer grains and short grains can sound very different. The Granular instrument can also play 
  * linear sequences (bursts) of grains at each buffer index. Long grains with long bursts come 
- * closest to reproducing the audio buffer.
+ * closest to reproducing the audio buffer. When you trigger a brushstroke, the bursts extend linearly
+ * from each event point. When you trigger a point event, the bursts follow the signal path. 
  *   <ul>
  *   <li>'r' key toggles between long grains (4096 milliseconds) and short grains (512 milliseconds).</li>
  *   <li>'b' key toggles between long bursts (eight grains) and short bursts (one grain).</li> 
+ *   <li>'y' key toggles between Granular and Sampler instruments for point events.</li>
  *   </ul>
  * </li>
  * </ol>
@@ -238,23 +240,24 @@ import com.hamoid.*;
  * Press SHIFT-LEFT ARROW to decrease Granular audio gain by 3 dB.
  * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.
  * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.
+ * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.
  * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.
  * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.
  * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.
  * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.
  * Press 'y' to select granular or sampler synth for click response.
  * Press 'r' to select long or short grain duration .
- * Press 'b' to toggle between long burst grains and short burst grains for granular events.
+ * Press 'b' to toggle between long burst grains and short burst grains.
  * Press 'p' to jitter the pitch of granular gestures.
- * Press '>' or '.' to increment epsilon value of current brush (less reduced points).
- * Press '<' or ',' to decrement epsilon value of current brush (more reduced points).
- * Press ']' or '.' to increment curve steps value of current brush.
- * Press '[' or ',' to decrement curve steps value of current brush.
+ * Press 'P' to adjust pitch of current brushstroke.
+ * Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).
+ * Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).
+ * Press ']' to increment curve steps value of current brush.
+ * Press '[' to decrement curve steps value of current brush.
  * Press 'm' to change the Sampler noise reduction profile.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
- * Press '/' to turn drawing on or off and turn off animation (if you insist, you can draw with animation, just press the 'a' key).
  * Press 'd' to toggle play audio on new brush .
  * Press 'c' to apply color from image file to display image.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
@@ -343,7 +346,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     
 	Minim minim;					// library that handles audio 
 	AudioOutput audioOut;			// line out to sound hardware
-	float outputGain = -3.0f;       // gain setting for audio output, decibels
+	float outputGain = 0.0f;        // gain setting for audio output, decibels
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset, not used in TutorialOneDrawing
 	float sampleRate = 48000;       // target audio engine rate used to configure audioOut
 	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
@@ -359,7 +362,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
 	int envDuration;                // current envelope duration
 	boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
-    String[] envPresets = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad", "default"};    // envelope presets
+    String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
     int presetIndex = envPresets.length - 1;    // current preset index
     float overlapFactor = 3.0f;     // envelope overlap
     int envMinDurationMs = 40;        // min envelope duration, milliseconds
@@ -367,7 +370,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     
     // Sampler Instrument setup
 	int samplelen;                  // calculated sample synth note length, samples
-	float samplerGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for Sampler gesture event
+	float samplerGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for Sampler gesture event
 	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
@@ -380,7 +383,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	ADSRParams defaultEnv = new ADSRParams(maxAmplitude, 0.2f, 0.1f, maxAmplitude * 0.75f, 0.5f);
 	// ADSRParams granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
 	float pitchScaling = 1.0f;          // factor for changing pitch
-	float defaultPitchScaling = 1.0f;     // pitch scaling factor
+	float defaultPitchScaling = 1.0f;   // pitch scaling factor
 	float lowPitchScaling = 0.5f;       // low pitch scaling, 0.5 => one octave down
 	float highPitchScaling = 2.0f;      // high pitch scaling, 2.0 => one octave up
 	
@@ -393,7 +396,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
     public PAGranularInstrument gSynth;         // granular synthesis instrument
     public PAGranularInstrumentDirector gDir;   // director of granular events
-    public float granularGain = AudioUtility.dbToLinear(0.0f);    // linear gain for a granular gesture event
+    public float granularGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for a granular gesture event
     public float granularPointGain = 1.0f;      // linear gain for a granular point event
     // parameters for granular synthesis
     boolean useShortGrain = false;              // default to short grains, if true
@@ -403,7 +406,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
     GestureGranularParams gParamsGesture;       // granular parameters when hopMode == HopMode.GESTURE
     GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED
-    public int curveSteps = 12;                 // number of steps in curve representation of a brushstroke path
+    public int curveSteps = 8;                  // number of steps in curve representation of a brushstroke path
     public int gMaxVoices = 256;                // number of voices managed by a PAGranularInstrument (gSynth)
     boolean useLongBursts = true;               // controls the number of burst grains in a point event or gesture event
     int maxBurstGrains = 8;
@@ -484,10 +487,9 @@ public class TutorialOne_03_Drawing extends PApplet {
 	int dimCircleColor = color(178, 168, 136);          // brushstroke interiro point color, dimmed
 
     // TimedLocation events
-    public ArrayList<TimedLocation> samplerTimeLocs;    // a list of timed events for Sampler brushes
+    public ArrayList<SamplerBrushEvent> samplerTimeLocs;    // a list of timed events for Sampler brushes
 	ArrayList<TimedLocation> pointTimeLocs;             // a list of timed events for mouse clicks
 	ArrayList<TimedLocation> grainTimeLocs;             // a list of timed events for Granular brushes
-    int eventStep = 90;                                 // ms spacing for constant interval sampler “path events”
     int animatedCircleColor = color(233, 220, 199);     // color for animated circles when playing audio   
 
     PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
@@ -513,7 +515,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     	/** Point reduction parameter */
         public float rdpEpsilon = 4.0f;
     	/** Number of polygon segments in a curve */
-        public int curveSteps = 16;
+        public int curveSteps = 8;
         // leave room for future compatibility
     }
 
@@ -542,6 +544,7 @@ public class TutorialOne_03_Drawing extends PApplet {
             this.cfg = cfg;
             this.output = output;
             this.hopMode = hopMode;
+            this.pitchRatio = 1.0f;
         }
         public PACurveMaker curve() { return curve; }
         public BrushConfig cfg() { return cfg; }
@@ -756,7 +759,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    // 3) if in the process of drawing, accumulate points while mouse is held down
 	    if (isDrawMode) {
 	        if (mousePressed) {
-	            addPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+	            addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
 	        }
 	        if (allPoints != null && allPoints.size() > 2) {
 	            PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
@@ -979,13 +982,14 @@ public class TutorialOne_03_Drawing extends PApplet {
 			granSamples = useShortGrain ? shortSample : longSample;
 			hopSamples = granSamples/4;
 			initGranularParams();
-			println("-- Granular synth uses grain length = "+ granSamples +" samples with "+ hopSamples +" between each grain");
+			println("-- Granular synth grain length = "+ granSamples +" samples with "+ hopSamples +" samples hop length");
 			break;
 		case 'b': // toggle between long burst grains and short burst grains
 			useLongBursts = !useLongBursts;
 			burstGrains = useLongBursts ? maxBurstGrains : 1;
 			initGranularParams();
-			println(useLongBursts ? "-- using long bursts of "+ maxBurstGrains : "using a short bursts of "+ minBurstGrains);
+			msg = useLongBursts ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
+			println("-- Granular synth uses "+ msg +" grains.");
 			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
@@ -1040,7 +1044,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 				println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
 			}
 			break;
-		case 'm': // 
+		case 'm': // change the Sampler noise reduction profile
 			pool.cycleMixProfile();
 			println("-- mix profile is "+ pool.getMixProfile().name());
 			break;
@@ -1172,23 +1176,24 @@ public class TutorialOne_03_Drawing extends PApplet {
 		println(" * Press SHIFT-LEFT ARROW to decrease Granular audio gain by 3 dB.");
 		println(" * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
 		println(" * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.");
+		println(" * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.");
 		println(" * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.");
 		println(" * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.");
 		println(" * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.");
 		println(" * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.");
 		println(" * Press 'y' to select granular or sampler synth for click response.");
 		println(" * Press 'r' to select long or short grain duration .");
-		println(" * Press 'b' to toggle between long burst grains and short burst grains for granular events.");
+		println(" * Press 'b' to toggle between long burst grains and short burst grains.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
-		println(" * Press '>' or '.' to increment epsilon value of current brush (less reduced points).");
-		println(" * Press '<' or ',' to decrement epsilon value of current brush (more reduced points).");
-		println(" * Press ']' or '.' to increment curve steps value of current brush.");
-		println(" * Press '[' or ',' to decrement curve steps value of current brush.");
+		println(" * Press 'P' to adjust pitch of current brushstroke.");
+		println(" * Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).");
+		println(" * Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).");
+		println(" * Press ']' to increment curve steps value of current brush.");
+		println(" * Press '[' to decrement curve steps value of current brush.");
 		println(" * Press 'm' to change the Sampler noise reduction profile.");
 		println(" * Press 'e' to change the envelope we're using .");
 		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
 		println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
-		println(" * Press '/' to turn drawing on or off & turn off animation (if you insist, you can draw with animation, just press the 'a' key).");
 		println(" * Press 'd' to toggle play audio on new brush .");
 		println(" * Press 'c' to apply color from image file to display image.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
@@ -2049,15 +2054,17 @@ public class TutorialOne_03_Drawing extends PApplet {
     	// use Granular synthesis instrument
 	    ensureGranularReady();
 	    float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-	    final int grainCount = useLongBursts ?  8 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
+	    final int grainCount = useLongBursts ?  2 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
 	    println("-- granular point burst with grainCount = "+ grainCount);
 	    ArrayList<PVector> path = new ArrayList<>(grainCount);
 	    int[] timing = new int[grainCount];
 	    for (int i = 0; i < grainCount; i++) {
-	    	if (useLongBursts) {
-	    		path.add(getCoordFromSignalPos(samplePos + hopSamples * i));
+	    	if (useLongBursts) { 
+	    		// follow the signal path
+	    		path.add(getCoordFromSignalPos(samplePos + hopSamples * i));	
 	    	}
 	    	else {
+	    		// cluster samples around the sample location
 	    		path.add(this.jitterCoord(x, y, 3));
 	    	}
 	        timing[i] = Math.round(i * hopMsF);
@@ -2068,7 +2075,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    curve.setTimeStamp(startTime);
 	    GestureSchedule sched = curve.getAllPointsSchedule();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    playGranularGesture(buf, sched, gParamsFixed);
+	    playGranularGesture(buf, sched, gParamsFixed, 1.0f);
 	    storeGranularCurveTL(sched, startTime, false);
 	    return curve.getTimeOffset();
 	}
@@ -2083,8 +2090,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 * @return     the index of the sample corresponding to (x,y) on the signal path
 	 */
 	public int getSamplePos(int x, int y) {
-	  int pos =  mapper.lookupSignalPosShifted(x, y, totalShift);
-	  return pos;
+		return mapper.lookupSignalPosShifted(x, y, totalShift);
 	}
 
 	/**
@@ -2197,18 +2203,12 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 */
 	static ADSRParams envPreset(String name) {
 		switch (name) {
-        // sharp attack, fast decay to 0
-		case "Pluck"      : return new ADSRParams(1.0f, 0.005f, 0.18f, 0.0f, 0.12f);   
         // medium fast attack, medium decay to 0.15, short tail 
-		case "Soft"       : return new ADSRParams(1.0f, 0.020f, 0.60f, 0.15f, 0.25f);   
+		case "Soft"       : return new ADSRParams(1.0f, 0.02f, 0.80f, 0.7f, 0.2f);   
 		// sharp attack, fast decay to 0.1, short tail
-        case "Percussion" : return new ADSRParams(1.0f, 0.002f, 0.20f, 0.10f, 0.18f);   
-        // trapezoid, medium tail
-		case "Fade"       : return new ADSRParams(1.0f, 0.05f, 0.0f, 1.0f, 0.50f);      
-        // soft attack, medium decay, medium long tail
-		case "Swell"      : return new ADSRParams(1.0f, 0.90f, 0.40f, 0.70f, 0.90f);    
+        case "Percussion" : return new ADSRParams(1.0f, 0.005f, 0.04f, 0.20f, 0.06f);   
         // long attack, slight decay, long tail
-		case "Pad"        : return new ADSRParams(1.0f, 1.40f, 0.60f, 0.85f, 1.80f);    
+		case "Pad"        : return new ADSRParams(1.0f, 0.50f, 0.25f, 0.75f, 1.0f);    
         // fast attack, fast decay to 0.75, medium tail
 		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);    
 		}
@@ -2266,14 +2266,13 @@ public class TutorialOne_03_Drawing extends PApplet {
 	/**
 	 * Calls PAGranularInstrumentDirector gDir to play a granular audio event.
 	 * 
-	 * @param buf       an audio signal as an array of flaot
+	 * @param buf       an audio signal as an array of float
 	 * @param sched     an GestureSchedule with coordinate and timing information 
 	 * @param params    a bundle of control parameters for granular synthesis
 	 */
-	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params, float pitchRatio) {
 		// call mapper method lookupSignalPosArray to obtain an array of indices into buf, derived from points in sched
 		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
-		// println("---> startIndices[0] = "+ startIndices[0] +" for "+ sched.points.get(0).x, sched.points.get(0).y, totalShift, mapper.getSize());
 		// calculate the pan for each grain, based on its x-coordinate
 		float[] panPerGrain = new float[sched.size()];
 		for (int i = 0; i < sched.size(); i++) {
@@ -2281,18 +2280,19 @@ public class TutorialOne_03_Drawing extends PApplet {
 		    // example: map x to [-0.8, +0.8]
 		    panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
 		}
-		if (usePitchedGrains) {
-			float[] pitch = generateJitterPitch(sched.size(), 0.25f);
-            GestureEventParams eventParams = GestureEventParams.builder(sched.size())
-                .startIndices(startIndices)
-                .pan(panPerGrain)
-                .pitchRatio(pitch)
-                .build();
-			gDir.playGestureNow(buf, sched, params, eventParams);
-			println("-- pitch jitter -- "+ pitch[0]);
-			return;
-		}
-		gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
+		float jitter = usePitchedGrains ? 0.25f : 0f;
+		float[] pitch = generateJitterPitch(sched.size(), jitter, pitchRatio);
+		// assemble all the grain-level attributes into a GestureEventParams object
+		GestureEventParams eventParams = GestureEventParams.builder(sched.size())
+				.startIndices(startIndices)
+				.pan(panPerGrain)
+				.pitchRatio(pitch)
+				.build();
+		// call playGestureNow() with eventParams and return
+		gDir.playGestureNow(buf, sched, params, eventParams);
+		println("-- pitch jitter -- "+ pitch[0]);
+		// if we aren't using a pitch array, we can call playGestureNow() with a different signature
+		// gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 	}
 
 	/**
@@ -2340,7 +2340,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    startTime = millis();
 	    int x = clipToWidth(mouseX);
 	    int y = clipToHeight(mouseY);
-	    addPoint(x, y);
+	    addDrawingPoint(x, y);
 	}
 	
 	/**
@@ -2352,7 +2352,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 * @param x    x-coordinate of point to add to allPoints
 	 * @param y    y-coordinate of point to add to allPoints
 	 */
-	public void addPoint(int x, int y) {
+	public void addDrawingPoint(int x, int y) {
 	    if (x != currentPoint.x || y != currentPoint.y) {
 	        currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
 	        allPoints.add(currentPoint);
@@ -2397,7 +2397,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
 	 * @param length            length of the returned array
 	 * @param deviationPitch    expected average deviation of the pitch 
-	 * @return                  and array of Gaussian values centered on 1.0
+	 * @return                  an array of Gaussian values centered on 1.0
 	 */
 	float[] generateJitterPitch(int length, float deviationPitch) {
 		float[] pitch = new float[length];
@@ -2409,11 +2409,27 @@ public class TutorialOne_03_Drawing extends PApplet {
 	}
 			
 	/**
+	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
+	 * @param length            length of the returned array
+	 * @param deviationPitch    expected average deviation of the pitch around center pitch ratio
+	 * @param centerPitch       ratio of center pitch, 1.0 => no change in source
+	 * @return                  an array of Gaussian values centered on 1.0
+	 */
+	float[] generateJitterPitch(int length, float deviationPitch, float centerPitch) {
+		float[] pitch = new float[length];
+		double variance = deviationPitch * deviationPitch;
+		for (int i = 0; i < pitch.length; i++) {
+			pitch[i] = (float) PixelAudio.gauss(centerPitch, variance);
+		}
+		return pitch;
+	}
+
+	/**
 	 * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
 	 * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from 
 	 * variables in the calling class (TutorialOneDrawing, here). 
 	 */
-	public void initCurveMakerAndAddBrush() {
+	public AudioBrushLite initCurveMakerAndAddBrush() {
 	    curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
 	    // configure from globals
 	    curveMaker.setEpsilon(epsilon);
@@ -2441,6 +2457,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    		scheduleSamplerBrushClick(b);
 	    	}
 	    }
+	    return b;
 	}
 
 	/**
@@ -2639,7 +2656,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 		ArrayList<PVector> pts = getPathPoints(b);
 		if (pts == null || pts.size() < 2) return;
 		GestureSchedule sched = getPlaybackScheduleForBrush(b);
-		storeSamplerCurveTL(sched, millis() + 10);
+		storeSamplerCurveTL(b, sched, millis() + 10);
 	}
 
 	/**
@@ -2647,7 +2664,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 * @param sched        a GestureSchedule (points + timing for a brush)
 	 * @param startTime    time to start a series of events
 	 */
-	public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
+	public synchronized void storeSamplerCurveTL(AudioBrushLite b, GestureSchedule sched, int startTime) {
 		if (this.samplerTimeLocs == null) samplerTimeLocs = new ArrayList<>();
 		int i = 0;
 		startTime = millis() + 5;
@@ -2656,8 +2673,14 @@ public class TutorialOne_03_Drawing extends PApplet {
 			int x = Math.round(loc.x);
 			int y = Math.round(loc.y);
 			int t = startTime + Math.round(sched.timesMs[i++]);
+			int pos = getSamplePos(x, y);
+			int len = calcSampleLen();
 			int d = 200;
-			this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
+			float gain = samplerGain;
+			float pitch = b.pitchRatio;
+			ADSRParams env = defaultEnv.copy();
+			float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+			this.samplerTimeLocs.add(new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, env, pan));
 		}
 		Collections.sort(samplerTimeLocs);
 	}
@@ -2668,23 +2691,22 @@ public class TutorialOne_03_Drawing extends PApplet {
 	public synchronized void runSamplerBrushEvents() {
 	    if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
 	    int currentTime = millis();
-	    samplerTimeLocs.forEach(tl -> {
-	        if (tl.eventTime() < currentTime) {
+	    int durationMs = 200;
+	    samplerTimeLocs.forEach(stl -> {
+	        if (stl.eventTimeMs() < currentTime) {
 	        	// sched points from storeSamplerCurveTL are already in bounds
-	            int sampleX = Math.round(tl.getX());
-	            int sampleY = Math.round(tl.getY());
-	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-	            int pos = getSamplePos(sampleX, sampleY);
+	            int sampleX = Math.round(stl.getX());
+	            int sampleY = Math.round(stl.getY());
 	            // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
-                playSample(pos, calcSampleLen(), samplerGain, panning); 
-        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
-	            tl.setStale(true);
+                playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
+        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
+	            stl.setStale(true);
 	        } 
 	        else {
 	            return;
 	        }
 	    });
-	    samplerTimeLocs.removeIf(TimedLocation::isStale);
+	    samplerTimeLocs.removeIf(SamplerBrushEvent::isStale);
 	}
 
 	/**
@@ -2701,7 +2723,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    boolean isGesture = (b.hopMode() == HopMode.GESTURE);
 		GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
 		GestureSchedule sched = getPlaybackScheduleForBrush(b); 
-	    playGranularGesture(buf, sched, gParams);
+	    playGranularGesture(buf, sched, gParams, b.pitchRatio); 
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
 	}	
 

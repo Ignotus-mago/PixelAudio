@@ -996,7 +996,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/**
 	 * Preload an audio file using a file path and a filename.
 	 * @param path        the fully qualified path to the file's directory, ending with a '/' 
-	 * @param filename    the name of the file
+	 * @param fileName    the name of the file
 	 */
 	public void preloadFiles(String path, String fileName) {
 		// the audio file we want to open on startup
@@ -2843,7 +2843,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Calculate an envelope of length totalSamples. 
-	 * @param gainDb     desired gain in dB, currently ignored
+	 * @param linear     desired gain as a linear ratio, currently ignored
 	 * @param totalMs    desired duration of the envelope in milliseconds
 	 * @return an ADSRParams envelope
 	 */
@@ -4004,7 +4004,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * This is a replacement operation: the old brush should be removed
 	 * from its list immediately after conversion.
 	 * 
-	 * @param brush    AudioBrush to convert, GranularBrush <-> SamplerBrush
+	 * @param brush    AudioBrush to convert, GranularBrush to/from SamplerBrush
 	 */
 	AudioBrush toggleBrushType(AudioBrush brush) {
 	    if (brush == null) return null;
@@ -4300,6 +4300,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	                    + " pos=" + pos
 	                    + " len=" + len
 	                    + " gain=" + gain
+	                    + " pitch=" + pitch
 	                    + " pan=" + pan);
 	            }
 	        }
@@ -4322,7 +4323,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	                // list is sorted, so we can stop early
 	                break;
 	            }
-	            playSample(evt.samplePos, evt.sampleLen, evt.gain, evt.env, evt.pitchRatio, evt.pan);
+	            playSample(evt.samplePos, evt.durationMs, evt.gain, evt.env, evt.pitchRatio, evt.pan);
 	            int sampleX = PixelAudio.constrain(evt.x, 0, width - 1);
 	            int sampleY = PixelAudio.constrain(evt.y, 0, height - 1);
 	            pointTimeLocsAddPoint(new TimedLocation(sampleX, sampleY, 200 + millis()));

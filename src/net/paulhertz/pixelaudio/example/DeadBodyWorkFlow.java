@@ -4142,7 +4142,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	                // list is sorted, so we can stop early
 	                break;
 	            }
-	            playSample(evt.samplePos, evt.sampleLen, evt.gain, evt.env, evt.pitchRatio, evt.pan);
+	            playSample(evt.samplePos, evt.durationMs, evt.gain, evt.env, evt.pitchRatio, evt.pan);
 	            int sampleX = PixelAudio.constrain(evt.x, 0, width - 1);
 	            int sampleY = PixelAudio.constrain(evt.y, 0, height - 1);
 	            pointTimeLocsAddPoint(new TimedLocation(sampleX, sampleY, 200 + millis()));

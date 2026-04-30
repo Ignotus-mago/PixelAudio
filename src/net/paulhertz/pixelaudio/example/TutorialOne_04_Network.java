@@ -8,7 +8,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -37,152 +36,150 @@ import com.hamoid.*;
 
 
 /**
- * <h2>QUICK START</h2>
+ * <h2>NETWORKING WITH UDP</h2>
  * <p>
- * <ol>
- * <li>Launch TutorialOne_03_Drawing. The display window opens with a pre-loaded file, "Saucer_mixdown.wav".
- * The audio data is displayed as grayscale values. A spectrum of rainbow colors overlaid on the 
- * image follows the Signal Path, the mapping of the audio signal to the image pixels created
- * by the PixelMapGen <code>multigen</code> and managed by the PixelAudioMapper <code>mapper</code>. 
- * This particular PixelMapGen reads time from top to bottom, left to right, in eight rows.</li> 
- * <li>Click on the image or press the spacebar with the cursor over the image to play 
- * a Sampler instrument sound.</i> 
- * <li>Press 'd' to enable drawing. Drag the mouse to draw a line. Try varying the speed of your gesture:
- * it will be recorded to the PACurveMaker instance that records your actions. When you release the
- * mouse, a brushstroke appears.</li> 
- * <li>Click on the brushstroke. The Sampler instrument plays new brushstokes, by default, using the 
- * ALL_POINTS representation of the curve. Press the '1', '2' or '3' key to change the representation
- * of the curve. REDUCED_POINTS (2) draws fewer points. CURVE_POINTS (3) draws many more. The Sampler
- * instrument sounds good with all points or reduced points, mostly because it has a fairly long 
- * envelope. It may sound too dense with curve points.</li>  
- * <li>Draw a few more brushstrokes to experiment with drawing and the Sampler instrument. 
- * Draw fast and slow, right to left or left to right (forwards or backwards in time), 
- * vertically, horizontally, or diagonally.</li> 
- * <li>To switch a brushstroke to use the Granular instrument, hover over it and press 't'. 
- * The representation of the curve will change to CURVE_POINTS. Click on the curve to
- * play it. Experiment with the other representations. The curve steps representation
- * of the brushstroke provides enough density to provide a continuous sound for the short
- * envelopes of grains. The reduced points representation may sound too sparse.
- * Press 't' again to switch the curve back to use the Sampler instrument. </li> 
- * </ol>
- * See the various key commands for various ways to alter the sound of the granular synth
- * and other features. Check out the JavaDocs comments code comments on the various methods 
- * for detailed information about the features of TutorialOne_03_Drawing. For an GUI with 
- * greater control over drawing, gesture, and audio synthesis, see the GesturePlayground sketch. 
- * </p>
- * <h2>NEW FEATURES</h2>
- * <p>
- * This sketch continues the Tutorial One sequence for the PixelAudio library
- * for Processing. To the previous tools for reading, writing, and transcoding
- * audio and image files, triggering audio events, and animating pixels to change
- * audio sample order, it adds the capability of drawing in the display window. Lines 
- * drawn on the display are captured as points and times and used to create brushstrokes
- * that can be activated to trigger audio events. In PixelAudio's conceptual framework, 
- * the combination of points and times constitutes a "gesture". Along with mapping of 
- * points to audio samples using PixelAudioMapper, "gesture" is a core concept of the
- * PixelAudio library. Check out {@link net.paulhertz.pixelaudio.curves.PAGesture PAGesture} 
- * for a formal definition of gesture.
+ * TutorialOne_04_Network is a copy of TutorialOne_03_Drawing with networking features added. 
+ * Refer to the notes for TutorialOne_03_Drawing for information about drawing and audio synthesis
+ * in TutorialOne_04_Network. Here, we're going to explain just the networking features.
  * </p><p>
- * PixelAudio provides two types of audio synthesis: the Sampler intruments, introduced in
- * previous sketches, and the Granular instruments. This sketch introduces PixelAudio's granular 
- * synthesis engine with the <code>PAGranularInstrumentDirector</code> class and provides
- * another class for Sampler instruments, <code>PASamplerInstrumentPool</code>. The Granular
- * instruments and the Sampler instruments both depend on a hierarchy of classes that 
- * implement a signal-processing chain. It's unlikely that you will have to deal with the
- * low-level processing. PAGranularInstrumentDirector and PASamplerInstrumentPool provide
- * the control knobs you would want for a virtual electronic instrument while keeping the
- * math and audio engine hooks in the background. This sketch and GesturePlayground provide
- * a good introduction to the functions available in the granular synth. GesturePlayground
- * goes into more detail than TutorialOne_03_Drawing, and provides a GUI to tweak almost
- * every Granular instrument feature. In TutorialOne_03_Drawing we are principally
- * concerned with showing how to create interactive brushstrokes by drawing on the screen.
+ * TutorialOne_04_Network is designed to work with a Max patch, simpleAudioIO.maxpat, which is 
+ * included in the example code for PixelAudio. The simpleAudioIO patch is designed to process 
+ * audio output from TutorialOne_04_Network and to respond to UDP messages from TutorialOne_04_Network. 
+ * We'll discuss the audio setup first, for MacOS (something similar can be done in the Windows OS). 
+ * You can use the audio signal flow without using UDP. It's handy for situations where you want to
+ * add a layer of audio processing and it will function with many audio applications besides Max. 
+ * Next, we'll discuss UDP network messaging. Finally we'll look at the <code>PANetworkClientINF</code> interface
+ * and its implementation in <code>NetworkDelegate</code>, an inner class of TutorialOne_04_Network. 
+ * </p>
+ * <h3>Audio Setup with Blackhole in MacOS</h3>
+ * <p>
+ * Using the System Settings for Sound in MacOS and the BlackHole audio routing tool 
+ * (https://existential.audio/blackhole/), you can set up a wide range of inputs and outputs, 
+ * depending on your system software and hardware. Here's how to route between this sketch
+ * and Max. 
+ * </p>
+ * <ol>
+ * <li>Open simpleAudioIO.maxpat</li>
+ * <li>Open MacOS System Settings control panel and select the Sound tab.</li>
+ * <li>In the Input and Output section, select BlackHole 16ch as the Output.</li>
+ * <li>In the Max Audio Status control panel, set Input Device to BlackHole 16ch.</li>
+ * <li>If you have external audio hardware, set that to your output.</li> 
+ * <li>Turn on audio processing in simpleAudioIO.</li>
+ * <li>Run TutorialOne_04_Network and play some sounds.</li> 
+ * </ol>
+ * <h3>UDP: User Datagram Protocol</h3>
+ * <p>UDP (User Datagram Protocol) is a network communications protocol that is apt for 
+ * sending relatively short, real-time messages over a network. In Processing, it is implemented
+ * with external libraries. I'm using the oscP5 library by Andreas Schlegel, which is included
+ * in Processing's Contributed Libraries. You can install it with the Sketch -> Import Library...
+ * -> Manage Libraries... menu command in Processing. UDP requires an IP address and a port
+ * number to enable communications. In this example, we use 127.0.0.1 as the IP address. 
+ * The address 127.0.0.1 is the standard address for IPv4 loopback traffic, i.e., for services
+ * running on the host computer. If you are communicating with a remote computer, you will need
+ * the IP address for that computer and your own, either on the local area network or on the 
+ * internet, if the addresses are static. We're using ports 7400 and 7401. TutorialOne_04_Network 
+ * sends messages out on port 7400. The Max application simpleAudioIO receives messages on 7400,
+ * using the udpreceive objects. It sends messages to TutorialOne_04_Network via IP address 
+ * 127.0.0.1 on port 7401 using the udpsend object. TutorialOne_04_Network receives messages 
+ * over port 7401. See the examples for oscP5 in Processing for more information. 
+ * </p>
+ * <h3>PANetworkClientINF and NetworkDelegate</h3>
+ * <P>Since UDP communications are independent of the PixelAudio library, they are implemented in the 
+ * example code, not in the library. The <code>PANetworkClientINF</code> interface is included in the example software. 
+ * It defines the methods that an implementing class must provide:  
+ * </p>
+ * <ul>
+ * <li>public PixelAudioMapper getMapper();</li>
+ * <li>public int playSample(int samplePos);</li>
+ * <li>public void playPoints(ArrayList<PVector> pts);</li>
+ * <li>public void parseKey(char key, int keyCode);</li>
+ * <li>public void controlMsg(String control, float val);</li>
+ * <li>public PApplet getPApplet();</li>
+ * </ul>
+ * <p>If you are running Processing in an IDE like Eclipse, the PApplet class you create should implement 
+ * PANetworkClientINF and provide these methods. In Processing, the PApplet host class doesn't provide
+ * a way to implement an interface directly, but you can still provide all the required methods and
+ * create a network delegate to handle UDP communications. In TutorialOne_04_Network we use the 
+ * <code>NetworkDelegate</code> subclass. In Eclipse, NetworkDelegate's constructors require a 
+ * PANetworkClientINF object as their first argument. In Processing, the constructors should require
+ * an instance of your PApplet class, which is indicated with the name of your application.</p>
+ * <ul>
+ * <li>Eclipse:    <code>NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)</code></li>
+ * <li>Processing: <code>NetworkDelegate(TutorialOne_04_Network app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)</code></li>
+ * </ul>
+ * <h3>Messages and Methods</h3>
+ * <p>To find the points at which networking code is implemented in methods in this sketch, 
+ * search for "// *****>>> NETWORKING <<<***** //". 
+ * The NetworkDelegate class provides a number of messaging methods, each prefaced with "oscSend". 
+ * For receiving remote messages, it calls oscP5's "plug" method (in initOscPlugs()) to link 
+ * incoming messages to local methods. In addition, it provides some boolean toggles, such as
+ * <code>isNetSendDrawingPoints</code>, to turn features on or off at various points in the 
+ * TutorialOne_04_Network code--if you aren't going to use data, don't send it. 
+ * In this sketch, we concentrate on:
+ * </p>
+ * <ul>
+ * <li>sending mouse coordinates and audio buffer position to simpleAudioIO</li>
+ * <li>turning Max reverb on or off with the ']' or '[' keys (we've left '{' and '}' open in simpleAudioIO)</li>
+ * <li>changing Max reverb settings with 'q' or 'Q' keys</li>
+ * </ul>
+ * <p>See NetworkDelegate comments for more information. There is quite a lot more that can be accomplished
+ * with UDP communications. In my collaborations with composer Christopher Walczak, it's been very useful
+ * in performances where we use mouse position to control objects in Max or trigger brushstrokes to send 
+ * control values to Max. It's not an integral part of PixelAudio, but I will post useful examples as
+ * I chance to develop them. 
  * </p>
  * <div>
- * <h2>Points + Times = Gestures</h2>
- * <p>
-  * The drawing tools and commands are a substantial addition. To implement them
- * we call on a whole new package of code, {@link net.paulhert.pixelaudio.curves
- * PixelAudio Curves Package}. To turn gestures into timing information that can
- * be used to schedule audio events, particularly with granular synthesis, we
- * rely on the {@link net.paulhertz.pixelaudio.schedule PixelAudio Schedule Package}. 
- * The workhorse of the Curves package is {@link net.paulhert.pixelaudio.curves.PACurveMaker PACurveMaker}, 
- * which is used to  * capture point and time information when you draw. A PACurveMaker 
- * instance is intialized with a list of unique points and a list of time offsets where 
- * both lists have the same number of elements. Each point is paired to the relative
- * time when it was recorded. Points drawn on the display stored in
- * PACurveMaker's ALL_POINTS representation of the gesture points. PACurveMaker
- * can also reduce the number of points captured, using the
- * Ramer-Douglas-Peucker (RDP) algorithm, to create the REDUCED_POINTS
- * representation of a gesture. RDP controls point reduction with a numerical
- * value, <code>epsilon</code>, which you can vary to control the number of
- * reduced points in a gesture. PACurveMaker can turn the reduced points
- * representation of a drawn line into a Bezier curve, the CURVE_POINTS
- * representation of the gesture. The curve can be divided polygonal segments,
- * with the potential to generate an audio event at each vertex. The number of
- * divisions is controlled by the <code>PACurveMaker.setCurveSteps(int
- * curveSteps)</code> method. In the GesturePlayground sketch you can vary the
- * curve divisions with the GUI.
- * </p><p>
- * The CURVE_POINTS curve is used to create a stylized brushstroke. The
- * brushstroke is an <code>PABezShape</code> object. PABezShape provides a
- * <code>pointInPoly()</code> method that you can use to detect the mouse
- * hovering over or clicking within a brushstroke. TutorialOne_03_Drawing shows
- * how the brushstroke can be activated as an animated UI element and used to
- * trigger audio events. 
- * </p> 
- * <h2>Audio Processing</h2>
- * <p>
- * The <code>PAGranularInstrumentDirector</code> class manages the high level processes for 
- * granular synthesis. Probably all the functionality you will commonly need 
- * is available in its methods. The various <code>playGestureNow(...)</code> methods 
- * allow you to control the timing, panning, pitch, and gain of individual grains, 
- * if you want to. Parameters for grain shaping and are set with the 
- * GestureGranularParams class. The GestureEventParams class supports arrays of 
- * values to set timing, pan, gain, and pitch for individual grains. The timing and 
- * pan settings for individual grains can also be passed as arrays to overloaded
- * <code>playGestureNow(...)</code> methods. 
- * </p><p>
- * Here's an outline of the granular synbthesis chain, which you can feel free to skip:
- * <code>PAGranularInstrumentDirector</code> sets up the <code>PABurstGranularSource</code> 
- * and passes it to the granular synth processing chain, first to <code>PAGranularInstrument</code> 
- * and then to <code>PAGranularSampler</code>, where the <code>PABurstGranularSource</code> is 
- * one of various parameters used to create an <code>AudioScheduler</code> scheduler. In
- * <code>PAGranularSampler.uGenerate()</code>, <code>scheduler.processBlock()</code> is called, 
- * the audio signal <code>leftMix</code> and <code>rightMix</code> variables are initialized 
- * to 0 and used to accumulate the currently active <code>PAGranularVoice</code> instances. 
- * After that, uGenerate applies power normalization and soft clipping to the signal and returns 
- * its value. All of this is set in motion through Minim's UGen interface, 
- * which PAGranularSampler extends.
- * </p>
- * 
  * <pre>
  * Here are the key commands for this sketch:
  * 
- * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
+ * Press UP ARROW to increase audio gain by 3 dB.
+ * Press DOWN ARROW to decrease audio gain by 3 dB.
+ * Press RIGHT ARROW to increase Sampler audio gain by 3 dB.
+ * Press LEFT ARROW to decrease Sampler audio gain by 3 dB.
+ * Press SHIFT-RIGHT ARROW to increase Granular audio gain by 3 dB.
+ * Press SHIFT-LEFT ARROW to decrease Granular audio gain by 3 dB.
+ * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.
  * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.
  * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.
  * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.
  * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.
  * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.
  * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.
- * Press 'e' to select granular or sampler synth for click response.
+ * Press 'y' to select granular or sampler synth for click response.
  * Press 'r' to select long or short grain duration .
+ * Press 'b' to toggle between long burst grains and short burst grains.
  * Press 'p' to jitter the pitch of granular gestures.
+ * Press 'P' to adjust pitch of current brushstroke.
+ * Press '.' to increment epsilon value of current brush (reduced points decrease).
+ * Press ',' to decrement epsilon value of current brush (reduced points increase).
+ * Press '>' to increment curve steps value of current brush.
+ * Press '<' to decrement curve steps value of current brush.
+ * Press 'm' to change the Sampler noise reduction profile.
+ * Press 'e' to change the envelope we're using .
+ * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
- * Press 'd' to turn drawing on or off.
+ * Press 'd' to toggle play audio on new brush .
  * Press 'c' to apply color from image file to display image.
- * Press 'k' to apply the hue and saturation in the colors array to mapImage (shifted when animating).
- * Press 'K' to color display with spectrum and write to base image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
+ * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  * Press 'j' to turn audio and image blending on or off.
  * Press 'n' to normalize the audio buffer to -6.0dB.
- * Press 'l' or 'L' to determine whether to load a new file to both image and audio or not.
+ * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.
  * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
+ * Press 's' to save display image to a PNG file.
+ * Press 'S' to save audio buffer to a .wav file.
  * Press 'w' to write the image HSB Brightness channel to the audio buffer as transcoded sample values .
  * Press 'W' to write the audio buffer samples to the image as color values.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
  * Press 'u' to mute audio.
  * Press 'V' to record a video.
+ * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
+ * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
+ * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
+ * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * Press 'h' or 'H' to show help message in the console.
  * </pre>
  * </div>
@@ -212,7 +209,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	// mapImage can change, and often does so with reference to the stable baseImage, for example when animating
 	PImage mapImage;           // image for display, may be animated
 	PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // also try ChannelNames.L (HSB brightness channel)
-	int[] colors;              // array of spectral colors
+	int[] spectrum;              // array of spectral colors
 	
 	/* ------------------------------------------------------------------ */
 	/*                        FILE I/O VARIABLES                          */
@@ -255,8 +252,9 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     
 	Minim minim;					// library that handles audio 
 	AudioOutput audioOut;			// line out to sound hardware
+	float outputGain = 0.0f;        // gain setting for audio output, decibels
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset, not used in TutorialOneDrawing
-	float sampleRate = 44100;       // target audio engine rate used to configure audioOut
+	float sampleRate = 48000;       // target audio engine rate used to configure audioOut
 	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
 	float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
 	float[] audioSignal;			// the audio signal as an array of floats
@@ -266,26 +264,34 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 
 	// ====== Sampler Synth ====== //
 
-	// SampleInstrument setup
-	int noteDuration = 1000;        // average sample synth note duration, milliseconds
+	// Sampler Instrument duration and envelopes
+	final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
+	int envDuration;                // current envelope duration
+	boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
+    String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
+    int presetIndex = envPresets.length - 1;    // current preset index
+    float overlapFactor = 3.0f;     // envelope overlap
+    int envMinDurationMs = 40;        // min envelope duration, milliseconds
+    int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
+    
+    // Sampler Instrument setup
 	int samplelen;                  // calculated sample synth note length, samples
-	float synthGain = 0.75f;         // gain setting for gesture events with Sampler instrument, decimal value 0..1
-	float synthPointGain = 0.75f;   // gain for point events with the Sampler instrument
-	float outputGain = -6.0f;       // gain setting for audio output, decibels
+	float samplerGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for Sampler gesture event
+	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
-	int samplerMaxVoices = 64;
+	int poolSize = 8;               // number of sampler instruments for polyphony
+	int samplerMaxVoices = 256;     // number of voices for each sampler instrument
 
 	// ADSR and its parameters
-	float maxAmplitude = 0.875f;         // in the range 0..1, maximum amplitude of envelope for sampler instruments
+	float maxAmplitude = 1.0f;          // set envelopes to 1.0f amplitude, then scale later with audio instrument gain
 	// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
 	ADSRParams defaultEnv = new ADSRParams(maxAmplitude, 0.2f, 0.1f, maxAmplitude * 0.75f, 0.5f);
 	// ADSRParams granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
 	float pitchScaling = 1.0f;          // factor for changing pitch
-	float defaultPitchScale = 1.0f;     // pitch scaling factor
+	float defaultPitchScaling = 1.0f;   // pitch scaling factor
 	float lowPitchScaling = 0.5f;       // low pitch scaling, 0.5 => one octave down
 	float highPitchScaling = 2.0f;      // high pitch scaling, 2.0 => one octave up
-	boolean usePitchedGrains = false;   // detune a granular gesture, if true
 	
     // toggle for sampler events with a "granular" envelope
     boolean useGranularSynth = false;   // which synth do we use for point events (mouse clicks and the like)
@@ -296,21 +302,23 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
     public PAGranularInstrument gSynth;         // granular synthesis instrument
     public PAGranularInstrumentDirector gDir;   // director of granular events
-    public float granularGain = 0.9f;           // gain for a granular gesture event
-    public float granularPointGain = 1.0f;      // gain for a granular point event ("granular burst")
+    public float granularGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for a granular gesture event
+    public float granularPointGain = 1.0f;      // linear gain for a granular point event
     // parameters for granular synthesis
-    boolean useShortGrain = true;               // default to short grains, if true
+    boolean useShortGrain = false;              // default to short grains, if true
     int longSample = 4096;                      // number of samples for a moderately long grain
-    int shortSample = 512;                     // number of samples for a relatively short grain
+    int shortSample = 512;                      // number of samples for a relatively short grain
     int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
     int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
     GestureGranularParams gParamsGesture;       // granular parameters when hopMode == HopMode.GESTURE
     GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED
-    public int curveSteps = 16;                 // number of steps in curve representation of a brushstroke path
-    public int gMaxVoices = 256;                 // number of voices managed by a PAGranularInstrument (gSynth)
-    boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
-    int maxBurstGrains = 4;
-    int burstGrains = 1;
+    public int curveSteps = 8;                  // number of steps in curve representation of a brushstroke path
+    public int gMaxVoices = 256;                // number of voices managed by a PAGranularInstrument (gSynth)
+    boolean useLongBursts = true;               // controls the number of burst grains in a point event or gesture event
+    int maxBurstGrains = 8;
+    int minBurstGrains = 1;
+    int burstGrains = useLongBursts ? maxBurstGrains : minBurstGrains;
+	boolean usePitchedGrains = false;           // detune a granular gesture, if true
 
 
     /* ------------------------------------------------------------------ */
@@ -326,7 +334,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     boolean isAnimating = false;         // do we run animation or not?
     boolean oldIsAnimating;              // keep track of animation state when opening a file
     // animation variables for video recording
-    int videoSteps = 720;                // how many steps in an animation loop
+    int videoSteps = 768;                // how many steps in an animation loop
     boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
     int videoFrameRate = 24;             // frames per second
     int step;                            // number of current step in animation loop
@@ -385,14 +393,13 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	int dimCircleColor = color(178, 168, 136);          // brushstroke interiro point color, dimmed
 
     // TimedLocation events
-    public ArrayList<TimedLocation> samplerTimeLocs;    // a list of timed events for Sampler brushes
+    public ArrayList<SamplerBrushEvent> samplerTimeLocs;    // a list of timed events for Sampler brushes
 	ArrayList<TimedLocation> pointTimeLocs;             // a list of timed events for mouse clicks
 	ArrayList<TimedLocation> grainTimeLocs;             // a list of timed events for Granular brushes
-    int eventStep = 90;                                 // ms spacing for constant interval sampler “path events”
     int animatedCircleColor = color(233, 220, 199);     // color for animated circles when playing audio   
 
-    boolean isIgnoreOutsideBounds = true;               // not used in TutorialOneDrawing, regulates brushstroke drawing
-        
+    PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+    PABoundsPolicy boundsPolicy;
 
     /* ------------------------------------------------------------------ */
 	/*                       INTERACTION VARIABLES                        */
@@ -409,41 +416,56 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
      * Defines the curve drawing model for a brush using PACurveMaker. 
      */
     public static final class BrushConfig {
+    	/** PathMode for drawing */
         public PathMode pathMode = PathMode.ALL_POINTS;
+    	/** Point reduction parameter */
         public float rdpEpsilon = 4.0f;
-        public int curveSteps = 16;
-        // leave room for future compatibility (gainDb etc.)
+    	/** Number of polygon segments in a curve */
+        public int curveSteps = 8;
+        // leave room for future compatibility
     }
 
     /**
-     * A light-weight version of the AudioBrush class for combining gestures and audio synthesis.
-     * PACurveMaker stores gesture points and times provides various curve and polygon models for 
-     * drawing brushes and outputting GestureSchedule objects for audio events. AudioBrushLite
-     * combines PACurveMaker brush modeling with basic audio synthesis parameters. 
-     * AudioBrush combines PACurveMaker with GestureGranularConfig, to provide just about every parameter
-     * you could ever need for sampler or granular synthesis. See GesturePlayground for an example. 
+     * A light-weight version of the AudioBrush class for combining gestures and
+     * audio synthesis. AudioBrushLite combines PACurveMaker gesture and curve
+     * modeling with basic audio synthesis parameters. AudioBrush, introduced in
+     * TutorialOne_05_GesturePlayground, exposes most of the parameters used for 
+     * granular synthesis in PixelAudio, along with a many of the brush and gesture
+     * settings available in PACurveMaker. 
      */
     public static final class AudioBrushLite {
-        private final PACurveMaker curve;
+    	/** PACurveMaker instance stores point and time data, provides drawing and scheduling methods  */
+    	private final PACurveMaker curve;
+    	/** Configuration variables for drawing */
         private final BrushConfig cfg;
+        /** Audio output variable */
         private BrushOutput output;
+    	/** For granular instrument, timing model */
         private HopMode hopMode;
+        /** Pitch scaling */
+        private float pitchRatio = 1.0f;
 
         public AudioBrushLite(PACurveMaker curve, BrushConfig cfg, BrushOutput output, HopMode hopMode) {
             this.curve = curve;
             this.cfg = cfg;
             this.output = output;
             this.hopMode = hopMode;
+            this.pitchRatio = 1.0f;
         }
         public PACurveMaker curve() { return curve; }
         public BrushConfig cfg() { return cfg; }
         public BrushOutput output() { return output; }
         public void setOutput(BrushOutput out) { this.output = out; }
+        public float pitchRatio() { return pitchRatio; }
+        public void setPitchRatio(float newRatio) { this.pitchRatio = newRatio; }
         public HopMode hopMode() { return hopMode; }
         public void setHopMode(HopMode hop) { this.hopMode = hop; }
+        
     }
 
-    // A class to store a hit-test result
+    /**
+     *  A class to store a hit-test result, recording an AudioBrushLite instance and its index in brush list.
+     */
     public static final class BrushHit {
         public final AudioBrushLite brush;
         public final int index;
@@ -453,10 +475,20 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
         }
     }
     
-	// network communications
+	// *****>>> NETWORKING <<<***** //
 	NetworkDelegate nd;
 	boolean isUseNetworkDelegate = false;
-	
+	boolean isNetSendDrawingPoints = true;
+	boolean isNetSendOutsideBrushPoints = true;
+	boolean isNetSendBrushTriggers = false;
+	boolean isNetSendFileInfo = false;
+	boolean isNetSendGestures = false;
+    
+	// application settings
+    
+    boolean doPlayOnNewBrush = true;
+	boolean shiftIsDown = false;
+
 
     // ---------------- APPLICATION ---------------- //
 	
@@ -471,34 +503,40 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	public void setup() {
 		// set a standard animation framerate
 		frameRate(24);
-		// 1) Initialize our library.
+		// 1. Initialize our library.
 		pixelaudio = new PixelAudio(this);
-		// 2) create a PixelMapGen subclass with dimensions equal to the display window.
+		// 2. create a PixelMapGen object with dimensions equal to the display window.
 		//   the call to "hilbertLoop3x2(genWidth, genHeight)" produces a MultiGen that is 3 * genWidth x 2 * genHeight, 
 		//   where genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
+		//
 		// multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
+		//
 		//   Here's an alternative multigen that is good for visualizing audio location within the image
 		//   It reads left to right, top to bottom, like a musical score. I've divided it 12 x 8, but 6 x 4 is good, too.
+		//
 		multigen = HilbertGen.hilbertRowOrtho(12, 8, width/12, height/8);
-		// 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
+		// 3. Initialize a PixelAudioMapper with multigen
 		mapper = new PixelAudioMapper(multigen);
 		// area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
 		mapSize = mapper.getSize();
+		// initialize the boundary policy for keeping points and indices in bounds
+		boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
 		// create an array of rainbow colors with mapSize elements
-		colors = getColors(mapSize);
-		// initialize various aspects of this application
+		spectrum = getColors(mapSize);
+		// 4. create image for display
 		initImages();
+		// 5. set up the audio environment and variables
 		initAudio();
+		// 6. set up the drawing environment and variables
 		initDrawing();
-		showHelp();
-		preloadFiles(daPath, "Saucer_mixdown.wav");    // handy when debugging, too
+		// 7. set up networking 
 	    // *****>>> NETWORKING <<<***** //
 		isUseNetworkDelegate = true;
-		if (isUseNetworkDelegate) {
-			String remoteAddress = "127.0.0.1";
-			nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
-			nd.oscSendClear();
-		}
+		initNetwork();
+		// 8. output a help message to the console
+		showHelp();
+		// preload files, parameters will vary with the system where we're running
+		preloadFiles(daPath, "Saucer_mixdown.wav");    // handy when debugging, too
 	}
 
 	/**
@@ -518,9 +556,9 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	public int[] getColors(int size) {
 		int[] colorWheel = new int[size]; // an array for our colors
 		pushStyle(); // save styles
-		colorMode(HSB, colorWheel.length, 100, 100); // pop over to the HSB color space and give hue a very wide range
+		colorMode(HSB, colorWheel.length, 100, 100); // create colors in the HSB color space, giving hue a very wide range
 		for (int i = 0; i < colorWheel.length; i++) {
-			colorWheel[i] = color(i, 40, 60); // fill our array with colors, gradually changing hue
+			colorWheel[i] = color(i, 50, 70); // fill our array with colors, gradually changing hue
 		}
 		popStyle(); // restore styles, including the default RGB color space
 		return colorWheel;
@@ -529,12 +567,12 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	/**
 	 * Initializes mapImage with the colors array. 
 	 * MapImage handles the color data for mapper and also serves as our display image.
-	 * BaseImage is intended as a reference image that usually only changes when you open a new image file.
+	 * BaseImage is intended as a reference image that typically only changes when you load a new image.
 	 */
 	public void initImages() {
 		mapImage = createImage(width, height, ARGB);
 		mapImage.loadPixels();
-		mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
+		mapper.plantPixels(spectrum, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
 		mapImage.updatePixels();
 		baseImage = mapImage.copy();
 	}
@@ -551,6 +589,15 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    samplerTimeLocs = new ArrayList<>();   // capture timing data when drawing
 	}
 	
+	void initNetwork() {
+	    // *****>>> NETWORKING <<<***** //
+		if (isUseNetworkDelegate) {
+			String remoteAddress = "127.0.0.1";
+			nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
+			nd.oscSendClear();
+		}
+	}
+	
 	/**
 	 * Preload an audio file using a file path and a filename.
 	 * @param path        the fully qualified path to the file's directory, ending with a '/' 
@@ -564,7 +611,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		fileSelected(audioSource);
 		// overlay colors on mapImage
 		mapImage.loadPixels();
-		applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+		applyColor(spectrum, mapImage.pixels, mapper.getImageToSignalLUT());
 		mapImage.updatePixels();
 		// write mapImage to baseImage
 		commitMapImageToBaseImage();
@@ -640,7 +687,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    // 3) if in the process of drawing, accumulate points while mouse is held down
 	    if (isDrawMode) {
 	        if (mousePressed) {
-	            addPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+	            addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
 	        }
 	        if (allPoints != null && allPoints.size() > 2) {
 	            PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
@@ -735,43 +782,72 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			activeBrush = hit.brush;      // flag the brush as the activeBrush
 			if (activeBrush.output() == BrushOutput.SAMPLER) {
 				scheduleSamplerBrushClick(activeBrush);    // Sampler brush clicked event
-			} 
-			else {
+			} else {
 				scheduleGranularBrushClick(activeBrush);   // Granular brush clicked event
 			}
-			return;
+		} else {
+			// click outside any brush is handled here
+			audioMouseClick(mouseX, mouseY);
 		}
-		// click outside any brush is handled here
-		audioMousePressed(mouseX, mouseY);
+		// *****>>> NETWORKING <<<***** //
+		int x = clipToWidth(mouseX);
+		int y = clipToHeight(mouseY);
+		int pos = getSamplePos(x, y);
+	    if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMousePressed(x, y, pos);
 	}
 
-    /**
+		
+	/**
      * Built-in keyPressed handler, forwards events to parseKey.
      */
     @Override
     public void keyPressed() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = true;
+            // println("-->> shiftIsDown " + shiftIsDown);
+            return;
+        }
     	if (key != CODED) {
     		parseKey(key, keyCode);
     	}
     	else {
-    		float g = audioOut.getGain();
 			if (keyCode == UP) {
-				setAudioGain(g + 3.0f);
+				adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == DOWN) {
-				setAudioGain(g - 3.0f);
+				adjustAudioGain(shiftIsDown ? -3.0f : -1.0f);
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
-			else if (keyCode == RIGHT) {
-
+			else if (keyCode == RIGHT) {				
+				if (!shiftIsDown) {
+					adjustPoolGain(3.0f);
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
 			else if (keyCode == LEFT) {
-
+				if (!shiftIsDown) {
+					adjustPoolGain(-3.0f);					
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(-3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
     	}
     }
 
+    @Override
+    public void keyReleased() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = false;
+            // println("-->> shiftIsDown " + shiftIsDown);
+        }
+    }
+    
 	/**
 	 * Handles key press events passed on by the built-in keyPressed method. 
 	 * By moving key event handling outside the built-in keyPressed method, 
@@ -779,13 +855,13 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * Methods and interfaces and even other threads can call parseKey(). 
 	 * This opens up many possibilities and a some risks, too.  
 	 * 
-	 * @param key
-	 * @param keyCode
+	 * @param key        the key that was pressed, as a char
+	 * @param keyCode    keyCode for the key that was pressed
 	 */
 	public void parseKey(char key, int keyCode) {
 		String msg;
 		switch(key) {
-		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
+		case ' ': // (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event
 			if (hoverBrush != null) {
 				if (hoverBrush.output() == BrushOutput.SAMPLER) {
 					scheduleSamplerBrushClick(hoverBrush);    // Sampler brush clicked event
@@ -794,7 +870,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				}
 			}
 			else {
-				audioMousePressed(mouseX, mouseY);
+				audioMouseClick(mouseX, mouseY);
 			}
 			break;
 		case '1': // set brushstroke under cursor to PathMode ALL_POINTS
@@ -829,7 +905,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				println("-- hover brush hop mode is now " + hoverBrush.hopMode());
 			}
 			break;
-		case 'e': // select granular or sampler synth for click response
+		case 'y': // select granular or sampler synth for click response
 			useGranularSynth = !useGranularSynth;
 			String synth = (useGranularSynth) ? "granular." : "sampler.";
 			println("-- default synth for click events is "+ synth);
@@ -839,20 +915,37 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			granSamples = useShortGrain ? shortSample : longSample;
 			hopSamples = granSamples/4;
 			initGranularParams();
-			println("-- Granular synth uses grain length = "+ granSamples +" samples with "+ hopSamples +" between each grain");
+			println("-- Granular synth grain length = "+ granSamples +" samples with "+ hopSamples +" samples hop length");
 			break;
-		case 'b':
+		case 'b': // toggle between long burst grains and short burst grains
 			useLongBursts = !useLongBursts;
 			burstGrains = useLongBursts ? maxBurstGrains : 1;
 			initGranularParams();
-			println(useLongBursts ? "-- using long bursts" : "using a single grain");
+			msg = useLongBursts ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
+			println("-- Granular synth uses "+ msg +" grains.");
 			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
 			println("-- Play granular synth with "+ msg);
 			break;
-		case '>': case '.': // increment epsilon value of current brush (reduced points decrease)
+		case 'P': // adjust pitch of current brushstroke
+			if (hoverBrush == null) return;
+			pitchScaling = hoverBrush.pitchRatio();
+			if (pitchScaling == defaultPitchScaling) {
+				pitchScaling = lowPitchScaling;
+			} else if (pitchScaling == lowPitchScaling) {
+				pitchScaling = highPitchScaling;
+			} else if (pitchScaling == highPitchScaling) {
+				pitchScaling = defaultPitchScaling;
+			} else {
+				pitchScaling = defaultPitchScaling;
+			}
+			hoverBrush.setPitchRatio(pitchScaling);
+			msg = "hover brush pitch scaling set to "+ hoverBrush.pitchRatio();
+			println("-- "+ msg);
+			break;
+		case '.': // increment epsilon value of current brush (reduced points decrease)
 			if (hoverBrush != null) {
 				float e = hoverBrush.curve.getEpsilon();
 				e = e < 32 ? e + 1 : e;
@@ -860,7 +953,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				println("-- epsilon for current brush is "+ hoverBrush.curve.getEpsilon());
 			}
 			break;
-		case '<': case ',': // decrement epsilon value of current brush (reduced points increase)
+		case ',': // decrement epsilon value of current brush (reduced points increase)
 			if (hoverBrush != null) {
 				float e = hoverBrush.curve.getEpsilon();
 				e = e > 1 ? e - 1 : e;
@@ -868,30 +961,57 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				println("-- epsilon for current brush is "+ hoverBrush.curve.getEpsilon());
 			}
 			break;
+		case '>': // increment curve steps value of current brush
+			if (hoverBrush != null) {
+				int cs = hoverBrush.curve.getCurveSteps();
+				cs = cs < 32 ? cs + 1 : cs;
+				setBrushCurveSteps(hoverBrush, cs);
+				println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
+			}
+			break;
+		case '<': // decrement curve steps value of current brush
+			if (hoverBrush != null) {
+				int cs = hoverBrush.curve.getCurveSteps();
+				cs = cs > 1 ? cs - 1 : cs;
+				setBrushCurveSteps(hoverBrush, cs);
+				println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
+			}
+			break;
+		case 'm': // change the Sampler noise reduction profile
+			pool.cycleMixProfile();
+			println("-- mix profile is "+ pool.getMixProfile().name());
+			break;
+		case 'e': // change the envelope we're using 
+			presetIndex = (presetIndex + 1) % envPresets.length;
+			defaultEnv = envPreset(envPresets[presetIndex]);
+			println("-- default envelope is "+ envPresets[presetIndex] +", "+ defaultEnv.toString());
+			break;
+		case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
+			isAdjustEnvelope = !isAdjustEnvelope;
+			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+			break;
 		case 'a': //  start or stop animation (bitmap rotation along the signal path)
 			isAnimating = !isAnimating;
 			println("-- animation is " + isAnimating);
 			break;
-		case 'd': // turn drawing on or off
+		case '/': // turn drawing on or off
 			// turn off animation (if you insist, you can try drawing with it on, just press the 'a' key)
 			isAnimating = false;
 			isDrawMode = !isDrawMode;
 			println(isDrawMode ? "----- Drawing is turned on" : "----- Drawing is turned off");
 			break;
+		case 'd': // toggle play audio on new brush 
+			doPlayOnNewBrush = !doPlayOnNewBrush;
+			println("-- play audio when creating a new brush is "+ (doPlayOnNewBrush ? "ON" : "OFF"));
+			break;
 		case 'c': // apply color from image file to display image
 			chooseColorImage();
 			break;
 		case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
-			refreshMapImageFromBase();
-			mapImage.loadPixels();
-			applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
-			mapImage.updatePixels();
+			applyColorMapToDisplay(false);
 			break;
 		case 'K': // apply hue and saturation in colors to baseImage and mapImage
-			baseImage.loadPixels();
-			applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
-			baseImage.updatePixels();
-			refreshMapImageFromBase();
+			applyColorMapToDisplay(true);
 			break;
 		case 'j': // turn audio and image blending on or off
 			isBlending = !isBlending;
@@ -918,9 +1038,6 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			break;
 		case 'S': // save audio buffer to a .wav file
 			saveToAudio();
-			break;
-		case 'm': // copy the current display image to the baseImage
-			commitMapImageToBaseImage();
 			break;
 		case 'w': // write the image HSB Brightness channel to the audio buffer as transcoded sample values 
 			// TODO refactor with loadImageFile() and loadAudioFile() code
@@ -970,6 +1087,35 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			oldIsAnimating = isAnimating;
 			isAnimating = true;
 			break;
+		// *****>>> NETWORKING <<<***** // key commands for networking
+		case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
+			if (nd != null) nd.oscSendOnOff(1, true);
+			break;
+		case '[': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
+			if (nd != null) nd.oscSendOnOff(1, false);
+			break;
+		case '}': // send UDP message to Max (simpleAudioIO.maxpat): unused
+			if (nd != null) nd.oscSendOnOff(2, true);
+			break;
+		case '{': // send UDP message to Max (simpleAudioIO.maxpat): unused
+			if (nd != null) nd.oscSendOnOff(2, false);
+			break;
+		case 'q': // send UDP message to Max (simpleAudioIO.maxpat): small reverb settings
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.125f);
+				nd.oscSendSetnum(2, 2048.0f);
+				nd.oscSendSetnum(3, 0.125f);
+				nd.oscSendSetnum(4, 2560.0f);
+			}
+			break;
+		case 'Q': // send UDP message to Max (simpleAudioIO.maxpat): big reverb settings
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.3f);
+				nd.oscSendSetnum(2, 4096.0f);
+				nd.oscSendSetnum(3, 0.3f);
+				nd.oscSendSetnum(4, 5120.0f);
+			}
+			break;
 		case 'h': case 'H': // show help message in the console
 			showHelp();
 			break;
@@ -986,31 +1132,52 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	public void showHelp() {
 		println(" * Press UP ARROW to increase audio gain by 3 dB.");
 		println(" * Press DOWN ARROW to decrease audio gain by 3 dB.");
-		println(" * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.");
+		println(" * Press RIGHT ARROW to increase Sampler audio gain by 3 dB.");
+		println(" * Press LEFT ARROW to decrease Sampler audio gain by 3 dB.");
+		println(" * Press SHIFT-RIGHT ARROW to increase Granular audio gain by 3 dB.");
+		println(" * Press SHIFT-LEFT ARROW to decrease Granular audio gain by 3 dB.");
+		println(" * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
 		println(" * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.");
 		println(" * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.");
 		println(" * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.");
 		println(" * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.");
 		println(" * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.");
 		println(" * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.");
-		println(" * Press 'e' to select granular or sampler synth for click response.");
+		println(" * Press 'y' to select granular or sampler synth for click response.");
 		println(" * Press 'r' to select long or short grain duration .");
+		println(" * Press 'b' to toggle between long burst grains and short burst grains.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
+		println(" * Press 'P' to adjust pitch of current brushstroke.");
+		println(" * Press '.' to increment epsilon value of current brush (reduced points decrease).");
+		println(" * Press ',' to decrement epsilon value of current brush (reduced points increase).");
+		println(" * Press '>' to increment curve steps value of current brush.");
+		println(" * Press '<' to decrement curve steps value of current brush.");
+		println(" * Press 'm' to change the Sampler noise reduction profile.");
+		println(" * Press 'e' to change the envelope we're using .");
+		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
 		println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
-		println(" * Press 'd' to turn drawing on or off.");
+		println(" * Press 'd' to toggle play audio on new brush .");
 		println(" * Press 'c' to apply color from image file to display image.");
-		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (shifted when animating).");
-		println(" * Press 'K' to color display with spectrum and write to base image.");
+		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
+		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
 		println(" * Press 'j' to turn audio and image blending on or off.");
 		println(" * Press 'n' to normalize the audio buffer to -6.0dB.");
-		println(" * Press 'l' or 'L' to determine whether to load a new file to both image and audio or not.");
+		println(" * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.");
 		println(" * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.");
+		println(" * Press 's' to save display image to a PNG file.");
+		println(" * Press 'S' to save audio buffer to a .wav file.");
 		println(" * Press 'w' to write the image HSB Brightness channel to the audio buffer as transcoded sample values .");
 		println(" * Press 'W' to write the audio buffer samples to the image as color values.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
 		println(" * Press 'u' to mute audio.");
 		println(" * Press 'V' to record a video.");
+		println(" * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
+		println(" * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
+		println(" * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.");
+		println(" * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
 		println(" * Press 'h' or 'H' to show help message in the console.");
 	}
 
@@ -1018,11 +1185,37 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * Sets audioOut.gain.
 	 * @param g   gain value for audioOut, in decibels
 	 */
-	public void setAudioGain(float g) {
-		audioOut.setGain(g);
+	public void adjustAudioGain(float g) {
+		float ag = audioOut.getGain();
+		ag += g;
+		if (ag > 12.0f || ag < -64.0f) return;
+		audioOut.setGain(ag);
 		outputGain = audioOut.getGain();
 	}
 
+	/**
+	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustPoolGain(float g) {
+		float pg = pool.getGainDb();
+		pg += g;
+		if (pg > 12.0f || pg < -64.0f) return;
+		pool.setGainDb(pg);
+	}
+	
+	/**
+	 * Sets Granular instrument gain in dB.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void adjustGranGain(float g) {		
+		float gg = gDir.getInstrument().getGlobalGainDb();
+		gg += g;
+		if (gg > 12.0f || gg < -64.0f) return;
+		gDir.getInstrument().setGlobalGainDb(gg);
+	}
+	
+	
 	/**
 	 * Utility method for applying hue and saturation values from a source array of RGB values
 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
@@ -1034,16 +1227,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
 	 */
 	public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
-		if (colorSource == null || graySource == null || lut == null) 
-			throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
-		if (colorSource.length != graySource.length || colorSource.length != lut.length) 
-			throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
-		// initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
-		float[] hsbPixel = new float[3];
-		for (int i = 0; i < graySource.length; i++) {
-			graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
-		}
-		return graySource;
+		return applyColorShifted(colorSource, graySource, lut, 0);
 	}
 
 	/**
@@ -1054,6 +1238,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
 	 * @param graySource     an target array of RGB data from which to obtain brightness values
 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param shift          number of pixels/array indices to shift
 	 * @return the graySource array of RGB values, with hue and saturation values changed
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
 	 */
@@ -1073,6 +1258,170 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    return graySource;
 	}	
 
+	/**
+	 * Apply color map hue and saturation to mapImage or baseImage.
+	 *
+	 * @param updateBaseImage    if true, update baseImage, otherwise just update mapImage
+	 */
+	public void applyColorMapToDisplay(boolean updateBaseImage) {
+		if (updateBaseImage) {
+			baseImage.loadPixels();
+			applyColor(spectrum, baseImage.pixels, mapper.getImageToSignalLUT());
+			baseImage.updatePixels();
+			refreshMapImageFromBase();
+		} else {
+			refreshMapImageFromBase();
+			mapImage.loadPixels();
+			applyColorShifted(spectrum, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
+			mapImage.updatePixels();
+		}
+	}
+	
+	
+	
+	// ------------- Granular Schedule Optimization ------------- //	
+	
+	// It will be difficult to optimize scheduling in TutorialOne_03_Drawing: 
+	// we rely on GestureScheduleBuilder, which is not introduced until GesturePlayground. 
+	public void optimizeActiveBrush(float alpha) {
+		if (activeBrush == null) return;
+		if (activeBrush.output() != BrushOutput.GRANULAR) {
+			println("-- optimization only applies to Granular brushes. Select a granular brush.");
+			return;
+		}
+
+		GestureSchedule sched = getScheduleForBrush(activeBrush);
+		int N = sched.points.size();
+
+		float[] times = sched.timesMs;
+		float t0 = times[0];
+		float t1 = times[times.length - 1];
+		float tMs = Math.max(0f, t1 - t0);
+
+		// hopSample, granSamples, sampleRate, (ArrayList<PVector>) schedule.points
+		// are easily obtained or built-in variables
+
+		float S = PACurveUtility.pathLength(sched.points);
+		float Tsec = sched.durationMs() / 1000f;
+		float hsec = hopSamples / audioOut.sampleRate();
+		float dHop = (S / Tsec) * hsec;          // pixels per hop
+		float targetSpacingPx = dHop * alpha;    // or 0.75 * dHop, etc.
+
+		StringBuffer info = new StringBuffer();
+		int optGrainCount = calcGranularOptHints(
+				"activeBrush",
+				N,
+				tMs,
+				hopSamples,
+				granSamples,
+				audioOut.sampleRate(),
+				(ArrayList<PVector>) sched.points,
+				targetSpacingPx,
+				1.0f,    // proportion of granular window
+				0.25f,   // proportion of hop between windows
+				info
+				);
+		println(info.toString());
+
+	}
+
+	/**
+	 * Calculate optimal configuration settings for a granular brush. 
+	 * 
+	 * @return optimal number of samples if time duration is kept as is
+	 */
+	public int calcGranularOptHints(
+			String tag,
+			int N, float Tms,
+			int hopSamples, int grainLenSamples,
+			float sr,
+			List<PVector> scheduledPoints,   // the list you will actually schedule
+			float targetSpacingPx, float wt, float ws,
+			StringBuffer sb
+			) {
+		// ---- GUI ranges ----
+		final int   RESAMPLE_MIN = 2,    RESAMPLE_MAX = 2048;
+		final float DUR_MIN_MS   = 50f,  DUR_MAX_MS   = 16000f; // bump from 10000 -> 16000 if desired
+
+		// Path length in px
+		float S = PACurveUtility.pathLength(scheduledPoints);
+
+		// Guard rails
+		N = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, N));
+		Tms = Math.max(DUR_MIN_MS, Math.min(DUR_MAX_MS, Tms));
+
+		float T = Math.max(0.001f, Tms / 1000f);
+		float h = hopSamples / sr;        // seconds
+		float hopMs = 1000f * h;
+
+		int Nm1 = Math.max(1, N - 1);
+		float dtMs = Tms / Nm1;
+		float r = dtMs / hopMs;           // dt/hop ratio
+		float dsPx = (S > 0 ? S / Nm1 : Float.NaN);
+
+		// Time-opt formulas
+		float ToptRawMs = 1000f * (Nm1 * h);
+		int NoptRaw = 1 + Math.max(1, Math.round((T * sr) / hopSamples));
+
+		// Clamp to widget ranges
+		float ToptMs = Math.max(DUR_MIN_MS, Math.min(DUR_MAX_MS, ToptRawMs));
+		int Nopt = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, NoptRaw));
+
+		// Compromise N* (time+space)
+		int NstarRaw = -1; 
+		int Nstar = -1;
+		if (S > 0 && targetSpacingPx > 0 && (wt > 0 || ws > 0)) {
+			float numer = wt * T * T + ws * S * S;
+			float denom = wt * T * h + ws * S * targetSpacingPx;
+			if (denom > 1e-9f) {
+				float xStar = numer / denom; // x = N-1
+				NstarRaw = 1 + Math.max(1, Math.round(xStar));
+				Nstar = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, NstarRaw));
+			}
+		}
+
+		float overlapPct = Float.NaN;
+		if (grainLenSamples > 0) overlapPct = 100f * (1f - hopSamples / (float)grainLenSamples);
+
+		String densityWord = (r > 1.25f) ? "SPARSE" : (r < 0.80f ? "DENSE" : "OK");
+
+		// construct informative StringBuffer
+		sb.append("\n---- Granular OptHints" + (tag == null ? "" : " [" + tag + "]") + " ----\n");
+		sb.append("Current: N=" + N + "  Tms=" + fmt(Tms, 2) +
+				"  hop=" + hopSamples + " samp (" + fmt(hopMs, 3) + " ms)" +
+				"  grain=" + grainLenSamples + " samp  sr=" + fmt(sr, 1) +"\n");
+		sb.append("Timing:  avg dt≈" + fmt(dtMs, 3) + " ms  dt/hop≈" + fmt(r, 2) + "  => " + densityWord +"\n");
+		if (!Float.isNaN(dsPx)) sb.append("Space:   pathLen≈" + fmt(S, 2) + " px  avg ds≈" + fmt(dsPx, 3) + " px");
+		if (!Float.isNaN(overlapPct)) sb.append("Overlap: ≈" + fmt(overlapPct, 1) + "% (1 - H/L)\n");
+		sb.append("If keep N:  Topt≈" + fmt(ToptRawMs, 2) + " ms" +
+				(ToptMs != ToptRawMs ? "  (clamped→" + fmt(ToptMs, 2) + ")" : ""));
+		sb.append("\n");
+		sb.append("If keep T:  Nopt≈" + NoptRaw +
+				(Nopt != NoptRaw ? "  (clamped→" + Nopt + ")" : ""));
+		sb.append("\n");
+		if (Nstar > 0) {
+			sb.append("Compromise (wt=" + fmt(wt,3) + ", ws=" + fmt(ws,3) + ", d0=" + fmt(targetSpacingPx,2) + "px): N*≈" +
+					NstarRaw + (Nstar != NstarRaw ? " (clamped→" + Nstar + ")" : ""));
+			sb.append("\n");
+		}
+		// Extra guidance when clamped
+		if (NoptRaw > RESAMPLE_MAX && r > 1.25f) {
+			sb.append("Note: Nopt exceeds max; likely sparse even at max resample. Consider CURVE_POINTS, shorter T, or smaller hop.\n");
+		}
+		if (ToptRawMs > DUR_MAX_MS && r > 1.25f) {
+			sb.append("Note: Topt exceeds max; consider raising Duration max (you mentioned 16000ms), or increase N / use CURVE_POINTS.\n");
+		}
+		sb.append("-------------------------------------------");
+
+		// optimal number of samples if time is kept as is
+		return Nstar;
+	}
+
+	static String fmt(float v, int decimals) {
+		return String.format("%." + decimals + "f", v);
+	}
+
+	
 	
 	/*----------------------------------------------------------------*/
 	/*                                                                */
@@ -1187,7 +1536,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 						+ filePath.substring(0, filePath.length() - fileName.length()));
 				loadAudioFile(audioFile);
 				// *****>>> NETWORKING <<<***** //
-			    if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
+			    if (nd != null && isNetSendFileInfo) nd.oscSendFileInfo(filePath, fileName, fileTag);
 			} 
 			else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
 					|| fileTag.equalsIgnoreCase("jpeg")) {
@@ -1216,21 +1565,19 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * @param audFile    an audio file
 	 */
 	public void loadAudioFile(File audFile) {
-		float[] resampled;
 		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
-		fileSampleRate =  minim.loadFileIntoBuffer(audioFile.getAbsolutePath(), buff);
+		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
+        // load the audio file and resample it if necessary
 		if (fileSampleRate > 0) {
 			if (fileSampleRate != audioOut.sampleRate()) {
-				resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
 				buff.setChannel(0, resampled);
-				//if (buff.getBufferSize() != mapSize) buff.setBufferSize(mapSize);
-				fileSampleRate = audioOut.sampleRate();
+				bufferSampleRate = audioOut.sampleRate();
 			}
 			else {
 				bufferSampleRate = fileSampleRate;
 			}
-			// save the length of the file, possibly resampled, for future use
 			this.audioFileLength = buff.getBufferSize();
 			println("---- file sample rate = "+ this.fileSampleRate 
 					+", buffer sample rate = "+ bufferSampleRate
@@ -1240,7 +1587,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
 			return;
 		}
-		// everything looks good, proceed
+		// everything looks good so far, proceed
 		if (isBlending) {
 			blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
 		}
@@ -1249,14 +1596,9 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
 			playBuffer = buff;
 		}
-		// ensureSamplerReady will load playBuffer to the Sampler synth "pool"
-		ensureSamplerReady();
-		// because playBuffer is used by synth and pool and should not change, while audioSignal changes
-		// when the image animates, we don't want playBuffer and audioSignal to point to the same array
-		// so we copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
-		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		granSignal = audioSignal;
-		audioLength = audioSignal.length;
+		// update dependent audio resources
+		updateAudioChain(playBuffer.getChannel(0), bufferSampleRate);
+ 		// if loadToBoth is true, transcode the audio to RGB pixel data and write it to mapImage
 		if (isLoadToBoth) {
 			renderAudioToMapImage(chan, 0);
 			commitMapImageToBaseImage();
@@ -1379,22 +1721,14 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
 		}
 		if (isLoadToBoth) {
-		    // prepare to copy image data to audio variables
-		    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-		    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-		    audioSignal = playBuffer.getChannel(0);
-		    renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-		    // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-		    playBuffer.setChannel(0, audioSignal);
-		    audioLength = audioSignal.length;
-		    // load the buffer of our PASamplerInstrument (created in initAudio() on starting the sketch)
-		    ensureSamplerReady();
-		    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
-		    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
-		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
-		    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		    granSignal = audioSignal;
-		    audioLength = audioSignal.length;
+			// create a new array for the audio signal
+			float[] sig = new float[mapper.getSize()];
+			audioSignal = sig;
+			// write transcoded pixel data from HSB Brightness channel to audioSignal
+			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+			// update all dependent audio data
+			updateAudioChain(sig);
+			// update baseImage from mapImage
 		}
 		commitMapImageToBaseImage();
 	}
@@ -1499,7 +1833,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			return;
 		}
 		String fileName = selection.getAbsolutePath();
-		if (!selection.getName().endsWith(".wav")) {
+		if (selection.getName().indexOf(".wav") != selection.getName().length() - 4) {
 			fileName += ".wav";
 		}
 		try {
@@ -1579,24 +1913,61 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * Initializes Minim audio library and audio variables.
 	 */
 	public void initAudio() {
-		// initialize the MInim library
+		// initialize the Minim library
 		minim = new Minim(this);
-		// use the getLineOut method of the Minim object to get an AudioOutput object
+		// Use the getLineOut method of the Minim object to get an AudioOutput object.
+		// PixelAudio instruments require a STEREO output. 1024 is a standard number of
+		// samples for the output buffer to process at one time. You should usually set
+		// the output sampleRate to either 41500 or 48000, standards for digital audio.
 		this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
-		// set the gain lower to avoid clipping from multiple voices (UP and DOWN arrow keys adjust)
+		// set the gain (UP and DOWN arrow keys adjust)
 		audioOut.setGain(outputGain); 
 		println("---- audio out gain is "+ nf(audioOut.getGain(), 0, 2));
 		// create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
-		// the buffer will not have any audio data -- you'll need to open a file for that
+		// the buffer will not have any audio data -- you'll need to open an audio file
 		this.playBuffer = new MultiChannelBuffer(mapSize, 1);
 		this.audioSignal = playBuffer.getChannel(0);
 		this.granSignal = audioSignal;
 		this.audioLength = audioSignal.length;
+		// set up the sampler synth
+		ensureSamplerReady();
+		// set up the granular synth
+		ensureGranularReady();
+		// start envelope duration at noteDuration
+		envDuration = noteDuration;
 		// initialize mouse event tracking array
 		pointTimeLocs = new ArrayList<TimedLocation>();
-		initGranularParams();
 	}
 	
+	/**
+	 * Ensures that all resources and variable necessary for the Sampler synth are ready to go.
+	 */
+	void ensureSamplerReady() {
+	    if (pool != null) pool.setBuffer(playBuffer);
+	    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, poolSize, samplerMaxVoices, audioOut, defaultEnv);
+	    pool.setGain(samplerGain);
+	}
+	
+	/**
+	 * Ensures that all resources and variable necessary for the Granular synth are ready to go.
+	 */
+	void ensureGranularReady() {
+		if (gParamsGesture == null || gParamsFixed == null) {
+			initGranularParams();
+		}
+	    if (gSynth == null) {
+	    	ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.875f, 0.025f);
+	    	gSynth = buildGranSynth(audioOut, granEnv, gMaxVoices);
+	    	gSynth.setGlobalGain(granularGain);
+	    }
+	    if (granSignal == null) {
+	        granSignal = (audioSignal != null) ? audioSignal : playBuffer.getChannel(0);
+	    }
+	    if (gDir == null) {
+	    	gDir = new PAGranularInstrumentDirector(gSynth);
+	    }
+	}
+
 	/**
 	 * Initializes global variables gParamsGesture and gParamsFixed, which provide basic
 	 * settings for granular synthesis the follows gesture timing or fixed hop timing 
@@ -1630,12 +2001,10 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * @param x    x-coordinate of mouse click
 	 * @param y    y-coordinate of mouse click
 	 */
-	public void audioMousePressed(int x, int y) {
-		samplePos = handleClickOutsideBrush(x, y);
-		// *****>>> NETWORKING <<<***** //
-	    if (nd != null) nd.oscSendMousePressed(x, y, samplePos);
+	public void audioMouseClick(int x, int y) {
+		int durationMs = handleClickOutsideBrush(x, y);
 	}
-
+	
 	/**
 	 * @param x
 	 * @param y
@@ -1647,23 +2016,25 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    	ensureSamplerReady();
 	        float panning = map(x, 0, width, -0.8f, 0.8f);
 	        int len = calcSampleLen();
-	        samplelen = playSample(samplePos, len, synthPointGain, defaultEnv, panning);
+	        samplelen = playSample(samplePos, len, samplerPointGain, defaultEnv, panning);
 	        int durationMS = (int)(samplelen / sampleRate * 1000);
 	        pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
-	        return samplePos;
+	        return durationMS;
 	    }
     	// use Granular synthesis instrument
 	    ensureGranularReady();
 	    float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-	    final int grainCount = useLongBursts ?  8 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
+	    final int grainCount = useLongBursts ?  2 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
 	    println("-- granular point burst with grainCount = "+ grainCount);
 	    ArrayList<PVector> path = new ArrayList<>(grainCount);
 	    int[] timing = new int[grainCount];
 	    for (int i = 0; i < grainCount; i++) {
-	    	if (useLongBursts) {
-	    		path.add(getCoordFromSignalPos(samplePos + hopSamples * i));
+	    	if (useLongBursts) { 
+	    		// follow the signal path
+	    		path.add(getCoordFromSignalPos(samplePos + hopSamples * i));	
 	    	}
 	    	else {
+	    		// cluster samples around the sample location
 	    		path.add(this.jitterCoord(x, y, 3));
 	    	}
 	        timing[i] = Math.round(i * hopMsF);
@@ -1674,11 +2045,11 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    curve.setTimeStamp(startTime);
 	    GestureSchedule sched = curve.getAllPointsSchedule();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    playGranularGesture(buf, sched, gParamsFixed);
+	    playGranularGesture(buf, sched, gParamsFixed, 1.0f);
 	    storeGranularCurveTL(sched, startTime, false);
-	    return samplePos;
+	    return curve.getTimeOffset();
 	}
-	
+
 	/**
 	 * Calculates the index of the image pixel within the signal path,
 	 * taking the shifting of pixels and audioSignal into account.
@@ -1689,8 +2060,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * @return     the index of the sample corresponding to (x,y) on the signal path
 	 */
 	public int getSamplePos(int x, int y) {
-	  int pos =  mapper.lookupSignalPosShifted(x, y, totalShift);
-	  return pos;
+		return mapper.lookupSignalPosShifted(x, y, totalShift);
 	}
 
 	/**
@@ -1755,7 +2125,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * @param samplelen    length of the sample (will be adjusted)
 	 * @param amplitude    amplitude of the sample on playback
 	 * @param env          an ADSR envelope for the sample
-	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher 
+	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = octave higher 
 	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
 	 * @return
 	 */
@@ -1764,18 +2134,25 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	
+    /**
+	 * @return a length in samples with some Gaussian variation
+	 */
+	public int calcSampleLen(int durMs, double mean, double variance) {
+		float vary = 0; 
+		// skip the fairly rare negative numbers
+		while (vary <= 0) {
+			vary = (float) PixelAudio.gauss(mean, variance);
+		}
+		samplelen = (int)(abs((vary * durMs) * sampleRate / 1000.0f));
+		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		return samplelen;
+	}
+
 	/**
 	 * @return a length in samples with some Gaussian variation
 	 */
 	public int calcSampleLen() {
-		float vary = 0; 
-		// skip the fairly rare negative numbers
-		while (vary <= 0) {
-			vary = (float) PixelAudio.gauss(1.0, 0.0625);
-		}
-		samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
-		return samplelen;
+		return calcSampleLen(envDuration, 1.0, 0.0625);
 	}
 
 	/**
@@ -1791,72 +2168,81 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	/**
-	 * Ensures that all resources and variable necessary for the Sampler synth are ready to go.
+	 * @param name   the name of the ADSRParams envelope to return
+	 * @return the specified ADSRParams envelope
 	 */
-	void ensureSamplerReady() {
-	    if (pool != null) pool.setBuffer(playBuffer);
-	    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, 1, samplerMaxVoices, audioOut, defaultEnv);
-	}
-	
-	/**
-	 * Ensures that all resources and variable necessary for the Granular synth are ready to go.
-	 */
-	void ensureGranularReady() {
-		if (gParamsGesture == null || gParamsFixed == null) {
-			initGranularParams();
+	static ADSRParams envPreset(String name) {
+		switch (name) {
+        // medium fast attack, medium decay to 0.15, short tail 
+		case "Soft"       : return new ADSRParams(1.0f, 0.02f, 0.80f, 0.7f, 0.2f);   
+		// sharp attack, fast decay to 0.1, short tail
+        case "Percussion" : return new ADSRParams(1.0f, 0.005f, 0.04f, 0.20f, 0.06f);   
+        // long attack, slight decay, long tail
+		case "Pad"        : return new ADSRParams(1.0f, 0.50f, 0.25f, 0.75f, 1.0f);    
+        // fast attack, fast decay to 0.75, medium tail
+		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);    
 		}
-	    if (gSynth == null) {
-	    	ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.875f, 0.025f);
-	    	gSynth = buildGranSynth(audioOut, granEnv, gMaxVoices);
-	    }
-	    if (granSignal == null) {
-	        granSignal = (audioSignal != null) ? audioSignal : playBuffer.getChannel(0);
-	    }
-	    if (gDir == null) {
-	    	gDir = new PAGranularInstrumentDirector(gSynth);
-	    }
 	}
 	
 	/**
-	 * Updates resources such as playBuffer and pool with a new signal, typcically when a new file is loaded.
+	 * Bottleneck "commit" method for audio state. 
+     * 
+     * Takes an arbitrary input signal and installs it as the canonical audio signal
+     * used by the application. This method:
+     *
+     *  - Resizes/pads/truncates the input to mapper.getSize()
+     *  - Copies the data to ensure no external aliasing
+     *  - Updates audioSignal (canonical signal handled by application code)
+     *  - Updates playBuffer (audio buffer used by Minim audio library methods)
+     *  - Propagates the buffer to active instruments: edit for your own instruments
+     * 
+     * This is the ONLY method that should mutate the global audio signal state.
+     * 
+     * In PixelAudio examples, the signal is typically loaded from a file, but
+     * it could also be signal cached in memory, a signal generated by code, audio
+     * captured live, etc. 
 	 * 
-	 * @param sig    an audio signal as an array of float
+	 * @param sig                 an audio signal
+	 * @param bufferSampleRate    audio sample rate for sig, 
+	 *                            usually obtained when reading from an audio file
 	 */
-	void updateAudioChain(float[] sig) {
+	void updateAudioChain(float[] sig, float bufferSampleRate) {
 	    // 0) Decide target length (make this a single source of truth)
-	    int targetSize = mapper.getSize();          // or mapSize, but pick one canonical TODO
+	    int targetSize = mapper.getSize();
 	    if (targetSize <= 0) return;
 	    // 1) Ensure playBuffer matches target
-	    if (playBuffer.getBufferSize() != targetSize) {
-	        playBuffer.setBufferSize(targetSize);
-	    }
-	    // 2) Copy sig into a temp array of exactly targetSize (pad/truncate deterministically)
-	    float[] tmp = new float[targetSize];
+	    float[] canonical = new float[targetSize];
 	    if (sig != null) {
-	        System.arraycopy(sig, 0, tmp, 0, Math.min(sig.length, targetSize));
+	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
 	    }
-	    // 3) Store into playBuffer
-	    playBuffer.setChannel(0, tmp);
-	    // 4) Snapshot arrays used elsewhere
-	    audioSignal = tmp;                 // already correct size
-	    granSignal = audioSignal;          // alias intentionally (or copy if you want independent)
+	    // 3) Set audioSignal and other audio arrays
+	    audioSignal = canonical;
+	    granSignal = audioSignal;    // copy if you want an independent granular source
 	    audioLength = targetSize;
-	    // 5) Propagate into synths (examples — adjust to your actual API)
-	    pool.setBuffer(playBuffer);
-	    // granularDirector doesn't track an audio buffer with a field
+	    // 4) Store signal in playBuffer
+	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+	        playBuffer = new MultiChannelBuffer(targetSize, 1);
+	    }
+	    playBuffer.setChannel(0, canonical);
+	    // 5) Propagate into synths (adjust to your actual API)
+	    if (pool != null) pool.setBuffer(playBuffer, bufferSampleRate);
 	}
+	
+	void updateAudioChain(float[] sig) {
+		updateAudioChain(sig, audioOut.sampleRate());
+	}
+
 	
 	/**
 	 * Calls PAGranularInstrumentDirector gDir to play a granular audio event.
 	 * 
-	 * @param buf       an audio signal as an array of flaot
+	 * @param buf       an audio signal as an array of float
 	 * @param sched     an GestureSchedule with coordinate and timing information 
 	 * @param params    a bundle of control parameters for granular synthesis
 	 */
-	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params, float pitchRatio) {
 		// call mapper method lookupSignalPosArray to obtain an array of indices into buf, derived from points in sched
 		int[] startIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
-		// println("---> startIndices[0] = "+ startIndices[0] +" for "+ sched.points.get(0).x, sched.points.get(0).y, totalShift, mapper.getSize());
 		// calculate the pan for each grain, based on its x-coordinate
 		float[] panPerGrain = new float[sched.size()];
 		for (int i = 0; i < sched.size(); i++) {
@@ -1864,25 +2250,19 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		    // example: map x to [-0.8, +0.8]
 		    panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
 		}
-		// debugging
-		//println("\n----->>> playGranularGesture()");
-		//debugIndexHeadroom(buf, startIndices, tx);
-		//debugTimesMs(sched);
-		//println("\n");\// end debugging
-		// if usePitchedGrains is true, apply a jittery pitch shift to 
-		// each grain, then call gDir.playGestureNow(), and return
-		if (usePitchedGrains) {
-			float[] pitch = generateJitterPitch(sched.size(), 0.25f);
-            GestureEventParams eventParams = GestureEventParams.builder(sched.size())
-                .startIndices(startIndices)
-                .pan(panPerGrain)
-                .pitchRatio(pitch)
-                .build();
-			gDir.playGestureNow(buf, sched, params, eventParams);
-			println("-- pitch jitter -- "+ pitch[0]);
-			return;
-		}
-		gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
+		float jitter = usePitchedGrains ? 0.25f : 0f;
+		float[] pitch = generateJitterPitch(sched.size(), jitter, pitchRatio);
+		// assemble all the grain-level attributes into a GestureEventParams object
+		GestureEventParams eventParams = GestureEventParams.builder(sched.size())
+				.startIndices(startIndices)
+				.pan(panPerGrain)
+				.pitchRatio(pitch)
+				.build();
+		// call playGestureNow() with eventParams and return
+		gDir.playGestureNow(buf, sched, params, eventParams);
+		println("-- pitch jitter -- "+ pitch[0]);
+		// if we aren't using a pitch array, we can call playGestureNow() with a different signature
+		// gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 	}
 
 	/**
@@ -1910,73 +2290,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    envGain = 1.0f;
 	    return new ADSRParams(envGain, attackMS / 1000f, 0.01f, 0.8f, releaseMS / 1000f);
 	}
-	
-	// DEBUGGIONG
-	static void debugIndexHeadroom(float[] buf, int[] startIndices, GestureGranularParams ggp) {
-	    int bufLen = buf.length;
-	    int grainLen = Math.max(1, ggp.grainLengthSamples);
-	    int hop = Math.max(1, ggp.hopLengthSamples);
-	    int burst = Math.max(1, ggp.burstGrains);
-	    float pitch = (ggp.pitchRatio > 0f) ? ggp.pitchRatio : 1.0f;
-
-	    int indexHop = hop; // your current semantics
-	    int need = (int)Math.ceil((grainLen - 1) * pitch) + (burst - 1) * indexHop;
-
-	    int maxStart = bufLen - 2 - need;
-	    if (maxStart < 0) maxStart = 0;
-
-	    int over = 0;
-	    int maxIdx = Integer.MIN_VALUE;
-	    int minIdx = Integer.MAX_VALUE;
-
-	    for (int idx : startIndices) {
-	        if (idx > maxStart) over++;
-	        if (idx > maxIdx) maxIdx = idx;
-	        if (idx < minIdx) minIdx = idx;
-	    }
-
-	    System.out.println("-- bufLen=" + bufLen
-	        + " grainLen=" + grainLen
-	        + " burst=" + burst
-	        + " hop=" + hop
-	        + " pitch=" + pitch
-	        + " need=" + need
-	        + " maxStart=" + maxStart);
-	    System.out.println("-- startIndices: min=" + minIdx + " max=" + maxIdx
-	        + " overMaxStart=" + over + "/" + startIndices.length);
-	}
-
-	// DEBUGGIONG
-	static void debugTimesMs(GestureSchedule s) {
-	    int n = s.size();
-	    if (n <= 1 || s.timesMs == null) return;
-
-	    float[] t = s.timesMs;
-	    float t0 = t[0];
-	    float tLast = t[n - 1];
-
-	    float minDt = Float.POSITIVE_INFINITY;
-	    float maxDt = Float.NEGATIVE_INFINITY;
-	    int nonInc = 0;
-	    int tiny = 0;
-
-	    for (int i = 1; i < n; i++) {
-	        float dt = t[i] - t[i - 1];
-	        if (dt <= 0f) nonInc++;
-	        if (dt >= 0f && dt < 0.1f) tiny++; // <0.1ms buckets into same ~4 samples at 44.1k
-	        if (dt < minDt) minDt = dt;
-	        if (dt > maxDt) maxDt = dt;
-	    }
-
-	    System.out.println("-- sched n=" + n
-	        + " spanMs=" + (tLast - t0)
-	        + " t0=" + t0 + " tLast=" + tLast);
-	    System.out.println("-- dtMs min=" + minDt
-	        + " max=" + maxDt
-	        + " nonInc=" + nonInc
-	        + " tiny(<0.1ms)=" + tiny);
-	}
-
+		
 	
 	/*				END AUDIO METHODS                        */
 	
@@ -1996,38 +2310,40 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    startTime = millis();
 	    int x = clipToWidth(mouseX);
 	    int y = clipToHeight(mouseY);
-	    addPoint(x, y);
-		// *****>>> NETWORKING <<<***** //
-		if (nd != null) nd.oscSendMousePressed(x, y, samplePos);
+	    addDrawingPoint(x, y);
 	}
-		
+	
 	/**
 	 * While user is dragging the mouses and isDrawMode == true, accumulates new points
 	 * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
 	 * We constrain points outside the bounds of the display window. An alternative approach 
-	 * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural" 
-	 * appearance for fast drawing. 
+	 * is be to ignore them, which may give a more "natural" appearance for fast drawing. 
+	 *
+	 * @param x    x-coordinate of point to add to allPoints
+	 * @param y    y-coordinate of point to add to allPoints
 	 */
-	public void addPoint(int x, int y) {
+	public void addDrawingPoint(int x, int y) {
 	    if (x != currentPoint.x || y != currentPoint.y) {
 	        currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
 	        allPoints.add(currentPoint);
 	        allTimes.add(millis() - startTime);
+		    // *****>>> NETWORKING <<<***** //
+			if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));	    
 	    }
 	}
 		
 	/**
 	 * Clips parameter i to the interval (0..width-1)
-	 * @param i
-	 * @return
+	 * @param i    integer to clip to width
+	 * @return     value within the range 0..width-1
 	 */
 	public int clipToWidth(int i) {
 		return min(max(0, i), width - 1);
 	}
 	/**
 	 * Clips parameter i to the interval (0..width-1)
-	 * @param i
-	 * @return
+	 * @param i    integer to clip to height
+	 * @return     value within the range 0..height-1
 	 */
 	public int clipToHeight(int i) {
 		return min(max(0, i), height - 1);
@@ -2053,7 +2369,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
 	 * @param length            length of the returned array
 	 * @param deviationPitch    expected average deviation of the pitch 
-	 * @return                  and array of Gaussian values centered on 1.0
+	 * @return                  an array of Gaussian values centered on 1.0
 	 */
 	float[] generateJitterPitch(int length, float deviationPitch) {
 		float[] pitch = new float[length];
@@ -2065,11 +2381,27 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 			
 	/**
+	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
+	 * @param length            length of the returned array
+	 * @param deviationPitch    expected average deviation of the pitch around center pitch ratio
+	 * @param centerPitch       ratio of center pitch, 1.0 => no change in source
+	 * @return                  an array of Gaussian values centered on 1.0
+	 */
+	float[] generateJitterPitch(int length, float deviationPitch, float centerPitch) {
+		float[] pitch = new float[length];
+		double variance = deviationPitch * deviationPitch;
+		for (int i = 0; i < pitch.length; i++) {
+			pitch[i] = (float) PixelAudio.gauss(centerPitch, variance);
+		}
+		return pitch;
+	}
+
+	/**
 	 * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
 	 * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from 
 	 * variables in the calling class (TutorialOneDrawing, here). 
 	 */
-	public void initCurveMakerAndAddBrush() {
+	public AudioBrushLite initCurveMakerAndAddBrush() {
 	    curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
 	    // configure from globals
 	    curveMaker.setEpsilon(epsilon);
@@ -2083,19 +2415,29 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    BrushConfig cfg = new BrushConfig();
 	    cfg.rdpEpsilon = epsilon;
 	    cfg.curveSteps = curveSteps;
-	    cfg.pathMode = PathMode.ALL_POINTS; // tutorial default
+	    cfg.pathMode = PathMode.REDUCED_POINTS; // tutorial default
 	    // Default output for newly drawn strokes: SAMPLER (tutorial-centric)
 	    AudioBrushLite b = new AudioBrushLite(curveMaker, cfg, BrushOutput.SAMPLER, HopMode.GESTURE);
 	    b.cfg.pathMode = defaultPathModeFor(b.output());
 	    brushes.add(b);
 	    // Optionally auto-select the new brush
 	    activeBrush = b;
+	    if (this.doPlayOnNewBrush) {
+	    	if (b.output() == BrushOutput.GRANULAR) {
+	    		scheduleGranularBrushClick(b);
+	    	} else {
+	    		scheduleSamplerBrushClick(b);
+	    	}
+	    }
 		// *****>>> NETWORKING <<<***** //
-		if (nd != null) {
-			nd.oscSendMousePressed(clipToWidth(mouseX), clipToHeight(mouseY), samplePos);
+		if (nd != null && isNetSendGestures) {
+			int x = clipToWidth(mouseX);
+			int y = clipToHeight(mouseY);
+			nd.oscSendMousePressed(x, y, getSamplePos(x, y));
 			nd.oscSendDrawPoints(curveMaker.getRdpPoints());
 			nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
 		}
+	    return b;
 	}
 
 	/**
@@ -2108,25 +2450,35 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 
 	/**
-	 * Enrty point for drawing brushstrokes on the screen.
+	 * Entry point for drawing brushstrokes on the screen.
+	 * TODO distinguish brush types by color.
 	 */
 	public void drawBrushShapes() {
 		if (brushes == null || brushes.isEmpty()) return;
-		drawBrushes(brushes, readyBrushColor1, hoverBrushColor1, selectedBrushColor1);
+		drawBrushes(brushes);
 	}
 
 	/**
 	 * Draw brushstrokes on the display image.
 	 * 
-	 * @param list             a list of all the brushstrokes (AudioBrushLite)
-	 * @param readyColor       color for a selectable brush
-	 * @param hoverColor       color for a brush when the mouse hovers over it
-	 * @param selectedColor    color for a selected brush (click or spacebar selects)
+	 * @param list    a list of all the brushstrokes (AudioBrushLite)
 	 */
-	public void drawBrushes(List<AudioBrushLite> list, int readyColor, int hoverColor, int selectedColor) {
+	public void drawBrushes(List<AudioBrushLite> list) {
 		// step through the list of all brushes
+		int readyColor; 
+		int hoverColor; 
+		int selectedColor;
 		for (int i = 0; i < list.size(); i++) {
 			AudioBrushLite b = list.get(i);
+			if (b.output == BrushOutput.GRANULAR) {
+				readyColor = readyBrushColor1;
+				hoverColor = hoverBrushColor1;
+				selectedColor = selectedBrushColor1;
+			} else {
+				readyColor = readyBrushColor2;
+				hoverColor = hoverBrushColor2;
+				selectedColor = selectedBrushColor2;
+			}
 			PACurveMaker cm = b.curve();
 			boolean isHover = (b == hoverBrush);
 			boolean isSelected = (b == activeBrush);
@@ -2179,6 +2531,21 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		cm.calculateDerivedPoints();
 	}
 
+	
+	/**
+	 * Sets epsilon value for the PACurveMaker associated with an AudioBrushLite instance.
+	 * 
+	 * @param b    an AudioBrushLite instance
+	 * @param cs    desired epsilon value to control point reduction
+	 */
+	public void setBrushCurveSteps(AudioBrushLite b, int cs) {
+		PACurveMaker cm = b.curve();
+		BrushConfig cfg = b.cfg();
+		cfg.curveSteps = cs;
+		cm.setCurveSteps(cs);
+		cm.calculateDerivedPoints();
+	}
+
 	/**
 	 * Get the path points of a brushstroke, with the representation determined by the BrushConfig's path mode.
 	 * 
@@ -2206,7 +2573,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
 		}
 		case CURVE_POINTS -> {
-			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, curveSteps, isAnimating);
+			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
 		}
 		case ALL_POINTS -> {
 			sched = b.curve.getAllPointsSchedule();
@@ -2219,18 +2586,59 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	/**
+	 * @param b    an AudioBrushLIte instance
+	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
+	 */
+	GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
+	    GestureSchedule sched = getScheduleForBrush(b);
+	    if (b.output == BrushOutput.SAMPLER) {
+	    	// divide gesture duration by number of gesture intervals and multiply result a fixed value
+	    	envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
+	    	println("-- envelope duration = "+ envDuration);
+	    }
+	    return boundsPolicy.applySchedule(sched);
+	}
+	
+	
+	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+	    int n = sched.points.size();
+	    if (n < 2) return fallbackMs;
+	    float avgStepMs = sched.durationMs() / (float)(n - 1);
+	    float factor;
+	    switch (envName) {
+	        case "Pluck":
+	        case "Percussion":
+	            factor = 4.0f;
+	            break;
+	        case "Soft":
+	        case "Fade":
+	            factor = 3.0f;
+	            break;
+	        case "Swell":
+	        case "Pad":
+	            factor = 2.0f;
+	            break;
+	        default:
+	            factor = 3.0f;
+	    }
+	    int minEnvMs = envMinDurationMs;
+	    int maxEnvMs = envMaxDurationMs;
+	    return PApplet.constrain(Math.round(avgStepMs * factor), minEnvMs, maxEnvMs);
+	}
+	
+	/**
 	 * Schedule a Sampler brush audio / animation event.
 	 * 
-	 * @param b    an AudioBrushLite instance
+	 * @param sb    an AudioBrushLite instance
 	 */
-	void scheduleSamplerBrushClick(AudioBrushLite b) {
-		if (b == null) return;
-		ArrayList<PVector> pts = getPathPoints(b);
+	void scheduleSamplerBrushClick(AudioBrushLite sb) {
+		if (sb == null) return;
+		ArrayList<PVector> pts = getPathPoints(sb);
 		if (pts == null || pts.size() < 2) return;
-		GestureSchedule sched = getScheduleForBrush(b);
-		storeSamplerCurveTL(sched, millis() + 10);
+		GestureSchedule sched = getPlaybackScheduleForBrush(sb);
+		storeSamplerCurveTL(sb, sched, millis() + 10);
 		// *****>>> NETWORKING <<<***** //
-		if (nd != null) nd.oscSendTrig(getBrushIndex(b));
+		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(sb)); 
 	}
 
 	/**
@@ -2238,7 +2646,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * @param sched        a GestureSchedule (points + timing for a brush)
 	 * @param startTime    time to start a series of events
 	 */
-	public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
+	public synchronized void storeSamplerCurveTL(AudioBrushLite b, GestureSchedule sched, int startTime) {
 		if (this.samplerTimeLocs == null) samplerTimeLocs = new ArrayList<>();
 		int i = 0;
 		startTime = millis() + 5;
@@ -2247,8 +2655,14 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			int x = Math.round(loc.x);
 			int y = Math.round(loc.y);
 			int t = startTime + Math.round(sched.timesMs[i++]);
+			int pos = getSamplePos(x, y);
+			int len = calcSampleLen();
 			int d = 200;
-			this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
+			float gain = samplerGain;
+			float pitch = b.pitchRatio;
+			ADSRParams env = defaultEnv.copy();
+			float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+			this.samplerTimeLocs.add(new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, env, pan));
 		}
 		Collections.sort(samplerTimeLocs);
 	}
@@ -2259,39 +2673,42 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	public synchronized void runSamplerBrushEvents() {
 	    if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
 	    int currentTime = millis();
-	    samplerTimeLocs.forEach(tl -> {
-	        if (tl.eventTime() < currentTime) {
-	            int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-	            int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
-	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-	            int pos = getSamplePos(sampleX, sampleY);
-                playSample(pos, calcSampleLen(), synthGain, panning);
-        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
-	            tl.setStale(true);
+	    int durationMs = 200;
+	    samplerTimeLocs.forEach(stl -> {
+	        if (stl.eventTimeMs() < currentTime) {
+	        	// sched points from storeSamplerCurveTL are already in bounds
+	            int sampleX = Math.round(stl.getX());
+	            int sampleY = Math.round(stl.getY());
+	            // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
+                playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
+        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
+	            stl.setStale(true);
 	        } 
 	        else {
 	            return;
 	        }
 	    });
-	    samplerTimeLocs.removeIf(TimedLocation::isStale);
+	    samplerTimeLocs.removeIf(SamplerBrushEvent::isStale);
 	}
 
 	/**
 	 * Schedule a Granular brush audio / animation event.
 	 * 
-	 * @param b    an AudioBrushLite instance
+	 * @param gb    an AudioBrushLite instance
 	 */
-	void scheduleGranularBrushClick(AudioBrushLite b) {
-	    if (b == null) return;
-	    ArrayList<PVector> pts = getPathPoints(b);
+	void scheduleGranularBrushClick(AudioBrushLite gb) {
+	    if (gb == null) return;
+	    ArrayList<PVector> pts = getPathPoints(gb);
 	    if (pts == null || pts.size() < 2) return;
 	    ensureGranularReady();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    boolean isGesture = (b.hopMode() == HopMode.GESTURE);
+	    boolean isGesture = (gb.hopMode() == HopMode.GESTURE);
 		GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
-		GestureSchedule sched = getScheduleForBrush(b); 
-	    playGranularGesture(buf, sched, gParams);
+		GestureSchedule sched = getPlaybackScheduleForBrush(gb); 
+	    playGranularGesture(buf, sched, gParams, gb.pitchRatio); 
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
+		// *****>>> NETWORKING <<<***** //
+		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(gb)); 
 	}	
 
 	/**
@@ -2303,6 +2720,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
 		if (this.grainTimeLocs == null) grainTimeLocs = new ArrayList<>();
 		int i = 0;
+		int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+		int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
 		// we store the point and the current time + time offset, where timesMs[0] == 0
 		for (PVector loc : sched.points) {
 			int x = Math.round(loc.x);
@@ -2366,10 +2785,6 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		return PABezShape.pointInPoly(poly, mouseX, mouseY);
 	}
 
-	int getBrushIndex(AudioBrushLite brush) {
-	    if (brush == null) return -1;
-	    return brushes.indexOf(brush);
-	}	
 	
 	/**
 	 * Reinitializes audio and clears event lists.   
@@ -2377,13 +2792,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 */
 	@Deprecated
 	public void reset() {
-		// if rescued from the deprecated:
-		if (nd != null) {
-			nd.oscSendMousePressed(clipToWidth(mouseX), clipToHeight(mouseY), samplePos);
-			nd.oscSendDrawPoints(curveMaker.getRdpPoints());
-			nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
-		}
-		
+
 	}
 
 
@@ -2458,7 +2867,9 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			times[i] = i * interval;
 		}
 		GestureSchedule sched = new GestureSchedule(pts, times);
-		storeSamplerCurveTL(sched, millis() + 10);
+		// storeSamplerBrushEvents(GestureSchedule sched, GestureGranularConfig snap, int startTime, PAControlCurve gainCurve) 
+		// TODO verify that this works
+		// storeSamplerBrushEvents(sched, gConfig.build(), millis() + 10, null);
 	}
 	
 	
@@ -2663,6 +3074,20 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			osc.send(msg, this.remoteTo);
 		}
 		
+		public void oscSendOnOff(int index, boolean state) {
+			OscMessage msg = new OscMessage("/onoff");
+			msg.add(state ? 1 : 0);
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		public void oscSendSetnum(int index, float value) {
+			OscMessage msg = new OscMessage("/setnum");
+			msg.add(value);
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
 		public void oscSendDelete(int index) {
 			OscMessage msg = new OscMessage("/del");
 			msg.add(index);
@@ -2734,13 +3159,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		}
 
 	}
-	
-	/*----------------------------------------------------------------*/
-	/*                                                                */
-	/*                           UTILITY                              */
-	/*                                                                */
-	/*----------------------------------------------------------------*/
-	
+
+		
 
 }
 
