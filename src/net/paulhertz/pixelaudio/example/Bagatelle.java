@@ -182,16 +182,19 @@ import net.paulhertz.pixelaudio.sampler.*;
  * 
  * <p>
  * <pre>
- * Press UP ARROW to increase audio output volume by 3.0 dB.
- * Press DOWN ARROW to decrease audio output volume by 3.0 dB.
- * Numeric keys are reserved for presets which affect new brushes. See the PerformancePreset enum
- *   If you are using presets with PerformancePreset, '0' is reserved for clearing the preset stack.
- * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
+ * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).
+ * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).
+ * Press RIGHT ARROW to increase current instrument gain by 3.0 dB.
+ * Press LEFT ARROW to decrease current instrument gain by 3.0 dB.
+ * Keys 1 through 9 are reserved for triggering Performance Presets 1-9, '0' will clear all presets.
+ * Press TAB to set brush to active, if cursor is over a brush.
+ * Press ' ' to (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event.
+ * Press 'a' to toggle animation.
  * Press 'c' or 'C' to print the current configuration status to the console.
- * Press 't' to switch between Granular and Sampler editing and playing.
+ * Press 't' to switch between Granular, Sampler, and Play Only modes.
  * Press 'z' to change the drawing mode of the hover brush.
- * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends, if true.
- * Press 'D' to toggle doPlayWhileDrawing to play while drawing a gesture, if true.
+ * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.
+ * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
@@ -200,21 +203,34 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'j' to save the active brush curve and config to JSON files.
  * Press 'J' to save all brushes curve and config to JSON Session file.
  * Press 'o' to open an audio file, image file, or JSON file.
- * Press 'm' to toggle doMagicClick .
- * Press 'R' to reset transform of active brush.
- * Press 'r' to reset synths to defaults .
+ * Press 'w' to write the map image to the audio buffer.
+ * Press 'W' to write the audio buffer to the display image.
+ * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.
+ * Press 'n' to set noise reduction policy for Sampler instrument audio mix.
+ * Press 'R' to reset transform of active brush if it has a transform TODO clarify.
+ * Press 'r' to reset instrument configuration to defaults in GUI.
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
  * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
- * Press 'g' to create a beatBrush.
+ * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
+ * Press 'g' to toggle use of dynamics in gainCurve with gesture .
  * Press 'G' to create a beatBrush.
- * Press 'l' to loop hovered granular brush 4 times.
- * Press 'L' to infinite loop on hovered granular brush.
+ * Press 'l' to loop hovered brush 4 times.
+ * Press 'L' to run an infinite loop on hovered brush.
  * Press ';' to stop loop for hovered brush.
  * Press ':' to stop all loops.
+ * Press 'y' to toggle transform animation test.
+ * Press 'Y' to freeze / unfreeze brush geometric transform animation.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
+ * Press '.' to turn random raindrops audio events on or off.
  * Press '≈' to option-x on MacOS keyboard, clear all brushes.
  * Press '`' to fade out all instruments.
+ * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
+ * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
+ * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
+ * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * Press 'h' or 'H' to show help message.
  * </pre>
  * </p>
@@ -1404,11 +1420,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		        // handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 		    }
 		    break;
-		case 'd': // toggle doPlayOnDraw to play when a drawing gesture ends or not
+		case 'd': // toggle doPlayOnNewBrush: if true, audio plays when a new brush is created
 			doPlayOnNewBrush = !doPlayOnNewBrush;
 			println("-- play on new brush is "+ doPlayOnNewBrush);
 			break;
-		case 'D': // toggle doPlayOnDraw to play when a drawing gesture ends or not
+		case 'D': // toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse
 			doPlayWhileDrawing = !doPlayWhileDrawing;
 			println("-- play while drawing is "+ doPlayWhileDrawing);
 			break;
@@ -1451,7 +1467,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			commitMapImageToBaseImage();
 			if (applyColorMapOnLoad) applyColorMapToDisplay(true);
 			break;
-		case 'm': // toggle doMagicClick 
+		case 'm': // toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar
 			doMagicClick = !doMagicClick;
 			println(doMagicClick ? "-- doMagicClick is true" : "-- doMagicClick is false");
 			break;
@@ -1553,7 +1569,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		case ':': // stop all loops
 			stopAllLoops();
 			println("-- stopped all loops");
-			break;		case 'y':   // toggle transform animation test
+			break;		
+		case 'y': // toggle transform animation test
 		    isBrushTransformTest = !isBrushTransformTest;
 		    if (isBrushTransformTest) {
 		        if (activeBrush != null) {
@@ -1568,7 +1585,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		    }
 		    break;
 		// BRUSH ANIMATON
-		case 'Y':   // freeze / unfreeze
+		case 'Y': // freeze / unfreeze brush geometric transform animation
 		    isBrushTransformFrozen = !isBrushTransformFrozen;
 		    println("-- brush transform frozen = " + isBrushTransformFrozen);
 		    break;
@@ -1639,16 +1656,19 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
-		println(" * Press UP ARROW to increase audio output volume by 3.0 dB.");
-		println(" * Press DOWN ARROW to decrease audio output volume by 3.0 dB.");
-		println(" * Numeric keys are reserved for presets which affect new brushes. See the PerformancePreset enum");
-		println(" *   If you are using presets with PerformancePreset, '0' is reserved for clearing the preset stack.");
-		println(" * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.");
+		println(" * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).");
+		println(" * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).");
+		println(" * Press RIGHT ARROW to increase current instrument gain by 3.0 dB.");
+		println(" * Press LEFT ARROW to decrease current instrument gain by 3.0 dB.");
+		println(" * Keys 1 through 9 are reserved for triggering Performance Presets 1-9, '0' will clear all presets.");
+		println(" * Press TAB to set brush to active, if cursor is over a brush.");
+		println(" * Press ' ' to (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
+		println(" * Press 'a' to toggle animation.");
 		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
-		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
+		println(" * Press 't' to switch between Granular, Sampler, and Play Only modes.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
-		println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends, if true.");
-		println(" * Press 'D' to toggle doPlayWhileDrawing to play while drawing a gesture, if true.");
+		println(" * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.");
+		println(" * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
@@ -1657,21 +1677,34 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println(" * Press 'j' to save the active brush curve and config to JSON files.");
 		println(" * Press 'J' to save all brushes curve and config to JSON Session file.");
 		println(" * Press 'o' to open an audio file, image file, or JSON file.");
-		println(" * Press 'm' to toggle doMagicClick .");
-		println(" * Press 'R' to reset transform of active brush.");
-		println(" * Press 'r' to reset synths to defaults .");
+		println(" * Press 'w' to write the map image to the audio buffer.");
+		println(" * Press 'W' to write the audio buffer to the display image.");
+		println(" * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.");
+		println(" * Press 'n' to set noise reduction policy for Sampler instrument audio mix.");
+		println(" * Press 'R' to reset transform of active brush if it has a transform TODO clarify.");
+		println(" * Press 'r' to reset instrument configuration to defaults in GUI.");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
 		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
-		println(" * Press 'g' to create a beatBrush.");
+		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
+		println(" * Press 'g' to toggle use of dynamics in gainCurve with gesture .");
 		println(" * Press 'G' to create a beatBrush.");
-		println(" * Press 'l' to loop hovered granular brush 4 times.");
-		println(" * Press 'L' to infinite loop on hovered granular brush.");
+		println(" * Press 'l' to loop hovered brush 4 times.");
+		println(" * Press 'L' to run an infinite loop on hovered brush.");
 		println(" * Press ';' to stop loop for hovered brush.");
 		println(" * Press ':' to stop all loops.");
+		println(" * Press 'y' to toggle transform animation test.");
+		println(" * Press 'Y' to freeze / unfreeze brush geometric transform animation.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
+		println(" * Press '.' to turn random raindrops audio events on or off.");
 		println(" * Press '≈' to option-x on MacOS keyboard, clear all brushes.");
 		println(" * Press '`' to fade out all instruments.");
+		println(" * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
+		println(" * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
+		println(" * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.");
+		println(" * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
 		println(" * Press 'h' or 'H' to show help message.");
 	}
 
