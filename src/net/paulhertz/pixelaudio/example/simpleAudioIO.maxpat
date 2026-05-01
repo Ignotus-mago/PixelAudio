@@ -9,10 +9,11 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 1523.0, -845.0, 611.0, 629.0 ],
+        "rect": [ 1536.0, -740.0, 611.0, 629.0 ],
         "boxes": [
             {
                 "box": {
+                    "hidden": 1,
                     "id": "obj-50",
                     "maxclass": "newobj",
                     "numinlets": 1,
@@ -30,6 +31,18 @@
                         "classnamespace": "box",
                         "rect": [ 108.0, 231.0, 1000.0, 780.0 ],
                         "boxes": [
+                            {
+                                "box": {
+                                    "fontsize": 24.0,
+                                    "id": "obj-3",
+                                    "maxclass": "message",
+                                    "numinlets": 2,
+                                    "numoutlets": 1,
+                                    "outlettype": [ "" ],
+                                    "patching_rect": [ 370.0, 131.0, 384.0, 35.0 ],
+                                    "text": "Work in Progress"
+                                }
+                            },
                             {
                                 "box": {
                                     "id": "obj-17",
@@ -160,7 +173,7 @@
                             }
                         ]
                     },
-                    "patching_rect": [ 116.0, 375.0, 61.0, 22.0 ],
+                    "patching_rect": [ 189.0, 337.0, 61.0, 22.0 ],
                     "text": "p crunchy"
                 }
             },
@@ -365,7 +378,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 394.0, 536.0, 116.0, 22.0 ],
-                    "text": "/sampleHit 626561"
+                    "text": "/sampleHit 1409841"
                 }
             },
             {
@@ -634,7 +647,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 136.0, 91.0, 163.0, 22.0 ],
-                                    "text": "626561 905 327"
+                                    "text": "1409841 920 882"
                                 }
                             },
                             {
