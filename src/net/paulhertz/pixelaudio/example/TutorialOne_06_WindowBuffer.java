@@ -1,176 +1,3 @@
-/*
- * This example application modifies the TutorialOne_04_Drawing code for the PixelAudio
- * library for Processing. Some of the changes:
- * 
- *   -- We use a windowed buffer to traverse all of the data in an audio file. The data
- *      is stored in its own buffer, anthemBuffer, distinct from playBuffer, which contains
- *      only the audio data corresponding to the display image.
- *   -- We use a custom MultiGen, hilbertRowOrtho(). This gen uses rows of Hilbert gens
- *      in row major order (left to right, top to bottom). Its signal path is revealed
- *      by using hues from the "colors" RGB array to color the display image. This gen
- *      is useful for revealing the order of data in a file, particularly if we stream
- *      it in at audio rate. 
- *      If you draw a line along one of the rows in the image dragging the mouse from
- *      left to right, you will sample the audio in "chronological" order, going 
- *      forwards through the file. If you draw a line along a row from right to left, 
- *      you are in effect playing audio back in "reverse chronological" order, goinf
- *      backwards through the file. You can only play as much of the file as appears,
- *      transcoded to pixels, in the display window. Bigger windows will expose more of
- *      the file. Smaller windows will refresh the diaplay faster when you are stepping
- *      through the audio buffer with the WindowedBuffer window. 
- *   -- We load audio and image separately. You can use key commands 'w' (image to audio) 
- *      and 'W' (audio to image) to exchange data between image and audio, but they only
- *      apply to the data corresponding to the current image and its corresponding
- *      audio buffer. 
- *   -- We add a raindrops() method to provide random audio events when the windowed 
- *      buffer is advancing automatically ('t' command). The raindrops cluster along the
- *      top edge and are useful for playing files with a recognizable time structure, like
- *      youthOrchestra.wav, the Spanish national anthem. 
- * 
- * Finally, we add methods to open a selected audio file and load all of it to a buffer. 
- * We use the buffer as a source for "audioSignal", an array of floats that is mapped to the 
- * display using the signal path. You could think of audioSignal as a window that moves 
- * through the buffer, transcoding audio data to brightness in the HSB color space and
- * then writing its values to the PImage "mapImage", which shows in the display window. 
- * The audioSignal array is the same size as mapImage, which is the display image. Signal 
- * and image use the PixelAudioMapper "mapper" to map samples onto pixels. Mapper was
- * initialized with the MultiGen created by hiilbertRowOrtho(). 
- * 
- * Note that we aren't streaming a file from disk and playing it. We're moving through 
- * a buffer in memory. We've loaded the entire file into the buffer and then assigned
- * the buffer to instances of our audio sampling instrument PASamplerInstrumentPool. 
- * We play audio by drawing on the display image. We step through audio with 
- * WindowedBuffer. It provides better control over animation than the built-in
- * array rotation methods in PixelAudioMapper do, and it's a complete implementation 
- * of a circular buffer. 
- * 
- * The audio loaded to WindowedBuffer windowBuff does not change once it is loaded, 
- * until you load a new audio file. Data from the windowed buffer gets written to audioSignal
- * and transcoded to mapImage. When you click on the display window, the getSamplePos()
- * method calculates the precise index of a sample in the backing buffer of the 
- * windowed buffer, which contains the entire audio file that you loaded. The index
- * gets passed to the WFSamplerInstrumentPool instance "pool", which plays the audio
- * at the sample position. GetSamplePos() takes animation into account, too, if you are
- * using PixelAudioMapper's shift methods. 
- * 
- * The current iteration of the instruments in net.paulhertz.pixelaudio.sampler can, 
- * in theory, play a great many samples from a single instance of PASamplerInstrumentPool
- * of PASamplerInstrument. I'm still experimenting with how many duplicated buffers are
- * optimal for real-time performance. The number of duplicate buffers is set with:
- * 
- *     int poolSize = 16;              // number of WFSamplerInstruments in the pool
- *     int perInstrumentVoices = 4;    // number of voices for each WFSamplerInstrument
- *     
- * Vary these numbers to experiment. In theory, poolSize = 1 and perInstrumentVoices = 64
- * should work as well as the current settings. It certainly works. The output signal
- * may be more susceptible to clipping and phasing distortion -- I'm still trying to 
- * determine that myself. 
- * 
- * 
- * Here are some of the ways I am using WindowedBuffer: 
- *   -- In the loadAudioFile() method, we open a file and load all of it into playBuffer.
- *   -- The audio data is copied to anthemBuffer.
- *   -- anthemBuffer is used to initialize a WindowedBuffer, windowBuff, with a mapSize window.
- *   -- playBuffer is trimmed to mapSize, the size of PixelAudioMapper mapper and the display image.
- *   -- Animation and transcoding image to audio use mapImage.pixels, audioSignal, and playBuffer.
- *   -- Audio events make use of anthemBuffer.
- *   -- You can step through the buffer either with the 't' command or the 'j' and 'J' commands. 
- *      The 't' command automates the window, shifting it on every frame
- *      The 'j' and 'J' commands step forward a half window or a whole window
- *   -- Generally, you can't run animation and windowing at the same time. 
- *   -- Audio events use anthemBuffer as a stable source of audio data, thus avoiding noise
- *      from threaded updates to audio data. See audioMousePressed() for the code. 
- *      The key bit of math is:
- *        position in anthemBuffer = position in playBuffer + this.windowBuff.getIndex();
- *   -- Animation and window shifting are turned off when you open a file, and returned 
- *      to previous settings after the file is loaded. This avoids thread conflicts and 
- *      crashes. Loading files automatically from code, without a dialog, can work around
- *      this restriction, but it's left as an exercise for the diligent coder. 
- *      
- * 
- * Comments on the individual methods indicate where some of the changes were made.
- * 
- *     1. Add hilbertRowOrtho().
- *     2. Modify loadAudioFile() and loadImageFile(), removing the writeAudioToImage()
- *        and writeImageToAudio() calls.
- *     3. Add key commands in parseKey() for writeAudioToImage() ('W')and writeImageToAudio() ('w').
- *     4. Add key commands in parseKey() to save to audio ('S') and save to image ('s'). 
- *     5. Create methods playPoints(int startTime) and playBrushStrokes(int offset) 
- *        to automate playback of brushstrokes. See DrawingTools tab.
- *     6. Add a key command ('p') to parseKey() to call playBrushStrokes(). 
- *     7. Modify the updateAudio() method: comment out the writeAudioToImage() call,
- *        because we will handle audio at full resolution whenever possible. 
- *        Rotate the audioSignal array when isAnimating == true.
- *     8. Add a section of WindowedBuffer variables.
- *     9. Add methods to play, mute and pause audio from WindowedBuffer. 
- *        
- *     
- * To play with the code:
- *     
- *     1. Launch the sketch. 
- *        Rainbow stripes appear in display window.
- *     2. Press 'o' and load an audio file to the audio buffer (saucer_mixdown.wav, in the 
- *        PixelAudio/examples/examples_data/ folder is a good choice).
- *        Display does not change, Click on the display image to test the audio. 
- *     3. Press 't' to step through audio from the selected file and write to the display. WindowBuff
- *        steps through anthemBuffer by windowHopSize samples and returns an array of floats for 
- *        every call to its nextWindow() method. WindowBuff passes the array of floats to audioSignal,  
- *        which gets transcoded to mapImage and the display as animated gray values.
-*         See the WindowedBuffer class for more information.  
- *     4. Unlike the AudioCapture example, which can play a file automatically, MusicBoxBuffer
- *        requires mouseClicks or interactive drawing to produce sound.  
- *     5. Click on the image to play samples. Try it while the window is stepping through 
- *        the buffer ('t' key command) and while it is animating (spacebar key command). To avoid
- *        problems, it is generally not possible to animate and step the window at the same time.  
- *     6. Press 'd' to start drawing -- draw a few brushstrokes. Hover on brushstrokes to activate 
- *        them--this will work even when drawing is off. Click on brushstrokes to play audio. 
- *        Audio samples will play, activated by the brushstrokes. 
- *     7. Press 'x' to delete the current active brush shape or the oldest brush shape.
- *        Press 'X' to delete the most recent brush shape.
- *     7. Press 'b' to play the brushstrokes.
- *        Audio corresponding to brushstrokes is played.
- *     8. Press the spacebar to run animation.
- *        The image pixel array and the audio signal array are both rotated and written along
- *        the signal path. 
- *        The audio played by the brushstrokes changes as the animation progresses.
- *     9. Press 't' to start windowed buffer traversal again. Experiment with different audio sources, 
- *        directions of drawing, etc. 
- * 
- * You can change the hilbertRowOrtho() MultiGen method arguments to fit other other audio and image files. 
- * 
- * 
- * Here are the key commands for this sketch:
- * 
- * Press ' ' to  start or stop animation.
- * Press 'd' to turn drawing on or off.
- * Press 'c' to apply color from image file to display image.
- * Press 'k' to apply the hue and saturation in the colors array to mapImage .
- * Press 'p' to play brushstrokes with a time lapse between each.
- * Press 'f' to toggle granular envelope and timing.
- * Press 'o' or 'O' to open an audio or image file.
- * Press 's' to save image to a PNG file.
- * Press 'S' to save audio to a WAV file.
- * Press ']' to jump half window ahead in the buffer.
- * Press '[' to jump half window back in the buffer.
- * Press '}' to jump whole window ahead in the buffer.
- * Press '{' to jump whole window back in the buffer.
- * Press 'r' to rewind the windowed audio buffer.
- * Press UP arrow to increase gain by 3.0 dB.
- * Press DOWN arrow to decrease gain by 3.0 dB.
- * Press 'u' to mute audio.
- * Press 't' to turn stream capture on or off.
- * Press 'w' to write the image colors to the audio buffer as transcoded values.
- * Press 'W' to write the audio buffer samples to the image as color values.
- * Press 'x' to delete the current active brush shape or the oldest brush shape.
- * Press 'X' to delete the most recent brush shape.
- * Press 'y' to turn rain (random audio events) on and off.
- * Press 'z' to reset brushstrokes and audio buffer (you may need to reload audio).
- * Press 'V' to record a video.
- * Press 'h' or 'H' to show help and key commands.
- * 
- */
-
-
 package net.paulhertz.pixelaudio.example;
 
 import processing.core.PApplet;
@@ -181,10 +8,9 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.ListIterator;
+import java.util.List;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
@@ -196,40 +22,163 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
-import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.schedule.*;
+import net.paulhertz.pixelaudio.granular.*;
+import net.paulhertz.pixelaudio.sampler.*;
 //audio library
 import ddf.minim.*;
-import ddf.minim.ugens.*;
 
 //video export library
 import com.hamoid.*;
 
+// TODO optimize granular brush 'q' command (may not be necessary for a demo
 
+/**
+ * 
+ * <h2>TutorialOne_06_WindowBuffer</h2>
+ * 
+ * A continuation of TutorialOne_03_Drawing that keeps the drawing, brush,
+ * sampler, granular, bounds, and envelope code from TutorialOne_03_Drawing,
+ * but changes the audio source model to load large audio files into a 
+ * windowed buffer:
+ *
+ *   - anthemSignal / anthemBuffer hold the entire loaded audio file,
+ *   - windowBuff is a moving window over anthemSignal,
+ *   - audioSignal / playBuffer / mapImage hold only the current visible window,
+ *   - Display coordinates map first to the visible window, then to the backing
+ *     full-file source by adding windowBuff.getIndex().
+ * 
+ * The new features are fit on top of Tutorial_03_Drawing variables and methods. 
+ * See Tutorial_03_Drawing for information about drawing, audio synthesis,
+ * audio events and animation. Here we'll document just the new features. 
+ * 
+ * See {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing}
+ * 
+ * <h2>NEW FEATURES</h2>
+ * <p>
+ * This sketch adds a windowed audio buffer to the drawing, interaction and
+ * audio synthesis tools of {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing
+ * TutorialOne_03_Drawing}. A windowed audio buffer combines an audio buffer with a
+ * method that positions a "window" within a larger source or "backing" buffer and
+ * reads data from it to a separate data structure. TutorialOne_06_WindowBuffer uses
+ * PixelAudio's <code>WindowedBuffer</code> class to store a backing buffer read
+ * from an audio file. It uses the backing buffer as the source array for the
+ * smaller audio buffers <code>audioSignal</code> and <code>playBuffer</code>. We
+ * can use the window function to select which portion of the backing buffer we want
+ * to see and interact with. Data in audioSignal is transcoded as pixel values in
+ * <code>mapImage</code>, an image used in this sketch to provide a visual
+ * representation of the data in the audio buffer. A PixelAudioMapper instance,
+ * <code>mapper</code>, handles the mapping of data between image and audio
+ * structures, and also maps mouse interactions on the display image to sample
+ * indices in the audio buffer.
+ * </p><p>
+ * The Granular and Sampler instruments both use the backing audio buffer directly
+ * as their audio source, though they can also use the smaller audio buffers derived
+ * from the window function. The window that moves through the backing buffer is
+ * exactly the same size as the display image and the smaller audio buffers. It can
+ * be positioned anywhere within the backing buffer. It also can be automatically
+ * moved across the backing buffer at a specified rate, animating the display image. 
+ * </p><p>
+ * Interaction with the sketch using the mouse and keyboard takes into account the
+ * indexing of the windowed audio buffer. A mouse click on the display image will
+ * trigger a sound from the sampler or granular instrument by requesting a sample
+ * index from mapper and adding the current window index in the backing buffer to
+ * it, thus obtaining the correct sample index in the backing buffer to forward to
+ * the instrument. It is possible to animate mapImage by pixel-shifting, which
+ * shifts the audio index with respect to the number of pixels shifted. Probably you
+ * won't want to run pixel-shifting and automatic window advancing together, but is
+ * is possible. As with the window index, the pixel shift index will be used to
+ * determine the audio sample index.
+ * </p>
+ * <h2>QUICK START</h2>
+ * <p>
+ * <ol>
+ *   Launch the sketch. 
+ * 
+ * <pre>
+ * Here are the key commands for this sketch:
+ * 
+ * Press UP ARROW to increase audio gain by 3 dB.
+ * Press DOWN ARROW to decrease audio gain by 3 dB.
+ * Press RIGHT ARROW to increase Sampler audio gain by 3 dB.
+ * Press LEFT ARROW to decrease Sampler audio gain by 3 dB.
+ * Press SHIFT-RIGHT ARROW to increase Granular audio gain by 3 dB.
+ * Press SHIFT-LEFT ARROW to decrease Granular audio gain by 3 dB.
+ * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.
+ * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.
+ * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.
+ * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.
+ * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.
+ * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.
+ * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.
+ * Press 'y' to select granular or sampler synth for click response.
+ * Press 'r' to select long or short grain duration .
+ * Press 'b' to toggle between long burst grains and short burst grains.
+ * Press 'p' to jitter the pitch of granular gestures.
+ * Press 'P' to adjust pitch of current brushstroke.
+ * Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).
+ * Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).
+ * Press ']' to increment curve steps value of current brush.
+ * Press '[' to decrement curve steps value of current brush.
+ * Press 'm' to change the Sampler noise reduction profile.
+ * Press 'e' to change the envelope we're using .
+ * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
+ * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
+ * Press 'd' to toggle play audio on new brush .
+ * Press 'c' to apply color from image file to display image.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
+ * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
+ * Press 'j' to turn audio and image blending on or off.
+ * Press 'n' to normalize the audio buffer to -6.0dB.
+ * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.
+ * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
+ * Press 's' to save display image to a PNG file.
+ * Press 'S' to save audio buffer to a .wav file.
+ * Press 'w' to write the image HSB Brightness channel to the audio buffer as transcoded sample values .
+ * Press 'W' to write the audio buffer samples to the image as color values.
+ * Press 'x' to delete the current active brush shape or the oldest brush shape.
+ * Press 'X' to delete the most recent brush shape.
+ * Press 'u' to mute audio.
+ * Press 'V' to record a video.
+ * Press 'h' or 'H' to show help message in the console.
+ * </pre>
+ * </div>
+ * 
+ * REVISIONS
+ * 
+ * 
+ * 
+ */
 public class TutorialOne_06_WindowBuffer extends PApplet {
-	// PixelAudio vars and objects
+	
+	/* ------------------------------------------------------------------ */
+	/*                       PIXELAUDIO VARIABLES                         */
+	/* ------------------------------------------------------------------ */
+	
 	PixelAudio pixelaudio;     // our shiny new library
 	MultiGen multigen;         // a PixelMapGen that links together multiple PixelMapGens
-	int genWidth = 64;         // width of multigen PixelMapGens
-	int genHeight = 64;        // height of  multigen PixelMapGens
-	int rows = 8;
-	int cols = 12;
+	int genWidth = 512;        // width of multigen PixelMapGens
+	int genHeight = 512;       // height of  multigen PixelMapGens
 	PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
 	int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
-	PImage mapImage;           // image for display
-	PixelAudioMapper.ChannelNames chan = ChannelNames.L;
-	int[] colors;              // array of spectral colors
-
+	// baseImage is a reference image that generally should not be changed except when you load a new file
+	PImage baseImage;          // unchanging source image
+	// mapImage can change, and often does so with reference to the stable baseImage, for example when animating
+	PImage mapImage;           // image for display, may be animated
+	PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // also try ChannelNames.L (HSB brightness channel)
+	int[] spectrum;              // array of spectral colors
+	
 	/* ------------------------------------------------------------------ */
 	/*                        FILE I/O VARIABLES                          */
 	/* ------------------------------------------------------------------ */
-
+	
 	// audio file
 	File audioFile;
 	String audioFilePath;
 	String audioFileName;
 	String audioFileTag;
 	int audioFileLength;
+
 	// image file
 	File imageFile;
 	String imageFilePath;
@@ -238,408 +187,529 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	int imageFileWidth;
 	int imageFileHeight;
 	
-	String daPath;                  // system-specific path to example files data
+	boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video 
+    boolean isBlending = false;     // flags blending of newly opened audio or image file with display/buffer 
 
-
-	/* ------------------------------------------------------------------ */
+    /* ------------------------------------------------------------------ */
 	/*                          AUDIO VARIABLES                           */
 	/* ------------------------------------------------------------------ */
-
+	
 	/*
 	 * Audio playback support is added with the audio variables and audio methods. 
-	 * You will also need the WFSamplerInstrument and TimedLocation classes. In setup(), 
-	 * call initAudio(), then add a mousePressed() method that calls 
-	 * audioMousePressed(mouseX, mouseY). AudioMousePressed() posts timed audio 
-	 * events to an event list. Call handleDrawing() in the draw() loop to run events. 
-	 * It calls runPointEvents() and runCurveEvents(), which traverse event lists for 
-	 * mouse clicks and for curve drawing. 
+	 * You will also need the ADSRParams, PASamplerInstrument, PASamplerInstrumentPool
+	 * and TimedLocation classes. In setup(), call initAudio(), then add
+	 * a mousePressed() method that calls audioMousePressed(mouseX, mouseY)
+	 * and call runTimeArray() in your draw method. 
 	 */
-	/** Minim audio library */
-	Minim minim;                    // library that handles audio 
-	AudioOutput audioOut;           // line out to sound hardware
-	boolean isBufferStale = false;  // flags that audioBuffer needs to be refreshed or reset
-	float sampleRate = 48000;       // sample rate of audioOut
-	float fileSampleRate;           // sample rate of most recently opened file
-	float[] audioSignal;            // the audio signal as an array of floats
-	MultiChannelBuffer playBuffer;  // a data structure allocated for storing and playing the audio signal
-	int samplePos;                  // an index into the audio signal, can be set by a mouse click on the display image
-	int audioLength;                // length of the audioSignal, same as the number of pixels in the display image
 
-	// SampleInstrument setup
-	int noteDuration = 1000;        // average sample synth note duration, milliseconds
+	// ====== Minim audio library ====== //
+    
+	Minim minim;					// library that handles audio 
+	AudioOutput audioOut;			// line out to sound hardware
+	float outputGain = 0.0f;        // gain setting for audio output, decibels
+	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset, not used in TutorialOneDrawing
+	float sampleRate = 48000;       // target audio engine rate used to configure audioOut
+	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
+	float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
+	float[] audioSignal;			// the audio signal as an array of floats
+	MultiChannelBuffer playBuffer;	// a buffer for playing the audio signal
+	int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
+	int audioLength;				// length of the audioSignal, same as the number of pixels in the display image
+
+	// ====== Sampler Synth ====== //
+
+	// Sampler Instrument duration and envelopes
+	final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
+	int envDuration;                // current envelope duration
+	boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
+    String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
+    int presetIndex = envPresets.length - 1;    // current preset index
+    float overlapFactor = 3.0f;     // envelope overlap
+    int envMinDurationMs = 40;        // min envelope duration, milliseconds
+    int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
+    
+    // Sampler Instrument setup
 	int samplelen;                  // calculated sample synth note length, samples
-	float defaultGain = 0.8f;
-	float gain = defaultGain;
-	// instrument pool, 16 WFSamplerInstruments with 4 voices each, for up to 64 simultaneous voices
-    PASamplerInstrumentPool pool;   // a pool of WFSamplerInstruments
-    int poolSize = 8;              // number of WFSamplerInstruments in the pool
-    int perInstrumentVoices = 8;    // number of voices for each WFSamplerInstrument
+	float samplerGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for Sampler gesture event
+	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
+	boolean isMuted = false;
+	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
+	int poolSize = 2;               // number of sampler instruments for polyphony
+	int samplerMaxVoices = 64;      // number of voices for each sampler instrument
+
 	// ADSR and its parameters
-	ADSRParams defaultEnv;			// good old attack, decay, sustain, release
-	ADSRParams granularEnv;         // envelope for a granular-style series of samples
-	float maxAmplitude = 0.75f;     // 0..1
-	float attackTime = 0.4f;        // seconds
-	float decayTime = 0.0f;         // seconds, no decay
-	float sustainLevel = 0.75f;     // 0..1, same as maxAmplitude
-	float releaseTime = 0.4f;       // seconds, same as attack
-	float pitchScaling = 1.0f;      // factor for changing pitch
-	float defaultPitchScaling = 1.0f;
-	float lowPitchScaling = 0.5f;
-	float highPitchScaling = 2.0f;
-    boolean isMuted = false;         // flag for muting audioOut
+	float maxAmplitude = 1.0f;          // set envelopes to 1.0f amplitude, then scale later with audio instrument gain
+	// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
+	ADSRParams defaultEnv = new ADSRParams(maxAmplitude, 0.2f, 0.1f, maxAmplitude * 0.75f, 0.5f);
+	// ADSRParams granularEnv = new ADSRParams(maxAmplitude, 0.125f, 0.125f, 0, 0);
+	float pitchScaling = 1.0f;          // factor for changing pitch
+	float defaultPitchScaling = 1.0f;   // pitch scaling factor
+	float lowPitchScaling = 0.5f;       // low pitch scaling, 0.5 => one octave down
+	float highPitchScaling = 2.0f;      // high pitch scaling, 2.0 => one octave up
+	
+    // toggle for sampler events with a "granular" envelope
+    boolean useGranularSynth = false;   // which synth do we use for point events (mouse clicks and the like)
+    int granEnvDuration = 120;          // envelope duration in ms
 
-	// interaction variables for audio
-	int sampleX;                    // keep track of coordinates associated with audio samples
-	int sampleY;
-	boolean isIgnoreOutsideBounds = true;      // set to true to ignore points outside bounds when drawing
-	ArrayList<TimedLocation> timeLocsArray;    // a list of timed events 
+    // ====== Granular Synth ====== //
+    
+    public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
+    public PAGranularInstrument gSynth;         // granular synthesis instrument
+    public PAGranularInstrumentDirector gDir;   // director of granular events
+    public float granularGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for a granular gesture event
+    public float granularPointGain = 1.0f;      // linear gain for a granular point event
+    // parameters for granular synthesis
+    boolean useShortGrain = false;              // default to short grains, if true
+    int longSample = 4096;                      // number of samples for a moderately long grain
+    int shortSample = 512;                      // number of samples for a relatively short grain
+    int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
+    int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
+    GestureGranularParams gParamsGesture;       // granular parameters when hopMode == HopMode.GESTURE
+    GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED
+    public int curveSteps = 8;                  // number of steps in curve representation of a brushstroke path
+    public int gMaxVoices = 256;                // number of voices managed by a PAGranularInstrument (gSynth)
+    boolean useLongBursts = true;               // controls the number of burst grains in a point event or gesture event
+    int maxBurstGrains = 8;
+    int minBurstGrains = 1;
+    int burstGrains = useLongBursts ? maxBurstGrains : minBurstGrains;
+	boolean usePitchedGrains = false;           // detune a granular gesture, if true
 
-	boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video
-	boolean isGranular = false;     // if true, sets all envelopes to the same size, with 50% overlap when playing
-	int grainDuration = 120;        // granular envelope duration in milliseconds
 
-
-	/* ------------------------------------------------------------------ */
+    /* ------------------------------------------------------------------ */
 	/*                   ANIMATION AND VIDEO VARIABLES                    */
 	/* ------------------------------------------------------------------ */
+    
+    // animation consists of rotating pixels / audio samples along the mapper's "signal path"
+    // it's an effect that looks glitchy or hypnotic, depending on your source material
+    // you an also use it to shift audio samples with respect to brushstrokes
+	
+    int shift = 1024;                    // number of pixels to shift the animation
+    int totalShift = 0;                  // cumulative shift
+    boolean isAnimating = false;         // do we run animation or not?
+    boolean oldIsAnimating;              // keep track of animation state when opening a file
+    // animation variables for video recording
+    int videoSteps = 768;                // how many steps in an animation loop
+    boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
+    int videoFrameRate = 24;             // frames per second
+    int step;                            // number of current step in animation loop
+    VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
+    
 
-	int shift = -4;                  // number of pixels to shift the animation
-	int totalShift = 0;              // cumulative shift
-	boolean isAnimating = false;     // are we animating or not?
-	boolean oldIsAnimating;          // keep track of state when we suspend animation
-	boolean isTrackMouse = false;    // if true, dragging the mouse sets animation speed
-	// animation variables
-	int animSteps = 720;             // how many steps in an animation loop
-	boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
-	int videoFrameRate = 24;         // fps, frames per second
-	int step;                        // number of current step in animation loop
-	VideoExport videx;               // hamoid library class for video export (requires ffmpeg)
-	  
-	/* ------------------------------------------------------------------ */
+    /* ------------------------------------------------------------------ */
 	/*                         DRAWING VARIABLES                          */
 	/* ------------------------------------------------------------------ */
-
+	
 	/*
-	 * Drawing uses classes in the package net.paulhertz.pixelaudio.curves to store drawing data
+	 * Drawing uses classes in the package net.paulhertz.pixelaudio.curves to store gesture data
 	 * and draw Bezier curves and lines. It also provides very basic brushstroke modeling code. 
 	 * Unlike most of the code in PixelAudio, which avoids dependencies on Processing, the 
 	 * curves.* classes interface with Processing to draw to PApplets and PGraphics instances. 
-	 * See the PACurveMaker class for details of how drawing works. 
-	 * 
+	 * See the CurveMaker class for details of how drawing works. Because CurveMaker also stores
+	 * timing data for each point it stores, it can reproduce gestures as audio events. 
 	 */
+	    
+    PACurveMaker curveMaker;             // a PACurveMaker instance for use when drawing a new brushstroke
+    public boolean isDrawMode = false;   // flag that drawing is enabled
+    public float epsilon = 4.0f;         // variable that controls point reduction in PACurveMaker
+    
+    public PVector currentPoint = new PVector(-1, -1);  // point to add to brushstroke points
+    public ArrayList<PVector> allPoints; // in-progress brushstroke points
+    public ArrayList<Integer> allTimes;  // in-progress brushstroke times
+    public int startTime;                // in-progress brushstroke start time
+    
+    public int dragColor = color(233, 199, 89, 128);    // color of line while dragging the mouse
+    public float dragWeight = 8.0f;                     // line weight
 
-	// curve drawing and interaction
-	public boolean isDrawMode = false;                  // is drawing on or not?
-	public float epsilon = 4.0f;                        // controls how much reduction is applied to points
-	public ArrayList<PVector> allPoints;                // all the points the user drew, thinnned
-	public int dragColor = color(233, 199, 89, 128);    // color for initial drawing 
-	public float dragWeight = 8.0f;                     // weight (brush diameter) of initial line drawing
-	public int startTime;                               // start time for user drawing event
-	public ArrayList<Integer> allTimes;                 // list for tracking user drawing times, for future use
-	public PVector currentPoint;                        // most recent point in user drawing
-	public int polySteps = 4;                           // number of steps in polygon representation of a Bezier curve
-	public int defaultPolySteps = polySteps;
-	public int granPolySteps = 16;
-	public PACurveMaker curveMaker;                     // class for tracking and storing drawing data
-	public ArrayList<PVector> eventPoints;              // list of points stored in or loaded from a PACurveMaker
-	public ListIterator<PVector> eventPointsIter;       // iterator for eventPoints
-	int eventStep = 90;                                 // milliseconds between events
-	public ArrayList<TimedLocation> curveTLEvents;      // a list of TimedLocation instances 
-	public ArrayList<PACurveMaker> brushShapesList;     // a list of PACurveMaker instances with recorded drawing data
-	public PACurveMaker activeBrush;                    // the currently active PACurveMaker, collecting points as user drags the mouse
-	public int activeIndex = 0;                         // index of current brush in brushShapesList, useful for UDP/OSC messages
-	int newBrushColor = color(144, 34, 42, 128);        // color of the new brushstroke
-	int polyPointsColor = color(233, 199, 144, 192);    // color for polygon representation of Bezier curve associated with a brushstroke
-	int activeBrushColor = color(144, 89, 55, 128);     // color for the active brush
-	int readyBrushColor = color(34, 89, 55, 96);        // color for a brushstroke when ready to be clicked
+    public int polySteps = 5;                           // polygon steps for brush, used by PACurveMaker
 
-	float blend = 0.5f;                                 // TODO implement blending of images
-	boolean isBlending = true;                          // for future use
+    public ArrayList<AudioBrushLite> brushes;           // a list of AudioBrushLite, a class that wraps a PACurveMaker and a BrushConfig
+    // Hover + selection
+    public AudioBrushLite hoverBrush = null;            // brush the mouse is over, if there is one
+    public int hoverIndex = -1;                         // index of the brush in the brushes list
+    public AudioBrushLite activeBrush = null;           // “selected” brush (optional but useful)
 
-	/* end drawing variables */
-	
+    // ====== Visual styling for brushstrokes ====== //
+    
+    int readyBrushColor = color(34, 89, 55, 233);       // color for a brushstroke when available to be clicked
+    int hoverBrushColor = color(144, 89, 55, 233);      // color for brushstroke under the cursor
+    int selectedBrushColor = color(233, 199, 144, 233); // color for the selected (clicked or currently active for editing) brushstroke
+    
+	int readyBrushColor1 = color(34, 55, 89, 178);		// color for a brushstroke when available to be clicked
+	int hoverBrushColor1 = color(55, 89, 144, 178);     // color for brushstroke under the cursor
+	int selectedBrushColor1 = color(199, 123, 55, 233);	// color for the selected (clicked or currently active for editing) brushstroke
+	int readyBrushColor2 = color(55, 34, 89, 178);		// color for a brushstroke when available to be clicked
+	int hoverBrushColor2 = color(89, 55, 144, 178);     // color for brushstroke under the cursor
+	int selectedBrushColor2 = color(123, 199, 55, 233);	// color for the selected (clicked or currently active for editing) brushstroke
+
+	int lineColor = color(233, 220, 178);               // brushstroke interior line color
+	int dimLineColor = color(178, 168, 136);            // brushstroke interior line color, dimmed
+	int circleColor = color(233, 178, 144);             // brushstroke interior point color
+	int dimCircleColor = color(178, 168, 136);          // brushstroke interiro point color, dimmed
+
+    // TimedLocation events
+    ArrayList<SamplerBrushEvent> samplerTimeLocs;       // a list of timed events for Sampler brushes
+	ArrayList<TimedLocation> pointTimeLocs;             // a list of timed events for mouse clicks
+	ArrayList<TimedLocation> grainTimeLocs;             // a list of timed events for Granular brushes
+    int animatedCircleColor = color(233, 220, 199);     // color for animated circles when playing audio   
+
+    PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+    PABoundsPolicy boundsPolicy;
+
+    /* ------------------------------------------------------------------ */
+	/*                       INTERACTION VARIABLES                        */
 	/* ------------------------------------------------------------------ */
-	/*                     WINDOWED BUFFER VARIABLES                      */
+
+    // ====== Minimal gesture + audio synthesis configuration ====== //
+    // GesturePlayground example provides a complete configuration model with the GestureGranularConfig class
+    
+    public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    // select model for brush shape in PACurveMaker
+    public enum BrushOutput { SAMPLER, GRANULAR }                        // select audio synthesis model
+    public enum HopMode { GESTURE, FIXED }                               // select audio gesture sequence timing model
+
+    /**
+     * Defines the curve drawing model for a brush using PACurveMaker. 
+     */
+    public static final class BrushConfig {
+    	/** PathMode for drawing */
+        public PathMode pathMode = PathMode.ALL_POINTS;
+    	/** Point reduction parameter */
+        public float rdpEpsilon = 4.0f;
+    	/** Number of polygon segments in a curve */
+        public int curveSteps = 8;
+        // leave room for future compatibility
+    }
+
+    /**
+     * A light-weight version of the {@link net.paulhertz.pixelaudio.curves.AudioBrush AudioBrush} 
+     * class for combining gestures and audio synthesis. 
+     * AudioBrushLite combines PACurveMaker gesture and curve modeling with basic 
+     * audio synthesis parameters. AudioBrush, introduced in TutorialOne_05_GesturePlayground, 
+     * exposes most of the parameters used for granular synthesis in PixelAudio, along with 
+     * many of the brush and gesture settings available in PACurveMaker. 
+     */
+    public static final class AudioBrushLite {
+    	/** PACurveMaker instance stores point and time data, provides drawing and scheduling methods  */
+    	private final PACurveMaker curve;
+    	/** Configuration variables for drawing */
+        private final BrushConfig cfg;
+        /** Audio output variable */
+        private BrushOutput output;
+    	/** For granular instrument, timing model */
+        private HopMode hopMode;
+        /** Pitch scaling */
+        private float pitchRatio = 1.0f;
+
+        public AudioBrushLite(PACurveMaker curve, BrushConfig cfg, BrushOutput output, HopMode hopMode) {
+            this.curve = curve;
+            this.cfg = cfg;
+            this.output = output;
+            this.hopMode = hopMode;
+            this.pitchRatio = 1.0f;
+        }
+        
+        public PACurveMaker curve() { return curve; }
+        public BrushConfig cfg() { return cfg; }
+        public BrushOutput output() { return output; }
+        public void setOutput(BrushOutput out) { this.output = out; }
+        public float pitchRatio() { return pitchRatio; }
+        public void setPitchRatio(float newRatio) { this.pitchRatio = newRatio; }
+        public HopMode hopMode() { return hopMode; }
+        public void setHopMode(HopMode hop) { this.hopMode = hop; }
+        
+    }
+
+    /**
+     *  A class to store a hit-test result, recording an AudioBrushLite instance and its index in brush list.
+     */
+    public static final class BrushHit {
+        public final AudioBrushLite brush;
+        public final int index;
+        public BrushHit(AudioBrushLite brush, int index) {
+            this.brush = brush;
+            this.index = index;
+        }
+    }
+    
+    boolean doPlayOnNewBrush = true;    // play audio immediately on creating a new brush
+	boolean shiftIsDown = false;        // shift key state
+	
+
 	/* ------------------------------------------------------------------ */
-	
-	/** keep track of the frame we should be rendering */
-	int frame = 0;
-	/** A windowed buffer for anthem */
-	WindowedBuffer windowBuff;
-	/** how far to step the window on each frame */
-	int windowHopSize = 64;
-	/** buffer for complete file */
-	MultiChannelBuffer anthemBuffer;
-	/** A source for streaming audio from a file */
-	float[] anthemSignal;
-	/** boolean to flag audio capture */
-	boolean isListening = false;
-	/** save isListening state */
-	boolean oldIsListening = isListening;
-	/** boolean to flag fixed length capture */
-	boolean isFixedLength = false;
-	/**  */
-	boolean isRaining = false;
+	/*                         WINDOWED BUFFER                            */
+	/* ------------------------------------------------------------------ */
 
-	// ** YOUR VARIABLES ** Variables for YOUR CLASS may go here **  //
-	
+    /** Full-file mono source, padded to at least mapper.getSize(). */
+    float[] anthemSignal;
+    /** Full-file source buffer used by the Sampler instrument pool. */
+    MultiChannelBuffer anthemBuffer;
+    /** Moving view onto anthemSignal, with window size == mapper.getSize(). */
+    WindowedBuffer windowBuff;
 
-	 
-	/**
-	 * Entry point for pure Java implementation (in Eclipse). Omit in Processsing. 
-	 * @param args    not used
-	 */
+    /** Hop size for automatic window traversal. */
+    int windowHopSize = 64;
+    /** If true, draw() advances windowBuff each frame and refreshes the display. */
+    boolean isWindowing = false;
+    /** Save animation state when file loading or windowing temporarily suspends it. */
+    boolean oldIsWindowing = false;
+
+    /** Optional random point-event texture while windowing. */
+    boolean isRaining = false;
+    
+    /** WindowBuffer initialized or not?  see initAudio() */
+    boolean windowAudioReady = false;
+    /** Sampler instruments use anthemBuffer, not the current visible playBuffer. */
+    MultiChannelBuffer samplerSourceRef = null;
+    /** sampling rate of samplerSourceRef */
+    float samplerSourceRateRef = -1;
+
+    // NOTE: I use poolSize = 2 and samplerMaxVoices = 64 in this sketch.
+    // Using samplerMaxVoices = 256 resulted in noise artifacts whose
+    // origin I have not tracked down yet. You can probably set poolSize = 8
+    // and samplerMaxVoices = 128 without difficulty. I tested these values and 
+    // didn't have any problems. TODO resolve the issue with noise when 
+    // samplerMaxVoices is comparatively large. I regard the issue as minor,
+    // as 128 voices should be entirely adequate for most uses of the Sampler. 
+	
+    /* ------------------------------------------------------------------ */
+	/*                 APPLICATION SPECIFIC VARIABLES                     */
+	/* ------------------------------------------------------------------ */
+    
+	// system-specific path to example files data
+    String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    
+    String daFile = "_sonic/FullMoonTonight_22050Hz.mp3";    // _sonic/FullMoonTonight_22050Hz.mp3, Saucer_mixdown.wav
+
+
+    // ---------------- APPLICATION ---------------- //
+	
 	public static void main(String[] args) {
 		PApplet.main(new String[] { TutorialOne_06_WindowBuffer.class.getName() });
 	}
 
-    @Override
 	public void settings() {
-	  size(cols * genWidth, rows * genHeight);
+		size(3 * genWidth, 2 * genHeight);
 	}
-
-    @Override
+	
+	/// Processing `setup()` method.
 	public void setup() {
-	  surface.setTitle("Music Box Buffer Example");
-	  frameRate(24);
-	  // initialize our library
-	  pixelaudio = new PixelAudio(this);
-	  // we create a PixelMapGen implemented as a MultiGen, with dimensions equal to our display window
-	  // hilbertRowOrtho() is a very flexible way to create a multigen. 
-	  // hilbertLoop3x2() produces a MultiGen that is 3 * genWidth x 2 * genHeight, where
-	  // genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
-	  //
-	  // multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);  // for example
-	  // 
-	  multigen = hilbertRowOrtho(cols, rows, genWidth, genHeight);
-	  // create a PixelAudioMapper to handle the mapping of pixel colors to audio samples
-	  mapper = new PixelAudioMapper(multigen);
-	  // keep track of the area of the PixelAudioMapper
-	  mapSize = mapper.getSize();
-	  println("---- mapSize == "+ mapSize);
-	  // create an array of rainbow colors with mapSize elements
-	  colors = getColors(mapSize);
-	  initImages();
-	  initAudio();
-	  initDrawing();
-	  showHelp();
-	  println("--- dimensions: ", width, height);
+        surface.setTitle("PixelAudio Tutorial One 06: WindowBuffer");
+		// set a standard animation framerate
+		frameRate(24);
+		// 1. Initialize our library.
+		pixelaudio = new PixelAudio(this);
+		// 2. create a PixelMapGen object with dimensions equal to the display window.
+		//    the call to "hilbertLoop3x2(genWidth, genHeight)" produces a MultiGen that is 3 * genWidth x 2 * genHeight, 
+		//    where genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
+		//
+		// multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
+		//
+		//    Here's an alternative multigen that is good for visualizing audio location within the image
+		//    It reads left to right, top to bottom, like a musical score. I've divided it 12 x 8, but 6 x 4 is good, too.
+		//
+		multigen = HilbertGen.hilbertRowOrtho(12, 8, width/12, height/8);
+		// 3. Initialize a PixelAudioMapper with multigen
+		mapper = new PixelAudioMapper(multigen);
+		// area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
+		mapSize = mapper.getSize();
+		// initialize the boundary policy for keeping points and indices in bounds
+		boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
+		// create an array of rainbow colors with mapSize elements
+		spectrum = getColors(mapSize);
+		// 4. create image for display
+		initImages();
+		// 5. set up the audio environment and variables
+		initAudio();
+		// 6. set up the drawing environment and variables
+		initDrawing();
+		// 7. output a help message to the console
+		showHelp();
+		// preload files, parameters will vary with the system where we're running
+		preloadFiles(daPath, daFile);    // handy when debugging, too
 	}
 
-    @Override
-    public void stop() {
-        if (pool != null) pool.close();
-        if (minim != null) minim.stop();
-        super.stop();
-    }
-
-
+	/**
+	 * turn off audio processing when we exit
+	 */
+	public void stop() {
+		if (pool != null) pool.close();
+		if (minim != null) minim.stop();
+		super.stop();
+	}
+	
 	/**
 	 * Generates an array of rainbow colors using the HSB color space.
 	 * @param size    the number of entries in the colors array
 	 * @return an array of RGB colors ordered by hue
 	 */
 	public int[] getColors(int size) {
-	  int[] colorWheel = new int[size]; // an array for our colors
-	  pushStyle(); // save styles
-	  colorMode(HSB, colorWheel.length, 100, 100); // pop over to the HSB color space and give hue a very wide range
-	  for (int i = 0; i < colorWheel.length; i++) {
-	    colorWheel[i] = color(i, 50, 70); // fill our array with colors, gradually changing hue
-	  }
-	  popStyle(); // restore styles, including the default RGB color space
-	  return colorWheel;
+		int[] colorWheel = new int[size]; // an array for our colors
+		pushStyle(); // save styles
+		colorMode(HSB, colorWheel.length, 100, 100); // create colors in the HSB color space, giving hue a very wide range
+		for (int i = 0; i < colorWheel.length; i++) {
+			colorWheel[i] = color(i, 50, 70); // fill our array with colors, gradually changing hue
+		}
+		popStyle(); // restore styles, including the default RGB color space
+		return colorWheel;
 	}
-
 	
 	/**
-	 * This method creates rows of HilbertGens, starting each row from the left
-	 * and adding gens. The odd rows are flipped vertically and the even rows are
-	 * unchanged. The unchanged HilbertGen starts at upper left corner and ends at 
-	 * upper right corner, so this provides some possibilities of symmetry between rows.
-	 * The path is not continuous. 
-	 * 
-	 * @param cols    number of columns of gens wide
-	 * @param rows    number of rows of gens high
-	 * @param genW    width of each gen (same as genH and a power of 2)
-	 * @param genH    height of each gen 
-	 * @return        a MultiGen composed of cols * rows PixelMapGens
-	 */
-	public MultiGen hilbertRowOrtho(int cols, int rows, int genW, int genH) {
-	    // list of PixelMapGens
-	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
-	    // list of x,y coordinates for placing gens from genList
-	    ArrayList<int[]> offsetList = new ArrayList<int[]>();
-	  for (int y = 0; y < rows; y++) {
-	    for (int x = 0; x < cols; x++) {
-	      if (y % 2 == 0) {
-	        genList.add(new HilbertGen(genW, genH, AffineTransformType.NADA));
-	      }
-	      else {
-	        genList.add(new HilbertGen(genW, genH,  AffineTransformType.NADA));
-	      }
-	      offsetList.add(new int[] {x * genW, y * genH});
-	    }
-	  }
-	  return new MultiGen(width, height, offsetList, genList);
-	}
-
-
-	/**
-	 * Initializes mapImage with the colors array. MapImage will handle the color data for mapper
-	 * and also serve as our display image.
+	 * Initializes mapImage with the colors array. 
+	 * MapImage handles the color data for mapper and also serves as our display image.
+	 * BaseImage is intended as a reference image that typically only changes when you load a new image.
 	 */
 	public void initImages() {
-	  mapImage = createImage(width, height, ARGB);
-	  mapImage.loadPixels();
-	  mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
-	  mapImage.updatePixels();
-	}	  
-	
-	/**
-	 * Initializes the line, curve, and brushstroke drawing variables. 
-	 * Note that timeLocsArray has been initialized by initAudio(), though it
-	 * will be used for point events in the drawing code, too. 
-	 */
-	public void initDrawing() {
-	  currentPoint = new PVector(-1, -1);
-	  brushShapesList = new ArrayList<PACurveMaker>();
+		mapImage = createImage(width, height, ARGB);
+		mapImage.loadPixels();
+		mapper.plantPixels(spectrum, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
+		mapImage.updatePixels();
+		baseImage = mapImage.copy();
 	}
 	
-	// ONLY IN PROCESSING, though it's possible in Eclipse
-	public void preloadFiles(String path) {
-		daPath = path;
+	/**
+	 * Initializes drawing and drawing interaction variables. 
+	 */
+	public void initDrawing() {
+	    currentPoint = new PVector(-1, -1);    // used for drawing to the display
+	    brushes = new ArrayList<>();           // keep track of brushstrokes/gestures
+	    hoverBrush = null;                     
+	    hoverIndex = -1;
+	    activeBrush = null;
+	}
+	
+	/**
+	 * Preload an audio file using a file path and a filename.
+	 * @param path        the fully qualified path to the file's directory, ending with a '/' 
+	 * @param filename    the name of the file
+	 */
+	public void preloadFiles(String path, String filename) {
 		// the audio file we want to open on startup
-		File audioSource = new File(daPath +"Saucer_mixdown.wav");
+		File audioSource = new File(path + filename);
 		// load the file into audio buffer and Brightness channel of display image (mapImage)
+		// if audio is also loaded to the image, will set baseImage to the new image 
 		fileSelected(audioSource);
 		// overlay colors on mapImage
 		mapImage.loadPixels();
-		applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
-		mapImage.updatePixels();  
+		applyColor(spectrum, mapImage.pixels, mapper.getImageToSignalLUT());
+		mapImage.updatePixels();
+		// write mapImage to baseImage
+		commitMapImageToBaseImage();
 	}
-	  
+
 	public void draw() {
+        if (isWindowing && windowBuff != null) {
+            refreshWindowFromBacking(true);
+            if (isRaining) raindrops(3);
+        }
 		image(mapImage, 0, 0);    // draw mapImage to the display window
 		handleDrawing();          // handle interactive drawing and audio events created by drawing
 		if (isAnimating) {        // animation is different from windowed buffer
-			animate();              // rotate mapImage.pixels by shift number of pixels
-			updateAudio();          // rotate audioSignal (we could just shift the index...)
-		}
-		if (isListening) {        // windowed buffer, never at the same time as isAnimating
-			updateAudio();        // update audioSignal with WindowedBuffer.nextWindow()
-			drawSignal();         // transcode audioSignal and write it to mapImage.pixels
-			if (isRaining && random(10) > 9) raindrops();    // a little rain never hurt anyone
+			animate();            // do some animation, here it's just to rotate mapImage.pixels by shift number of pixels
 		}
 	}
 	
-	  
-	 public void animate() {
-	   stepAnimation();
-	   renderFrame(step);
-	 }
-	 
-	  
+	public void animate() {
+		stepAnimation();
+		renderFrame(step);
+	}
+	
 	/**
 	 * Step through the animation, called by the draw() method.
 	 * Will also record a frame of video, if we're recording.
 	 */
 	public void stepAnimation() {
-	  if (step >= animSteps) {
-	    if (isRecordingVideo) {
-	      isRecordingVideo = false;
-	      videx.endMovie();
-	      isAnimating = oldIsAnimating;
-	      println("--- Completed video at frame " + animSteps);
-	    }
-	    step = 0;
-	  } 
-	  else {
-	    step += 1;
-	    if (isRecordingVideo) {
-	      if (videx == null) {
-	        println("----->>> start video recording ");
-	        videx = new VideoExport(this, "TutorialOneVideo.mp4");
-	        videx.setFrameRate(videoFrameRate);
-	        videx.startMovie();
-	      }
-	      videx.saveFrame();
-	      println("-- video recording frame " + step + " of " + animSteps);
-	    }
-	  }
+		if (step >= videoSteps) {
+			if (isRecordingVideo) {
+				isRecordingVideo = false;
+				videx.endMovie();
+				isAnimating = oldIsAnimating;
+				println("--- Completed video at frame " + videoSteps);
+			}
+			step = 0;
+		} 
+		else {
+			step += 1;
+			if (isRecordingVideo) {
+				if (videx == null) {
+					println("----->>> start video recording ");
+					videx = new VideoExport(this, "TutorialOneVideo.mp4");
+					videx.setFrameRate(videoFrameRate);
+					videx.startMovie();
+				}
+				videx.saveFrame();
+				println("-- video recording frame " + step + " of " + videoSteps);
+			}
+		}
 	}
 	
-
 	/**
-	 * Renders a frame of animation: moving along the signal path, copies mapImage pixels into rgbSignal, 
-	 * rotates them shift elements left, writes them back to mapImage along the signal path.
+	 * Renders a frame of animation: moving along the signal path, copies baseImage pixels to
+	 * mapImage pixels, adjusting the index position of the copy using totalShift --
+	 * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
 	 * 
 	 * @param step   current animation step
 	 */
 	public void renderFrame(int step) {
-		mapImage.loadPixels();
-		// get the pixels in the order that the signal path visits them
-		int[] rgbSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
-		// rotate the pixel array
-		PixelAudioMapper.rotateLeft(rgbSignal, shift);
-		// keep track of how much the pixel array (and the audio array) are shifted
-		totalShift += shift;
+		// keep track of how much the pixel array is shifted
+		totalShift = PixelAudioMapper.wrap(totalShift + shift, mapSize);
 		// write the pixels in rgbSignal to mapImage, following the signal path
-		mapper.plantPixels(rgbSignal, mapImage.pixels, 0, mapSize);
-		mapImage.updatePixels();
-	}
-	
-	
-	/**
-	 * Transcode directly from audioSignal to mapImage.pixels, the display image.
-	 * When we are stepping through an audio buffer with BufferedWindow, audioSignal
-	 * contains the most recent window, which is exactly the same size as mapImage.pixels.
-	 * By default, we transcode audio to the Brightness channel of HSB, preserving Hue 
-	 * and Saturation in the mapImage. 
-	 */
-	public void drawSignal() {
-		// we transcode directly from audioSignal to mapImage.pixels, with no intermediate steps or copies
 		mapImage.loadPixels();
-		mapper.mapSigToImg(audioSignal, mapImage.pixels, chan);
+		mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
 		mapImage.updatePixels();
-	}  
-
-	  
-	/**
-	 * Updates global variable audioSignal, either by rotating array or getting 
-	 * a new window of values from the audio buffer.
-	 */
-	public void updateAudio() {
-		if (isListening) {
-			audioSignal = windowBuff.nextWindow();
-			return;    // don't animate if we're moving through the windowed buffer
-		}
-		if (isAnimating) {
-			PixelAudioMapper.rotateLeft(audioSignal, shift);
-		}
 	}
-	  
-	
+
 	/**
-	 * Handles user's drawing actions, draws previously recorded brushstrokes, 
-	 * tracks and generates animation and audio events. 
+	 * Handles user's drawing actions: draws previously recorded brushstrokes, 
+	 * tracks and generates interactive animation and audio events. 
 	 */
-	public void handleDrawing() {	
-		// draw current brushShapes 
-		drawBrushShapes();
-		if (isDrawMode) {
-			if (mousePressed) {
-				addPoint(mouseX, mouseY);
-			}
-			if (allPoints != null && allPoints.size() > 2) {
-				PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
-			}
-			if (curveMaker != null) curveMakerDraw();
-		} 
-		runCurveEvents();
-		runPointEvents();
+	public void handleDrawing() {
+	    // 1) draw existing brushes
+	    drawBrushShapes();
+	    // 2) update hover state (pure state update, no action)
+	    updateHover();
+	    // 3) if in the process of drawing, accumulate points while mouse is held down
+	    if (isDrawMode) {
+	        if (mousePressed) {
+	            addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+	        }
+	        if (allPoints != null && allPoints.size() > 2) {
+	            PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
+	        }
+	    }
+	    // 4) run scheduled events
+	    runSamplerBrushEvents();
+	    runPointEvents();
+	    runGrainEvents();
 	}
 	
+	/**
+	 * @return a reference to the brushstroke the mouse is over, or null if there's no brushstroke. 
+	 */
+	BrushHit findHoverHit() {
+	    if (brushes == null || brushes.isEmpty()) return null;    // no brushes
+	    // check from topmost (end) to bottom (start)
+	    for (int i = brushes.size() - 1; i >= 0; i--) {
+	        AudioBrushLite b = brushes.get(i);
+	        if (mouseInPoly(b.curve().getBrushPoly())) {
+	            return new BrushHit(b, i);
+	        }
+	    }
+	    return null;
+	}
 
+	/**
+	 * Update the hoverBrush and hoverIndex global variables.
+	 */
+	void updateHover() {
+	    BrushHit hit = findHoverHit();
+	    if (hit != null) {
+	        hoverBrush = hit.brush;
+	        hoverIndex = hit.index;
+	    } 
+	    else {
+	        hoverBrush = null;
+	        hoverIndex = -1;
+	    }
+	}
+		
 	/**
 	 * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
 	 * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
@@ -663,307 +733,485 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		text(msg, x, y);
 		popStyle();
 	}
+	
+    /**
+     * Random point events along the upper part of the current window, useful for
+     * hearing time-structured files while the window is advancing.
+     */
+    public void raindrops(int count) {
+        for (int i = 0; i < count; i++) {
+            if (random(1) < 0.35f) {
+                int x = (int)random(width);
+                int y = (int)random(Math.max(1, height / 8));
+                handleClickOutsideBrush(x, y);
+            }
+        }
+    }
 
 	/**
-	 * The built-in mousePressed handler for Processing, but note that it forwards 
-	 * mouse coords to handleMousePressed(). If isDrawMode is true, we start accumulating
-	 * points to allPoints: initAllPoints() adds the current mouseX and mouseY. After that, 
-	 * the draw loop calls handleDrawing() to add points. Drawing ends on mouseReleased(). 
+	 * The built-in mousePressed handler for Processing, clicks are handled in mouseClicked().
 	 */
 	public void mousePressed() {
-		setSampleVars(mouseX, mouseY);			
-		if (this.isDrawMode) {
-			initAllPoints();
-		} 
-		else {
-			handleMousePressed(mouseX, mouseY);
-		}
+	    if (isDrawMode) {
+	        initAllPoints();    // start capturing points and times for a brushstroke
+	    }
 	}
 	
-    /**
-     * Used for interactively setting the amount of pixel array shift when animating.
-     * TODO, since this app is a demo for WindowedBuffer, we can probably do without 
-     * setting shift interactively. 
-     */
-    @Override
 	public void mouseDragged() {
-		if (isTrackMouse) {
-			shift = abs(width/2 - mouseX);
-			if (mouseY < height/2) 
-				shift = -shift;
-			writeToScreen("shift = "+ shift, 16, 24, 24, false);
-		}
+		// we don't do anything here, drawing will be handled by the draw() loop
 	}
 	
-    public void mouseReleased() {
-    	setSampleVars(mouseX, mouseY);			
-    	if (isAnimating && isTrackMouse) {
-    		// ignore isTrackMouse in this sketch
-    		// println("----- animation shift = "+ shift);
-    	}
-    	if (isDrawMode && allPoints != null) {
-    		if (allPoints.size() > 2) {		// add curve data to the brush list
-    			initCurveMaker();
-    		}
-    		else {							// handle the event as a click
-    			handleMousePressed(mouseX, mouseY);
-    		}
-    		allPoints.clear();
-    	}
-    }
+	public void mouseReleased() {
+	    if (isDrawMode && allPoints != null) {
+	        if (allPoints.size() > 2) {
+	            initCurveMakerAndAddBrush();    // finalize curve drawing into a new PACurveMaker instance, add a brush
+	        }
+	        allPoints.clear();                  // clear points accumulated while dragging the mouse
+	        // mouseClicked() handles actual clicks
+	    }
+	}
 	
-    /**
-     * built-in keyPressed handler, forwards events to parseKey.
+	public void mouseClicked() {
+		BrushHit hit = findHoverHit();    // are we over a brush?
+		if (hit != null) {                // yes, let's figure out what to do
+			activeBrush = hit.brush;      // flag the brush as the activeBrush
+			if (activeBrush.output() == BrushOutput.SAMPLER) {
+				scheduleSamplerBrushClick(activeBrush);    // Sampler brush clicked event
+			} else {
+				scheduleGranularBrushClick(activeBrush);   // Granular brush clicked event
+			}
+			return;
+		}
+		// click outside any brush is handled here
+		audioMouseClick(mouseX, mouseY);
+	}
+
+		
+	/**
+     * Built-in keyPressed handler, forwards events to parseKey.
      */
     @Override
     public void keyPressed() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = true;
+            // println("-->> shiftIsDown " + shiftIsDown);
+            return;
+        }
     	if (key != CODED) {
     		parseKey(key, keyCode);
     	}
     	else {
-    		float g = audioOut.getGain();
 			if (keyCode == UP) {
-				setAudioGain(g + 3.0f);
-				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+				adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == DOWN) {
-				setAudioGain(g - 3.0f);
-				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+				adjustAudioGain(shiftIsDown ? -3.0f : -1.0f);
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
-			else if (keyCode == RIGHT) {
-
+			else if (keyCode == RIGHT) {				
+				if (!shiftIsDown) {
+					adjustPoolGain(3.0f);
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
 			else if (keyCode == LEFT) {
-
+				if (!shiftIsDown) {
+					adjustPoolGain(-3.0f);					
+					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+				} else {
+					adjustGranGain(-3.0f);
+					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
+				}
 			}
     	}
     }
 
-	
-    /**
-     * Handles key press events passed on by the built-in keyPressed method. 
-     * By moving key event handling outside the built-in keyPressed method, 
-     * we make it possible to post key commands without an actual key event.
-     * Methods and interfaces and even other threads can call parseKey(). 
-     * This opens up many possibilities and a some dangers, too. 
-     * @see TutorialOne_04_UDP.java (Eclipse) or TutorialOne_05_UDP (Processing)
-     * for an example of external calls to parseKey().
-     * 
-     * @param key
-     * @param keyCode
-     */
-    public void parseKey(char key, int keyCode) {
-    	switch(key) {
-    	case ' ': //  start or stop animation
-    		if (isListening) {
-    			println("-- animation is not run when you moving through the windowed buffer");			
-    		}
-    		else {
-    			isAnimating = !isAnimating;
-    			println("-- animation is " + isAnimating);
-    		}
-    		break;
-    	case 'd': // turn drawing on or off
-    		// turn off mouse tracking that sets shift value for animation
-    		isTrackMouse = false; 
-    		// turn off animation (you can try drawing with it on, just press the spacebar)
-    		isAnimating = false;
-    		isDrawMode = !isDrawMode;
-    		println(isDrawMode ? "----- Drawing is turned on" : "----- Drawing is turned off");
-    		if (!isDrawMode)
-    			this.curveMaker = null;
-    		break;
-    		//	  case 'm': // turn mouse tracking on or off, a distraction better omitted
-    		//	    isTrackMouse = !isTrackMouse;
-    		//	    println("-- mouse tracking is " + isTrackMouse);
-    		//	    break;
-    	case 'c': // apply color from image file to display image
-    		chooseColorImage();
-    		break;
-    	case 'k': // apply the hue and saturation in the colors array to mapImage 
-    		mapImage.loadPixels();
-    		applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
-    		mapImage.updatePixels();
-    		break;
-    	case 'p': // play brushstrokes with a time lapse between each
-    		playBrushstrokes(2000);
-    		break;
-    	case 'f': // toggle granular envelope and timing
-    		isGranular = !isGranular;
-    		println("-- isGranular is "+ isGranular);
-    		break;
-    	case 'o': case 'O': // open an audio or image file
-    		chooseFile();
-    		break;
-    	case 's': // save image to a PNG file
-    		saveToImage();
-    		break;
-    	case 'S': // save audio to a WAV file
-    		saveToAudio();
-    		break;
-    	case ']': // jump half window ahead in the buffer
-    		moveAudioWindow(windowBuff.getWindowSize()/2);
-    		drawSignal();
-    		break;
-    	case '[': // jump half window back in the buffer
-    		moveAudioWindow(-windowBuff.getWindowSize()/2);
-    		drawSignal();
-    		break;
-    	case '}': // jump whole window ahead in the buffer
-    		moveAudioWindow(windowBuff.getWindowSize());
-    		drawSignal();
-    		break;
-    	case '{': // jump whole window back in the buffer
-    		moveAudioWindow(-windowBuff.getWindowSize());
-    		drawSignal();
-    		break;
-    	case 'r': // rewind the windowed audio buffer
-    		resetAudioWindow();
-    		drawSignal();
-    		break;
-    	case 'u': // mute audio
-    		isMuted = !isMuted;
-    		if (isMuted) {
-    			audioOut.mute();
-    		}
-    		else {
-    			audioOut.unmute();
-    		}
-    		String msg = isMuted ? "muted" : "unmuted";
-    		println("---- audio out is "+ msg);
-    		break;
-    	case 't': // turn stream capture on or off
-    		if (anthemSignal != null) {
-    			isListening = listenToAnthem(!isListening);
-    			if (isListening) 
-    				isAnimating = false;		// generally don't want to animate and stream at the same time
-    			totalShift = 0;
-    		}
-    		else {
-    			println("---- You need to load an audio file before you can window through the buffer.");
-    		}
-    		break;
-    	case 'w': // write the image colors to the audio buffer as transcoded values
-    		// prepare to copy image data to audio variables
-    		// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-    		if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-    		audioSignal = playBuffer.getChannel(0);
-    		writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-    		// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-    		playBuffer.setChannel(0, audioSignal);
-    		audioLength = audioSignal.length;
-    		println("--->> Wrote image to audio as audio data.");
-    		break;
-    	case 'W': // write the audio buffer samples to the image as color values
-    		writeAudioToImage(audioSignal, mapper, mapImage, chan);
-    		println("--->> Wrote audio to image as pixel data.");
-    		break;
-    	case 'x': // delete the current active brush shape or the oldest brush shape
-    		if (activeBrush != null) {
-    			removeActiveBrush();
-    		}
-    		else {
-    			removeOldestBrush();
-    		}
-    		break;
-    	case 'X': // delete the most recent brush shape
-    		removeNewestBrush();
-    		break;
-    	case 'y': // turn rain (random audio events) on and off
-    		isRaining = !isRaining;
-    		println("---- isRaining = "+ isRaining);
-    		break;
-    	case 'z': // reset brushstrokes and audio buffer (you may need to reload audio)
-    		isListening = listenToAnthem(false);
-    		reset(true);
-    		break;
-    	case 'V': // record a video
-    		// records a complete video loop with following actions:
-    		// Go to frame 0, turn recording on, turn animation on.
-    		// This will record a complete video loop, from frame 0 to the
-    		// stop frame value in the GUI control panel.
-    		step = 0;
-    		renderFrame(step);
-    		isRecordingVideo = true;
-    		oldIsAnimating = isAnimating;
-    		isAnimating = true;
-    	case 'h': case 'H': // show help and key commands
-    		showHelp();
-    		break;
-    	default:
-    		break;
-    	}
+    @Override
+    public void keyReleased() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = false;
+            // println("-->> shiftIsDown " + shiftIsDown);
+        }
     }
-
+    
 	/**
-	 * Rewinds WindowedBuffer instance windowBuff to the beginning of the audio buffer.
+	 * Handles key press events passed on by the built-in keyPressed method. 
+	 * By moving key event handling outside the built-in keyPressed method, 
+	 * we make it possible to post key commands without an actual key event.
+	 * Methods and interfaces and even other threads can call parseKey(). 
+	 * This opens up many possibilities and a some risks, too.  
+	 * 
+	 * @param key        the key that was pressed, as a char
+	 * @param keyCode    keyCode for the key that was pressed
 	 */
-	public void resetAudioWindow() {
-		windowBuff.reset();
-		audioSignal = windowBuff.nextWindow();
-		playBuffer.setChannel(0, audioSignal);
-		totalShift = 0;
-	}
-
-	/**
-	 * Moves WindowedBuffer instance windowBuff's window to the index howFar.
-	 */
-	public void moveAudioWindow(int howFar) {
-		int i = this.windowBuff.getIndex();
-		audioSignal = windowBuff.gettWindowAtIndex(i + howFar);
-		playBuffer.setChannel(0, audioSignal);
-		// println("---->> audioSignal[0] = "+ audioSignal[0]);
-		totalShift = 0;
-	}
-
-	/**
-	 * Sets audioOut.gain.
-	 * @param g   gain value for audioOut, in decibels
-	 */
-	public void setAudioGain(float g) {
-		audioOut.setGain(g);
-		gain = audioOut.getGain();
+	public void parseKey(char key, int keyCode) {
+		String msg;
+		switch(key) {
+		case ' ': // (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event
+			if (hoverBrush != null) {
+				if (hoverBrush.output() == BrushOutput.SAMPLER) {
+					scheduleSamplerBrushClick(hoverBrush);    // Sampler brush clicked event
+				} else {
+					scheduleGranularBrushClick(hoverBrush);   // Granular brush clicked event
+				}
+			}
+			else {
+				audioMouseClick(mouseX, mouseY);
+			}
+			break;
+		case '1': // set brushstroke under cursor to PathMode ALL_POINTS
+		    // if (activeBrush != null) activeBrush.cfg().pathMode = PathMode.ALL_POINTS;
+		    if (hoverBrush != null) hoverBrush.cfg().pathMode = PathMode.ALL_POINTS;
+	        println("-- hover brush path mode is now " + PathMode.ALL_POINTS);		    
+		    break;
+		case '2': // set brushstroke under cursor to PathMode REDUCED_POINTS
+		    if (hoverBrush != null) hoverBrush.cfg().pathMode = PathMode.REDUCED_POINTS;
+	        println("-- hover brush path mode is now " + PathMode.REDUCED_POINTS);		    
+		    break;
+		case '3': // set brushstroke under cursor to PathMode CURVE_POINTS
+		    if (hoverBrush != null) hoverBrush.cfg().pathMode = PathMode.CURVE_POINTS;
+	        println("-- hover brush path mode is now " + PathMode.CURVE_POINTS);		    
+		    break;
+		case 't': // set brushstroke under cursor to use Sampler or Granular synth
+		    if (hoverBrush != null) {
+		    	hoverBrush.setOutput(hoverBrush.output() == BrushOutput.SAMPLER ? BrushOutput.GRANULAR : BrushOutput.SAMPLER);
+			    hoverBrush.cfg.pathMode = defaultPathModeFor(hoverBrush.output());
+		        println("-- hover brush output is now " + hoverBrush.output());
+		    }
+		    break;
+		case 'f': // set brushstroke under cursor to FIXED hop mode for granular events
+			if (hoverBrush != null) {
+				hoverBrush.hopMode = HopMode.FIXED;
+				println("-- hover brush hop mode is now " + hoverBrush.hopMode());
+			}
+			break;
+		case 'g': // set brushstroke under cursor to GESTURE hop mode for granular events
+			if (hoverBrush != null) {
+				hoverBrush.hopMode = HopMode.GESTURE;
+				println("-- hover brush hop mode is now " + hoverBrush.hopMode());
+			}
+			break;
+		case 'y': // select granular or sampler synth for click response
+			useGranularSynth = !useGranularSynth;
+			String synth = (useGranularSynth) ? "granular." : "sampler.";
+			println("-- default synth for click events is "+ synth);
+			break;
+		case 'r': // select long or short grain duration 
+			useShortGrain = !useShortGrain;
+			granSamples = useShortGrain ? shortSample : longSample;
+			hopSamples = granSamples/4;
+			initGranularParams();
+			println("-- Granular synth grain length = "+ granSamples +" samples with "+ hopSamples +" samples hop length");
+			break;
+		case 'b': // toggle between long burst grains and short burst grains
+			useLongBursts = !useLongBursts;
+			burstGrains = useLongBursts ? maxBurstGrains : 1;
+			initGranularParams();
+			msg = useLongBursts ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
+			println("-- Granular synth uses "+ msg +" grains.");
+			break;
+		case 'p': // jitter the pitch of granular gestures
+			usePitchedGrains = !usePitchedGrains;
+			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
+			println("-- Play granular synth with "+ msg);
+			break;
+		case 'P': // adjust pitch of current brushstroke
+			if (hoverBrush == null) return;
+			pitchScaling = hoverBrush.pitchRatio();
+			if (pitchScaling == defaultPitchScaling) {
+				pitchScaling = lowPitchScaling;
+			} else if (pitchScaling == lowPitchScaling) {
+				pitchScaling = highPitchScaling;
+			} else if (pitchScaling == highPitchScaling) {
+				pitchScaling = defaultPitchScaling;
+			} else {
+				pitchScaling = defaultPitchScaling;
+			}
+			hoverBrush.setPitchRatio(pitchScaling);
+			msg = "hover brush pitch scaling set to "+ hoverBrush.pitchRatio();
+			println("-- "+ msg);
+			break;
+		case '>': case '.': // increment epsilon value of current brush (reduced points decrease)
+			if (hoverBrush != null) {
+				float e = hoverBrush.curve.getEpsilon();
+				e = e < 32 ? e + 1 : e;
+				setBrushEpsilon(hoverBrush, e);
+				println("-- epsilon for current brush is "+ hoverBrush.curve.getEpsilon());
+			}
+			break;
+		case '<': case ',': // decrement epsilon value of current brush (reduced points increase)
+			if (hoverBrush != null) {
+				float e = hoverBrush.curve.getEpsilon();
+				e = e > 1 ? e - 1 : e;
+				setBrushEpsilon(hoverBrush, e);
+				println("-- epsilon for current brush is "+ hoverBrush.curve.getEpsilon());
+			}
+			break;
+		case ']': // increment curve steps value of current brush
+			if (hoverBrush != null) {
+				int cs = hoverBrush.curve.getCurveSteps();
+				cs = cs < 32 ? cs + 1 : cs;
+				setBrushCurveSteps(hoverBrush, cs);
+				println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
+			}
+			break;
+		case '[': // decrement curve steps value of current brush
+			if (hoverBrush != null) {
+				int cs = hoverBrush.curve.getCurveSteps();
+				cs = cs > 1 ? cs - 1 : cs;
+				setBrushCurveSteps(hoverBrush, cs);
+				println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
+			}
+			break;
+		case 'm': // change the Sampler noise reduction profile
+			pool.cycleMixProfile();
+			println("-- mix profile is "+ pool.getMixProfile().name());
+			break;
+		case 'e': // change the envelope we're using 
+			presetIndex = (presetIndex + 1) % envPresets.length;
+			defaultEnv = envPreset(envPresets[presetIndex]);
+			println("-- default envelope is "+ envPresets[presetIndex] +", "+ defaultEnv.toString());
+			break;
+		case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
+			isAdjustEnvelope = !isAdjustEnvelope;
+			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+			break;
+		case 'a': //  start or stop animation (bitmap rotation along the signal path)
+			isAnimating = !isAnimating;
+			println("-- animation is " + isAnimating);
+			break;
+		case '/': // turn drawing on or off
+			// turn off animation (if you insist, you can try drawing with it on, just press the 'a' key)
+			isAnimating = false;
+			isDrawMode = !isDrawMode;
+			println(isDrawMode ? "----- Drawing is turned on" : "----- Drawing is turned off");
+			break;
+		case 'd': // toggle play audio on new brush 
+			doPlayOnNewBrush = !doPlayOnNewBrush;
+			println("-- play audio when creating a new brush is "+ (doPlayOnNewBrush ? "ON" : "OFF"));
+			break;
+		case 'c': // apply color from image file to display image
+			chooseColorImage();
+			break;
+		case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
+			applyColorMapToDisplay(false);
+			break;
+		case 'K': // apply hue and saturation in colors to baseImage and mapImage
+			applyColorMapToDisplay(true);
+			break;
+		case 'j': // turn audio and image blending on or off
+			isBlending = !isBlending;
+			println("-- isBlending is "+ isBlending +" (images blend only if chan = ChannelNames.ALL)");
+			break;
+		case 'n': // normalize the audio buffer to -6.0dB
+			audioSignal = playBuffer.getChannel(0);
+			normalize(audioSignal, -6.0f);
+			updateAudioChain(audioSignal);
+			ensureSamplerReady();
+			ensureGranularReady();
+		    println("---- normalized");
+			break;
+		case 'L': case 'l': // determine whether to load a new file to both image and audio or not
+			isLoadToBoth = !isLoadToBoth;
+			msg = isLoadToBoth ? "loads to both audio and image. " : "loads only to selected format. ";
+			println("---- isLoadToBoth is "+ isLoadToBoth +", opening a file "+ msg);
+			break;
+		case 'o': case 'O': // open an audio or image file and load to image or audio buffer or both
+			chooseFile();
+			break;
+		case 's': // save display image to a PNG file
+			saveToImage();
+			break;
+		case 'S': // save audio buffer to a .wav file
+			saveToAudio();
+			break;
+		case 'w': // write the image HSB Brightness channel to the audio buffer as transcoded sample values 
+			// TODO refactor with loadImageFile() and loadAudioFile() code
+			// prepare to copy image data to audio variables
+			// resize the buffer to mapSize, if necessary -- signal will not be overwritten
+			if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
+			audioSignal = playBuffer.getChannel(0);
+			// transcode mapImage brightness channel in HSB color space to audio sample values
+			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+			commitMapImageToBaseImage();
+			// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
+			updateAudioChain(audioSignal);
+			println("--->> Wrote image to audio as audio data.");
+		    // load the buffer of our PASamplerInstrument (it will use a copy)
+			ensureSamplerReady();
+			ensureGranularReady();
+			break;
+		case 'W': // write the audio buffer samples to the image as color values
+			renderAudioToMapImage(chan, totalShift);
+			println("--->> Wrote audio to image as pixel data.");
+			break;
+		case 'x': // delete the current active brush shape or the oldest brush shape
+			if (activeBrush != null) removeHoveredOrOldestBrush();
+			break;
+		case 'X': // delete the most recent brush shape
+			removeNewestBrush();
+			break;
+		case 'u': // mute audio
+			isMuted = !isMuted;
+			if (isMuted) {
+				audioOut.mute();
+			}
+			else {
+				audioOut.unmute();
+			}
+			msg = isMuted ? "muted" : "unmuted";
+			println("---- audio out is "+ msg);
+			break;
+		case 'V': // record a video
+			// records a complete video loop with following actions:
+			// Go to frame 0, turn recording on, turn animation on,
+			// record animSteps number of frames. 
+		    // not of much use in this sketch, but here to keep code complete
+			step = 0;
+			renderFrame(step);
+			isRecordingVideo = true;
+			oldIsAnimating = isAnimating;
+			isAnimating = true;
+			break;
+		case 'h': case 'H': // show help message in the console
+			showHelp();
+			break;
+		default:
+			parseKeyWB(key, keyCode);
+		}
 	}
 	
+	public void parseKeyWB(char key, int keyCode) {
+		switch(key) {
+		case 'T':
+			isWindowing = !isWindowing;
+			if (isWindowing) isAnimating = false;
+			totalShift = 0;
+			println("---- WindowBuffer traversal is " + (isWindowing ? "ON" : "OFF"));
+			break;
+		case '}':
+			moveAudioWindow(windowBuff != null ? windowBuff.getWindowSize() : mapper.getSize());
+			break;
+		case '{':
+			moveAudioWindow(windowBuff != null ? -windowBuff.getWindowSize() : -mapper.getSize());
+			break;
+		case ')':
+			moveAudioWindow(windowBuff != null ? windowBuff.getWindowSize() / 2 : mapper.getSize() / 2);
+			break;
+		case '(':
+			moveAudioWindow(windowBuff != null ? -windowBuff.getWindowSize() / 2 : -mapper.getSize() / 2);
+			break;
+		case 'R':
+			resetAudioWindow();
+			break;
+		case 'Y':
+			isRaining = !isRaining;
+			println("---- WindowBuffer raindrops are " + (isRaining ? "ON" : "OFF"));
+			break;
+		default:
+			break;
+		}
+	}
+
 	/**
 	 * to generate help output, run RegEx search/replace on parseKey case lines with:
 	 * // case ('.'): // (.+)
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
-		println(" * Press ' ' to  start or stop animation.");
-		println(" * Press 'd' to turn drawing on or off.");
+		println(" * Press UP ARROW to increase audio gain by 3 dB.");
+		println(" * Press DOWN ARROW to decrease audio gain by 3 dB.");
+		println(" * Press RIGHT ARROW to increase Sampler audio gain by 3 dB.");
+		println(" * Press LEFT ARROW to decrease Sampler audio gain by 3 dB.");
+		println(" * Press SHIFT-RIGHT ARROW to increase Granular audio gain by 3 dB.");
+		println(" * Press SHIFT-LEFT ARROW to decrease Granular audio gain by 3 dB.");
+		println(" * Press ' ' (spacebar) to trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
+		println(" * Press '1' to set brushstroke under cursor to PathMode ALL_POINTS.");
+		println(" * Press '2' to set brushstroke under cursor to PathMode REDUCED_POINTS.");
+		println(" * Press '3' to set brushstroke under cursor to PathMode CURVE_POINTS.");
+		println(" * Press 't' to set brushstroke under cursor to use Sampler or Granular synth.");
+		println(" * Press 'f' to set brushstroke under cursor to FIXED hop mode for granular events.");
+		println(" * Press 'g' to set brushstroke under cursor to GESTURE hop mode for granular events.");
+		println(" * Press 'y' to select granular or sampler synth for click response.");
+		println(" * Press 'r' to select long or short grain duration .");
+		println(" * Press 'b' to toggle between long burst grains and short burst grains.");
+		println(" * Press 'p' to jitter the pitch of granular gestures.");
+		println(" * Press 'P' to adjust pitch of current brushstroke.");
+		println(" * Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).");
+		println(" * Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).");
+		println(" * Press ']' to increment curve steps value of current brush.");
+		println(" * Press '[' to decrement curve steps value of current brush.");
+		println(" * Press 'm' to change the Sampler noise reduction profile.");
+		println(" * Press 'e' to change the envelope we're using .");
+		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
+		println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
+		println(" * Press 'd' to toggle play audio on new brush .");
 		println(" * Press 'c' to apply color from image file to display image.");
-		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
-		println(" * Press 'p' to play brushstrokes with a time lapse between each.");
-		println(" * Press 'f' to toggle granular envelope and timing.");
-		println(" * Press 'o' or 'O' to open an audio or image file.");
-		println(" * Press 's' to save image to a PNG file.");
-		println(" * Press 'S' to save audio to a WAV file.");
-		println(" * Press ']' to jump half window ahead in the buffer.");
-		println(" * Press '[' to jump half window back in the buffer.");
-		println(" * Press '}' to jump whole window ahead in the buffer.");
-		println(" * Press '{' to jump whole window back in the buffer.");
-		println(" * Press 'r' to rewind the windowed audio buffer.");
-		println(" * Press UP arrow to increase gain by 3.0 dB.");
-		println(" * Press DOWN arrow to decrease gain by 3.0 dB.");
-		println(" * Press 'u' to mute audio.");
-		println(" * Press 't' to turn stream capture on or off.");
-		println(" * Press 'w' to write the image colors to the audio buffer as transcoded values.");
+		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
+		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
+		println(" * Press 'j' to turn audio and image blending on or off.");
+		println(" * Press 'n' to normalize the audio buffer to -6.0dB.");
+		println(" * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.");
+		println(" * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.");
+		println(" * Press 's' to save display image to a PNG file.");
+		println(" * Press 'S' to save audio buffer to a .wav file.");
+		println(" * Press 'w' to write the image HSB Brightness channel to the audio buffer as transcoded sample values .");
 		println(" * Press 'W' to write the audio buffer samples to the image as color values.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
-		println(" * Press 'y' to turn rain (random audio events) on and off.");
-		println(" * Press 'z' to reset brushstrokes and audio buffer (you may need to reload audio).");
+		println(" * Press 'u' to mute audio.");
 		println(" * Press 'V' to record a video.");
-		println(" * Press 'h' or 'H' to show help and key commands.");
+        println("\nWindowBuffer additions:");
+        println("Press 'T' to toggle automatic WindowBuffer traversal.");
+        println("Press '{' or '}' to jump back/forward one full window.");
+        println("Press '(' or ')' to jump back/forward one half window.");
+        println("Press 'R' to rewind the WindowBuffer.");
+        println("Press 'Y' to toggle raindrop point events while windowing.\n");
+		println(" * Press 'h' or 'H' to show help message in the console.");
+	}
+
+	/**
+	 * Sets audioOut.gain.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void adjustAudioGain(float g) {
+		float ag = audioOut.getGain();
+		ag += g;
+		if (ag > 12.0f || ag < -64.0f) return;
+		audioOut.setGain(ag);
+		outputGain = audioOut.getGain();
+	}
+
+	/**
+	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustPoolGain(float g) {
+		float pg = pool.getGainDb();
+		pg += g;
+		if (pg > 12.0f || pg < -64.0f) return;
+		pool.setGainDb(pg);
 	}
 	
-
+	/**
+	 * Sets Granular instrument gain in dB.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void adjustGranGain(float g) {		
+		float gg = gDir.getInstrument().getGlobalGainDb();
+		gg += g;
+		if (gg > 12.0f || gg < -64.0f) return;
+		gDir.getInstrument().setGlobalGainDb(gg);
+	}
+	
+	
 	/**
 	 * Utility method for applying hue and saturation values from a source array of RGB values
 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
-	 * Available as a static method in PixelAudio class PixelAudioMapper.
 	 * 
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
 	 * @param graySource     an target array of RGB data from which to obtain brightness values
@@ -972,17 +1220,71 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
 	 */
 	public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
-	  if (colorSource == null || graySource == null || lut == null) 
-	    throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
-	  if (colorSource.length != graySource.length || colorSource.length != lut.length) 
-	    throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
-	  // initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
-	  float[] hsbPixel = new float[3];
-	  for (int i = 0; i < graySource.length; i++) {
-	    graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
-	  }
-	  return graySource;
+		return applyColorShifted(colorSource, graySource, lut, 0);
 	}
+
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+	 * taking into account any pixels that were shifted.
+	 * 
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param shift          number of pixels/array indices to shift
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
+	public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
+	    if (colorSource == null || graySource == null || lut == null)
+	        throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
+	    if (colorSource.length != graySource.length || colorSource.length != lut.length)
+	        throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
+	    int n = graySource.length;
+	    int s = ((shift % n) + n) % n; // wrap + allow negative shifts
+	    float[] hsbPixel = new float[3];
+	    for (int i = 0; i < n; i++) {
+	        int srcIdx = lut[i] + s;
+	        if (srcIdx >= n) srcIdx -= n; // faster than % in tight loop
+	        graySource[i] = PixelAudioMapper.applyColor(colorSource[srcIdx], graySource[i], hsbPixel);
+	    }
+	    return graySource;
+	}	
+
+	/**
+	 * Apply color map hue and saturation to mapImage or baseImage.
+	 *
+	 * @param updateBaseImage    if true, update baseImage, otherwise just update mapImage
+	 */
+	public void applyColorMapToDisplay(boolean updateBaseImage) {
+		if (updateBaseImage) {
+			baseImage.loadPixels();
+			applyColor(spectrum, baseImage.pixels, mapper.getImageToSignalLUT());
+			baseImage.updatePixels();
+			refreshMapImageFromBase();
+		} else {
+			refreshMapImageFromBase();
+			mapImage.loadPixels();
+			applyColorShifted(spectrum, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
+			mapImage.updatePixels();
+		}
+	}
+
+	// *** WindowedBuffer support *** //	
+	public void resetAudioWindow() {
+		if (windowBuff == null) return;
+		windowBuff.reset();
+		refreshWindowFromBacking(false);
+	}
+
+	// *** WindowedBuffer support *** //
+	public void moveAudioWindow(int delta) {
+		if (windowBuff == null || anthemSignal == null || anthemSignal.length == 0) return;
+		int next = PixelAudioMapper.wrap(windowBuff.getIndex() + delta, anthemSignal.length);
+		windowBuff.setIndex(next);   // or equivalent setter in promoted WindowedBuffer
+		refreshWindowFromBacking(false);
+	}
+
 	
 	
 	/*----------------------------------------------------------------*/
@@ -997,16 +1299,16 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * Here is a special section of code for TutorialOne and other applications that
 	 * color a grayscale image with color data from a file. The color and saturation
 	 * come from the selected file, the brightness (gray values, more or less) come
-	 * from an image you supply. 
+	 * from an image you supply, such as display image. 
 	 */
 
+	
 	/**
 	 * Call to initiate process of opening an image file to get its color data.
 	 */
 	public void chooseColorImage() {
 		selectInput("Choose an image file to apply color: ", "colorFileSelected");
 	}
-	
 
 	/**
 	 * callback method for chooseColorImage() 
@@ -1025,7 +1327,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 				imageFileTag = fileTag;
 				println("--- Selected color file "+ fileName +"."+ fileTag);
 				// apply the color data (hue, saturation) in the selected image to our display image, mapImage
-				applyImageColorToMapImage(imageFile);
+				applyImageColor(imageFile, mapImage);
 			} else {
 				println("----- File is not a recognized image format ending with \"png\", \"jpg\", or \"jpeg\".");
 			}
@@ -1034,14 +1336,13 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		}
 	}
 	
-	
     /**
-     * Apply the hue and saturation channels of one image to another image, 
-     * leaving its brightness channel unchanged.
-     * @param colorImage     image that is the source of hue and saturation values
+     * Apply the hue and saturation of a chosen image file to the brightness channel of the display image.
+     * @param imgFile        selected image file, source of hue and saturation values
      * @param targetImage    target image where brightness will remain unchanged
      */
-    public void applyImageColor(PImage colorImage, PImage targetImage) {
+    public void applyImageColor(File imgFile, PImage targetImage) {
+		PImage colorImage = loadImage(imgFile.getAbsolutePath());
 		int w = colorImage.width > mapImage.width ? targetImage.width : colorImage.width;
 		int h = colorImage.height > targetImage.height ? targetImage.height : colorImage.height;
         float[] hsbPixel = new float[3];
@@ -1059,19 +1360,13 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
         }
         targetImage.updatePixels();
 	}
-    
-    
-    public void applyImageColorToMapImage(File imgFile) {
-    	PImage colorImage = loadImage(imgFile.getAbsolutePath());
-    	applyImageColor(colorImage, mapImage);
-    }
 	
 	// -------- END FILE I/O FOR APPLYING COLOR --------- //
-    
     
     /*
      * Here is a section of "regular" file i/o methods for audio and image files.
      */
+	
 	
 	/**
 	 * Wrapper method for Processing's selectInput command
@@ -1079,11 +1374,8 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	public void chooseFile() {
 		oldIsAnimating = isAnimating;
 		isAnimating = false;
-		oldIsListening = isListening;
-		isListening = listenToAnthem(false);
 		selectInput("Choose an audio file or an image file: ", "fileSelected");
 	}
-	
 	
 	/**
 	 * callback method for chooseFile(), handles standard audio and image formats for Processing.
@@ -1104,7 +1396,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 				audioFilePath = filePath;
 				audioFileName = fileName;
 				audioFileTag = fileTag;
-				println("---- Selected file " + fileName + "." + fileTag + " at "
+				println("----- Selected file " + fileName + "." + fileTag + " at "
 						+ filePath.substring(0, filePath.length() - fileName.length()));
 				loadAudioFile(audioFile);
 			} 
@@ -1118,181 +1410,80 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 				loadImageFile(imageFile);
 			} 
 			else {
-				println("---- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
+				println("----- File is not a recognized audio or image format ending with "
+						+ "\"mp3\", \"wav\", \"aif\", \"aiff\", \"png\", \"jpg\" or \"jpeg\" .");
 			}
 		} 
 		else {
-			println("---- No audio or image file was selected.");
+			println("----- No audio or image file was selected.");
 		}
 		isAnimating = oldIsAnimating;
-		isListening = listenToAnthem(oldIsListening);
 	}
 
-	
 	/**
-	 * LoadAudioFile attempts to load audio data from a selected file into playBuffer and anthemBuffer.
-	 * If audio loads, resizes playBuffer to mapSize and loads the entire file into anthemBuffer, 
-	 * which is passed to the PASamplerInstrumentPool audio sampling instrument "pool". 
-	 * In the context of a windowed buffer as audio source, as in TutorialOneWindowBuffer,
-	 * blending is not applied to the WindowedBuffer instance, but only to playBuffer. I have
-	 * ignored it in this example code. It might make sense to use it to blend images during 
-	 * a performance, but I leave that to future development by others or by myself.
+	 * Attempts to load audio data from a selected file into playBuffer, then calls
+	 * writeAudioToImage() to transcode audio data and write it to mapImage.
+	 * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
 	 * 
 	 * @param audFile    an audio file
 	 */
 	public void loadAudioFile(File audFile) {
-		boolean isLoaded = false;
+        println("-- local loadAudioFile ");
+        boolean wasAnimating = isAnimating;
+        boolean wasWindowing = isWindowing;
+        boolean wasBlending = isBlending;
+        isAnimating = false;
+        isWindowing = false;
+        isBlending = false;
+        // hard stop old sampler/granular activity before replacing buffers
+        suspendWindowAudio();
+        // now the standard calls for loading audio from a file
+		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
+		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
+        // load the audio file and resample it if necessary
+		if (fileSampleRate > 0) {
+			if (fileSampleRate != audioOut.sampleRate()) {
+				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+				buff.setBufferSize(resampled.length);
+				buff.setChannel(0, resampled);
+				bufferSampleRate = audioOut.sampleRate();
+			}
+			else {
+				bufferSampleRate = fileSampleRate;
+			}
+			this.audioFileLength = buff.getBufferSize();
+			println("---- file sample rate = "+ this.fileSampleRate 
+					+", buffer sample rate = "+ bufferSampleRate
+					+", audio output sample rate = "+ audioOut.sampleRate());
+		}
+		else {
+			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
+			return;
+		}
+		// everything looks good so far, proceed (but blending is turned off) 
+		// TODO omit blending with window buffer
 		if (isBlending) {
-			MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
-			fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
-			if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
-			// fileSampleRate > 0 means we read audio from the file
-			isLoaded = (fileSampleRate > 0);
-			if (isLoaded) {
-				println("---- file sample rate is "+ fileSampleRate);
-				// TODO we're ignoring possibly different sampling rates in the playBuffer and buff, does it matter?
-				blendInto(playBuffer, buff, 0.5f, false, -12.0f);    // mix audio sources without normalization
-			}
+		    blendInto(playBuffer, buff, 0.5f, false, -12.0f);
+		    updateAudioChain(playBuffer.getChannel(0), bufferSampleRate);
 		}
 		else {
-			// read audio file into our MultiChannelBuffer, buffer size will be adjusted to match the file
-			fileSampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), playBuffer);
-			// sampleRate > 0 means we read audio from the file
-			isLoaded = (fileSampleRate > 0);
-			if (isLoaded) {
-				println("---- file sample rate is "+ fileSampleRate);
-				// save the length of the buffer as read from the file, for future use
-				this.audioFileLength = playBuffer.getBufferSize();
-				// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-				if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-			}
+		    updateAudioChain(buff.getChannel(0), bufferSampleRate);
 		}
-		if (isLoaded) {
-			loadAnthem(audFile);    // load the complete file into windowed buffer
-			// because playBuffer is used by synth and pool and should not change, while audioSignal changes
-			// when the image animates, we don't want playBuffer and audioSignal to point to the same array
-			// so we copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
-			audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-			audioLength = audioSignal.length;
-			if (isLoadToBoth) writeAudioToImage(audioSignal, mapper, mapImage, chan);
-			totalShift = 0;    // reset animation shift when audio is reloaded
+		// update dependent audio sources
+		if (isLoadToBoth) {
+		    println("-- loading transcoded audio to display image\n");
+		    renderAudioToMapImage(chan, 0);   // or writeAudioToImage(audioSignal, mapper, mapImage, chan)
+		    commitMapImageToBaseImage();
 		}
-		else {
-			println("---->> File did not load or was empty.");
-		}
-	}
-
-	
-	public float loadAnthem(File audFile) {
-		anthemBuffer = new MultiChannelBuffer(1, 1); // dummy buffer
-		float fileSampleRate = minim.loadFileIntoBuffer(audFile.getAbsolutePath(), anthemBuffer);
-		if (fileSampleRate == 0) {
-			return -1;
-		}
-		else {
-			// if anthemBuffer size is smaller than mapper size, padd it to fit
-			if (anthemBuffer.getBufferSize() < mapper.getSize()) anthemBuffer.setBufferSize(mapper.getSize());
-			// save the length of the buffer as read from the file, for future use
-			this.audioFileLength = anthemBuffer.getBufferSize();
-			this.windowHopSize = (int) (fileSampleRate/this.frameRate);
-			anthemSignal = anthemBuffer.getChannel(0);
-			windowBuff = new WindowedBuffer(anthemSignal, mapSize, windowHopSize);
-			// this.instrument = new WFSamplerInstrument(anthemBuffer, audioOut.sampleRate(), 32, audioOut, env); 
-			this.pool = new PASamplerInstrumentPool(anthemBuffer, fileSampleRate, 
-					    poolSize, perInstrumentVoices, audioOut, defaultEnv);
-			println("---- initialized WindowBuffer windowBuff with signal length "+ windowBuff.buffer.length 
-					+", window size "+ windowBuff.getWindowSize() +", hop size "+ windowBuff.getHopSize());
-			println("---- file sample rate = "+ fileSampleRate +", file duration = "+ windowBuff.buffer.length / fileSampleRate 
-					+", window time span = "+ windowBuff.getWindowSize() / fileSampleRate);
-			return fileSampleRate;
-		}
-	}
-
-
-	/**
-	 * Blends audio data from buffer "src" into buffer "dest" in place.
-	 *
-	 * The formula per sample is:
-	 *    dest[i] = weight * src[i] + (1 - weight) * dest[i]
-	 *
-	 * @param dest   Destination buffer (will be modified)
-	 * @param src    Source buffer to blend into dest
-	 * @param weight Blend ratio (0.0 = keep dest, 1.0 = replace with src)
-	 */
-	public static void blendInto(MultiChannelBuffer dest, MultiChannelBuffer src, float weight, boolean normalize, float targetDB) {
-		// Clamp blend ratio to [0, 1]
-		weight = Math.max(0f, Math.min(1f, weight));
-		float invWeight = 1f - weight;
-		// Match dimensions safely
-		int channels = Math.min(dest.getChannelCount(), src.getChannelCount());
-		int frames = Math.min(dest.getBufferSize(), src.getBufferSize());
-		// Perform blending directly on dest channels
-		for (int c = 0; c < channels; c++) {
-			float[] d = dest.getChannel(c);
-			float[] s = src.getChannel(c);
-			for (int i = 0; i < frames; i++) {
-				d[i] = weight * s[i] + invWeight * d[i];
-			}
-		}
-		if (normalize) {
-		    for (int c = 0; c < channels; c++) {
-		        float[] d = dest.getChannel(c);
-		        normalize(d, targetDB);
-		    }
-
-		}
+		// restore state
+        isBlending = wasBlending;
+        isAnimating = wasAnimating;
+        isWindowing = wasWindowing;		
 	}
 	
-	/**
-	 * Normalizes a single-channel signal array to a target RMS level in dBFS.
-	 *
-	 * @param signal    The audio samples to normalize (modified in place)
-	 * @param targetDB  The target RMS level in decibels relative to full scale
-	 *                  (e.g. -3.0f for moderately loud, -12.0f for safe headroom)
-	 */
-	public static void normalize(float[] signal, float targetDB) {
-	    if (signal == null || signal.length == 0) return;
-	    // --- Step 1: Compute RMS of the signal ---
-	    float sumSq = 0f;
-	    for (float v : signal) {
-	        sumSq += v * v;
-	    }
-	    float rms = (float)Math.sqrt(sumSq / signal.length);
-	    // --- Step 2: Convert target dBFS to linear RMS value ---
-	    float targetRMS = (float)Math.pow(10.0, targetDB / 20.0);
-	    // --- Step 3: Compute and apply gain ---
-	    if (rms > 1e-6f) {
-	        float gain = targetRMS / rms;
-	        if (gain > 100.0f) gain = 100.0f; // safety limit
-	        for (int i = 0; i < signal.length; i++) {
-	            signal[i] *= gain;
-	        }
-	    }
-	}
-
-	/**
-	 * Transcodes audio data in sig[] and writes it to color channel chan of mapImage 
-	 * using the lookup tables in mapper to redirect indexing. Calls PixelAudioMapper 
-	 * method mapSigToImg(), which will throw an IllegalArgumentException if 
-	 * sig.length != img.pixels.length or sig.length != mapper.getSize(). 
-	 * 
-	 * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
-	 * @param mapper      a PixelAudioMapper
-	 * @param img         a PImage
-	 * @param chan        a color channel
-	 */
-	public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
-		// If sig.length == mapper.getSize() == mapImage.width * mapImage.height, we can call safely mapper.mapSigToImg()	
-		img.loadPixels();
-		mapper.mapSigToImg(sig, img.pixels, chan);
-		img.updatePixels();
-	}
-
-
 	/**
 	 * Attempts to load image data from a selected file into mapImage, then calls writeImageToAudio() 
 	 * to transcode HSB brightness channel to audio and writes it to playBuffer and audioSignal.
-	 * If you want to load the image file and audio file separately, comment out writeImageToAudio(). 
 	 * 
 	 * @param imgFile    an image file
 	 */
@@ -1332,25 +1523,99 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 			mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
 		}
 		if (isLoadToBoth) {
-		    // prepare to copy image data to audio variables
-		    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-		    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-		    audioSignal = playBuffer.getChannel(0);
-		    writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-		    // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-		    playBuffer.setChannel(0, audioSignal);
-		    audioLength = audioSignal.length;
-		    if (pool != null) pool.setBuffer(playBuffer);
-		    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, poolSize, 1, audioOut, defaultEnv);
-		    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
-		    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
-		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
-		    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		    audioLength = audioSignal.length;
-			totalShift = 0;    // reset animation shift when audio is reloaded
+			// create a new array for the audio signal
+			float[] sig = new float[mapper.getSize()];
+			audioSignal = sig;
+			// write transcoded pixel data from HSB Brightness channel to audioSignal
+			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+			// update all dependent audio data
+			updateAudioChain(sig);
+			// update baseImage from mapImage
 		}
+		commitMapImageToBaseImage();
 	}
 
+	/**
+	 * Blends audio data from buffer "src" into buffer "dest" in place.
+	 *
+	 * The formula per sample is:
+	 *    dest[i] = weight * src[i] + (1 - weight) * dest[i]
+	 *
+	 * @param dest   Destination buffer (will be modified)
+	 * @param src    Source buffer to blend into dest
+	 * @param weight Blend ratio (0.0 = keep dest, 1.0 = replace with src)
+	 */
+	public static void blendInto(MultiChannelBuffer dest, MultiChannelBuffer src, float weight, boolean normalize, float targetDB) {
+		// Clamp blend ratio to [0, 1]
+		weight = Math.max(0f, Math.min(1f, weight));
+		float invWeight = 1f - weight;
+		// Match dimensions safely
+		int channels = Math.min(dest.getChannelCount(), src.getChannelCount());
+		int frames = Math.min(dest.getBufferSize(), src.getBufferSize());
+		// Perform blending directly on dest channels
+		for (int c = 0; c < channels; c++) {
+			float[] d = dest.getChannel(c);
+			float[] s = src.getChannel(c);
+			for (int i = 0; i < frames; i++) {
+				d[i] = weight * s[i] + invWeight * d[i];
+			}
+		}
+		if (normalize) {
+		    for (int c = 0; c < channels; c++) {
+		        float[] d = dest.getChannel(c);
+		        normalize(d, targetDB);
+		    }
+
+		}
+	}
+		
+	/**
+	 * Normalizes a single-channel signal array to a target RMS level in dBFS (decibels relative to full scale).
+	 * 0 is the maximum digital amplitude. -6.0 dB is 50% of the maximum level. 
+	 *  
+	 * @param signal
+	 * @param targetPeakDB
+	 */
+	public static void normalize(float[] signal, float targetPeakDB) {
+		AudioUtility.normalizeRmsWithCeiling(signal, targetPeakDB, -3.0f);
+	}
+		
+	/**
+	 * Transcodes audio data in audioSignal and writes it to color channel chan of mapImage.
+	 * 
+	 * @param chan     A color channel
+	 * @param shift    number of index positions to shift the audio signal
+	 */
+	public void renderAudioToMapImage(PixelAudioMapper.ChannelNames chan, int shift) {
+	    // Render current audioSignal into mapImage using current mapper & current totalShift
+	    writeAudioToImage(audioSignal, mapper, mapImage, chan, shift);
+	}
+	
+	/**
+	 * Transcodes audio data in sig[] and writes it to color channel chan of img 
+	 * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImgShifted(), 
+	 * which will throw an IllegalArgumentException if sig.length != img.pixels.length
+	 * or sig.length != mapper.getSize(). 
+	 * 
+	 * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
+	 * @param mapper      a PixelAudioMapper
+	 * @param img         a PImage
+	 * @param chan        a color channel
+	 * @param shift       the number of indices to shift when writing audio
+	 */
+	public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan, int shift) {
+		img.loadPixels();
+	    mapper.mapSigToImgShifted(sig, img.pixels, chan, shift); // commit current phase
+	    img.updatePixels();
+	}
+
+	/**
+	 * Sets the alpha channel of an RGBA color, conditionally setting alpha = 0 if all other channels = 0.
+	 * 
+	 * @param argb     an RGBA color value
+	 * @param alpha    the desired alpha value to apply to argb
+	 * @return         the argb color with changed alpha channel value
+	 */
 	public int setAlphaWithBlack(int argb, int alpha) {
 		int[] c = PixelAudioMapper.rgbaComponents(argb);
 		if (c[0] == c[1] && c[1] == c[2] && c[2] == 0) {
@@ -1359,27 +1624,72 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
 	}
 	
+	/**
+	 * Sets the alpha channel of an RGBA color.
+	 * 
+	 * @param argb     an RGBA color value
+	 * @param alpha    the desired alpha value to apply to argb
+	 * @return         the argb color with changed alpha channel value
+	 */
 	public static int setAlpha(int argb, int alpha) {
 		 return (argb & 0x00FFFFFF) | (alpha << 24);
 	}
-	
 
 	/**
-	 * This method writes a color channel from the an image to playBuffer, fulfilling a 
+	 * This method writes a color channel from an image to playBuffer, fulfilling a 
 	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
 	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
 	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync. 
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
 	 * @param sig       an target array of float in audio format 
 	 * @param chan      a color channel
+	 * @param shift     number of indices to shift 
 	 */
-	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
-		sig = mapper.mapImgToSig(img.pixels, sig, chan);
-	}		
+	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan, int shift) {
+		// If img is the *display* (shifted) image, commit its phase into audio:
+		sig = mapper.mapImgToSigShifted(img.pixels, sig, chan, shift);
+	}
 	
+	/**
+	 * Writes a specified channel of mapImage to audioSignal.
+	 * 
+	 * @param chan    the selected color channel
+	 */
+	public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
+		writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
+	}
 	
+	/**
+	 * Writes the mapImage, which may change with animation, to the baseImage, a reference image
+	 * that usually only changes when a new file is loaded.
+	 */
+	public void commitMapImageToBaseImage() {
+		baseImage = mapImage.copy();
+		totalShift = 0;
+	}
+	
+	/**
+	 * Copies the supplied PImage to mapImage and baseImage, sets totalShift to 0 (the images are identical).
+	 * @param img
+	 */
+	public void commitNewBaseImage(PImage img) {
+		baseImage = img.copy();
+		mapImage = img.copy();
+		totalShift = 0;
+	}
+	
+	/**
+	 * Writes baseImage to mapImage with an index position offset of totalShift.
+	 */
+	public void refreshMapImageFromBase() {
+	    mapImage.loadPixels();
+	    mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
+	    mapImage.updatePixels();
+	}
+
 	/**
 	 * Calls Processing's selectOutput method to start the process of saving 
 	 * the current audio signal to a .wav file. 
@@ -1390,7 +1700,9 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		selectOutput("Select an audio file to write to:", "audioFileSelectedWrite");
 	}
 
-	
+	/**
+	 * @param selection    a File to write as audio
+	 */
 	public void audioFileSelectedWrite(File selection) {
 		if (selection == null) {
 			println("Window was closed or the user hit cancel.");
@@ -1409,16 +1721,15 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		}
 	}
 	
-	
 	/**
 	 * Saves audio data to 16-bit integer PCM format, which Processing can also open.
-	 * This same method can be called as a static method in PixelAudio.
+	 * This same method can be called as a static method in AudioUtility.
 	 * 
 	 * @param samples			an array of floats in the audio range (-1.0f, 1.0f)
 	 * @param sampleRate		audio sample rate for the file
 	 * @param fileName			name of the file to save to
-	 * @throws IOException		an Exception you'll need to handle to call this method (see keyPressed entry for 's')
-	 * @throws UnsupportedAudioFileException		another Exception (see keyPressed entry for 's')
+	 * @throws IOException		an Exception you'll need to handle to call this method
+	 * @throws UnsupportedAudioFileException		another Exception
 	 */
 	public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
 	        throws IOException, UnsupportedAudioFileException {
@@ -1441,7 +1752,6 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
 	}
 
-	
 	/**
 	 * Calls Processing's selectOutput method to start the process of saving 
 	 * the mapImage (the offscreen copy of the display image) to a .png file. 
@@ -1451,7 +1761,6 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
 	}
 
-	
 	public void imageFileSelectedWrite(File selection) {
 		if (selection == null) {
 			println("Window was closed or the user hit cancel.");
@@ -1471,117 +1780,342 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	
 	/*----------------------------------------------------------------*/
 	/*                                                                */
-	/*                     BEGIN AUDIO METHODS                        */
+	/*                        AUDIO METHODS                           */
 	/*                                                                */
 	/*----------------------------------------------------------------*/
 	
+	// *** WindowedBuffer support *** //
 	/**
-	 * CALL THIS METHOD IN SETUP()
+	 * CALL THIS METHOD IN SETUP() 
 	 * Initializes Minim audio library and audio variables.
 	 */
-	public void initAudio() { 
+	public void initAudio() {
+    	windowAudioReady = false;    // suspend operations that use the backing buffer
+		// initialize the Minim library
 		minim = new Minim(this);
-		// use the getLineOut method of the Minim object to get an AudioOutput object
+		// Use the getLineOut method of the Minim object to get an AudioOutput object.
+		// PixelAudio instruments require a STEREO output. 1024 is a standard number of
+		// samples for the output buffer to process at one time. You should usually set
+		// the output sampleRate to either 41500 or 48000, standards for digital audio.
 		this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
-		audioOut.setGain(defaultGain);
-		println("---- audio out gain is "+ audioOut.getGain());
+		// set the gain (UP and DOWN arrow keys adjust)
+		audioOut.setGain(outputGain); 
+		println("---- audio out gain is "+ nf(audioOut.getGain(), 0, 2));
 		// create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
+		// the buffer will not have any audio data -- you'll need to open an audio file
 		this.playBuffer = new MultiChannelBuffer(mapSize, 1);
-		this.anthemBuffer = new MultiChannelBuffer(mapSize, 1);
 		this.audioSignal = playBuffer.getChannel(0);
+		this.granSignal = audioSignal;
 		this.audioLength = audioSignal.length;
-		this.anthemSignal = new float[audioLength];
-		System.arraycopy(audioSignal, 0, anthemSignal, 0, audioLength);
-		windowBuff = new WindowedBuffer(anthemSignal, mapSize, 1024);
-		// ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-		defaultEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-		granularEnv = ADSRUtils.fitEnvelopeToDuration(defaultEnv, grainDuration);
+		// start envelope duration at noteDuration
+		envDuration = noteDuration;
+		// setup the backing buffer
+		installBackingSource(playBuffer.getChannel(0), audioOut.sampleRate());
+		// refresh variables that depend on the backing buffer
+		refreshWindowFromBacking(false);
+		windowAudioReady = true;
+		// set up the sampler synth, taking the backing buffer into account
+		ensureSamplerReady();
+		// set up the granular synth, taking the backing buffer into account
+		ensureGranularReady();
+		// initialize audio event animation tracking arrays
+		initTimedEventLists();
+	}
+	
+	// *** WindowedBuffer support *** //
+    /**
+     * Installs a full-file backing source for WindowedBuffer and instruments.
+     * Sets the window size to mapper.getSize() 
+     */
+    void installBackingSource(float[] sig, float sourceSampleRate) {
+        int windowSize = (mapper != null) ? mapper.getSize() : mapSize;
+        if (windowSize <= 0) return;
+
+        int backingSize = Math.max(windowSize, (sig != null) ? sig.length : 0);
+        float[] backing = new float[backingSize];
+        if (sig != null) {
+            System.arraycopy(sig, 0, backing, 0, Math.min(sig.length, backing.length));
+        }
+
+        anthemSignal = backing;
+        anthemBuffer = new MultiChannelBuffer(backing.length, 1);
+        anthemBuffer.setChannel(0, anthemSignal);
+
+        bufferSampleRate = sourceSampleRate;
+        audioFileLength = backing.length;
+        windowHopSize = Math.max(1, Math.round(sourceSampleRate / Math.max(1f, frameRate)));
+        windowBuff = new WindowedBuffer(anthemSignal, windowSize, windowHopSize);
+
+        granSignal = anthemSignal;
+
+        println("---- WindowBuffer backing source length = " + anthemSignal.length
+                + ", window size = " + windowBuff.getWindowSize()
+                + ", hop size = " + windowBuff.getHopSize());
+    }
+
+    // *** WindowedBuffer support *** //
+    /**
+     * Copies the current window into audioSignal and playBuffer. The Sampler and
+     * Granular instruments still read from anthemSignal / anthemBuffer.
+     */
+    void refreshWindowFromBacking(boolean advance) {
+        if (windowBuff == null || anthemSignal == null) return;
+
+        if (advance) {
+            windowBuff.nextWindow(); // advances exactly once
+        }
+
+        int targetSize = mapper.getSize();
+        int start = PixelAudioMapper.wrap(windowBuff.getIndex(), anthemSignal.length);
+
+        if (audioSignal == null || audioSignal.length != targetSize) {
+            audioSignal = new float[targetSize];
+        }
+
+        for (int i = 0; i < targetSize; i++) {
+            audioSignal[i] = anthemSignal[(start + i) % anthemSignal.length];
+        }
+
+        audioLength = audioSignal.length;
+
+        if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+            playBuffer = new MultiChannelBuffer(targetSize, 1);
+        }
+
+        playBuffer.setChannel(0, audioSignal);
+
+        totalShift = 0;
+        renderAudioToMapImage(chan, 0);
+        commitMapImageToBaseImage();
+    }
+
+    // *** WindowedBuffer support *** //
+	/**
+	 * Ensures that all resources and variable necessary for the Sampler synth are ready to go.
+	 */
+	void ensureSamplerReady() {
+        // Prevent super.initAudio() from creating a sampler pool before
+        // anthemBuffer has been installed.
+        if (!windowAudioReady) return;
+        // Prefer anthemBuffer as our source
+        MultiChannelBuffer source = (anthemBuffer != null) ? anthemBuffer : playBuffer;
+        if (source == anthemBuffer) println("-- sampler source is anthemBuffer");
+        if (source == playBuffer) println("-- sampler source is playBuffer");
+        if (source == null) println("-- sampler source is null");
+        float sr = (bufferSampleRate > 0) ? bufferSampleRate : sampleRate;
+        if (source == null) return;
+        // Rebuild the Sampler instrument, pool, when required
+        // Loading a new file to the backing buffer should trigger this
+        boolean needsRebuild =
+                pool == null
+                || pool.isClosed()
+                || source != samplerSourceRef
+                || sr != samplerSourceRateRef;
+
+        if (needsRebuild) {
+            if (pool != null && !pool.isClosed()) {
+                pool.stopAll();
+                pool.close();
+            }
+            pool = new PASamplerInstrumentPool(
+                    source,
+                    sr,
+                    poolSize,
+                    samplerMaxVoices,
+                    audioOut,
+                    defaultEnv
+            );
+            samplerSourceRef = source;
+            samplerSourceRateRef = sr;
+        }
+        else {
+            // Important: keep the whole pool bound to anthemBuffer.
+            // Do not rely on playSample(anthemBuffer, ...) to patch one instrument at a time.
+            pool.setBuffer(source, sr);
+        }
+
+        pool.setGain(samplerGain);
+	}
+	
+    // *** WindowedBuffer support *** //
+	/**
+	 * Ensures that all resources and variable necessary for the Granular synth are ready to go.
+	 */
+	void ensureGranularReady() {
+		if (gParamsGesture == null || gParamsFixed == null) {
+			initGranularParams();
+		}
+	    if (gSynth == null) {
+	    	ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.875f, 0.025f);
+	    	gSynth = buildGranSynth(audioOut, granEnv, gMaxVoices);
+	    	gSynth.setGlobalGain(granularGain);
+	    }
+	    if (granSignal == null) {
+	        granSignal = (audioSignal != null) ? audioSignal : playBuffer.getChannel(0);
+	    }
+	    if (gDir == null) {
+	    	gDir = new PAGranularInstrumentDirector(gSynth);
+	    }
+	    // when we use a backing buffer, point granSignal at anthemSignal
+	    if (anthemSignal != null) granSignal = anthemSignal;
+	}
+	
+	void initTimedEventLists() {
 		// initialize mouse event tracking array
-		timeLocsArray = new ArrayList<TimedLocation>();
-	}
-	
-	
-	/**
-	 * Prepares audioSignal before it is used as an instrument source.
-	 * Modify as needed to prepare your audio signal data. 
-	 * TODO Of limited use. Discard?
-	 */
-	public void renderSignals() {
-		writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-		playBuffer.setChannel(0, audioSignal);
-		audioLength = audioSignal.length;
-	}
-	
-
-	/**
-	 * Typically called from mousePressed with mouseX and mouseY, generates audio events.
-	 * 
-	 * @param x    x-coordinate within a PixelAudioMapper's width
-	 * @param y    y-coordinate within a PixelAudioMapper's height
-	 */
-	public void audioMousePressed(int x, int y) {
-		setSampleVars(x, y);
-		float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-		// update audioSignal and playBuffer if audioSignal hasn't been initialized or if 
-		// playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
-		// TODO logic not used in current version, should be deleted?
-		if (audioSignal == null || isBufferStale) {
-			renderSignals();
-			isBufferStale = false;
-		}
-		if (pool == null) {
-			println("---- You need to load a audio file before you can trigger audio events.");
-		}
-		else {
-			// use the default envelope
-			if (!isGranular) {
-				int len = calcSampleLen();
-				playSample(samplePos, len, defaultGain, defaultEnv, panning);
-				//println("variable duration "+ len);
-			}
-			else {
-				int len = (int)(abs((this.grainDuration) * sampleRate / 1000.0f));
-				playSample(samplePos, len, defaultGain, granularEnv, panning);
-				//println("---- grain "+ len);
-			}
-		}
-	}
-	
-	/**
-	 * Sets variables sampleX, sampleY and samplePos. Arguments x and y may be outside
-	 * the window bounds, sampleX and sampleY will be constrained to window bounds. As
-	 * a result, samplePos will be within the bounds of audioSignal.
-	 * 
-	 * @param x    x coordinate, typically from a mouse event
-	 * @param y    y coordinate, typically from a mouse event
-	 * @return     samplePos, the index of of (x, y) along the signal path
-	 */
-	public int setSampleVars(int x, int y) {
-		// (PApplet.constrain(x, 0, width-1), PApplet.constrain(y, 0, height-1));
-		sampleX = min(max(0, x), width - 1);
-		sampleY = min(max(0, y), height - 1);
-		samplePos = getSamplePos(sampleX, sampleY);
-		return samplePos;
+		pointTimeLocs = new ArrayList<TimedLocation>();
+		samplerTimeLocs = new ArrayList<>();   // capture timing data when drawing
+		grainTimeLocs = new ArrayList<>();
 	}
 
+	/**
+	 * Initializes global variables gParamsGesture and gParamsFixed, which provide basic
+	 * settings for granular synthesis the follows gesture timing or fixed hop timing 
+	 * between grains. 
+	 */
+	public void initGranularParams() {
+		ADSRParams env = this.calculateEnvelopeLinear(granularGain, 1000);
+	    gParamsGesture = GestureGranularParams.builder()
+	            .grainLengthSamples(granSamples)
+	            .hopLengthSamples(hopSamples)
+	            .gainLinear(granularGain)
+	            .looping(false)
+	            .env(env)
+	            .hopMode(GestureGranularParams.HopMode.GESTURE)
+	            .burstGrains(burstGrains)
+	            .build();
+	   gParamsFixed = GestureGranularParams.builder()
+	            .grainLengthSamples(granSamples)
+	            .hopLengthSamples(hopSamples)
+	            .gainLinear(granularGain)
+	            .looping(false)
+	            .env(env)
+	            .hopMode(GestureGranularParams.HopMode.FIXED)
+	            .burstGrains(burstGrains)
+	            .build();
+	}
+		
+	/**
+	 * Handles mouse clicks that happen outside a brushstroke.
+	 * 
+	 * @param x    x-coordinate of mouse click
+	 * @param y    y-coordinate of mouse click
+	 */
+	public void audioMouseClick(int x, int y) {
+		int durationMs = handleClickOutsideBrush(x, y);
+	}
+	
+    // *** WindowedBuffer support *** //
+	/**
+     * Point clicks are mouse location, but the initial samplePos is the 
+     * backing source index. Long granular bursts still create
+     * display points in the current window; playGranularGesture(...) remaps
+     * them to backing indices.
+     * 
+	 * @param x
+	 * @param y
+	 */
+    public int handleClickOutsideBrush(int x, int y) {
+        int localSamplePos = mapper.lookupSignalPosShifted(x, y, totalShift);
+        samplePos = backingIndexFromLocal(localSamplePos);
+
+        if (!useGranularSynth) {
+            ensureSamplerReady();
+            float panning = map(x, 0, width, -0.8f, 0.8f);
+            int len = calcSampleLen();
+            samplelen = playSample(samplePos, len, samplerPointGain, defaultEnv, panning);
+            int durationMS = (int)(samplelen / sampleRate * 1000);
+            pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
+            return durationMS;
+        }
+
+        ensureGranularReady();
+        float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+        final int grainCount = useLongBursts
+                ? 2 * (int)Math.round(noteDuration / hopMsF)
+                : (int)Math.round(noteDuration / hopMsF);
+        println("-- granular point burst with grainCount = " + grainCount);
+
+        java.util.ArrayList<PVector> path = new java.util.ArrayList<>(grainCount);
+        int[] timing = new int[grainCount];
+        for (int i = 0; i < grainCount; i++) {
+            if (useLongBursts) {
+                int local = PixelAudioMapper.wrap(localSamplePos + hopSamples * i, mapper.getSize());
+                path.add(getCoordFromSignalPosLocal(local));
+            }
+            else {
+                path.add(this.jitterCoord(x, y, 3));
+            }
+            timing[i] = Math.round(i * hopMsF);
+        }
+
+        int startTime = millis() + 10;
+        PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+        curve.setDragTimes(timing);
+        curve.setTimeStamp(startTime);
+        GestureSchedule sched = curve.getAllPointsSchedule();
+        playGranularGesture(backingGranularSignal(), sched, gParamsFixed, 1.0f);
+        storeGranularCurveTL(sched, startTime, false);
+        return curve.getTimeOffset();
+    }
+    
+    // *** WindowedBuffer support *** //
+    float[] backingGranularSignal() {
+    	return (anthemSignal != null && anthemSignal.length > 0) ? anthemSignal : audioSignal;
+    }
+
+
+    // *** WindowedBuffer support *** //
 	/**
 	 * Calculates the index of the image pixel within the signal path,
-	 * taking the current window position and animated shifting of pixels 
-	 * and audioSignal into account.
+	 * taking the shifting of pixels and audioSignal into account.
+	 * See MusicBoxBuffer for use of a windowed buffer in this calculation. 
 	 * 
 	 * @param x    an x coordinate within mapImage and display bounds
 	 * @param y    a y coordinate within mapImage and display bounds
 	 * @return     the index of the sample corresponding to (x,y) on the signal path
 	 */
-	public int getSamplePos(int x, int y) {
-		samplePos = mapper.lookupSignalPos(x, y);
-		// calculate how much animation has shifted the indices into the buffer
-		totalShift = (totalShift + shift % mapSize + mapSize) % mapSize;
-		samplePos = (samplePos + totalShift) % mapSize;
-		samplePos += this.windowBuff.getIndex();
-		return samplePos % this.windowBuff.getBufferSize();
+    public int getSamplePos(int x, int y) {
+        int local = mapper.lookupSignalPosShifted(x, y, totalShift);
+        return backingIndexFromLocal(local);
+    }
+
+    // *** WindowedBuffer support *** //
+    int backingIndexFromLocal(int localIndex) {
+        if (windowBuff == null || anthemSignal == null || anthemSignal.length == 0) {
+            return PixelAudioMapper.wrap(localIndex, Math.max(1, mapper.getSize()));
+        }
+        int local = PixelAudioMapper.wrap(localIndex, mapper.getSize());
+        return PixelAudioMapper.wrap(windowBuff.getIndex() + local, anthemSignal.length);
+    }
+
+	/**
+	 * Calculates the display image coordinates corresponding to a specified audio sample index,
+	 * use this version when the position is used to calculate local display coordinates. 
+	 * @param pos    an index into an audio signal, must be between 0 and width * height - 1.
+	 * @return       a PVector with the x and y coordinates
+	 */
+	public PVector getCoordFromSignalPosLocal(int pos) {
+		int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
+		return new PVector(xy[0], xy[1]);
 	}
-		
+
+	// *** WindowedBuffer support *** //
+    /**
+	 * Calculates the display image coordinates corresponding to a specified audio sample index,
+	 * use when the position is relative to the backing buffer. 
+	 * @param pos    an index into an audio signal, must be between 0 and width * height - 1.
+	 * @return       a PVector with the x and y coordinates
+	 * 
+     * Backing-file index -> visible display coordinate, relative to the current window.
+     */
+    public PVector getCoordFromSignalPos(int pos) {
+        int local = pos;
+        if (windowBuff != null && anthemSignal != null && anthemSignal.length > 0) {
+            local = PixelAudioMapper.wrap(pos - windowBuff.getIndex(), mapper.getSize());
+        }
+        int[] xy = mapper.lookupImageCoordShifted(local, totalShift);
+        return new PVector(xy[0], xy[1]);
+    }
 	
 	/**
 	 * Draws a circle at the location of an audio trigger (mouseDown event).
@@ -1590,96 +2124,18 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 */
 	public void drawCircle(int x, int y) {
 		//float size = isRaining? random(10, 30) : 60;
-		fill(color(233, 220, 199));
+		fill(animatedCircleColor);
 		noStroke();
-		circle(x, y, 24);
-	}	
-	/**
-	 * Draws a circle at the location of an audio trigger (mouseDown event).
-	 * @param x		x coordinate of circle
-	 * @param y		y coordinate of circle
-	 * @param d	    diameter of circle
-	 */
-	public void drawCircle(int x, int y, float d, int c) {
-		//float size = isRaining? random(10, 30) : 60;
-		fill(c);
-		noStroke();
-		circle(x, y, d);
-	}	
-	
-	public void raindrops() {
-		float x = random(width/4, 3 * width/4);
-		float y = random(16, height/5);
-//		int signalPos = mapper.lookupSample(x, y);
-//		int[] coords = mapper.lookupCoordinate(signalPos);
-		audioMousePressed((int) x, (int) y);
-	}	
-
-	
-	/**
-	 * TODO update for buffer animation
-	 * @param isStartListening    true if audio stream capture should be initiated, false if it should be ended
-	 * @return    current value of isStartListening
-	 */
-	public boolean listenToAnthem(boolean isStartListening) {
-		if (isStartListening) {
-			if (isFixedLength) {
-
-			}
-			else {
-
-			}
-//			anthemBuffer.loop();
-		}
-		else {
-//			anthemBuffer.pause();
-			if (isFixedLength) {
-
-			}
-		}
-		return isStartListening;
+		circle(x, y, 16);
 	}
+	
 	
 	/*----------------------------------------------------------------*/
-	/*      How do I call playSample()? Let me count the ways.        */
+	/*       See PASamplerInstrument and PASamplerInstrumentPool      */
+	/*       for all the ways you can play a Sampler instrument.      */
+	/*       The ones listed here are the most useful of them.        */
 	/*----------------------------------------------------------------*/
 
-	/**
-	 * Plays an audio sample with the default envelope.
-	 * 
-	 * @param samplePos    position of the sample in the audio buffer
-	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
-	 * @return the calculated sample length in samples
-	 */
-	public int playSample(int samplePos, int samplelen, float amplitude) {
-		if (pool == null) return 0;
-		samplelen = pool.playSample(samplePos, samplelen, amplitude);
-		int durationMS = (int)(samplelen/sampleRate * 1000);
-		timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-		// return the length of the sample
-		return samplelen;
-	}
-
-	/**
-	 * Plays an audio sample with a custom envelope.
-	 * 
-	 * @param samplePos    position of the sample in the audio buffer
-	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
-	 * @param env          an ADSR envelope for the sample
-	 * @return the calculated sample length in samples
-	 */
-	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-		if (pool == null) return 0;
-		samplelen = pool.playSample(samplePos, samplelen, amplitude, env);
-		int durationMS = (int)(samplelen/sampleRate * 1000);
-		timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-		// return the length of the sample
-		return samplelen;
-	}
-
-	
 	/**
 	 * Plays an audio sample with default envelope and stereo pan.
 	 * 
@@ -1689,12 +2145,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
-		if (pool == null) return 0;
-		samplelen = pool.playSample(samplePos, samplelen, amplitude, defaultEnv, pitchScaling, pan);
-		int durationMS = (int)(samplelen/sampleRate * 1000);
-		timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-		// return the length of the sample
-		return samplelen;
+		return playSample(samplePos, samplelen, amplitude, defaultEnv, 1.0f, pan);
 	}
 
 	/**
@@ -1708,15 +2159,10 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
-		if (pool == null) return 0;
-		samplelen = pool.playSample(samplePos, samplelen, amplitude, env, pitchScaling, pan);
-		int durationMS = (int)(samplelen/sampleRate * 1000);
-		// println("---->> adding event to timeLocsArray "+  samplelen, durationMS, millis());
-		timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-		// return the length of the sample
-		return samplelen;
+		return playSample(samplePos, samplelen, amplitude, env, 1.0f, pan);
 	}
 
+	// *** WindowedBuffer support *** //
 	/**
 	 * Plays an audio sample with  with a custom envelope, pitch and stereo pan.
 	 * 
@@ -1724,34 +2170,200 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param samplelen    length of the sample (will be adjusted)
 	 * @param amplitude    amplitude of the sample on playback
 	 * @param env          an ADSR envelope for the sample
-	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher 
+	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = octave higher 
 	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
 	 * @return
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		if (pool == null) return 0;
-		samplelen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-		int durationMS = (int)(samplelen/sampleRate * 1000);
-		timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-		// return the length of the sample
-		return samplelen;
+        if (anthemBuffer == null || pool == null) {
+        	return 0;
+            // return playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+        }
+        println("-- retrofit playSample() call ");
+        int pos = PixelAudioMapper.wrap(samplePos, anthemBuffer.getBufferSize());
+        int len = Math.min(samplelen, anthemBuffer.getBufferSize() - pos);
+        // debugging information for windowed buffer
+        println("---- 06 playSample pos=" + pos
+            + " len=" + len
+            + " anthemBuffer=" + anthemBuffer.getBufferSize()
+            + " windowIndex=" + windowBuff.getIndex());
+		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
 	}
-
 	
-	/**
+	
+    /**
 	 * @return a length in samples with some Gaussian variation
 	 */
-	public int calcSampleLen() {
+	public int calcSampleLen(int durMs, double mean, double variance) {
 		float vary = 0; 
 		// skip the fairly rare negative numbers
 		while (vary <= 0) {
-			vary = (float) PixelAudio.gauss(1.0, 0.0625);
+			vary = (float) PixelAudio.gauss(mean, variance);
 		}
-		samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
+		samplelen = (int)(abs((vary * durMs) * sampleRate / 1000.0f));
 		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 
+	/**
+	 * @return a length in samples with some Gaussian variation
+	 */
+	public int calcSampleLen() {
+		return calcSampleLen(envDuration, 1.0, 0.0625);
+	}
+
+	/**
+	 * Initializes a new PAGranularSynth instance that you probably would pass to a PAGranularInstrumentDirector.
+	 * 
+	 * @param out          and AudioOutput, most likely the one used by this sketch
+	 * @param env          an ADSRParams envelope
+	 * @param numVoices    the number of voices to use for synthesizing simultaneous grains
+	 * @return             a PAGranularSynth instance
+	 */
+	public PAGranularInstrument buildGranSynth(AudioOutput out, ADSRParams env, int numVoices) {
+	    return new PAGranularInstrument(out, env, numVoices);
+	}
+	
+	/**
+	 * @param name   the name of the ADSRParams envelope to return
+	 * @return the specified ADSRParams envelope
+	 */
+	static ADSRParams envPreset(String name) {
+		switch (name) {
+        // medium fast attack, medium decay to 0.15, short tail 
+		case "Soft"       : return new ADSRParams(1.0f, 0.02f, 0.80f, 0.7f, 0.2f);   
+		// sharp attack, fast decay to 0.1, short tail
+        case "Percussion" : return new ADSRParams(1.0f, 0.005f, 0.04f, 0.20f, 0.06f);   
+        // long attack, slight decay, long tail
+		case "Pad"        : return new ADSRParams(1.0f, 0.50f, 0.25f, 0.75f, 1.0f);    
+        // fast attack, fast decay to 0.75, medium tail
+		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);    
+		}
+	}
+	
+    // *** WindowedBuffer support *** //	
+    /**
+     * Suspend audio instruments and events when a new backing buffer is in the process of loading.
+     */
+    void suspendWindowAudio() {
+    	// clear audio/animation TimedLocation events
+        if (samplerTimeLocs != null) samplerTimeLocs.clear();
+        if (pointTimeLocs != null) pointTimeLocs.clear();
+        if (grainTimeLocs != null) grainTimeLocs.clear();
+        // shut down Sampler instrument, pool
+        if (pool != null) {
+            pool.stopAll();
+            pool.close();
+            pool = null;
+        }
+        samplerSourceRef = null;
+        samplerSourceRateRef = -1;
+        // shut down Granular instrument, gDir
+        if (gDir != null) gDir.cancelAndReleaseAll();
+    }
+ 
+	
+    // *** WindowedBuffer support *** //	
+	/**
+	 * Bottleneck "commit" method for audio state. 
+	 * 
+     * This is the ONLY method that should mutate the global audio signal state.
+     * 
+     * Modified for use with WindowedBuffer and a backing buffer, installBackingSource()
+     * and refreshWindowFromBacking() set the various buffers. The ensureSamplerReady()
+     * and ensureGranularReady() reset instruments. 
+     * 
+     * In PixelAudio examples, the signal is typically loaded from a file, but
+     * it could also be signal cached in memory, a signal generated by code, audio
+     * captured live, etc. 
+	 * 
+	 * @param sig                 an audio signal
+	 * @param sourceSampleRate    audio sample rate for sig, 
+	 *                            usually obtained when reading from an audio file
+	 */
+	void updateAudioChain(float[] sig, float sourceSampleRate) {
+        installBackingSource(sig, sourceSampleRate);
+        refreshWindowFromBacking(false);
+        // critical: rebind instruments after anthemBuffer/anthemSignal change
+        ensureSamplerReady();
+        ensureGranularReady();
+	}
+	
+    // *** WindowedBuffer support *** //	
+	void updateAudioChain(float[] sig) {
+        float sr = (audioOut != null) ? audioOut.sampleRate() : sampleRate;
+		updateAudioChain(sig, sr);
+	}
+
+	
+    // *** WindowedBuffer support *** //	
+	/**
+	 * Calls PAGranularInstrumentDirector gDir to play a granular audio event.
+	 * 
+	 * @param buf       an audio signal as an array of float (null, if we are using the backing buffer)
+	 * @param sched     an GestureSchedule with coordinate and timing information 
+	 * @param params    a bundle of control parameters for granular synthesis
+	 */
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params, float pitchRatio) {
+        if (sched == null || sched.isEmpty()) return;
+        float[] source = (buf != null) ? buf : backingGranularSignal();
+        int sourceLen = (source != null && source.length > 0) ? source.length : mapper.getSize();
+
+        int[] localIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
+        int[] startIndices = new int[localIndices.length];
+        for (int i = 0; i < localIndices.length; i++) {
+            startIndices[i] = (windowBuff != null)
+                    ? PixelAudioMapper.wrap(windowBuff.getIndex() + localIndices[i], sourceLen)
+                    : PixelAudioMapper.wrap(localIndices[i], sourceLen);
+        }
+		
+		// calculate the pan for each grain, based on its x-coordinate
+		float[] panPerGrain = new float[sched.size()];
+		for (int i = 0; i < sched.size(); i++) {
+		    PVector p = sched.points.get(i);
+		    // example: map x to [-0.8, +0.8]
+		    panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
+		}
+		
+		float jitter = usePitchedGrains ? 0.25f : 0f;
+		float[] pitch = generateJitterPitch(sched.size(), jitter, pitchRatio);
+		// assemble all the grain-level attributes into a GestureEventParams object
+		GestureEventParams eventParams = GestureEventParams.builder(sched.size())
+				.startIndices(startIndices)
+				.pan(panPerGrain)
+				.pitchRatio(pitch)
+				.build();
+		// call playGestureNow() with eventParams and return
+		gDir.playGestureNow(buf, sched, params, eventParams);
+	}
+
+	/**
+	 * Calculate an envelope of length totalSamples. 
+	 * @param gainDb          desired gain in dB, currently ignored
+	 * @param totalSamples    number of samples the envelope should cover
+	 * @param sampleRate      sample rate of the audio buffer the envelope is applied to
+	 * @return and ADSRParams envelope
+	 */
+	public ADSRParams calculateEnvelopeDb(float gainDb, int totalSamples, float sampleRate) {
+		float linear = AudioUtility.dbToLinear(gainDb);
+		return calculateEnvelopeLinear(linear, totalSamples * 1000f / sampleRate);
+	}
+
+	/**
+	 * Calculate an envelope of length totalSamples. 
+	 * @param gainDb     desired gain in dB, currently ignored
+	 * @param totalMs    desired duration of the envelope in milliseconds
+	 * @return an ADSRParams envelope
+	 */
+	public ADSRParams calculateEnvelopeLinear(float gainDb, float totalMs) {
+	    float attackMS = Math.min(50, totalMs * 0.1f);
+	    float releaseMS = Math.min(200, totalMs * 0.3f);
+	    float envGain = AudioUtility.dbToLinear(gainDb);
+	    envGain = 1.0f;
+	    return new ADSRParams(envGain, attackMS / 1000f, 0.01f, 0.8f, releaseMS / 1000f);
+	}
+		
+	
 	/*				END AUDIO METHODS                        */
 	
 
@@ -1765,243 +2377,465 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * Initializes allPoints and adds the current mouse location to it. 
 	 */
 	public void initAllPoints() {
-		allPoints = new ArrayList<PVector>();
-		allTimes = new ArrayList<Integer>();
-		startTime = millis();
-		addPoint(PApplet.constrain(mouseX, 0, width-1), PApplet.constrain(mouseY, 0, height-1));
+	    allPoints = new ArrayList<>();
+	    allTimes = new ArrayList<>();
+	    startTime = millis();
+	    int x = clipToWidth(mouseX);
+	    int y = clipToHeight(mouseY);
+	    addDrawingPoint(x, y);
 	}
-	
-	
-	/**
-	 * Responds to mousePressed events associated with drawing.
-	 */
-	public void handleMousePressed(int x, int y) {
-		if (activeBrush != null) {
-			// a brushShape was triggered
-			eventPoints = activeBrush.getEventPoints();
-			loadEventPoints();
-			activeBrush = null;
-		} 
-		else {
-			// handle audio generation in response to a mouse click
-			audioMousePressed(PApplet.constrain(x, 0, width-1), PApplet.constrain(y, 0, height-1));
-		}
-	}
-	
 	
 	/**
 	 * While user is dragging the mouses and isDrawMode == true, accumulates new points
 	 * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
 	 * We constrain points outside the bounds of the display window. An alternative approach 
-	 * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural" 
-	 * appearance for fast drawing. 
+	 * is be to ignore them, which may give a more "natural" appearance for fast drawing. 
+	 *
+	 * @param x    x-coordinate of point to add to allPoints
+	 * @param y    y-coordinate of point to add to allPoints
 	 */
-	public void addPoint(int x, int y) {
-		// we do some very basic point thinning to eliminate successive duplicate points
-		if (x != currentPoint.x || y != currentPoint.y) {
-			if (isIgnoreOutsideBounds && (x < 0 || x >= width || y < 0 || y >= height)) return;
-			currentPoint = new PVector(x, y);
-			allPoints.add(currentPoint);
-			allTimes.add(millis() - startTime);
-			setSampleVars(x, y);
-		}
+	public void addDrawingPoint(int x, int y) {
+	    if (x != currentPoint.x || y != currentPoint.y) {
+	        currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
+	        allPoints.add(currentPoint);
+	        allTimes.add(millis() - startTime);
+	    }
+	}
+		
+	/**
+	 * Clips parameter i to the interval (0..width-1)
+	 * @param i    integer to clip to width
+	 * @return     value within the range 0..width-1
+	 */
+	public int clipToWidth(int i) {
+		return min(max(0, i), width - 1);
+	}
+	/**
+	 * Clips parameter i to the interval (0..width-1)
+	 * @param i    integer to clip to height
+	 * @return     value within the range 0..height-1
+	 */
+	public int clipToHeight(int i) {
+		return min(max(0, i), height - 1);
+	}
+	
+	/**
+	 * @param x              x-coordinate
+	 * @param y              y-coordinate
+	 * @param deviationPx    distance deviation from mean
+	 * @return               a PVector with coordinates shifted by a Gaussing variable
+	 */
+	public PVector jitterCoord(int x, int y, int deviationPx) {
+	    double variance = deviationPx * deviationPx;
+	    int jx = (int)Math.round(PixelAudio.gauss(0, variance));
+	    int jy = (int)Math.round(PixelAudio.gauss(0, variance));
+	    int nx = clipToWidth(x + jx);
+	    int ny = clipToHeight(y + jy);
+	    return new PVector(nx, ny);
 	}
 	
 	
 	/**
-	 * Processes the eventPoints list to create TimedLocation events 
-	 * and stores them in curveTLEvents. 
+	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
+	 * @param length            length of the returned array
+	 * @param deviationPitch    expected average deviation of the pitch 
+	 * @return                  an array of Gaussian values centered on 1.0
 	 */
-	public void loadEventPoints() {
-		if (eventPoints != null) {
-			eventPointsIter = eventPoints.listIterator();
-			int startTime = millis();
-			// println("building pointsTimer: "+ startTime);
-			if (curveTLEvents == null) curveTLEvents = new ArrayList<TimedLocation>();
-			if (!isGranular) {				
-				storeCurveTL(eventPointsIter, startTime);
-			}
-			else {
-				storeGranularCurveTL(eventPointsIter, startTime, grainDuration);
-			}
+	float[] generateJitterPitch(int length, float deviationPitch) {
+		float[] pitch = new float[length];
+		double variance = deviationPitch * deviationPitch;
+		for (int i = 0; i < pitch.length; i++) {
+			pitch[i] = (float) PixelAudio.gauss(1, variance);
 		}
-		else {
-			println("--->> NULL eventPoints");
-		}
+		return pitch;
 	}
-	
-	
+			
 	/**
-	 * Processes the eventPoints list to create TimedLocation events 
-	 * and stores them in curveTLEvents. 
-	 * @param startTime    time in millis (in the future!) when event should begin
+	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
+	 * @param length            length of the returned array
+	 * @param deviationPitch    expected average deviation of the pitch around center pitch ratio
+	 * @param centerPitch       ratio of center pitch, 1.0 => no change in source
+	 * @return                  an array of Gaussian values centered on 1.0
 	 */
-	public void loadEventPoints(int startTime) {
-	  if (eventPoints != null) {
-	    eventPointsIter = eventPoints.listIterator();
-	    // println("building pointsTimer: "+ startTime);
-	    if (curveTLEvents == null) curveTLEvents = new ArrayList<TimedLocation>();
-		if (!isGranular) {				
-			storeCurveTL(eventPointsIter, startTime);
+	float[] generateJitterPitch(int length, float deviationPitch, float centerPitch) {
+		float[] pitch = new float[length];
+		double variance = deviationPitch * deviationPitch;
+		for (int i = 0; i < pitch.length; i++) {
+			pitch[i] = (float) PixelAudio.gauss(centerPitch, variance);
 		}
-		else {
-			storeGranularCurveTL(eventPointsIter, startTime, grainDuration);
-		}
-	  }
-	  else {
-	    println("--->> NULL eventPoints");
-	  }
+		return pitch;
 	}
 
-	/**
-	 * @param iter         a ListIterator over eventPoints
-	 * @param startTime    a time in millis  
-	 * @param grainSize    a duration in milliseconds
-	 */
-	public synchronized void storeGranularCurveTL(ListIterator<PVector> iter, int startTime, int grainSize) {
-		startTime += 50;
-		int grainOffset = grainSize / 4;
-		int i = 0;
-		while (iter.hasNext()) {
-			PVector loc = iter.next();
-			curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * grainOffset));
-		}
-		Collections.sort(curveTLEvents);
-	}	
-	
-	/**
-	 * @param iter         a ListIterator over eventPoints
-	 * @param startTime    a time in millis
-	 */
-	public synchronized void storeCurveTL(ListIterator<PVector> iter, int startTime) {
-		startTime += 50;
-		int i = 0;
-		while (iter.hasNext()) {
-			PVector loc = iter.next();
-			curveTLEvents.add(new TimedLocation(Math.round(loc.x), Math.round(loc.y), startTime + i++ * eventStep));
-		}
-		Collections.sort(curveTLEvents);
-	}	
-	
-	
 	/**
 	 * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
 	 * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from 
-	 * global variables in the host class. 
+	 * variables in the calling class (TutorialOneDrawing, here). 
 	 */
-	public void initCurveMaker() {
-		curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
-		curveMaker.setBrushColor(readyBrushColor);
-		curveMaker.setActiveBrushColor(activeBrushColor);
-		curveMaker.setEpsilon(epsilon);
-		curveMaker.setTimeOffset(millis() - startTime);
-		curveMaker.calculateDerivedPoints();
-		PABezShape curve = curveMaker.getCurveShape();
-		eventPoints = curve.getPointList(polySteps);
-		loadEventPoints();
-		this.brushShapesList.add(curveMaker);
-		setSampleVars(mouseX, mouseY);
-		// testing
-		/*
-		println("----- RDP Indices: ");
-		int[] ndx = curveMaker.getRdpIndicesAsInts();
-		for (int n : ndx) {
-			println(n);
-		}
-		*/
+	public AudioBrushLite initCurveMakerAndAddBrush() {
+	    curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
+	    // configure from globals
+	    curveMaker.setEpsilon(epsilon);
+	    curveMaker.setCurveSteps(curveSteps);
+	    curveMaker.setTimeOffset(millis() - startTime);
+	    curveMaker.calculateDerivedPoints();    // load all internal point lists
+	    // Optional: set PACurveMaker brush colors if you want them retained internally
+	    curveMaker.setBrushColor(readyBrushColor);
+	    curveMaker.setActiveBrushColor(selectedBrushColor);
+	    // Create a forward-compatible config object
+	    BrushConfig cfg = new BrushConfig();
+	    cfg.rdpEpsilon = epsilon;
+	    cfg.curveSteps = curveSteps;
+	    cfg.pathMode = PathMode.REDUCED_POINTS; // tutorial default
+	    // Default output for newly drawn strokes: SAMPLER (tutorial-centric)
+	    AudioBrushLite b = new AudioBrushLite(curveMaker, cfg, BrushOutput.SAMPLER, HopMode.GESTURE);
+	    b.cfg.pathMode = defaultPathModeFor(b.output());
+	    brushes.add(b);
+	    // Optionally auto-select the new brush
+	    activeBrush = b;
+	    if (this.doPlayOnNewBrush) {
+	    	if (b.output() == BrushOutput.GRANULAR) {
+	    		scheduleGranularBrushClick(b);
+	    	} else {
+	    		scheduleSamplerBrushClick(b);
+	    	}
+	    }
+	    return b;
 	}
-	
+
 	/**
-	 * Iterates over brushShapesList and draws the brushstrokes stored in 
-	 * each PACurveMaker in the list. Detects if mouse is over a brush 
-	 * and points activeBrush to it if that is the case.
+	 * Determines the path mode for a particular BrushOutput.
+	 * @param out    a BrushOutput (SAMPLER of GRANULAR)
+	 * @return       a PathMode (ALL_POINTS for Sampler instruments, CURVE_POINTS for Granular instruments)
+	 */
+	PathMode defaultPathModeFor(BrushOutput out) {
+	    return (out == BrushOutput.SAMPLER) ? PathMode.ALL_POINTS : PathMode.CURVE_POINTS;
+	}
+
+	/**
+	 * Entry point for drawing brushstrokes on the screen.
+	 * TODO distinguish brush types by color.
 	 */
 	public void drawBrushShapes() {
-		if (this.brushShapesList.size() > 0) {
-			int idx = 0;
-			activeBrush = null;
-			for (PACurveMaker bd : brushShapesList) {
-				int brushFill = readyBrushColor;
-				if (mouseInPoly(bd.getBrushPoly())) {
-					brushFill = activeBrushColor;
-					activeBrush = bd;
-					activeIndex = idx;
-				}
-				PACurveUtility.shapeDraw(this, bd.getBrushShape(), brushFill, brushFill, 2);
-				idx++;
+		if (brushes == null || brushes.isEmpty()) return;
+		drawBrushes(brushes);
+	}
+
+	/**
+	 * Draw brushstrokes on the display image.
+	 * 
+	 * @param list    a list of all the brushstrokes (AudioBrushLite)
+	 */
+	public void drawBrushes(List<AudioBrushLite> list) {
+		// step through the list of all brushes
+		int readyColor; 
+		int hoverColor; 
+		int selectedColor;
+		for (int i = 0; i < list.size(); i++) {
+			AudioBrushLite b = list.get(i);
+			if (b.output == BrushOutput.GRANULAR) {
+				readyColor = readyBrushColor1;
+				hoverColor = hoverBrushColor1;
+				selectedColor = selectedBrushColor1;
+			} else {
+				readyColor = readyBrushColor2;
+				hoverColor = hoverBrushColor2;
+				selectedColor = selectedBrushColor2;
+			}
+			PACurveMaker cm = b.curve();
+			boolean isHover = (b == hoverBrush);
+			boolean isSelected = (b == activeBrush);
+			int fill = readyColor;
+			if (isSelected) {
+				fill = selectedColor;
+				// keep selected brush geometry consistent with cfg
+				cm.setEpsilon(b.cfg().rdpEpsilon);
+				cm.setCurveSteps(b.cfg().curveSteps);
+				cm.calculateDerivedPoints();
+			} 
+			else if (isHover) {
+				fill = hoverColor;
+			}
+			// brush body
+			PACurveUtility.shapeDraw(this, cm.getBrushShape(), fill, fill, 2);
+			// overlay points/lines depending on PathMode
+			int w = 1, d = 5;
+			int lc = isSelected ? lineColor : dimLineColor;
+			int cc = isSelected ? circleColor : dimCircleColor;
+			// selected the appropriate point set for drawing
+			switch (b.cfg().pathMode) {
+			case REDUCED_POINTS -> {
+				PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
+				PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
+			}
+			case CURVE_POINTS -> {
+				PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
+				PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
+			}
+			case ALL_POINTS -> {
+				PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
+				PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+			}
 			}
 		}
 	}
 	
-
 	/**
-	 * Draws shapes stored in curveMaker, a PACurveMaker instance that stores the most recent drawing data. 
+	 * Sets epsilon value for the PACurveMaker associated with an AudioBrushLite instance.
+	 * 
+	 * @param b    an AudioBrushLite instance
+	 * @param e    desired epsilon value to control point reduction
 	 */
-	public void curveMakerDraw() {
-		if (curveMaker.isReady()) {
-			curveMaker.brushDraw(this, newBrushColor, newBrushColor, 2);
-			// curveMaker.brushDrawDirect(this);
-			curveMaker.eventPointsDraw(this);
-		}
+	public void setBrushEpsilon(AudioBrushLite b, float e) {
+		PACurveMaker cm = b.curve();
+		BrushConfig cfg = b.cfg();
+		cfg.rdpEpsilon = e;
+		cm.setEpsilon(e);
+		cm.calculateDerivedPoints();
 	}
 
 	
 	/**
-	 * Tracks and runs TimedLocation events in the curveTLEvents list.
-	 * This method is synchronized with a view to future development where it may be called from different threads.
+	 * Sets epsilon value for the PACurveMaker associated with an AudioBrushLite instance.
+	 * 
+	 * @param b    an AudioBrushLite instance
+	 * @param cs    desired epsilon value to control point reduction
 	 */
-	public synchronized void runCurveEvents() {
-		// if the event list is null or empty, skip out
-		if (curveTLEvents != null && curveTLEvents.size() > 0) {
-			int currentTime = millis();
-			curveTLEvents.forEach(tl -> {
-				if (tl.eventTime() < currentTime) {
-					// the curves may exceed display bounds, so we have to constrain values
-					sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-					sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
-					float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-					int pos = getSamplePos(sampleX, sampleY);
-					if (!isGranular) {
-						playSample(pos, calcSampleLen(), defaultGain, panning);
-					}
-					else {
-						int len = (int)(abs((this.grainDuration) * sampleRate / 1000.0f));
-						playSample(pos, len, defaultGain, granularEnv, panning);
-					}
+	public void setBrushCurveSteps(AudioBrushLite b, int cs) {
+		PACurveMaker cm = b.curve();
+		BrushConfig cfg = b.cfg();
+		cfg.curveSteps = cs;
+		cm.setCurveSteps(cs);
+		cm.calculateDerivedPoints();
+	}
+
+	/**
+	 * Get the path points of a brushstroke, with the representation determined by the BrushConfig's path mode.
+	 * 
+	 * @param b    an AudioBrushLite instance
+	 * @return     an all points, reduced, or curve representation of the path points of an AudioBrushLite instance
+	 */
+	ArrayList<PVector> getPathPoints(AudioBrushLite b) {
+		PACurveMaker cm = b.curve();
+		return switch (b.cfg().pathMode) {
+		case ALL_POINTS -> cm.getAllPoints();
+		case REDUCED_POINTS -> cm.getReducedPoints();
+		case CURVE_POINTS -> cm.getCurvePoints();
+		};
+	}
+
+	/**
+	 * Get a GestureSchedule (points + timing) for an AudioBrushLite instance.
+	 * @param b    an AudioBrushLite instance
+	 * @return     GestureSchedule for the current pathMode of the brush
+	 */
+	public GestureSchedule getScheduleForBrush(AudioBrushLite b) {
+		GestureSchedule sched;
+		switch (b.cfg().pathMode) {
+		case REDUCED_POINTS -> {
+			sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
+		}
+		case CURVE_POINTS -> {
+			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
+		}
+		case ALL_POINTS -> {
+			sched = b.curve.getAllPointsSchedule();
+		}
+		default -> {
+			sched = b.curve.getAllPointsSchedule();
+		}
+		}
+		return sched;
+	}
+	
+	/**
+	 * @param b    an AudioBrushLIte instance
+	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
+	 */
+	GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
+	    GestureSchedule sched = getScheduleForBrush(b);
+	    if (b.output == BrushOutput.SAMPLER) {
+	    	// divide gesture duration by number of gesture intervals and multiply result a fixed value
+	    	envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
+	    	println("-- envelope duration = "+ envDuration);
+	    }
+	    return boundsPolicy.applySchedule(sched);
+	}
+	
+	
+	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+	    int n = sched.points.size();
+	    if (n < 2) return fallbackMs;
+	    float avgStepMs = sched.durationMs() / (float)(n - 1);
+	    float factor;
+	    switch (envName) {
+	        case "Pluck":
+	        case "Percussion":
+	            factor = 4.0f;
+	            break;
+	        case "Soft":
+	        case "Fade":
+	            factor = 3.0f;
+	            break;
+	        case "Swell":
+	        case "Pad":
+	            factor = 2.0f;
+	            break;
+	        default:
+	            factor = 3.0f;
+	    }
+	    int minEnvMs = envMinDurationMs;
+	    int maxEnvMs = envMaxDurationMs;
+	    return PApplet.constrain(Math.round(avgStepMs * factor), minEnvMs, maxEnvMs);
+	}
+	
+	/**
+	 * Schedule a Sampler brush audio / animation event.
+	 * 
+	 * @param b    an AudioBrushLite instance
+	 */
+	void scheduleSamplerBrushClick(AudioBrushLite b) {
+		if (b == null) return;
+		ArrayList<PVector> pts = getPathPoints(b);
+		if (pts == null || pts.size() < 2) return;
+		GestureSchedule sched = getPlaybackScheduleForBrush(b);
+		storeSamplerCurveTL(b, sched, millis() + 10);
+	}
+
+	/**
+	 * Store scheduled sampler synth / animation events for future activation. 
+	 * @param sched        a GestureSchedule (points + timing for a brush)
+	 * @param startTime    time to start a series of events
+	 */
+	public synchronized void storeSamplerCurveTL(AudioBrushLite b, GestureSchedule sched, int startTime) {
+		int i = 0;
+		startTime = millis() + 5;
+		// we store the point and the current time + time offset, where timesMs[0] == 0
+		for (PVector loc : sched.points) {
+			int x = Math.round(loc.x);
+			int y = Math.round(loc.y);
+			int t = startTime + Math.round(sched.timesMs[i++]);
+			int pos = getSamplePos(x, y);
+			int len = calcSampleLen();
+			int d = 200;
+			float gain = samplerGain;
+			float pitch = b.pitchRatio;
+			ADSRParams env = defaultEnv.copy();
+			float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+			this.samplerTimeLocs.add(new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, env, pan));
+		}
+		Collections.sort(samplerTimeLocs);
+	}
+
+	/**
+	 * Execute audio / animation events for Sampler brushstrokes.
+	 */
+	public synchronized void runSamplerBrushEvents() {
+	    if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
+	    int currentTime = millis();
+	    int durationMs = 200;
+	    samplerTimeLocs.forEach(stl -> {
+	        if (stl.eventTimeMs() < currentTime) {
+	        	// sched points from storeSamplerCurveTL are already in bounds
+	            int sampleX = Math.round(stl.getX());
+	            int sampleY = Math.round(stl.getY());
+	            // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
+                playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
+        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
+	            stl.setStale(true);
+	        } 
+	        else {
+	            return;
+	        }
+	    });
+	    samplerTimeLocs.removeIf(SamplerBrushEvent::isStale);
+	}
+
+    // *** WindowedBuffer support *** //	
+	/**
+	 * Schedule a Granular brush audio / animation event.
+	 * 
+	 * @param b    an AudioBrushLite instance
+	 */
+	void scheduleGranularBrushClick(AudioBrushLite b) {
+	    if (b == null) return;
+	    ArrayList<PVector> pts = getPathPoints(b);
+	    if (pts == null || pts.size() < 2) return;
+	    ensureGranularReady();
+	    boolean isGesture = (b.hopMode() == HopMode.GESTURE);
+		GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
+		GestureSchedule sched = getPlaybackScheduleForBrush(b); 
+        playGranularGesture(backingGranularSignal(), sched, gParams, b.pitchRatio());
+        storeGranularCurveTL(sched, millis() + 10, isGesture);
+	}	
+
+	/**
+	 * Store scheduled granular synth / animation events for future activation. 
+	 * @param sched        a GestureSchedule (points + timing for a brush)
+	 * @param startTime    time to start a series of events
+	 * @param isGesture    is the schedule for a GESTURE or FIXED granular event (ignored)
+	 */
+	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
+		int i = 0;
+		int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+		int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
+		// we store the point and the current time + time offset, where timesMs[0] == 0
+		for (PVector loc : sched.points) {
+			int x = Math.round(loc.x);
+			int y = Math.round(loc.y);
+			int t = startTime + Math.round(sched.timesMs[i++]);
+			int d = 200;
+			this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
+		}
+		Collections.sort(grainTimeLocs);
+	}
+		
+	/**
+	 * Tracks and runs TimedLocation events in the grainLocsArray list, which is 
+	 * associated with granular synthesis gestures.
+	 */
+	public synchronized void runGrainEvents() {
+	    if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;	
+	    int t = millis();
+		for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
+			TimedLocation tl = iter.next();
+			int low = tl.eventTime();
+			int high = (tl.eventTime() + tl.getDurationMs());
+			if (t >= low && t < high) { // event in the interval between low and high
+				drawCircle(tl.getX(), tl.getY());
+			}
+			else {
+				if (t >= high) {        // event in the past
 					tl.setStale(true);
-					// println("----- ");
-				} 
-				else {
-					// pointEventsArray is sorted by time, so ignore events still in the future
-					return;
+					iter.remove();
 				}
-			});
-			curveTLEvents.removeIf(TimedLocation::isStale);
+				if (t < low) {          // event in the future
+					break;
+				}
+			}
 		}
+		// grainLocsArray.removeIf(TimedLocation::isStale);		// not necessary if we remove in loop
 	}
-	
 
 	/**
-	 * Tracks and runs TimedLocation events in the timeLocsArray list.
-	 * This method is synchronized with a view to future development where it may be called from different threads.
+	 * Tracks and runs TimedLocation events in the timeLocsArray list, which is 
+	 * associated with mouse clicks that trigger audio a the click point.
 	 */
 	public synchronized void runPointEvents() {
 		int currentTime = millis();
-		for (Iterator<TimedLocation> iter = timeLocsArray.iterator(); iter.hasNext();) {
+		for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
 			TimedLocation tl = iter.next();
 			tl.setStale(tl.eventTime() < currentTime);
 			if (!tl.isStale()) {
-				drawCircle(tl.getX(), tl.getY(), 20, color(233, 89, 110, 199));
+				drawCircle(tl.getX(), tl.getY());
 			}
 		}
-		timeLocsArray.removeIf(TimedLocation::isStale);		
+		pointTimeLocs.removeIf(TimedLocation::isStale);		
 	}
 	
 
 	/**
-	 * Detects if the mouse is within a selected polygon. 
-	 * @param poly    a polygon as an ArrayList of PVectors
-	 * @return        true if mouse is within poly, false otherwise
+	 * @param poly    a polygon described by an ArrayList of PVector
+	 * @return        true if the mouse is within the bounds of the polygon, false otherwise
 	 */
 	public boolean mouseInPoly(ArrayList<PVector> poly) {
 		return PABezShape.pointInPoly(poly, mouseX, mouseY);
@@ -2009,192 +2843,51 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 
 	
 	/**
-	 * Reinitializes audio and clears event lists. If isClearCurves is true, clears brushShapesList
-	 * and curveTLEvents. 
-	 * @param isClearCurves
+	 * Reinitializes audio and clears event lists.   
+	 * -- TODO drop, this used to be the "emergency off" switch for runaway audio processing
 	 */
-	public void reset(boolean isClearCurves) {
-		initAudio();
-		if (audioFile != null)
-			loadAudioFile(audioFile);
-		if (this.curveMaker != null) this.curveMaker = null;
-		if (this.eventPoints != null) this.eventPoints.clear();
-		this.activeIndex = 0;
-		if (isClearCurves) {
-			if (this.brushShapesList != null) this.brushShapesList.clear();
-			if (this.curveTLEvents != null) this.curveTLEvents.clear();
-			println("----->>> RESET audio, event points and curves <<<------");
-		}
-		else {
-			println("----->>> RESET audio and event points <<<------");
-		}
+	@Deprecated
+	public void reset() {
+
 	}
 
-	/**
-	 * Plays all audio events controlled by PACurveMaker curves in brushShapesList, 
-	 * spaced out by offset milliseconds.
-	 * @param offset
-	 */
-	public void playBrushstrokes(int offset) {
-		  int startTime = millis() + 50;
-		  for (PACurveMaker curve : brushShapesList) {
-		    if (curve.isReady()) {
-		      eventPoints = curve.getCurveShape().getPointList(polySteps);
-		      loadEventPoints(startTime);
-		      startTime += offset;
-		    }
-		  }
-		}
 
 	/**
-	 * Removes the current active PACurveMaker instance, flagged by a highlighted brush stroke,
-	 * from brushShapesList, if there is one.
+	 * Removes the current active AudioBrushLite instance.
 	 */
-	public void removeActiveBrush() {
-		if (brushShapesList != null) {
-			// remove the active (highlighted) brush
-			if (!brushShapesList.isEmpty()) {
-				int idx = brushShapesList.indexOf(activeBrush);
-				brushShapesList.remove(activeBrush);
-				if (brushShapesList.size() == idx)
-					curveMaker = null;
-				// println("-->> removed activeBrush");
-			}
-		}
+	public void removeHoveredOrOldestBrush() {
+	    if (brushes == null || brushes.isEmpty()) return;
+	    if (hoverBrush != null) {
+	        brushes.remove(hoverBrush);
+	        if (activeBrush == hoverBrush) activeBrush = null;
+	        hoverBrush = null;
+	        hoverIndex = -1;
+	    } else {
+	        brushes.remove(0);
+	    }
 	}
 	
-
 	/**
-	 * Removes the newest PACurveMaker instance, shown as a brush stroke
-	 * in the display, from brushShapesList.
+	 * Removes the most recent AudioBrushLite instance.
 	 */
 	public void removeNewestBrush() {
-		if (brushShapesList != null) {
-			// remove the most recent addition
-			if (!brushShapesList.isEmpty()) {
-				int idx = brushShapesList.size();
-				brushShapesList.remove(idx - 1);	// brushShapes array starts at 0
-				println("-->> removed newest brush");
-				curveMaker = null;
-			}
-		}
+	    if (brushes == null || brushes.isEmpty()) return;
+	    AudioBrushLite removed = brushes.remove(brushes.size() - 1);
+	    if (activeBrush == removed) activeBrush = null;
+	    if (hoverBrush == removed) {
+	        hoverBrush = null;
+	        hoverIndex = -1;
+	    }
 	}
-
-	
-	/**
-	 * Removes the oldest brush in brushShapesList.
-	 */
-	public void removeOldestBrush() {
-		if (brushShapesList != null) {
-			// remove the oldest addition
-			if (!brushShapesList.isEmpty()) {
-				brushShapesList.remove(0);		// brushShapes array starts at 0
-				if (brushShapesList.isEmpty())
-					curveMaker = null;
-			}
-		}
-	}
-	
 
 	/*             END DRAWING METHODS              */
 	
 	
-	// ------------------------------------------- //
-	//            WINDOWED BUFFER CLASS            //
-	// ------------------------------------------- //
-
-	public class WindowedBuffer {
-	    private final float[] buffer;   // circular source
-	    private final float[] window;   // reusable window array
-	    private final int windowSize;   // number of samples in a window
-	    private int hopSize;      		// step between windows
-	    private int index = 0;          // current start position in buffer
-
-	    public WindowedBuffer(float[] buffer, int windowSize, int hopSize) {
-	        if (buffer.length == 0) {
-	            throw new IllegalArgumentException("Buffer must not be empty");
-	        }
-	        if (windowSize <= 0) {
-	            throw new IllegalArgumentException("Window size must be positive");
-	        }
-	        if (hopSize <= 0) {
-	            throw new IllegalArgumentException("Hop size must be positive");
-	        }
-	        this.buffer = buffer;
-	        this.windowSize = windowSize;
-	        this.hopSize = hopSize;
-	        this.window = new float[windowSize];
-	    }
-
-	    /**
-	     * Returns the next window, advancing the read index by hopSize.
-	     * Wraps around the buffer as needed.
-	     */
-	    public float[] nextWindow() {
-	        int bufferLen = buffer.length;
-	        // Copy first chunk
-	        int firstCopyLen = Math.min(windowSize, bufferLen - index);
-	        System.arraycopy(buffer, index, window, 0, firstCopyLen);
-	        // Wrap if needed
-	        if (firstCopyLen < windowSize) {
-	            int remaining = windowSize - firstCopyLen;
-	            System.arraycopy(buffer, 0, window, firstCopyLen, remaining);
-	        }
-	        // Advance start index
-	        index = (index + hopSize) % bufferLen;
-	        return window;
-	    }
-
- 	    /**
-	     * Returns the window at a supplied index. Wraps around the buffer as needed.
-		 * Updates current index and advances it by hopSize.
-	     */
-	    public float[] gettWindowAtIndex(int idx) {
-	    	int len = buffer.length;
-	    	idx = ((idx % len) + len) % len; // normalize to 0..len-1
-	    	setIndex(idx);
-	        return nextWindow();
-	    }
-
-	    /** Reset reader to start of buffer */
-	    public void reset() {
-	        index = 0;
-	    }
-
-	    /** Current buffer index */
-	    public int getIndex() {
-	        return index;
-	    }
-	    /** set current index */
-	    public void setIndex(int index) {
-			this.index = index % buffer.length;
-		}
-
-		/** Expose the underlying array size */
-	    public int getBufferSize() {
-	        return this.buffer.length;
-	    }
-
-		/** Expose the reusable window array size */
-	    public int getWindowSize() {
-	        return windowSize;
-	    }
-
-	    /** Expose hop size */
-	    public int getHopSize() {
-	        return hopSize;
-	    }
-
-		public void setHopSize(int hopSize) {
-			this.hopSize = hopSize;
-		}
-
-	 }	
-		
-	
-	// ------------------------------------------- //
-	//               UTILITY METHODS               //
-	// ------------------------------------------- //
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                           UTILITY                              */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
 	
 
 }

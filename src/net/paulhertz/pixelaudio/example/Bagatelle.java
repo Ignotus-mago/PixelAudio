@@ -2252,10 +2252,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println("---- file sample rate = "+ this.fileSampleRate 
 				+", buffer sample rate = "+ bufferSampleRate
 				+", audio output sample rate = "+ audioOut.sampleRate());
-
 		ensureSamplerReady();
 		updateAudioChain(sig);
-
 		if (isLoadToBoth) {
 			println("---- loading to both ----");
 			writeAudioToImage(audioSignal, mapper, mapImage, chan);
@@ -3083,10 +3081,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    audioLength = targetSize;
 	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
 	        playBuffer = new MultiChannelBuffer(targetSize, 1);
+	        // println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
 	    }
 	    playBuffer.setChannel(0, canonical);
 	    // Propagate into synths (adjust to your actual API)
-	    if (pool != null) pool.setBuffer(playBuffer);
+	    if (pool != null) {
+	    	pool.setBuffer(playBuffer);
+	    	// println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
+	    }
 	}
 	
 	
@@ -5563,7 +5565,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		if (guiSyncing) return;
 		gConfig.useArcLengthTime = source.isSelected();
 		// gConfig.useArcLengthTime = ;
-		
 	}
 	
 	public void envelopeMenu_clicked(GDropList source, GEvent event) { 
