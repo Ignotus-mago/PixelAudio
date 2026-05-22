@@ -38,19 +38,25 @@ import g4p_controls.*;
 
 
 /**
- * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns 
- * that can be saved to video or played as an additive synthesis audio source. 
+ * Additive audio synthesis engine produces colorful animated patterns and electronic synth sounds. 
  * 
+ * <h2>WaveSynth Editor Sketch</h2>
+ * <p>
+ * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns 
+ * that can be saved to video or played as an additive synthesis audio source. It 
+ * provides an introduction to <code>WaveSynth</code> objects and the <code>WaveData</code> objects that 
+ * WaveSynths use to generate visual patterns and audio signals. 
+ * </p><p>
  * Use this application to edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
  * some of what you can do with the HilbertGen for making patterns with the WaveSynth. There
  * are lots of other possibilities. Patterns can be loaded from and saved to JSON files. 
- * 
+ * </p><p>
  * For audio signals, a WaveSynth behaves like an audio synthesizer that adds together 
  * sine waves at different frequencies. The BigWaveSynthAudio and WaveSynthSequencer 
  * example sketches also produce audio with a WaveSynth. This example provides a graphical
  * user interface for editing the colors and other properties of a WaveSynth. 
- * 
+ * </p><p>
  * Click on the WaveSynth image to hear what it sounds like. Note that the appearance of the
  * image is determined by the current sampling frequency, set in the initWaveSynth() method.
  * For a higher sampling rate, there are more samples. One sampling rate we use for the 
@@ -58,7 +64,7 @@ import g4p_controls.*;
  * Though it may have more or less samples, the sound of the audio will not vary, as its 
  * frequency is governed by the sampling rate. If you want to save the audio to a file, 
  * you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
- * 
+ * </p><p>
  * A WaveSynth is organized around attributes, such as gain (i.e. loudness or brightness) 
  * and gamma (a sort of contrast setting), and data objects. The data objects include a 
  * a bitmap, mapImage, that is a Processing PImage instance for the image representation
@@ -66,15 +72,15 @@ import g4p_controls.*;
  * data and image data using arrays for the audio signal and the image data ordered along the 
  * PixelAudioMapper signal path, and an array of WaveData objects that define the individual
  * sine wave components of the WaveSynth. 
- * 
+ * </p><p>
  * When a WaveSynth is used to produce color patterns, each WaveData object in the waveDataList
  * controls a color. The colors of the various WaveData objects are added together. The 
  * amplitude of the controlling sine wave controls the brightness of each color. The control
  * panel in this example allows to isolate individual WaveData operators to see how they 
  * affect the color patterns. 
- * 
- * SAMPLING RATES FOR AUDIO AND FOR WAVESYNTH IMAGES
- * 
+ * </p>
+ * <h3>SAMPLING RATES FOR AUDIO AND FOR WAVESYNTH IMAGES</h3>
+ * <p>
  * We use different sampling rates for audio playback and recording and for WaveSynth's 
  * additive synthesis algorithm. We use the standard sampling rate 48000 Hz for audio
  * output. A 48000 Hz sampling rate fits conveniently with Hilbert curve dimensions. 
@@ -83,25 +89,28 @@ import g4p_controls.*;
  * together to produce the WaveSynth image. If genWidth = 512, this value is 262144.
  * You can change the audio sampling rate in the instance variables list or in setup(). 
  * You can change WaveSynth's sampling rate in the initWaveSynth() method. 
- * 
+ * </p><p>
  * 
  * In addition to the GUI commands, there are some useful key commands.
- *
+ * </p><p>
  * ---------------------------------------------------------------------------------------------
  * ***>>  NOTE: Key commands only work when the image display window is the front window.  <<***
  * ---------------------------------------------------------------------------------------------
- * 
+ * </p><p>
  * Key commands will not work when the control panel is the active window.
  * Click on the display window to make it the active window and then try the commands. 
  * See the parseKey() method and the methods it calls for more information about key commands.
- * 
+ * </p><p>
  * The quickest way to record a video, from frame 0 to the stop frame value in the 
  * control panel, is to press the 'V' (capital 'v') key. 
- * 
+ * </p><p>
  * The code in this example is extensively annotated. We the author heartily recommend you 
  * read the notes for the various methods. 
- * 
-* Press the UP arrow to increase audio output gain by 3.0 dB.
+ * </p>
+ * <pre>
+ * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
+ *
+ * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
  * press ' ' to turn animation on or off.
  * Press 'a' to scale all active WaveSynth amplitudes by ampFac.
@@ -118,7 +127,7 @@ import g4p_controls.*;
  * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.
  * Press '+' or '=' to make the image brighter.
  * Press '-' or '_' to make the image darker.
-// ------------- COMMANDS FOR ANIMATION STEPPING ------------- //
+ // ------------- COMMANDS FOR ANIMATION STEPPING ------------- //
  * Press 'e' to fast forward animation 1/8 of total steps.
  * Press 'E' to rewind animation 1/8 of total steps (loops back from end, if required).
  * Press 'i' to reset current animation step to initial value, 0.
@@ -127,15 +136,15 @@ import g4p_controls.*;
  * Press 'y' to rewind animation by 1 step.
  * Press 'Y' to rewind animation by 10 steps.
  * Press 'l' or 'L' to toggle animation looping on or off.
-// ------------- MUTING COMMANDS ------------- //
+ // ------------- MUTING COMMANDS ------------- //
  * press keys 1-8 to mute or unmute first eight wave data operators
  * press 'm' to print current WaveData muting states to console.
  * press 'M' to unmute all current WaveData operators.
-// ------------- JSON COMMANDS ------------- //
+ // ------------- JSON COMMANDS ------------- //
  * press 'j' or 'J' to save WaveSynth settings to a JSON file.
  * press 'o' to open a new JSON file.
  * press 'O' to reload the current JSON file, if there is one, reverting all edits.
-// ------------- MISCELLANEOUS COMMANDS ------------- //
+ // ------------- MISCELLANEOUS COMMANDS ------------- //
  * Press 'r' to toggles display window to fit screen or display at size.
  * Press 's' to save the current image to a .png file.
  * Press 'S' to save audio from WaveSynth.
@@ -143,12 +152,21 @@ import g4p_controls.*;
  * Press 'V' to record a complete video loop from frame 0 to stop frame.
  * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.
  * Press 'z' to find nearest zero crossing in the audio signal and play from there.
- * press 'h' or 'H' to show this help message in the console. 
- *  
+ * Press '?' to print window dimensions, video frame rate, and audio settings to the console.
+ * press 'h' or 'H' to show this help message in the console.
+ *
+ * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
+ * </pre>
+ * 
  * TODO can the audioBuffer be updated for all image and audio amplitude/brightness changes. How?
  * 
  */
 public class WaveSynthEditor extends PApplet {
+
+	/* ------------------------------------------------------------------ */
+	/*                        DIMENSION SETTINGS                          */
+	/* ------------------------------------------------------------------ */
+
 	int bgFillColor;
 	/**
 	 * Set designMode true to use designWidth and designHeight for display width
@@ -174,7 +192,11 @@ public class WaveSynthEditor extends PApplet {
 	int scaledWindowHeight;                // scaled window height
 	float windowScale = 1.0f;              // scaling ratio, used to calculate scaled mouse location
 
-	// PixelAudio vars and objects
+	
+	/* ------------------------------------------------------------------ */
+	/*                       PIXELAUDIO VARIABLES                         */
+	/* ------------------------------------------------------------------ */
+
 	PixelAudio pixelaudio;      // our shiny new library
 	HilbertGen hGen;            // a PixelMapGen to draw Hilbert curves
 	MooreGen mGen;              // a PixelMapGen to draw Moore curves
@@ -186,6 +208,11 @@ public class WaveSynthEditor extends PApplet {
 	PImage mapImage;            // image for display
 	PGraphics offscreen;        // offscreen PGraphics
 	int[] rgbSignal;            // the pixel values in mapImage, in the order the signal path visits them
+
+	
+	/* ------------------------------------------------------------------ */
+	/*                        WAVESYNTH VARIABLES                         */
+	/* ------------------------------------------------------------------ */
 
 	// WaveSynth vars
 	ArrayList<WaveData> wdList;    // list of WaveData objects used by a WaveSynth
@@ -208,7 +235,11 @@ public class WaveSynthEditor extends PApplet {
 	String jsonFile = "test327.json";
 	String jsonFolder = "JSON";
 
-	/* -------------------------- RENDER SETTINGS -------------------------- */
+	
+	/* ------------------------------------------------------------------ */
+	/*                         RENDER SETTINGS                            */
+	/* ------------------------------------------------------------------ */
+
 	/** Sets how much to shift phase with shiftPhases() */
 	float phaseShift = (float) (Math.PI * 1.0 / 1536.0);
 	/** Sets how much to shift colors with shiftColors()
@@ -234,21 +265,19 @@ public class WaveSynthEditor extends PApplet {
 	int startTime;                          // set when animation starts
 	int stopTime;                           // used to calculate animation time until finish and duration
 
-	/* ---------------------------------------------------------------------- */
 	boolean isVerbose = true;               // if true, post lots of debugging messages to console
 	boolean isSecondScreen = false;         // for a two screen display
 	int screen2x;                           // second screen x-coord, will be set by setScaling()
 	int screen2y;                           // second window y-coord, will be set by setScaling()
 
+	
 	/* ------------------------------------------------------------------ */
-	/*                                                                    */
 	/*                          AUDIO VARIABLES                           */
-	/*                                                                    */
 	/* ------------------------------------------------------------------ */
+	
 	/** Minim audio library */
 	Minim minim;                       // library that handles audio
 	AudioOutput audioOut;              // line out to sound hardware
-	boolean isBufferStale = false;     // flags that audioBuffer needs to be reset: i.e., after loading JSON data to wavesynth
 	float sampleRate = 48000;          // sample rate for audio playback and output to file, see notes above
 	float[] audioSignal;               // the audio signal as an array of floats
 	MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
@@ -259,9 +288,14 @@ public class WaveSynthEditor extends PApplet {
 	int noteDuration = 2000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
 	PASamplerInstrumentPool pool;   // pool of instruments
+	int poolSize = 4;               // number of instruments
+	int samplerMaxVoices = 8;       // number of voices per instrument
+	float samplerGain = 0.875f;     // instrument gain
+	
+
 
 	// ADSR and params
-	ADSRParams adsr;                   // good old attack, decay, sustain, release
+	ADSRParams samplerEnv;                   // good old attack, decay, sustain, release
 	float maxAmplitude = 0.9f;
 	float attackTime = 0.3f;
 	float decayTime = 0.1f;
@@ -277,10 +311,21 @@ public class WaveSynthEditor extends PApplet {
 	int wsIndex = 0;
 	
 	boolean isFindZeroCrossing = false;    // default setting for PASamplerVoice
+	
 
-	/* ---------------- end audio variables ---------------- */
+	/* ------------------------------------------------------------------ */
+	/*                          UPDATE RENDERING                          */
+	/* ------------------------------------------------------------------ */
+
+	boolean imageDirty = true;
+	boolean audioDirty = true;
+
+
 	
-	
+	/* ------------------------------------------------------------------ */
+	/*                           APPLICATION                              */
+	/* ------------------------------------------------------------------ */
+		
 	/**
 	 * Used in Eclipse IDE and other Java environments to launch application. Delete in Processing.
 	 * @param args
@@ -290,7 +335,7 @@ public class WaveSynthEditor extends PApplet {
 	}
 	
 	/**
-	 * A call to the settings() method is required when setting size from variables
+	 * The settings() method is required when setting size from variables
 	 */
 	public void settings() {
 		if (isDesignMode) {
@@ -311,16 +356,27 @@ public class WaveSynthEditor extends PApplet {
 	public void setup() {
 		this.frameRate(24);
 		bgFillColor = color(0, 0, 0, 255);
+		// 1. Initialize PixelAudio
 		pixelaudio = new PixelAudio(this);
+		// 2. Create a PixelMapGen object with dimensions equal to the display window.
 		gen = isDesignMode ? createHilbertGen(genWidth) : hilbertLoop3x2(genWidth, genHeight);
+		// 3. Initialize a PixelAudioMapper to handle mapping between audio and image
 		mapper = new PixelAudioMapper(gen);
-		mapSize = mapper.getSize();                    // size of the image, and of various other entities
+		// area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
+		mapSize = mapper.getSize();
+		// 4. Create a list of WaveData objects
 		wdList = initWaveDataList();
+		// 5. Create a WaveSynth with mapper and wdList
 		wavesynth = new WaveSynth(mapper, wdList);
+		//    Set the initial values of the WaveSynth
 		initWaveSynth(wavesynth);
-		initAudio();
+		//    Point currentWD to the first item in wavesynth's waveDataList field
 		currentWD = wavesynth.waveDataList.get(0);
+		//    Point mapImage to wavesynth.mapImage, for drawing to the screen
 		mapImage = wavesynth.mapImage;
+		// 6. Initialize audio
+		initAudio();
+		// 7. Set up displays
 		listDisplays();
 		setScaling();
 		if (isOversize) {
@@ -328,7 +384,9 @@ public class WaveSynthEditor extends PApplet {
 			resizeWindow();
 			println("Window is resized");
 		}
+		// 8. Create the Graphical User Interface control panel
 		createGUI();
+		// 9. Show some help
 		showHelp();
 	}
 	
@@ -362,8 +420,8 @@ public class WaveSynthEditor extends PApplet {
 	 * 
 	 * @param genW    width of each HilbertGen 
 	 * @param genH    height of each HilbertGen
-	 * @return	            a 3 x 2 array of Hilbert curves, connected in 
-	 *                      a loop (3 * genWidth by 2 * genHeight pixels)
+	 * @return	      a 3 x 2 array of Hilbert curves, connected in 
+	 *                a loop (3 * genWidth by 2 * genHeight pixels)
 	 */
 	public MultiGen hilbertLoop3x2(int genW, int genH) {
 		// list of PixelMapGens that create an image using mapper
@@ -439,19 +497,25 @@ public class WaveSynthEditor extends PApplet {
 	}	
 	
 	public void draw() {
-		// draw the image 
-		// mapImage points to wavesynth.mapImage, which gets updated by animation, etc.
-		image(mapImage, 0, 0, width, height);
-		// do one step of animation, if conditions are right
 		if (isAnimating) {
-			stepAnimation();
+			stepAnimation();      // only updates step / recording state
+			imageDirty = true;
 		}
-		runTimeArray();		// animate audio event markers
+		refreshAudioIfDirty();
+		if (imageDirty) {
+			renderVisualFrame();  // calls wavesynth.renderFrame(step)
+		}
+		image(mapImage, 0, 0, width, height);
+		runTimeArray();
+		if (isRecordingVideo) {
+			videx.saveFrame();
+			println("-- video recording frame " + step + " of " + animStop);
+		}
 	}
-	
+
 	/**
 	 * Step through the animation, called by the draw() method.
-	 * Will also record a frame of video, if we're recording.
+	 * Updates step and video recording state, but does not render or save frames.
 	 */
 	public void stepAnimation() {
 		if (step >= animStop) {
@@ -474,15 +538,36 @@ public class WaveSynthEditor extends PApplet {
 					videx.setFrameRate(wavesynth.videoFrameRate);
 					videx.startMovie();
 				}
-				videx.saveFrame();
-				println("-- video recording frame " + step + " of " + animStop);
 			}
 		}
-		renderFrame(step);
 	}
 	
-	public void renderFrame(int frame) {
-		wavesynth.renderFrame(frame);
+	public PImage renderFrame(int frame) {
+		wavesynth.prepareAnimation();
+		return wavesynth.renderFrame(frame);
+	}
+	
+	void markWaveSynthVisualDirty() {
+	    imageDirty = true;
+	}
+
+	void markWaveSynthAudioDirty() {
+	    imageDirty = true;
+	    audioDirty = true;
+	}
+
+	void renderVisualFrame() {
+	    mapImage = renderFrame(step);
+	    imageDirty = false;
+	}
+
+	void refreshAudioIfDirty() {
+	    if (!audioDirty) return;
+	    wavesynth.prepareAnimation();
+	    float[] sig = wavesynth.renderAudioRaw(0);  // audio for frame 0, stable source
+	    sig = WaveSynth.normalize(sig, 0.9f);
+	    updateAudioChain(sig);
+	    audioDirty = false;
 	}
 	
 	
@@ -531,7 +616,7 @@ public class WaveSynthEditor extends PApplet {
 	 * 
 	 */
 	public void setScaling() {
-		// max window width is a little less than the screen width of the screen
+		// max window width is a little less than the full width of the screen
 		maxWindowWidth = displayWidth - 80;
 		// leave window height some room for title bar, etc.
 		maxWindowHeight = displayHeight - 80;
@@ -565,17 +650,53 @@ public class WaveSynthEditor extends PApplet {
 		}
 	}
 
+	int screenToSampleX(int x) {
+	    return constrain(Math.round(x * windowScale), 0, mapImage.width - 1);
+	}
+
+	int screenToSampleY(int y) {
+	    return constrain(Math.round(y * windowScale), 0, mapImage.height - 1);
+	}
+
+	int sampleToScreenX(int x) {
+	    return Math.round(x / windowScale);
+	}
+
+	int sampleToScreenY(int y) {
+	    return Math.round(y / windowScale);
+	}
+	
 	// ------------- END DISPLAY SCALING METHODS ------------- //
 	
 	
-	public void mousePressed() {
+	public void mouseClicked() {
 		// Demo of how to scale mousePressed events works when window is resized.
-		int x = (this.isFitToScreen) ?  (int)(mouseX * windowScale) : mouseX;
-		int y = (this.isFitToScreen) ?  (int)(mouseY * windowScale) : mouseY;
-		audioMousePressed(constrain(x, 0, width - 1), constrain(y, 0, height - 1));
+		audioMouseClick(mouseX, mouseY);
+	}
+
+	/**
+	 * Bottleneck method for triggering an audio event at display/mouse coordinates (mx, my).
+	 * @param mx
+	 * @param my
+	 */
+	void audioMouseClick(int mx, int my) {
+	    sampleX = isFitToScreen ? screenToSampleX(mx) : mx;
+	    sampleY = isFitToScreen ? screenToSampleY(my) : my;
+	    if (sampleX < 0 || sampleX >= mapImage.width ||
+	        sampleY < 0 || sampleY >= mapImage.height) return;
+	    samplePos = mapper.lookupSignalPosShifted(sampleX, sampleY, 0);
+	    //
+	    // For WindowBuffer version:
+	    // int backingPos = posInVisibleWindow + windowBuff.getIndex();
+	    //
+	    // use sampleX/sampleY for logical event storage
+	    // use backingPos for sampler/granular source position
+	    //
+	    refreshAudioIfDirty();
+		playSample(samplePos, calcSampleLen(), 0.9f, samplerEnv);
 	}
 	
-	   /**
+    /**
      * built-in keyPressed handler, forwards events to parseKey.
      */
     @Override
@@ -584,17 +705,16 @@ public class WaveSynthEditor extends PApplet {
     		parseKey(key, keyCode);
     	}
     	else {
-    		float g = audioOut.getGain();
 			if (keyCode == UP) {
-				setAudioGain(g + 3.0f);
+				adjustAudioGain(3.0f);
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == DOWN) {
-				setAudioGain(g - 3.0f);
+				adjustAudioGain(-3.0f);
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
 			}
 			else if (keyCode == RIGHT) {
-				println("-- frame rate = "+ frameRate);
+				
 			}
 			else if (keyCode == LEFT) {
 
@@ -610,28 +730,33 @@ public class WaveSynthEditor extends PApplet {
 	 */
 	public void parseKey(char theKey, int keyCode) {
 	  switch(theKey) {
-	  case ' ': // turn animation on or off
+		case ' ': // play audio for the point the mouse is currently over
+			audioMouseClick(mouseX, mouseY);
+			break;
+		case TAB: // turn animation on or off
 	    toggleAnimation();
 	    break;
 	  case 'a': // scale all active WaveSynth amplitudes by ampFac
 	    scaleAmps(wavesynth.getWaveDataList(), ampFac);
 	    loadWaveDataPanelValues(currentWD);
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
 	    break;
 	  case 'A': // scale all active WaveSynth amplitudes by 1/ampFac
 	    scaleAmps(wavesynth.getWaveDataList(), 1/ampFac);
 	    loadWaveDataPanelValues(currentWD);
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
 	    break;
 	  case 'c': // shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space
 	    shiftColors(wavesynth.getWaveDataList(), colorShift);
 	    wavesynth.updateWaveColors();
 	    refreshGlobalPanel();
+	    markWaveSynthVisualDirty();
 	    break;
 	  case 'C': // shift all active WaveSynth colors by -colorShift * 360 degrees in the HSB color space
 	    shiftColors(wavesynth.getWaveDataList(), -colorShift);
 	    wavesynth.updateWaveColors();
 	    refreshGlobalPanel();
+	    markWaveSynthVisualDirty();
 	    break;
 	  case 'd': // print animation data to the console
 	    println(isAnimating ? "-- running animation frame " + step + " of " + animStop : "-- stopped at frame " + step +" of " + animStop);
@@ -642,22 +767,26 @@ public class WaveSynthEditor extends PApplet {
 	  case 'f': // scale all active WaveSynth frequencies by freqFac
 	    scaleFreqs(wavesynth.getWaveDataList(), freqFac);
 	    loadWaveDataPanelValues(currentWD);
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
+	    markWaveSynthVisualDirty();
 	    break;
 	  case 'F': // scale all active WaveSynth frequencies by 1/freqFac
 	    scaleFreqs(wavesynth.getWaveDataList(), 1/freqFac);
 	    loadWaveDataPanelValues(currentWD);
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
+	    markWaveSynthVisualDirty();
 	    break;
 	  case 'p': // shift all active WaveSynth phases by phaseFac
 	    shiftPhases(wavesynth.getWaveDataList(), phaseShift);
 	    loadWaveDataPanelValues(currentWD);
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
+	    markWaveSynthVisualDirty();
 	    break;
 	  case 'P': // shift all active WaveSynth phases by -phaseFac
 	    shiftPhases(wavesynth.getWaveDataList(), -phaseShift);
 	    loadWaveDataPanelValues(currentWD);
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
+	    markWaveSynthVisualDirty();
 	    break;
 	  case 'k': // show all current phase values in the console
 	    showPhaseValues(wavesynth.getWaveDataList());
@@ -665,55 +794,55 @@ public class WaveSynthEditor extends PApplet {
 	  case 'K': // set all phase values so that first frame looks like the current frame, then go to first frame
 	    capturePhaseValues(wavesynth.getWaveDataList());
 	    step = 0;
-	    renderFrame(step);
+	    markWaveSynthVisualDirty();
 	    break;
 	  case '+': // make the image brighter
 	  case '=':
 	    wavesynth.setGain(wavesynth.gain + gainInc);
 	    refreshGlobalPanel();
-	    if (!isAnimating) renderFrame(step);
+	    if (!isAnimating) markWaveSynthVisualDirty();
 	    break;
 	  case '-': // make the image darker
 	  case '_':
 	    wavesynth.setGain(wavesynth.gain - gainInc);
 	    refreshGlobalPanel();
-	    if (!isAnimating) renderFrame(step);
+	    if (!isAnimating) markWaveSynthVisualDirty();
 	    break;
 	    // ------------- BEGIN COMMANDS FOR ANIMATION STEPPING ------------- //
 	  case 'e': // fast forward animation 1/8 of total steps
 	    step = (step + animSteps/8) % animSteps;
-	    renderFrame(step);
+	    mapImage = renderFrame(step);
 	    println("-- step = "+ step);
 	    break;
 	  case 'E': // rewind animation 1/8 of total steps (loops back from end, if required)
 	    int leap = animSteps/8;
 	    step = (step > leap) ? step - leap : animSteps - (leap - step);
-	    renderFrame(step);
+	    mapImage = renderFrame(step);
 	    println("-- step = "+ step);
 	    break;
 	  case 'i': // reset current animation step to initial value, 0
 	    step = 0;
-	    renderFrame(0);
+	    mapImage = renderFrame(0);
 	    println("-- step = "+ step);
 	    break;
 	  case 'u': // advance animation by 1 step
 	    step = (step + 1) % animSteps;
-	    renderFrame(step);
+	    mapImage = renderFrame(step);
 	    println("-- step = "+ step);
 	    break;
 	  case 'U': // advance animation by 10 steps
 	    step = (step + 10) % animSteps;
-	    renderFrame(step);
+	    mapImage = renderFrame(step);
 	    println("-- step = "+ step);
 	    break;
 	  case 'y': // rewind animation by 1 step
 	    step = (step > 0) ? (step - 1) : animSteps - 1;
-	    renderFrame(step);
+	    mapImage = renderFrame(step);
 	    println("-- step = "+ step);
 	    break;
 	  case 'Y': // rewind animation by 10 steps
 	    step = (step > 10) ? (step - 10) : animSteps - (10 - step);
-	    renderFrame(step);
+	    mapImage = renderFrame(step);
 	    println("-- step = "+ step);
 	    break;
 	  case 'l': // toggle animation looping on or off
@@ -734,7 +863,7 @@ public class WaveSynthEditor extends PApplet {
 	    int k = Character.getNumericValue(theKey) - 1;
 	    toggleWDMute(k);
 	    refreshGlobalPanel();
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
 	    break;
 	  case 'm': // print current WaveData states to console
 	    printWDStates(wavesynth.getWaveDataList());
@@ -742,7 +871,7 @@ public class WaveSynthEditor extends PApplet {
 	  case 'M': // unmute all WaveData operators
 		unmuteAllWD(wavesynth.getWaveDataList());
 	    refreshGlobalPanel();
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
 	    break;
 	    // ------------- END MUTING COMMANDS ------------- //
 	  case 'j': // save WaveSynth settings to a JSON file
@@ -751,15 +880,15 @@ public class WaveSynthEditor extends PApplet {
 	    break;
 	  case 'o': // open a new JSON file
 	    loadWaveData();
-	    isBufferStale = true;
+	    markWaveSynthAudioDirty();
 	    break;
 	  case 'O': // reload the current JSON file, if there is one, reverting all edits
 	    if (this.currentDataFile == null) {
 	      loadWaveData();
-	      isBufferStale = true;
+	      markWaveSynthAudioDirty();
 	    } else {
 	      fileSelectedOpen(currentDataFile);
-	      isBufferStale = true;
+	      markWaveSynthAudioDirty();
 	      if (isVerbose) println("--->> reloaded JSON file");
 	    }
 	    break;
@@ -791,15 +920,16 @@ public class WaveSynthEditor extends PApplet {
 	    // This will record a complete video loop, from frame 0 to the
 	    // stop frame value in the GUI control panel.
 	    step = 0;
-	    renderFrame(step);
+	    mapImage = renderFrame(step);
 	    isRecordingVideo = true;
 	    isAnimating = true;
+	    break;
 	  case 't': // sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON
 	    Collections.sort(wavesynth.waveDataList, new CompareWaveData());
 	    currentWD = wavesynth.waveDataList.get(0);
 	    wavesynth.prepareAnimation();
 	    refreshGlobalPanel();
-	    if (!isAnimating) renderFrame(step);
+	    if (!isAnimating) mapImage = renderFrame(step);
 	    if (isVerbose) {
 	      println("--->> Sorted wave data operators by frequency.");
 	    }
@@ -808,6 +938,12 @@ public class WaveSynthEditor extends PApplet {
 		  isFindZeroCrossing = !isFindZeroCrossing;
 		  println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
 		  toggleZeroCrossing(isFindZeroCrossing);
+		  break;
+	  case '?': // print some global information to the console
+		  println("-- window dimensions = "+ width +" x "+ height);
+		  println("-- frame rate = "+ frameRate);
+		  println("-- audio gain = "+ audioOut.getGain());
+		  println("-- audio sample rate = "+ audioOut.sampleRate());
 		  break;
 	  case 'h': // show Help Message in console
 	  case 'H':
@@ -819,6 +955,7 @@ public class WaveSynthEditor extends PApplet {
 	}
 	
 	public void showHelp() {
+		println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
 		println("\n * Press the UP arrow to increase audio output gain by 3.0 dB.");
 		println(" * Press the DOWN arrow to decrease audio output gain by 3.0 dB.");
 		println(" * press ' ' to turn animation on or off.");
@@ -861,7 +998,9 @@ public class WaveSynthEditor extends PApplet {
 		println(" * Press 'V' to record a complete video loop from frame 0 to stop frame.");
 		println(" * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.");
 		println(" * Press 'z' to find nearest zero crossing in the audio signal and play from there.");
+		println(" * Press '?' to print window dimensions, video frame rate, and audio settings to the console.");
 		println(" * press 'h' or 'H' to show this help message in the console.");
+		println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
 	}
 
 	/**
@@ -873,6 +1012,17 @@ public class WaveSynthEditor extends PApplet {
 		outputGain = audioOut.getGain();
 	}
 
+	/**
+	 * Sets audioOut.gain.
+	 * @param g   gain value for audioOut, in decibels
+	 */
+	public void adjustAudioGain(float g) {
+		float ag = audioOut.getGain();
+		ag += g;
+		if (ag > 12.0f || ag < -64.0f) return;
+		audioOut.setGain(ag);
+		outputGain = audioOut.getGain();
+	}
 	
 	/**
 	 * Turn animation on or off.
@@ -1060,7 +1210,7 @@ public class WaveSynthEditor extends PApplet {
 			wd.waveState = WaveState.ACTIVE;
 		}
 		if (!isAnimating) {
-			wavesynth.renderFrame(step);
+			mapImage = renderFrame(step);
 		}
 	}
 	
@@ -1137,6 +1287,495 @@ public class WaveSynthEditor extends PApplet {
 	
 	//----- END WAVEDATA METHODS ----- //
 	
+		
+	//-----------------------------------------------------------//
+	/* ----->>>           BEGIN JSON FILE I/O           <<<----- */
+	//-----------------------------------------------------------//
+	
+
+	// select a file of WaveData objects in JSON format to open
+	public void loadWaveData() {
+		File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
+		selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
+	}
+
+	public void fileSelectedOpen(File selection) {
+		if (selection == null) {
+			println("Window was closed or the user hit cancel.");
+			isAnimating = oldIsAnimating;
+			return;
+		}
+		currentDataFile = selection;
+		println("User selected " + selection.getAbsolutePath());
+		currentFileName = selection.getAbsolutePath();
+		json = loadJSONObject(currentFileName);
+		boolean goodHeader = checkJSONHeader(json, "PXAU", "WSYN");
+		if (goodHeader) {
+			println("--->> JSON file contains WaveSynthEditor data. It should load correctly.");
+		}
+		else {
+			println("--->> JSON file may not contain WaveSynthEditor data. Will try to load,anyhow.");
+		}
+		setWaveSynthFromJSON(json, wavesynth);
+		surface.setTitle(currentFileName);
+		isAnimating = oldIsAnimating;
+	}
+	
+	boolean checkJSONHeader(JSONObject json, String key, String val) {
+		JSONObject header = (json.isNull("header") ? null : json.getJSONObject("header"));
+		String pxau;
+		if (header != null) {
+			pxau = (header.isNull(key)) ? "" : header.getString(key);	
+		}
+		else {
+			pxau = (json.isNull(key)) ? "" : json.getString(key);
+		}
+		if (pxau.equals(val)) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	/**
+	 * Sets the fields of a WaveSynth using values stored in a JSON object. 
+	 * @param json		a JSON object, typically read in from a file
+	 * @param synth		a WaveSynth
+	 */
+	public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
+		// set animation globals and WaveSynth properties
+		animSteps = (json.isNull("steps")) ? 240 : json.getInt("steps");
+		synth.setAnimSteps(animSteps);
+		animStop = (json.isNull("stop")) ? this.animSteps : json.getInt("stop");
+		synth.setStop(animStop);
+		float myGamma = (json.isNull("gamma")) ? 1.0f : json.getFloat("gamma");
+		synth.setGamma(myGamma);
+		comments = (json.isNull("comments")) ? "" : json.getString("comments");
+		synth.setComments(comments);
+		synth.setGain(json.isNull("blendFactor") ? 0.5f : json.getFloat("blendFactor"));
+		synth.setVideoFilename((json.isNull("filename")) ? "wavesynth.mp4" : json.getString("filename"));
+		this.videoFilename = synth.getVideoFilename();
+		synth.setScaleHisto((json.isNull("scaleHisto")) ? false : json.getBoolean("scaleHisto"));
+		if (synth.isScaleHisto()) {
+			synth.setHistoHigh((json.isNull("histoHigh")) ? 255 : json.getInt("histoHigh"));
+			synth.setHistoLow((json.isNull("histoLow")) ? 0 : json.getInt("histoLow"));
+		}
+		// now load the JSON wavedata into ArrayList<WaveData> waveDataList
+		JSONArray waveDataArray = json.getJSONArray("waves");
+		int datalen = waveDataArray.size();
+		ArrayList<WaveData> waveDataList = new ArrayList<WaveData>(datalen);
+		for (int i = 0; i < datalen; i++) {
+			// load fields common to both old and new format
+			JSONObject waveElement = waveDataArray.getJSONObject(i);
+			float f = waveElement.getFloat("freq");
+			float a = waveElement.getFloat("amp");
+			float p = waveElement.getFloat("phase");
+			// float pInc = waveElement.getFloat("phaseInc");
+			float dc = 0.0f;
+			if (!waveElement.isNull("dc")) {
+				dc = waveElement.getFloat("dc");
+			}
+			JSONObject rgbColor = waveElement.getJSONObject("color");
+			int c = color(rgbColor.getInt("r"), rgbColor.getInt("g"), rgbColor.getInt("b"));
+			float cycles;
+			cycles = waveElement.getFloat("cycles");
+			// frequency, amplitude, phase, dc, cycles, color, steps
+			WaveData wd = new WaveData(f, a, p, dc, cycles, c, animSteps);
+			waveDataList.add(wd);
+		}
+		synth.setWaveDataList(waveDataList);
+		currentWD = wavesynth.waveDataList.get(0);
+		waveDataIndex = 0;
+		synth.prepareAnimation();
+		synth.renderFrame(0);
+		loadGlobalPanelValues();
+		loadWaveDataPanelValues(currentWD);
+		printWaveData(synth);
+	    markWaveSynthAudioDirty();
+	}
+
+	/**
+	 * Outputs current wavesynth settings and WaveData list.
+	 */
+	public void printWaveData(WaveSynth synth) {
+		java.nio.file.Path path = java.nio.file.Paths.get(currentFileName);
+		String fname = path.getFileName().toString();
+		println("\n--------=====>>> Current WaveSynth instance for file " + fname + " <<<=====--------\n");
+		println("Animation steps: " + synth.getAnimSteps());
+		// println("Stop frame: "+ waveAnimal.getAnimSteps());
+		println("gain: " + synth.getGain());
+		println("gamma: " + synth.getGamma());
+		if (synth.isScaleHisto()) {
+			println("scaleHisto: " + synth.isScaleHisto());
+			println("histoLow: " + synth.getHistoLow());
+			println("histoHigh: " + synth.getHistoHigh());
+		}
+		println(fname);
+		println("video filename: " + synth.getVideoFilename());
+		// println("WaveData list for: "+ videoFilename);
+		for (int i = 0; i < synth.waveDataList.size(); i++) {
+			WaveData wd = synth.waveDataList.get(i);
+			println("  " + (i + 1) + ":: " + wd.toString());
+		}
+		println("comments: " + synth.getComments() +"\n");
+	}
+	
+	public void saveWaveData() {
+		if ((currentDataFile == null) || (currentDataFile.getAbsolutePath().equals(""))) {
+			selectOutput("Select a file to write to:", "fileSelectedWrite");
+		}
+		else {
+			selectOutput("Select a file to write to:", "fileSelectedWrite", currentDataFile);
+		}
+	}
+
+	public void fileSelectedWrite(File selection) {
+		if (selection == null) {
+			println("Window was closed or the user hit cancel.");
+			return;
+		}
+		WaveSynth synth = this.wavesynth;
+		println("User selected " + selection.getAbsolutePath());
+		// Do we have a .json at the end?
+		if (selection.getName().length() < 5
+				|| selection.getName().indexOf(".json") != selection.getName().length() - 5) {
+			// problem missing ".json"
+			currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
+		} else {
+			currentFileName = selection.getAbsolutePath();
+		}
+		// put WaveData objects into an array
+		JSONArray waveDataArray = new JSONArray();
+		JSONObject waveElement;
+		WaveData wd;
+		for (int i = 0; i < synth.waveDataList.size(); i++) {
+			wd = synth.waveDataList.get(i);
+			waveElement = new JSONObject();
+			waveElement.setInt("index", i);
+			waveElement.setFloat("freq", wd.freq);
+			waveElement.setFloat("amp", wd.amp);
+			waveElement.setFloat("phase", wd.phase);
+			waveElement.setFloat("phaseInc", wd.phaseInc);
+			waveElement.setFloat("cycles", wd.phaseCycles);
+			waveElement.setFloat("dc", wd.dc);
+			// BADSR settings
+			int[] rgb = PixelAudioMapper.rgbComponents(wd.waveColor);
+			JSONObject rgbColor = new JSONObject();
+			rgbColor.setInt("r", rgb[0]);
+			rgbColor.setInt("g", rgb[1]);
+			rgbColor.setInt("b", rgb[2]);
+			waveElement.setJSONObject("color", rgbColor);
+			// append wave data to array
+			waveDataArray.append(waveElement);
+		}
+		// put the array into an object that tracks other state variables
+		JSONObject stateData = new JSONObject();
+		stateData.setJSONObject("header", getWaveSynthJSONHeader());
+		// stateData.setString("PXAU", "WSYN");
+		stateData.setInt("steps", synth.animSteps);
+		stateData.setInt("stop", animStop);
+		stateData.setFloat("blendFactor", synth.gain);
+		stateData.setInt("dataFormat", 2);
+		stateData.setString("comments", synth.comments);
+		// String videoName = selection.getName(); 
+		String videoName = synth.videoFilename;
+		if (videoName == null || videoName.equals("")) {
+			videoName = selection.getName();
+			if (videoName.indexOf(".json") != -1) {
+				videoName = videoName.substring(0, videoName.indexOf(".json")) + ".mp4";
+			} else {
+				videoName += ".mp4";
+			}
+		}
+		println("----->>> video name is " + videoName);
+		synth.videoFilename = videoName; // ???
+		stateData.setString("filename", videoName);
+		stateData.setFloat("gamma", synth.gamma);
+		stateData.setBoolean("scaleHisto", synth.isScaleHisto);
+		stateData.setFloat("histoHigh", synth.histoHigh);
+		stateData.setFloat("histoLow", synth.histoLow);
+		stateData.setJSONArray("waves", waveDataArray);
+		saveJSONObject(stateData, currentFileName);
+		currentDataFile = new File(currentFileName);
+		surface.setTitle(currentFileName);
+	}
+	
+	public JSONObject getWaveSynthJSONHeader() {
+		// flag this JSON file as WaveSynthEditor data using a "PXAU" key with value "WSYN"
+		// add some other pertinent information
+		JSONObject header = new JSONObject();
+		header.setString("PXAU", "WSYN");
+		header.setString("description", "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.");
+		header.setString("PixelAudioURL", "https://github.com/Ignotus-mago/PixelAudio");
+		return header;
+	}
+
+	//-------------------------------------------//
+	//             END JSON FILE I/O             //
+	//-------------------------------------------//
+	
+	//-----------------------------------------------------------//
+	/* ----->>>      BEGIN IMAGE AND AUDIO FILE I/O     <<<----- */
+	//-----------------------------------------------------------//
+
+
+	public void saveToImage() {
+	    // File folderToStartFrom = new File(dataPath(""));
+	    selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
+	}
+
+	public void imageFileSelectedWrite(File selection) {
+	    if (selection == null) {
+	        println("Window was closed or the user hit cancel.");
+	        return;            
+	    }
+	    String fileName = selection.getAbsolutePath();
+	    if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
+	        fileName += ".png";
+	    }
+	    // saveImageToFile(mapImage, fileName);
+	    save(fileName);
+	}
+
+	public void saveImageToFile(PImage img, String fileName) {
+	    img.save(fileName);
+	}
+
+	/**
+	 * Saves audio data to 16-bit integer PCM format, which Processing can also open.
+	 * 
+	 * @param samples            an array of floats in the audio range (-1.0f, 1.0f)
+	 * @param sampleRate        audio sample rate for the file
+	 * @param fileName            name of the file to save to
+	 * @throws IOException        an Exception you'll need to catch to call this method (see keyPressed entry for 's')
+	 * @throws UnsupportedAudioFileException        another Exception (see keyPressed entry for 's')
+	 */
+	public static void saveAudioToFile(float[] samples, float sampleRate, String fileName)
+	        throws IOException, UnsupportedAudioFileException {
+	    // Convert samples from float to 16-bit PCM
+	    byte[] audioBytes = new byte[samples.length * 2];
+	    int index = 0;
+	    for (float sample : samples) {
+	        // Scale sample to 16-bit signed integer
+	        int intSample = (int) (sample * 32767);
+	        // Convert to bytes
+	        audioBytes[index++] = (byte) (intSample & 0xFF);
+	        audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
+	    }
+	    // Create an AudioInputStream
+	    ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+	    AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+	    AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
+	    // Save the AudioInputStream to a WAV file
+	    File outFile = new File(fileName);
+	    AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
+	    println("----- saved WaveSynth data as an audio file: "+ outFile.getAbsolutePath());
+	}
+	
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                     BEGIN AUDIO METHODS                        */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+
+	/**
+	 * CALL IN SETUP()
+	 */
+	public void initAudio() {
+	  minim = new Minim(this);
+	  // use the getLineOut method of the Minim object to get an AudioOutput object
+	  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
+	  this.setAudioGain(outputGain);
+	  this.audioBuffer = new MultiChannelBuffer(mapSize, 1);
+	  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
+	  samplerEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+	  ensureSamplerReady();
+	  this.renderSignal();
+	  timeLocsArray = new ArrayList<TimedLocation>();     // initialize mouse event tracking array
+	}
+	
+	/**
+	 * Prepares Sampler instruments and assets
+	 */
+	void ensureSamplerReady() {
+	    if (pool != null) pool.setBuffer(audioBuffer);
+	    else pool = new PASamplerInstrumentPool(audioBuffer, sampleRate, poolSize, samplerMaxVoices, audioOut, samplerEnv);
+	    pool.setGain(samplerGain);
+	}
+	
+    /**
+	 * Bottleneck "commit" method for audio state. 
+     * 
+     * Takes an arbitrary input signal and installs it as the canonical audio signal
+     * used by the application. This method:
+     *
+     *  - Resizes/pads/truncates the input to mapper.getSize()
+     *  - Copies the data to ensure no external aliasing
+     *  - Updates audioSignal (canonical signal handled by application code)
+     *  - Updates audioBuffer (audio buffer used by Minim audio library methods)
+     *  - Propagates the buffer to active instruments: edit for your own instruments
+     * 
+     * This is the ONLY method that should mutate the global audio signal state.
+     * 
+     * In PixelAudio examples, the signal is typically loaded from a file, but
+     * it could also be signal cached in memory, a signal generated by code, audio
+     * captured live, etc. 
+	 * 
+	 * @param sig                 an audio signal
+	 * @param bufferSampleRate    audio sample rate for sig, 
+	 *                            usually obtained when reading from an audio file
+	 */
+	void updateAudioChain(float[] sig, float bufferSampleRate) {
+	    // 0) Decide target length (make this a single source of truth)
+	    int targetSize = mapper.getSize();
+	    if (targetSize <= 0) return;
+	    // 1) Ensure audioBuffer matches target
+	    float[] canonical = new float[targetSize];
+	    if (sig != null) {
+	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
+	    }
+	    // 3) Set audioSignal and other audio arrays
+	    audioSignal = canonical;
+	    audioLength = targetSize;
+	    // 4) Store signal in audioBuffer
+	    if (audioBuffer == null || audioBuffer.getBufferSize() != targetSize) {
+	        audioBuffer = new MultiChannelBuffer(targetSize, 1);
+	    }
+	    audioBuffer.setChannel(0, canonical);
+	    // 5) Propagate into synths (adjust to your actual API)
+	    if (pool != null) {
+	    	pool.setBuffer(audioBuffer, bufferSampleRate);
+	    }
+	}
+	
+	void updateAudioChain(float[] sig) {
+		updateAudioChain(sig, audioOut.sampleRate());
+	}
+
+	/**
+	 * Save audio buffer to a file called "wavesynth_<wsIndex>.wav".
+	 */
+	public void saveToAudio() {
+		audioDirty = true;
+		refreshAudioIfDirty();
+		try {
+			saveAudioToFile(audioSignal, sampleRate, "wavesynth_"+ wsIndex +".wav");
+		}
+		catch (IOException e) {
+			println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());
+		}
+		catch (UnsupportedAudioFileException e) {
+			println("--->> The file format is unsupported "+ e.getMessage());
+		}
+	}
+
+	/**
+	 * Calls WaveSynth to render a audio sample array derived from the same math that creates the image,
+	 * then loads the derived audio data to audioBuffer, ready to be played.
+	 */
+	public void renderSignal() {
+		mapImage = renderFrame(step);		
+		float[] sig = wavesynth.renderAudioRaw(step);           // get the signal "as is" from WaveSynth
+		sig = WaveSynth.normalize(sig, 0.9f);        // normalize samples to the range (-0.9f, 0.9f) 
+		this.updateAudioChain(sig);
+		// println("--->> copied audio signal to audio buffer");
+	}
+	    
+	/**
+	 * Plays an audio sample with WFSamplerInstrument and custom ADSR.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param defaultEnv         an ADSR envelope for the sample
+	 * @return the calculated sample length in samples
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
+	  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
+	  int durationMS = (int)(samplelen/sampleRate * 1000);
+	  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
+	  // return the length of the sample
+	  return samplelen;
+	}
+
+	/**
+	 * Plays an audio sample with WFSamplerInstrument and default ADSR.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @return the calculated sample length in samples
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude) {
+	  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
+	  int durationMS = (int)(samplelen/sampleRate * 1000);
+	  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
+	  // return the length of the sample
+	  return samplelen;
+	}
+
+	public int calcSampleLen() {
+	  float vary = 0; 
+	  // skip the fairly rare negative numbers
+	  while (vary <= 0) {
+	    vary = (float) PixelAudio.gauss(1.0, 0.0625);
+	  }
+	  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
+	  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+	  return samplelen;
+	}
+
+	/**
+	 * Run the animation for audio events. 
+	 */
+	public void runTimeArray() {
+	    int currentTime = millis();
+	    timeLocsArray.forEach(tl -> {
+	        tl.setStale(tl.eventTime() < currentTime);
+	        if (!tl.isStale()) {
+	        	int x = isFitToScreen ? sampleToScreenX(tl.getX()) : tl.getX();
+	        	int y = isFitToScreen ? sampleToScreenY(tl.getY()) : tl.getY();
+	        	drawCircle(x, y);
+	        }
+	    });
+	    timeLocsArray.removeIf(TimedLocation::isStale);
+	}
+
+	/**
+	 * Draws a circle at the location of an audio trigger (mouseDown event).
+	 * @param x        x coordinate of circle
+	 * @param y        y coordinate of circle
+	 */
+	public void drawCircle(int x, int y) {
+	    //float size = isRaining? random(10, 30) : 60;
+	    fill(color(233, 220, 199));
+	    noStroke();
+	    circle(x, y, 60);
+	}    
+
+	
+	/* ----->>> initialize GUI and control window <<<----- */
+	/* ----->>> initialize currentWD and wavesynth.waveDataList before setting up the GUI  <<<----- */
+
+	/**
+	 * Initialize GUI and control window -- initialize wavesynth before calling this method.
+	 */
+	public void createGUI() {
+	  createControlWindow();
+	  initGlobalPanel();
+	  createGlobalControls();
+	  buildGlobalPanel();
+	  loadGlobalPanelValues();
+	  initWaveDataPanel();
+	  createWaveDataControls();
+	  buildWaveDataPanel();
+	  loadWaveDataPanelValues(currentWD);
+	  // get crackin'
+	  controlWindow.loop();
+	}
+
 	
 	/* ------------------------------------------------------------- */
 	/* ----->>>              BEGIN G4P GUI                  <<<----- */
@@ -1204,29 +1843,11 @@ public class WaveSynthEditor extends PApplet {
 	GLabel colorTitle;
 	PGraphics colorPG;
 	int sel_col = -1;
-	/* ----->>> initialize GUI and control window <<<----- */
-	/* ----->>> initialize currentWD and wavesynth.waveDataList before setting up the GUI  <<<----- */
-
-	/**
-	 * Initialize GUI and control window -- initialize wavesynth before calling this method.
-	 */
-	public void createGUI() {
-	  createControlWindow();
-	  initGlobalPanel();
-	  createGlobalControls();
-	  buildGlobalPanel();
-	  loadGlobalPanelValues();
-	  initWaveDataPanel();
-	  createWaveDataControls();
-	  buildWaveDataPanel();
-	  loadWaveDataPanelValues(currentWD);
-	  // get crackin'
-	  controlWindow.loop();
-	}
-
+	
 	/********************************************************************/
 	/* ----->>>                CONTROL WINDOW                  <<<----- */
 	/********************************************************************/
+	
 	/* ----->>> set up GUI and initialize the control window <<<----- */
 	public void createControlWindow() {
 	  G4P.messagesEnabled(false);
@@ -1249,6 +1870,7 @@ public class WaveSynthEditor extends PApplet {
 	  //controlWindow.addOnCloseHandler(this, "winClose");
 	  createCommentsField();
 	}
+	
 	public void createCommentsField() {
 	  commentsField = new GTextArea(controlWindow, 5, 480, 470, 70, G4P.SCROLLBARS_NONE);
 	  commentsField.setOpaque(true);
@@ -1256,9 +1878,11 @@ public class WaveSynthEditor extends PApplet {
 	  commentsField.addEventHandler(this, "comments_hit");
 	  commentsField.setText(comments);
 	}
+	
 	/********************************************************************/
 	/* ----->>>                 GLOBAL PANEL                   <<<----- */
 	/********************************************************************/
+	
 	/* ----->>> initialize global panel <<<----- */
 	public void initGlobalPanel() {
 	  globalPanel = new GPanel(controlWindow, 5, 5, 230, 470, "Globals");
@@ -1269,6 +1893,7 @@ public class WaveSynthEditor extends PApplet {
 	  globalPanel.setOpaque(true);
 	  globalPanel.addEventHandler(this, "globalPanel_hit");
 	}
+	
 	/* ----->>> add controls to global panel <<<----- */
 	public void createGlobalControls() {
 	    int ypos = 30;
@@ -1424,6 +2049,7 @@ public class WaveSynthEditor extends PApplet {
 	  globalPanel.addControl(saveAsBtn);
 	  globalPanel.setCollapsed(false);
 	}
+	
 	public void loadGlobalPanelValues() {
 	  blendField.setText(str(wavesynth.gain));
 	  gammaField.setText(str(wavesynth.gamma));
@@ -1443,16 +2069,19 @@ public class WaveSynthEditor extends PApplet {
 	  videoNameField.setText(wavesynth.videoFilename); 
 	  commentsField.setText(wavesynth.getComments());
 	}
+	
 	// called for globals that may be affected by a keypress
 	public void refreshGlobalPanel() {
 	  wavesynth. prepareAnimation();
 	  loadGlobalPanelValues();
 	  loadWaveDataPanelValues(currentWD);
 	}
+	
 	/* ----->>> end of the global panel setup <<<----- */
 	/********************************************************************/
 	/* ----->>>               WAVE DATA PANEL                  <<<----- */
 	/********************************************************************/
+	
 	/* ----->>> initialize wave data panel <<<----- */
 	public void initWaveDataPanel() {
 	  waveDataPanel = new GPanel(controlWindow, 245, 5, 230, 470, "Operators");
@@ -1463,6 +2092,7 @@ public class WaveSynthEditor extends PApplet {
 	  waveDataPanel.setOpaque(true);
 	  waveDataPanel.addEventHandler(this, "waveDataPanel_hit");
 	}
+	
 	/* ----->>> add controls to the wave data panel <<<----- */
 	public void createWaveDataControls() {
 	  /* ----->>>  <<<----- */
@@ -1548,6 +2178,7 @@ public class WaveSynthEditor extends PApplet {
 	  delWaveBtn.setText("Delete");
 	  delWaveBtn.addEventHandler(this, "delWave_hit");
 	}
+	
 	// Color Chooser GUI
 	// @TODO dispense with the "Choose" button and just click on the GView to show the color picker
 	public void createColorChooserGUI(int x, int y, int w, int h, int border) {
@@ -1575,12 +2206,14 @@ public class WaveSynthEditor extends PApplet {
 	  colorPG.background(sel_col);
 	  colorPG.endDraw();
 	}
+	
 	public void setWaveDataPanelColor(int sel_col) {
 	  colorTitle.setText("Color: "+ (sel_col >> 16 & 0xFF) +", "+ (sel_col >> 8 & 0xFF) +", "+ (sel_col & 0xFF));
 	  colorPG.beginDraw();
 	  colorPG.background(sel_col);
 	  colorPG.endDraw();
 	}
+	
 	/* ----->>> populate the wave data panel with controls <<<----- */
 	public void buildWaveDataPanel() {
 	  waveDataPanel.addControl(freqField);
@@ -1602,6 +2235,7 @@ public class WaveSynthEditor extends PApplet {
 	  waveDataPanel.addControl(dupWaveBtn);
 	  waveDataPanel.addControl(delWaveBtn);
 	}
+	
 	public void loadWaveDataPanelValues(WaveData wd) {
 	  freqField.setText(str(wd.freq));
 	  ampField.setText(str(wd.amp));
@@ -1639,8 +2273,7 @@ public class WaveSynthEditor extends PApplet {
 	    }
 	  }
 	  // rely on the global blendChannels 
-	  if (!isAnimating) renderFrame(step);
-	  
+	  if (!isAnimating) mapImage = renderFrame(step);  
 	  /*
 	  muteWave.setText("Mute");
 	  newWaveBtn.setText("New");
@@ -1648,17 +2281,20 @@ public class WaveSynthEditor extends PApplet {
 	  delWaveBtn.setText("Delete");
 	  */
 	}
+	
 	/********************************************************************/
 	/*            Window and Global Control Panel Handlers              */
 	/********************************************************************/
+	
 	// our draw method, call each time through the event loop
 	synchronized public void winDraw(PApplet appc, GWinData data) { 
 	  appc.background(color(254, 233, 178));
 	}
 	
+/*
 	// respond to key in window
 	// not loaded
-	// under development
+	// old method under development, the new one below is better
 	public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
 		if (!evt.isControlDown()) {
 			println("-- exit winKey");
@@ -1670,10 +2306,28 @@ public class WaveSynthEditor extends PApplet {
 		}
 		
 	}
+*/
+
+/*	
+    // validate all text entry fields...
+	boolean isGuiTyping() {
+		if (pitchShiftText != null && pitchShiftText.hasFocus()) {
+			return true;
+		}
+	    return false;
+	}
+
+	// respond to key in window (new method)
+	public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
+	    if (evt.getAction() != KeyEvent.RELEASE) return;
+	    if (isGuiTyping()) return;
+	    parseKey(evt.getKey(), evt.getKeyCode());
+	}	
 
 	public void globalPanel_hit(GPanel panel, GEvent event) { 
 	  // nothing doing
 	}
+*/
 	
 	/*
 	  Dropped:
@@ -1770,7 +2424,7 @@ public class WaveSynthEditor extends PApplet {
 	  if (!isDesignMode) {
 	    
 	  }
-	  renderFrame(step);
+	  mapImage = renderFrame(step);
 	}
 
 	// stays global
@@ -1847,7 +2501,7 @@ public class WaveSynthEditor extends PApplet {
 	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
 	  // TODO verify compatibility with older JSON format
 	  currentWD.setPhase(newPhase);
-	  if (!isAnimating) renderFrame(step);
+	  if (!isAnimating) mapImage = renderFrame(step);
 	}
 	
 	public void cycles_hit(GTextField source, GEvent event) { 
@@ -1979,433 +2633,6 @@ public class WaveSynthEditor extends PApplet {
 	/* ------------------------------------------------------------- */
 	/*                        END G4P GUI                            */
 	/* ------------------------------------------------------------- */
-	
-	
-	
-	
-	//-----------------------------------------------------------//
-	/* ----->>>           BEGIN JSON FILE I/O           <<<----- */
-	//-----------------------------------------------------------//
-	
-
-	// select a file of WaveData objects in JSON format to open
-	public void loadWaveData() {
-		File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
-		selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
-	}
-
-	public void fileSelectedOpen(File selection) {
-		if (selection == null) {
-			println("Window was closed or the user hit cancel.");
-			isAnimating = oldIsAnimating;
-			return;
-		}
-		currentDataFile = selection;
-		println("User selected " + selection.getAbsolutePath());
-		currentFileName = selection.getAbsolutePath();
-		json = loadJSONObject(currentFileName);
-		boolean goodHeader = checkJSONHeader(json, "PXAU", "WSYN");
-		if (goodHeader) {
-			println("--->> JSON file contains WaveSynthEditor data. It should load correctly.");
-		}
-		else {
-			println("--->> JSON file may not contain WaveSynthEditor data. Will try to load,anyhow.");
-		}
-		setWaveSynthFromJSON(json, wavesynth);
-		surface.setTitle(currentFileName);
-		isAnimating = oldIsAnimating;
-	}
-	
-	boolean checkJSONHeader(JSONObject json, String key, String val) {
-		JSONObject header = (json.isNull("header") ? null : json.getJSONObject("header"));
-		String pxau;
-		if (header != null) {
-			pxau = (header.isNull(key)) ? "" : header.getString(key);	
-		}
-		else {
-			pxau = (json.isNull(key)) ? "" : json.getString(key);
-		}
-		if (pxau.equals(val)) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-
-	/**
-	 * Sets the fields of a WaveSynth using values stored in a JSON object. 
-	 * @param json		a JSON object, typically read in from a file
-	 * @param synth		a WaveSynth
-	 */
-	public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
-		// set animation globals and WaveSynth properties
-		animSteps = (json.isNull("steps")) ? 240 : json.getInt("steps");
-		synth.setAnimSteps(animSteps);
-		animStop = (json.isNull("stop")) ? this.animSteps : json.getInt("stop");
-		synth.setStop(animStop);
-		float myGamma = (json.isNull("gamma")) ? 1.0f : json.getFloat("gamma");
-		synth.setGamma(myGamma);
-		comments = (json.isNull("comments")) ? "" : json.getString("comments");
-		synth.setComments(comments);
-		synth.setGain(json.isNull("blendFactor") ? 0.5f : json.getFloat("blendFactor"));
-		synth.setVideoFilename((json.isNull("filename")) ? "wavesynth.mp4" : json.getString("filename"));
-		this.videoFilename = synth.getVideoFilename();
-		synth.setScaleHisto((json.isNull("scaleHisto")) ? false : json.getBoolean("scaleHisto"));
-		if (synth.isScaleHisto()) {
-			synth.setHistoHigh((json.isNull("histoHigh")) ? 255 : json.getInt("histoHigh"));
-			synth.setHistoLow((json.isNull("histoLow")) ? 0 : json.getInt("histoLow"));
-		}
-		// now load the JSON wavedata into ArrayList<WaveData> waveDataList
-		JSONArray waveDataArray = json.getJSONArray("waves");
-		int datalen = waveDataArray.size();
-		ArrayList<WaveData> waveDataList = new ArrayList<WaveData>(datalen);
-		for (int i = 0; i < datalen; i++) {
-			// load fields common to both old and new format
-			JSONObject waveElement = waveDataArray.getJSONObject(i);
-			float f = waveElement.getFloat("freq");
-			float a = waveElement.getFloat("amp");
-			float p = waveElement.getFloat("phase");
-			// float pInc = waveElement.getFloat("phaseInc");
-			float dc = 0.0f;
-			if (!waveElement.isNull("dc")) {
-				dc = waveElement.getFloat("dc");
-			}
-			JSONObject rgbColor = waveElement.getJSONObject("color");
-			int c = color(rgbColor.getInt("r"), rgbColor.getInt("g"), rgbColor.getInt("b"));
-			float cycles;
-			cycles = waveElement.getFloat("cycles");
-			// frequency, amplitude, phase, dc, cycles, color, steps
-			WaveData wd = new WaveData(f, a, p, dc, cycles, c, animSteps);
-			waveDataList.add(wd);
-		}
-		synth.setWaveDataList(waveDataList);
-		currentWD = wavesynth.waveDataList.get(0);
-		waveDataIndex = 0;
-		synth.prepareAnimation();
-		synth.renderFrame(0);
-		loadGlobalPanelValues();
-		loadWaveDataPanelValues(currentWD);
-		printWaveData(synth);
-	}
-
-	/**
-	 * Outputs current wavesynth settings and WaveData list.
-	 */
-	public void printWaveData(WaveSynth synth) {
-		java.nio.file.Path path = java.nio.file.Paths.get(currentFileName);
-		String fname = path.getFileName().toString();
-		println("\n--------=====>>> Current WaveSynth instance for file " + fname + " <<<=====--------\n");
-		println("Animation steps: " + synth.getAnimSteps());
-		// println("Stop frame: "+ waveAnimal.getAnimSteps());
-		println("gain: " + synth.getGain());
-		println("gamma: " + synth.getGamma());
-		if (synth.isScaleHisto()) {
-			println("scaleHisto: " + synth.isScaleHisto());
-			println("histoLow: " + synth.getHistoLow());
-			println("histoHigh: " + synth.getHistoHigh());
-		}
-		println(fname);
-		println("video filename: " + synth.getVideoFilename());
-		// println("WaveData list for: "+ videoFilename);
-		for (int i = 0; i < synth.waveDataList.size(); i++) {
-			WaveData wd = synth.waveDataList.get(i);
-			println("  " + (i + 1) + ":: " + wd.toString());
-		}
-		println("comments: " + synth.getComments() +"\n");
-	}
-	
-	public void saveWaveData() {
-		if ((currentDataFile == null) || (currentDataFile.getAbsolutePath().equals(""))) {
-			selectOutput("Select a file to write to:", "fileSelectedWrite");
-		}
-		else {
-			selectOutput("Select a file to write to:", "fileSelectedWrite", currentDataFile);
-		}
-	}
-
-	public void fileSelectedWrite(File selection) {
-		if (selection == null) {
-			println("Window was closed or the user hit cancel.");
-			return;
-		}
-		WaveSynth synth = this.wavesynth;
-		println("User selected " + selection.getAbsolutePath());
-		// Do we have a .json at the end?
-		if (selection.getName().length() < 5
-				|| selection.getName().indexOf(".json") != selection.getName().length() - 5) {
-			// problem missing ".json"
-			currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
-		} else {
-			currentFileName = selection.getAbsolutePath();
-		}
-		// put WaveData objects into an array
-		JSONArray waveDataArray = new JSONArray();
-		JSONObject waveElement;
-		WaveData wd;
-		for (int i = 0; i < synth.waveDataList.size(); i++) {
-			wd = synth.waveDataList.get(i);
-			waveElement = new JSONObject();
-			waveElement.setInt("index", i);
-			waveElement.setFloat("freq", wd.freq);
-			waveElement.setFloat("amp", wd.amp);
-			waveElement.setFloat("phase", wd.phase);
-			waveElement.setFloat("phaseInc", wd.phaseInc);
-			waveElement.setFloat("cycles", wd.phaseCycles);
-			waveElement.setFloat("dc", wd.dc);
-			// BADSR settings
-			int[] rgb = PixelAudioMapper.rgbComponents(wd.waveColor);
-			JSONObject rgbColor = new JSONObject();
-			rgbColor.setInt("r", rgb[0]);
-			rgbColor.setInt("g", rgb[1]);
-			rgbColor.setInt("b", rgb[2]);
-			waveElement.setJSONObject("color", rgbColor);
-			// append wave data to array
-			waveDataArray.append(waveElement);
-		}
-		// put the array into an object that tracks other state variables
-		JSONObject stateData = new JSONObject();
-		stateData.setJSONObject("header", getWaveSynthJSONHeader());
-		// stateData.setString("PXAU", "WSYN");
-		stateData.setInt("steps", synth.animSteps);
-		stateData.setInt("stop", animStop);
-		stateData.setFloat("blendFactor", synth.gain);
-		stateData.setInt("dataFormat", 2);
-		stateData.setString("comments", synth.comments);
-		// String videoName = selection.getName(); 
-		String videoName = synth.videoFilename;
-		if (videoName == null || videoName.equals("")) {
-			videoName = selection.getName();
-			if (videoName.indexOf(".json") != -1) {
-				videoName = videoName.substring(0, videoName.indexOf(".json")) + ".mp4";
-			} else {
-				videoName += ".mp4";
-			}
-		}
-		println("----->>> video name is " + videoName);
-		synth.videoFilename = videoName; // ???
-		stateData.setString("filename", videoName);
-		stateData.setFloat("gamma", synth.gamma);
-		stateData.setBoolean("scaleHisto", synth.isScaleHisto);
-		stateData.setFloat("histoHigh", synth.histoHigh);
-		stateData.setFloat("histoLow", synth.histoLow);
-		stateData.setJSONArray("waves", waveDataArray);
-		saveJSONObject(stateData, currentFileName);
-		currentDataFile = new File(currentFileName);
-		surface.setTitle(currentFileName);
-	}
-	
-	public JSONObject getWaveSynthJSONHeader() {
-		// flag this JSON file as WaveSynthEditor data using a "PXAU" key with value "WSYN"
-		// add some other pertinent information
-		JSONObject header = new JSONObject();
-		header.setString("PXAU", "WSYN");
-		header.setString("description", "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.");
-		header.setString("PixelAudioURL", "https://github.com/Ignotus-mago/PixelAudio");
-		return header;
-	}
-
-	//-------------------------------------------//
-	//             END JSON FILE I/O             //
-	//-------------------------------------------//
-	
-	//-----------------------------------------------------------//
-	/* ----->>>      BEGIN IMAGE AND AUDIO FILE I/O     <<<----- */
-	//-----------------------------------------------------------//
-
-
-	public void saveToImage() {
-	    // File folderToStartFrom = new File(dataPath(""));
-	    selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
-	}
-	public void imageFileSelectedWrite(File selection) {
-	    if (selection == null) {
-	        println("Window was closed or the user hit cancel.");
-	        return;            
-	    }
-	    String fileName = selection.getAbsolutePath();
-	    if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
-	        fileName += ".png";
-	    }
-	    // saveImageToFile(mapImage, fileName);
-	    save(fileName);
-	}
-
-	public void saveImageToFile(PImage img, String fileName) {
-	    img.save(fileName);
-	}
-
-	/**
-	 * Saves audio data to 16-bit integer PCM format, which Processing can also open.
-	 * 
-	 * @param samples            an array of floats in the audio range (-1.0f, 1.0f)
-	 * @param sampleRate        audio sample rate for the file
-	 * @param fileName            name of the file to save to
-	 * @throws IOException        an Exception you'll need to catch to call this method (see keyPressed entry for 's')
-	 * @throws UnsupportedAudioFileException        another Exception (see keyPressed entry for 's')
-	 */
-	public static void saveAudioToFile(float[] samples, float sampleRate, String fileName)
-	        throws IOException, UnsupportedAudioFileException {
-	    // Convert samples from float to 16-bit PCM
-	    byte[] audioBytes = new byte[samples.length * 2];
-	    int index = 0;
-	    for (float sample : samples) {
-	        // Scale sample to 16-bit signed integer
-	        int intSample = (int) (sample * 32767);
-	        // Convert to bytes
-	        audioBytes[index++] = (byte) (intSample & 0xFF);
-	        audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
-	    }
-	    // Create an AudioInputStream
-	    ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
-	    AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
-	    AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
-	    // Save the AudioInputStream to a WAV file
-	    File outFile = new File(fileName);
-	    AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
-	    println("----- saved WaveSynth data as an audio file: "+ outFile.getAbsolutePath());
-	}
-	
-	
-	/*----------------------------------------------------------------*/
-	/*                                                                */
-	/*                     BEGIN AUDIO METHODS                        */
-	/*                                                                */
-	/*----------------------------------------------------------------*/
-
-	/**
-	 * CALL IN SETUP()
-	 */
-	public void initAudio() {
-	  minim = new Minim(this);
-	  // use the getLineOut method of the Minim object to get an AudioOutput object
-	  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
-	  this.setAudioGain(outputGain);
-	  this.audioBuffer = new MultiChannelBuffer(mapSize, 1);
-	  // ADSR envelope with maximum amplitude, attack Time, decay time, sustain level, and release time
-	  adsr = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
-	  this.renderSignal();
-	  pool = new PASamplerInstrumentPool(audioBuffer, sampleRate, 8, 1, audioOut, adsr);
-	  timeLocsArray = new ArrayList<TimedLocation>();     // initialize mouse event tracking array
-	}
-
-	/**
-	 * Save audio buffer to a file called "wavesynth_<wsIndex>.wav".
-	 */
-	public void saveToAudio() {
-	  renderSignal();
-	  try {
-	    saveAudioToFile(audioSignal, sampleRate, "wavesynth_"+ wsIndex +".wav");
-	  }
-	  catch (IOException e) {
-	    println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());
-	  }
-	  catch (UnsupportedAudioFileException e) {
-	    println("--->> The file format is unsupported "+ e.getMessage());
-	  }
-	}
-
-	/**
-	 * Calls WaveSynth to render a audio sample array derived from the same math that creates the image,
-	 * then loads the derived audio data to audioBuffer, ready to be played.
-	 */
-	public void renderSignal() {
-	  this.audioSignal = wavesynth.renderAudioRaw(step);           // get the signal "as is" from WaveSynth
-	  audioSignal = WaveSynth.normalize(audioSignal, 0.9f);        // normalize samples to the range (-0.9f, 0.9f) 
-	  audioLength = audioSignal.length;
-	  audioBuffer.setBufferSize(audioLength);
-	  audioBuffer.setChannel(0, audioSignal);                      // copy audioSignal to channel 0 of audioBuffer
-	  // println("--->> copied audio signal to audio buffer");
-	}
-
-	// Called by mousePressed(), this should be a bottleneck method for all playSample() calls.
-	public void audioMousePressed(int sampleX, int sampleY) {
-	  this.sampleX = sampleX;
-	  this.sampleY = sampleY;
-	  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
-	  checkBufferState();
-	  playSample(samplePos, calcSampleLen(), 0.6f, adsr);
-	}
-
-	public void checkBufferState() {
-	  if (isBufferStale) {
-	    println("--->> Stale buffer refreshed ");
-	    // any changes to image are equivalent changes to audio, so isBufferStale is set often
-	    renderSignal();
-	    pool.setBuffer(audioBuffer);
-	    isBufferStale = false;
-	  }
-	}
-	    
-	/**
-	 * Plays an audio sample with WFSamplerInstrument and custom ADSR.
-	 * 
-	 * @param samplePos    position of the sample in the audio buffer
-	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
-	 * @param defaultEnv         an ADSR envelope for the sample
-	 * @return the calculated sample length in samples
-	 */
-	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-	  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
-	  int durationMS = (int)(samplelen/sampleRate * 1000);
-	  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-	  // return the length of the sample
-	  return samplelen;
-	}
-
-	/**
-	 * Plays an audio sample with WFSamplerInstrument and default ADSR.
-	 * 
-	 * @param samplePos    position of the sample in the audio buffer
-	 * @param samplelen    length of the sample (will be adjusted)
-	 * @param amplitude    amplitude of the sample on playback
-	 * @return the calculated sample length in samples
-	 */
-	public int playSample(int samplePos, int samplelen, float amplitude) {
-	  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
-	  int durationMS = (int)(samplelen/sampleRate * 1000);
-	  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-	  // return the length of the sample
-	  return samplelen;
-	}
-
-	public int calcSampleLen() {
-	  float vary = 0; 
-	  // skip the fairly rare negative numbers
-	  while (vary <= 0) {
-	    vary = (float) PixelAudio.gauss(1.0, 0.0625);
-	  }
-	  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-	  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
-	  return samplelen;
-	}
-
-	/**
-	 * Run the animation for audio events. 
-	 */
-	public void runTimeArray() {
-	    int currentTime = millis();
-	    timeLocsArray.forEach(tl -> {
-	        tl.setStale(tl.eventTime() < currentTime);
-	        if (!tl.isStale()) {
-	            drawCircle(tl.getX(), tl.getY());
-	        }
-	    });
-	    timeLocsArray.removeIf(TimedLocation::isStale);
-	}
-
-	/**
-	 * Draws a circle at the location of an audio trigger (mouseDown event).
-	 * @param x        x coordinate of circle
-	 * @param y        y coordinate of circle
-	 */
-	public void drawCircle(int x, int y) {
-	    //float size = isRaining? random(10, 30) : 60;
-	    fill(color(233, 220, 199));
-	    noStroke();
-	    circle(x, y, 60);
-	}    
 
 	
 }
