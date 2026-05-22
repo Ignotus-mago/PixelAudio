@@ -18,9 +18,10 @@ import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.sampler.*;
 
 /**
+ * Example sketch shows how to create an audio synth sequencer with the WaveSynth. 
  * 
- * INSTRUCTIONS FOR PERFORMANCE
- * 
+ * <h2>INSTRUCTIONS FOR PERFORMANCE<?h2>
+ * <pre>
  * Launch and let the raindrops play. 
  * The tempo for performance is quarter note = 88 bpm, flexible for humans, inflexible for computer.
  * Percussion cues computer instrumentalist -- type '\' to start music, speak words. (Engineer: mic up)
@@ -56,7 +57,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'h' to show this help message in the console. 
  * 
  * See also: BigWaveSynth, BigWaveSynthAudio.
- * 
+ * </pre>
  */
 public class WaveSynthSequencer extends PApplet {
 	PixelAudio pixelaudio;			// our shiny new library
