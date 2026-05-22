@@ -485,7 +485,7 @@ public class WaveSynth {
 	
 	// loop to render all the pixels in a frame
 	// We want it to complete a frame before any changes to the WaveSynth, so it's synchronized.
-	public synchronized void renderFrame(int frame) {
+	public synchronized PImage renderFrame(int frame) {
 		// load variables with prepareAnimation() at start of animation loop
 		if (frame == 0) {
 			prepareAnimation();
@@ -526,6 +526,7 @@ public class WaveSynth {
 		}
 		// set our internal step variable, just a tracker for now
 		this.setStep(frame);
+		return mapImage;
 	}
 	
     /**
@@ -588,7 +589,7 @@ public class WaveSynth {
 	 *  from the initial phase: instead of adding, we subtract so that animation data files 
 	 *  give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.
 	 *  For the latest version:
-	 *  We now let the WaveData object calculate the signal: this is much more flexible and barely affects the time
+	 *  We now let the WaveData object calculate the signal: this is much more flexible and barely affects the time.
 	 *   
 	 * @param frame
 	 * @param pos
