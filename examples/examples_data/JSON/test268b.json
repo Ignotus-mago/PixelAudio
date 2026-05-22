@@ -142,11 +142,15 @@
     }
   ],
   "blendFactor": 0.1875,
-  "comments": "---",
+  "comments": "--- Blues and purples, 10 operators ",
   "filename": "test268b_dark.mp4",
   "stop": 288,
   "dataFormat": 2,
-  "scanner": 1,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": true,
   "histoHigh": 233,
   "histoLow": 8,

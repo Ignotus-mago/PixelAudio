@@ -114,11 +114,15 @@
     }
   ],
   "blendFactor": 0.25,
-  "comments": "---",
-  "filename": "test275b.mp4",
+  "comments": "--- 8-operator diagonal grid, in blue and gold",
+  "filename": "test275c.mp4",
   "stop": 432,
   "dataFormat": 2,
-  "scanner": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
   "histoHigh": 233,
   "histoLow": 8,

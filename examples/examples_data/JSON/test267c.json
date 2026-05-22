@@ -141,16 +141,19 @@
       "dc": 0
     }
   ],
-  "comments": "---",
-  "dataFormat": 2,
-  "scaleHisto": true,
-  "histoHigh": 233,
-  "steps": 576,
   "blendFactor": 0.3125,
-  "contrastFactor": 1,
+  "comments": "--- very chromatic, 10-ops",
   "filename": "test267c.mp4",
   "stop": 576,
-  "scanner": 2,
+  "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
+  "scaleHisto": true,
+  "histoHigh": 233,
   "histoLow": 8,
+  "steps": 576,
   "gamma": 1.399999976158142
 }

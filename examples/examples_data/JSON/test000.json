@@ -9,7 +9,7 @@
       },
       "amp": 0.800000011920929,
       "phaseInc": 0.008726646192371845,
-      "freq": 768,
+      "freq": 6143.99951171875,
       "index": 0,
       "cycles": 1,
       "dc": 0
@@ -23,20 +23,25 @@
       },
       "amp": 0.800000011920929,
       "phaseInc": 0.01745329238474369,
-      "freq": 192,
+      "freq": 1535.9998779296875,
       "index": 1,
       "cycles": 2,
       "dc": 0
     }
   ],
   "blendFactor": 0.800000011920929,
-  "comments": "---",
-  "filename": "pixelaudio_01.mp4",
+  "comments": "--- The startup WaveSynth, 2-operators. Good for frequency multiplication ('f' key) --- ",
+  "filename": "wavesynth_000.mp4",
   "stop": 720,
   "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
-  "histoHigh": 254,
-  "histoLow": 1,
+  "histoHigh": 246,
+  "histoLow": 5,
   "steps": 720,
   "gamma": 1
 }

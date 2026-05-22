@@ -30,11 +30,15 @@
     }
   ],
   "blendFactor": 0.699999988079071,
-  "comments": "4331.0 Hz * 5 * sqrt(2) ",
+  "comments": "--- 4331.0 Hz * 5 * sqrt(2), 2-operator high frequency blink ",
   "filename": "t324.mp4",
   "stop": 1200,
   "dataFormat": 2,
-  "scanner": 1,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
   "histoHigh": 233,
   "histoLow": 8,

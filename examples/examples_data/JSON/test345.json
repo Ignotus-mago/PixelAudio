@@ -114,7 +114,7 @@
     }
   ],
   "blendFactor": 0.3499999940395355,
-  "comments": "--- An 8-operator color wave synth ---",
+  "comments": "--- An 8-operator color wave synth with fast animation --- ",
   "filename": "test345.mp4",
   "stop": 432,
   "dataFormat": 2,

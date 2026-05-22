@@ -86,11 +86,15 @@
     }
   ],
   "blendFactor": 0.4300000071525574,
-  "comments": "---",
+  "comments": "--- Circle Mirage, 6-operator visual effect from specific frequencies ",
   "filename": "test287.mp4",
   "stop": 1152,
   "dataFormat": 2,
-  "scanner": 1,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": true,
   "histoHigh": 246,
   "histoLow": 5,

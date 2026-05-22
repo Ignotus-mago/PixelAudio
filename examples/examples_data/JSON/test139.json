@@ -114,11 +114,15 @@
     }
   ],
   "blendFactor": 0.2750000059604645,
-  "comments": "Based on a novel by James Joyce.",
+  "comments": "--- 8-operators with low, medium, and high frequency --- ",
   "filename": "test139zed.mp4",
   "stop": 720,
   "dataFormat": 2,
-  "header": {"PXAU": "WSYN"},
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": true,
   "histoHigh": 246,
   "histoLow": 5,

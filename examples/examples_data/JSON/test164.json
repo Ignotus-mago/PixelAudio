@@ -58,11 +58,15 @@
     }
   ],
   "blendFactor": 0.625,
-  "contrastFactor": 1,
-  "comments": "5888.0 Hz barrio, 6144.0 Hz barrio,  patterns and phase blocking. ",
+  "comments": "Monochrome color patterns, 4-operators: 5888.0 Hz barrio, 6144.0 Hz barrio,  patterns and phase blocking. ",
   "filename": "test164.mp4",
+  "stop": 576,
   "dataFormat": 2,
-  "scanner": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
   "histoHigh": 233,
   "histoLow": 8,

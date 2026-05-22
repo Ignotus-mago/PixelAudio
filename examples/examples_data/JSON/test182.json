@@ -113,16 +113,19 @@
       "dc": 0
     }
   ],
-  "comments": "Fractional cycles, bright colors, 8189 barrio. ",
+  "blendFactor": 0.3125,
+  "comments": "8-operator chromatic checkerboard: ractional cycles, bright colors, 8189 barrio. ",
+  "filename": "test182_pixelaudio.mp4",
+  "stop": 312,
   "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
   "histoHigh": 233,
-  "steps": 624,
-  "blendFactor": 0.3125,
-  "contrastFactor": 1,
-  "filename": "test182_C.mp4",
-  "stop": 312,
-  "scanner": 1,
   "histoLow": 8,
+  "steps": 624,
   "gamma": 1.2000000476837158
 }

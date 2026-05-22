@@ -7,12 +7,12 @@
         "b": 144,
         "g": 193
       },
-      "amp": 0.5,
-      "phaseInc": -0.03272492438554764,
+      "amp": 0.3182503879070282,
+      "phaseInc": -0.01636246219277382,
       "freq": 6,
       "index": 0,
       "cycles": -1,
-      "dc": 0.25
+      "dc": 0.10000000149011612
     },
     {
       "phase": 0.10000000149011612,
@@ -21,12 +21,12 @@
         "b": 240,
         "g": 191
       },
-      "amp": 0.5,
-      "phaseInc": 0.03272492438554764,
+      "amp": 0.3182503879070282,
+      "phaseInc": 0.01636246219277382,
       "freq": 6,
       "index": 1,
       "cycles": 1,
-      "dc": 0.25
+      "dc": 0.10000000149011612
     },
     {
       "phase": 0.3499999940395355,
@@ -35,12 +35,12 @@
         "b": 144,
         "g": 252
       },
-      "amp": 0.5,
-      "phaseInc": -0.03272492438554764,
+      "amp": 0.3182503879070282,
+      "phaseInc": -0.01636246219277382,
       "freq": 13,
       "index": 2,
       "cycles": -1,
-      "dc": 0.25
+      "dc": 0.10000000149011612
     },
     {
       "phase": 0.3499999940395355,
@@ -49,23 +49,27 @@
         "b": 240,
         "g": 131
       },
-      "amp": 0.5,
-      "phaseInc": 0.03272492438554764,
+      "amp": 0.3182503879070282,
+      "phaseInc": 0.01636246219277382,
       "freq": 13,
       "index": 3,
       "cycles": 1,
-      "dc": 0.25
+      "dc": 0.10000000149011612
     }
   ],
   "blendFactor": 0.6000000238418579,
-  "comments": "Derived from test276b.json, using frequency, phase, and color shifting. Then operators were duplicated and assigned new frequencies. While muting operators we did not want to edit, the colors were shifted on the new operators. Then the operators were sorted and saved with the \"Save As\" button.  ",
+  "comments": "--- Color phasing with gray --- ",
   "filename": "test276c.mp4",
   "stop": 384,
   "dataFormat": 2,
-  "header": {"PXAU": "WSYN"},
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
-  "histoHigh": 246,
-  "histoLow": 5,
-  "steps": 192,
+  "histoHigh": 233,
+  "histoLow": 8,
+  "steps": 384,
   "gamma": 0.4000000059604645
 }

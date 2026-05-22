@@ -58,7 +58,7 @@
     }
   ],
   "blendFactor": 0.5,
-  "comments": "---",
+  "comments": "--- Disappearing Act: Low frequency + high frequency, 4 operators --- ",
   "filename": "test002.mp4",
   "stop": 720,
   "dataFormat": 2,
@@ -68,8 +68,8 @@
     "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
   },
   "scaleHisto": false,
-  "histoHigh": 254,
-  "histoLow": 1,
+  "histoHigh": 233,
+  "histoLow": 8,
   "steps": 720,
   "gamma": 1
 }

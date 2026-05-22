@@ -114,17 +114,18 @@
     }
   ],
   "blendFactor": 0.48750001192092896,
-  "comments": "---",
-  "filename": "test161c.mp4",
+  "comments": "--- Colorful 8-operator low + mid frequency ",
+  "filename": "test161a.mp4",
   "stop": 576,
   "dataFormat": 2,
   "header": {
     "PXAU": "WSYN",
-    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz."
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
   },
   "scaleHisto": false,
-  "histoHigh": 254,
-  "histoLow": 1,
+  "histoHigh": 233,
+  "histoLow": 8,
   "steps": 576,
   "gamma": 1.2000000476837158
 }

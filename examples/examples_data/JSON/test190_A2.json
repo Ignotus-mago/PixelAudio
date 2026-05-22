@@ -114,11 +114,15 @@
     }
   ],
   "blendFactor": 0.48750001192092896,
-  "comments": "--- Lots of filigree with low freq color shifting. Nice with Moore curve, small shift, random transforms (which go well with Moore curve). ",
+  "comments": "--- Lots of filigree with low freq color shifting. Nice with Moore curve, small shift, random transforms (which go well with Moore curve). Used in Campos / Temporales (2023)",
   "filename": "test190_A2_13sec.mp4",
   "stop": 312,
   "dataFormat": 2,
-  "scanner": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
   "histoHigh": 233,
   "histoLow": 8,

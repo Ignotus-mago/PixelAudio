@@ -114,11 +114,15 @@
     }
   ],
   "blendFactor": 0.3125,
-  "comments": "Color phasing experiment, #polychrome, two ocatave below test273a.",
+  "comments": "Color animation phasing experiment, from gray to rainbows and back again ",
   "filename": "test273b.mp4",
   "stop": 480,
   "dataFormat": 2,
-  "scanner": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
   "scaleHisto": false,
   "histoHigh": 233,
   "histoLow": 8,
