@@ -802,7 +802,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
     	}
     	else {
 			if (keyCode == UP) {
-				adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
+				   adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
 				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
 			}
 			else if (keyCode == DOWN) {
@@ -2179,14 +2179,14 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
         	return 0;
             // return playSample(samplePos, samplelen, amplitude, env, pitch, pan);
         }
-        println("-- retrofit playSample() call ");
+        // debugging
+        // println("-- retrofit playSample() call ");
         int pos = PixelAudioMapper.wrap(samplePos, anthemBuffer.getBufferSize());
         int len = Math.min(samplelen, anthemBuffer.getBufferSize() - pos);
         // debugging information for windowed buffer
-        println("---- 06 playSample pos=" + pos
-            + " len=" + len
-            + " anthemBuffer=" + anthemBuffer.getBufferSize()
-            + " windowIndex=" + windowBuff.getIndex());
+        // println("---- 06 playSample pos=" + pos + " len=" + len
+        //    + " anthemBuffer=" + anthemBuffer.getBufferSize() 
+        //    + " windowIndex=" + windowBuff.getIndex());
 		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
 	}
 	
