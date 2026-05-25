@@ -1,0 +1,103 @@
+{
+  "waves": [
+    {
+      "phase": 0.8749997615814209,
+      "color": {
+        "r": 172,
+        "b": 254,
+        "g": 239
+      },
+      "amp": 0.125,
+      "phaseInc": 0.07999426126480103,
+      "freq": 1632,
+      "index": 0,
+      "cycles": 11,
+      "dc": 0
+    },
+    {
+      "phase": 0.7847219705581665,
+      "color": {
+        "r": 241,
+        "b": 170,
+        "g": 99
+      },
+      "amp": 0.375,
+      "phaseInc": 0.050905440002679825,
+      "freq": 1664,
+      "index": 1,
+      "cycles": 7,
+      "dc": 0
+    },
+    {
+      "phase": 0.3067129850387573,
+      "color": {
+        "r": 101,
+        "b": 171,
+        "g": 241
+      },
+      "amp": 0.5,
+      "phaseInc": 0.036361027508974075,
+      "freq": 1696,
+      "index": 2,
+      "cycles": 5,
+      "dc": 0
+    },
+    {
+      "phase": 0.5694441795349121,
+      "color": {
+        "r": 216,
+        "b": 134,
+        "g": 151
+      },
+      "amp": 0.875,
+      "phaseInc": 0.13817189633846283,
+      "freq": 16320,
+      "index": 3,
+      "cycles": 19,
+      "dc": 0
+    },
+    {
+      "phase": 0.04745364189147949,
+      "color": {
+        "r": 220,
+        "b": 252,
+        "g": 144
+      },
+      "amp": 0.875,
+      "phaseInc": 0.09453867375850677,
+      "freq": 65280,
+      "index": 4,
+      "cycles": 13,
+      "dc": 0
+    },
+    {
+      "phase": 0.7337956428527832,
+      "color": {
+        "r": 168,
+        "b": 131,
+        "g": 240
+      },
+      "amp": 0.625,
+      "phaseInc": 0.13817189633846283,
+      "freq": 65280,
+      "index": 5,
+      "cycles": 19,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.4437499940395355,
+  "comments": "Scaling by 10 and 40, managing phase relationships, 1632 base frequency. ",
+  "filename": "test128a.mp4",
+  "stop": 864,
+  "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
+  "scaleHisto": true,
+  "histoHigh": 246,
+  "histoLow": 5,
+  "steps": 864,
+  "gamma": 1.7999999523162842
+}

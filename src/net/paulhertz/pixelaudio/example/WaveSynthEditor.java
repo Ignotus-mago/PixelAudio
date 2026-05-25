@@ -44,10 +44,10 @@ import g4p_controls.*;
  * <p>
  * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns 
  * that can be saved to video or played as an additive synthesis audio source. It 
- * provides an introduction to <code>WaveSynth</code> objects and the <code>WaveData</code> objects that 
- * WaveSynths use to generate visual patterns and audio signals. 
+ * provides an introduction to the <code>WaveSynth</code> class and the <code>WaveData</code> objects 
+ * that WaveSynths use to generate visual patterns and audio signals. 
  * </p><p>
- * Use this application to edit a PixelAudio WaveSynth, including its individual WaveData
+ * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
  * some of what you can do with the HilbertGen for making patterns with the WaveSynth. There
  * are lots of other possibilities. Patterns can be loaded from and saved to JSON files. 
@@ -57,13 +57,13 @@ import g4p_controls.*;
  * example sketches also produce audio with a WaveSynth. This example provides a graphical
  * user interface for editing the colors and other properties of a WaveSynth. 
  * </p><p>
- * Click on the WaveSynth image to hear what it sounds like. Note that the appearance of the
- * image is determined by the current sampling frequency, set in the initWaveSynth() method.
- * For a higher sampling rate, there are more samples. One sampling rate we use for the 
- * WaveSynth Editor is the number of pixels in the WaveSynth image, 1024 * 1024 = 1048576.
- * Though it may have more or less samples, the sound of the audio will not vary, as its 
- * frequency is governed by the sampling rate. If you want to save the audio to a file, 
- * you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
+ * Click on the WaveSynth image or press spacebar to hear the audio version of the image. Note
+ * that the appearance of the image is determined by the current sampling frequency, set in the
+ * initWaveSynth() method. For a higher sampling rate, there are more samples. One sampling rate
+ * I commonly use for the WaveSynth Editor is the number of pixels in the WaveSynth image, 
+ * 1024 * 1024 = 1048576. Though it may have more or less samples, the sound of the audio will not
+ * vary, as its frequency is governed by the sampling rate. If you want to save the audio to a
+ * file, you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
  * </p><p>
  * A WaveSynth is organized around attributes, such as gain (i.e. loudness or brightness) 
  * and gamma (a sort of contrast setting), and data objects. The data objects include a 
@@ -73,10 +73,15 @@ import g4p_controls.*;
  * PixelAudioMapper signal path, and an array of WaveData objects that define the individual
  * sine wave components of the WaveSynth. 
  * </p><p>
+ * NOTE: Changes to data fields in the Control Panel will not be applied immediately to the 
+ * WaveSynth image and audio. Click the Refresh button to force an update. Stepping to the
+ * next or previous operator will also refresh audio and image. If the display window is 
+ * active, stepping to another frame 'y', 'u', or 'e' key commands) will also force an update. 
+ * </p><p>
  * When a WaveSynth is used to produce color patterns, each WaveData object in the waveDataList
  * controls a color. The colors of the various WaveData objects are added together. The 
  * amplitude of the controlling sine wave controls the brightness of each color. The control
- * panel in this example allows to isolate individual WaveData operators to see how they 
+ * panel in this example allows you to isolate individual WaveData operators to see how they 
  * affect the color patterns. 
  * </p>
  * <h3>SAMPLING RATES FOR AUDIO AND FOR WAVESYNTH IMAGES</h3>
@@ -97,7 +102,7 @@ import g4p_controls.*;
  * ***>>  NOTE: Key commands only work when the image display window is the front window.  <<***
  * ---------------------------------------------------------------------------------------------
  * </p><p>
- * Key commands will not work when the control panel is the active window.
+ * Key commands will NOT work when the control panel is the active window.
  * Click on the display window to make it the active window and then try the commands. 
  * See the parseKey() method and the methods it calls for more information about key commands.
  * </p><p>
@@ -109,10 +114,11 @@ import g4p_controls.*;
  * </p>
  * <pre>
  * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
- *
+
  * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
- * press ' ' to turn animation on or off.
+ * Press ' ' (spacebar) to trigger audio playback at the current mouse position.
+ * Press TAB to turn animation on or off.
  * Press 'a' to scale all active WaveSynth amplitudes by ampFac.
  * Press 'A' to scale all active WaveSynth amplitudes by 1/ampFac.
  * Press 'c' to shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space.
@@ -127,7 +133,7 @@ import g4p_controls.*;
  * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.
  * Press '+' or '=' to make the image brighter.
  * Press '-' or '_' to make the image darker.
- // ------------- COMMANDS FOR ANIMATION STEPPING ------------- //
+// ------------- COMMANDS FOR ANIMATION STEPPING ------------- //
  * Press 'e' to fast forward animation 1/8 of total steps.
  * Press 'E' to rewind animation 1/8 of total steps (loops back from end, if required).
  * Press 'i' to reset current animation step to initial value, 0.
@@ -136,15 +142,15 @@ import g4p_controls.*;
  * Press 'y' to rewind animation by 1 step.
  * Press 'Y' to rewind animation by 10 steps.
  * Press 'l' or 'L' to toggle animation looping on or off.
- // ------------- MUTING COMMANDS ------------- //
+// ------------- MUTING COMMANDS ------------- //
  * press keys 1-8 to mute or unmute first eight wave data operators
  * press 'm' to print current WaveData muting states to console.
  * press 'M' to unmute all current WaveData operators.
- // ------------- JSON COMMANDS ------------- //
+// ------------- JSON COMMANDS ------------- //
  * press 'j' or 'J' to save WaveSynth settings to a JSON file.
  * press 'o' to open a new JSON file.
  * press 'O' to reload the current JSON file, if there is one, reverting all edits.
- // ------------- MISCELLANEOUS COMMANDS ------------- //
+// ------------- MISCELLANEOUS COMMANDS ------------- //
  * Press 'r' to toggles display window to fit screen or display at size.
  * Press 's' to save the current image to a .png file.
  * Press 'S' to save audio from WaveSynth.
@@ -154,11 +160,11 @@ import g4p_controls.*;
  * Press 'z' to find nearest zero crossing in the audio signal and play from there.
  * Press '?' to print window dimensions, video frame rate, and audio settings to the console.
  * press 'h' or 'H' to show this help message in the console.
- *
+
  * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
  * </pre>
  * 
- * TODO can the audioBuffer be updated for all image and audio amplitude/brightness changes. How?
+ * 
  * 
  */
 public class WaveSynthEditor extends PApplet {
@@ -174,7 +180,7 @@ public class WaveSynthEditor extends PApplet {
 	 * width and height. Set renderWidth and renderHeight to the dimensions
 	 * of the PixelMapGen you want render and animate.
 	 */
-	boolean isDesignMode = true;
+	boolean isDesignMode = false;
 	int genWidth = isDesignMode ? 1024 : 512;         // for Hilbert and Moore curves, genWidth must be a power of 2
 	int genHeight = isDesignMode ? 1024 : 512;        // for Hilbert and Moore curves, genHeight must be a power of 2
 	int designWidth = genWidth;
@@ -522,6 +528,7 @@ public class WaveSynthEditor extends PApplet {
 			println("--- Completed video at frame " + animStop);
 			if (!isLooping) {
 				isAnimating = false;
+				enableWDListControls(true);
 			}
 			step = 0;
 			if (isRecordingVideo) {
@@ -941,6 +948,7 @@ public class WaveSynthEditor extends PApplet {
 		  break;
 	  case '?': // print some global information to the console
 		  println("-- window dimensions = "+ width +" x "+ height);
+		  println("-- current frame = "+ step);
 		  println("-- frame rate = "+ frameRate);
 		  println("-- audio gain = "+ audioOut.getGain());
 		  println("-- audio sample rate = "+ audioOut.sampleRate());
@@ -958,7 +966,8 @@ public class WaveSynthEditor extends PApplet {
 		println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
 		println("\n * Press the UP arrow to increase audio output gain by 3.0 dB.");
 		println(" * Press the DOWN arrow to decrease audio output gain by 3.0 dB.");
-		println(" * press ' ' to turn animation on or off.");
+		println(" * Press ' ' (spacebar) to trigger audio playback at the current mouse position.");
+		println(" * Press TAB to turn animation on or off.");
 		println(" * Press 'a' to scale all active WaveSynth amplitudes by ampFac.");
 		println(" * Press 'A' to scale all active WaveSynth amplitudes by 1/ampFac.");
 		println(" * Press 'c' to shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space.");
@@ -1108,6 +1117,7 @@ public class WaveSynthEditor extends PApplet {
 				continue;
 			}
 			wd.setAmp(wd.amp * scale);
+			wd.invalidateFrameState();
 			if (isVerbose) println("----- set amplitude " + i + " to " + wd.amp);
 			i++;
 		}
@@ -1140,7 +1150,9 @@ public class WaveSynthEditor extends PApplet {
 				continue;
 			}
 			wd.setFreq(wd.freq * scale);
+			wd.invalidateFrameState();
 			if (isVerbose) println("----- set frequency " + i + " to " + wd.freq);
+			i++;
 		}
 	}	
 	
@@ -1155,6 +1167,7 @@ public class WaveSynthEditor extends PApplet {
 				continue;
 			// wd.setPhase(wd.phase + shift - floor(wd.phase + shift));
 			wd.setPhase(wd.phase + shift);
+			wd.invalidateFrameState();
 		}
 		if (isVerbose) println("----->>> shiftPhase " + shift);
 	}
@@ -1295,6 +1308,9 @@ public class WaveSynthEditor extends PApplet {
 
 	// select a file of WaveData objects in JSON format to open
 	public void loadWaveData() {
+		if (isAnimating) {
+			toggleAnimation();    // avoid concurrent modification of WaveData
+		}
 		File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
 		selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 	}
@@ -2405,7 +2421,7 @@ public class WaveSynthEditor extends PApplet {
 	
 	// this stays global
 	public void recordCheck_hit(GCheckbox source, GEvent event) { 
-	  println("recordCheck - GCheckbox >> GEvent." + event + " @ " + millis());
+	  // println("recordCheck - GCheckbox >> GEvent." + event + " @ " + millis());
 	  isRecordingVideo = recordCheck.isSelected();
 	  if (isRecordingVideo) {
 	    if (isOversize) {
@@ -2424,7 +2440,8 @@ public class WaveSynthEditor extends PApplet {
 	  if (!isDesignMode) {
 	    
 	  }
-	  mapImage = renderFrame(step);
+	  markWaveSynthVisualDirty();
+	  markWaveSynthAudioDirty();
 	}
 
 	// stays global
@@ -2483,6 +2500,7 @@ public class WaveSynthEditor extends PApplet {
 	  float newFreq = freqField.getValueF();
 	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
 	  currentWD.setFreq(newFreq);
+	  currentWD.invalidateFrameState();
 	} 
 	
 	public void ampField_hit(GTextField source, GEvent event) { 
@@ -2490,6 +2508,7 @@ public class WaveSynthEditor extends PApplet {
 	  float newAmp = ampField.getValueF();
 	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
 	  currentWD.setAmp( newAmp);
+	  currentWD.invalidateFrameState();
 	} 
 	
 	public void phaseField_hit(GTextField source, GEvent event) { 
@@ -2501,7 +2520,10 @@ public class WaveSynthEditor extends PApplet {
 	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
 	  // TODO verify compatibility with older JSON format
 	  currentWD.setPhase(newPhase);
-	  if (!isAnimating) mapImage = renderFrame(step);
+	  currentWD.invalidateFrameState();
+	  if (!isAnimating) {
+		  mapImage = renderFrame(step);
+	  }
 	}
 	
 	public void cycles_hit(GTextField source, GEvent event) { 
@@ -2509,6 +2531,7 @@ public class WaveSynthEditor extends PApplet {
 	  float newCycles = cyclesField.getValueF();
 	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
 	  currentWD.setCycles(newCycles); 
+	  currentWD.invalidateFrameState();
 	}
 	
 	public void dc_hit(GTextField source, GEvent event) {
@@ -2516,6 +2539,7 @@ public class WaveSynthEditor extends PApplet {
 	  float newDc = dcField.getValueF();
 	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
 	  currentWD.setDc(newDc);
+	  currentWD.invalidateFrameState();
 	}
 	
 	// G4P code for colour chooser
@@ -2531,9 +2555,8 @@ public class WaveSynthEditor extends PApplet {
 	  // be sure to set color value in wavesynth.waveColors array, otherwise the display won't update
 	  currentWD.setWaveColor(sel_col);
 	  wavesynth.waveColors[waveDataIndex] = sel_col;
-	  if (step != 0) wavesynth.prepareAnimation();
-	  renderFrame(step);
-	  mapImage = wavesynth.mapImage;
+	  markWaveSynthVisualDirty();
+	  markWaveSynthAudioDirty();
 	}
 	
 	public void prev_hit(GButton source, GEvent event) { 
@@ -2626,8 +2649,7 @@ public class WaveSynthEditor extends PApplet {
 	  // println("----->>> enableWDListControls "+ enable);
 	  newWaveBtn.setEnabled(enable);
 	  dupWaveBtn.setEnabled(enable);
-	  delWaveBtn.setEnabled(enable);
-	  
+	  delWaveBtn.setEnabled(enable);	  
 	}
 
 	/* ------------------------------------------------------------- */

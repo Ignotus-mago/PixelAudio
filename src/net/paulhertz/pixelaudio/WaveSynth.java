@@ -443,53 +443,29 @@ public class WaveSynth {
 		this.isRenderAudio = isRenderAudio;
 	}
 
-	// set up mapImage for editing, set mapInc
+	/**
+	 * Legacy code: set up mapImage for editing, load colorSignal, set mapInc.
+	 * colorSignal = mapper.pluckPixels(...) is no longer essential, 
+	 * because renderFrame() overwrites every colorSignal[pos] before 
+	 * planting it back into mapImage.pixels.
+	 * 
+	 */
 	public void prepareAnimation() {
 		this.mapImage.loadPixels();
 		this.colorSignal = mapper.pluckPixels(mapImage.pixels, 0, mapSize);
 		this.mapInc = PConstants.TWO_PI / this.sampleRate;
-		/*
-		this.editModeWDList = new ArrayList<WaveData>();
-		for (int j = 0; j < dataLength; j++) {
-			WaveData wd = waveDataList.get(j);
-			if (wd.isMuted || wd.waveState == WaveData.WaveState.SUSPENDED) {
-				setEditMode(true);
-				continue;
-			}
-			editModeWDList.add(wd);
-		}
-		*/
 	}
 	
-	/*
-	// loop to render all the pixels in a frame
-	// We want it to complete a frame before any changes to the WaveSynth, so it's synchronized.
-	public synchronized void renderFrame(int frame) {
-		// load variables with prepareAnimation() at start of animation loop
-		if (frame == 0) {
-			prepareAnimation();
-		}
-		for (int i = 0; i < this.mapSize; i++) {
-			this.colorSignal[i] = this.renderPixel(frame, i, this.waveDataList);
-		}
-		// write scanSignal's pixel color values to scanImage pixels
-		this.mapper.plantPixels(colorSignal, mapImage.pixels, 0, mapSize);
-		this.mapImage.updatePixels();
-		if (isRenderAudio) {
-			audioSignal = renderSignal;
-		}
-		// set our internal step variable, just a tracker for now
-		this.setStep(frame);
-	}
-	*/
-	
-	// loop to render all the pixels in a frame
-	// We want it to complete a frame before any changes to the WaveSynth, so it's synchronized.
+	/**
+	 * Loop to render all the pixels in a frame. We want it to complete a frame 
+	 * before any changes to the WaveSynth, so it's synchronized.
+	 * 
+	 * @param frame    the number of the frame we are rendering in an animation sequence
+	 * @return a PImage derived from additive audio synthesis.
+	 */
 	public synchronized PImage renderFrame(int frame) {
-		// load variables with prepareAnimation() at start of animation loop
-		if (frame == 0) {
-			prepareAnimation();
-		}
+		mapImage.loadPixels();
+		if (mapInc == 0) mapInc = PConstants.TWO_PI / this.sampleRate;
 		// NEW: build active wave list and pre-split their colors
 		rebuildActiveWaves();
 		// NEW: per-frame oscillator preparation for each active wave

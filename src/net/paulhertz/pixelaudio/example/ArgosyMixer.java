@@ -43,19 +43,21 @@ import ddf.minim.*;
 
 /**
  * 
- * ArgosyMixer demonstrates how you can use the Argosy class to create and animate patterns 
+ * ArgosyMixer demonstrates use of the Argosy class to create and animate patterns 
  * and save them to video. This is still a work in progress, with the new PASamplerInstrument 
  * class and audio events not yet handled in the most efficient way. There will be updates.
- * 
+ * <P>
  * The Argosy class turns arrays of integers into color patterns. It steps through the Pattern
  * array to create blocks of pixels and assigns color to the blocks as it steps through the 
  * Colors arrays. The arrays don't have to be the same size--this creates variations in the 
  * pattern color sequences. For example, we might have blocks that are [5, 3, 8] units and 
  * assign them just two colors, say black and white:
- * 
+ * </p>
+ * <pre>
  *    |    5     |  3   |       8        |    5     |  3   |       8        |
  *    |    B     |  W   |       B        |    W     |  B   |       W        |
- * 
+ * </pre>
+ * <p>
  * As you can see, the two patterns together generate a larger repeating unit. If the "Repeat" 
  * filed in the GUI is set to 0, the patterns fill the Argosy array, which is the same size as 
  * the pixels[] array for the display image. A non-zero Repeat value determines how many times  
@@ -66,14 +68,15 @@ import ddf.minim.*;
  * and PixelMapGen documentation if you want detailed information. You can also browse the code
  * for quite a few MultiGen PixelMapGens in this sketch and in the static methods appended to
  * PixelAudio PixelMapGen classes. 
- * 
+ * </p><p>
  * ArgosyMixer provides a GUI for modifying argosy and animation
  * parameters, plus a series of key commands that can shift patterns along
  * the signal path. There are two Argosy patterns involved: the top one, 
  * Argosy 2, is transparent (Opacity = 127, initially). 
- * 
+ * </p><p>
  * In the GUI, the following parameters are exposed for each Argosy pattern:
- * 
+ * </p>
+ * <pre>
  *   Map          -- select the PixelMapGen for each Argosy instance
  *   Colors       -- select a preset palette from a drop down list
  *   Opacity      -- opacity of the colors in the palette, 0-255
@@ -93,19 +96,19 @@ import ddf.minim.*;
  *   Hold frames  -- number of frames to hold after a run of frames, sets Argosy 1 and Argosy 2 separately
  *   Duration     -- number of frames in the animation
  *   Record Video -- press to run and record animation from current display 
- *   
- *   
+ * </pre>  
+ * <p>  
  * I suggest you start by experimenting with the patterns "The One" and "One-one". They create
  * repeating patterns of one or two elements. Setting the Unit value (the number of pixels
  * in each pattern element) to a power of 2 or a sum of powers of 2 is a good place to start, 
  * especially with the Hilbert PixelMapGens in the Map menu. 
- *
+ * </p><p>
  * Click on the image to hear the sounds made by the patterns with sampling rate 48KHz. The patterns
  * produce step or pulse (square) waves, so they are buzzy. Opacity will change how loud the sound is.
- * 
+ * </p><p>
  * You can create stereo drones with the 'e' command, which creates a series of audio events along 
  * the points of an ellipse. 
- * 
+ * </p><p>
  * Press the spacebar to start or stop animation. 
  *   
  *   
