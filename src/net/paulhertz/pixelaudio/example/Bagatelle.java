@@ -52,6 +52,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  */
 
 /**
+ * Experimental real time performance application based on PixelAudio, with an editing GUI, Presets, and 
+ * saving and loading JSON-format files for brushstroke and granular configuration data. 
  * 
  * <DIV>
  * <h2>QUICK START</h2>
@@ -111,41 +113,48 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   </ol>
  * </ol>
  * <p>
- * <h2>About DeadBodyWorkFlow</h2>
- * <b>DeadBodyWorkFlow</b> uses a GUI to provide a tour of the usage and properties of the <code>AudioBrush</code> 
- * subclasses <code>GranularBrush</code> and <code>SamplerBrush</code>, the <code>GestureSchedule</code> class, and the
- * Sampler and Granular audio synthesis instruments <code>PASamplerInstrumentPool</code> and <code>PAGranularInstrumentDirector</code>.
- * An AudioBrush combines a <code>PACurveMaker</code> and a <code>GestureGranularConfig.Builder</code>. PACurveMaker
- * models <i>gestures</i>, one of the core concepts of PixelAudio. In its simplest encoded form, the <code>PAGesture</code> interface, 
- * a gesture consists of an array of points and an array of times. The times array and the points array must be the same size, because
- * the times array records the times when something as-yet-unspecified will happen at the corresponding point in the 
- * points array. In my demos for PixelAudio, what happens at a point is typically an audio event and an animation event. 
- * The sound happens at the point because points in PixelAudio map onto locations in the sound buffer. Mapping of bitmap locations 
- * onto audio buffer indices is another core concept of PixelAudio. Gestures over the 2D space of an image become 
- * paths through audio buffers. The audio buffer is traversed either by a granular synthesis engine or by a sampling synthesizer.
- * For the granular synth, a gesture corresponds to a non-linear traversal of an audio buffer, potentially as a continuous sequence 
- * of overlapping grains with a single envelope. The sampling synthesizer treats each point as a discrete event with its own 
- * envelope. Depending on how gestures and schedules are structured, the two synthesizers can sound very similar, but there 
- * are possibilities in each that the other cannot realize. As you might expect, GranularBrush implements granular synth
- * events and SamplerBrush implements sampler synth events. Both rely on PACUrveMaker which, in addition to capturing
- * the raw gesture of drawing a line, provides methods to reduce points / times and create Bezier paths. PACurveMaker 
- * data can also be modified by changing duration, interpolating samples, or non-linear time warping. DeadBodyWorkFlow uses 
+ * <h2>About Bagatelle</h2>
+  * <b>Bagatelle</b> and its companion performance work<b>DeadBodyWorkFlow</b> use a GUI to provide a tour of
+ * the usage and properties of the <code>AudioBrush</code> subclasses <code>GranularBrush</code> and
+ * <code>SamplerBrush</code>, the <code>GestureSchedule</code> class, and the Sampler and Granular audio
+ * synthesis instruments <code>PASamplerInstrumentPool</code> and <code>PAGranularInstrumentDirector</code>.
+ * An AudioBrush combines a <code>PACurveMaker</code> and a <code>GestureGranularConfig.Builder</code>.
+ * PACurveMaker models <i>gestures</i>, one of the core concepts of PixelAudio. In its simplest encoded
+ * form, the <code>PAGesture</code> interface, a gesture consists of an array of points and an array of
+ * times. The times array and the points array must be the same size, because the times array records the
+ * times when something as-yet-unspecified will happen at the corresponding point in the points array. In my
+ * demos for PixelAudio, what happens at a point is typically an audio event and an animation event. The
+ * sound happens at the point because points in PixelAudio map onto locations in the sound buffer. Mapping
+ * of bitmap locations onto audio buffer indices is another core concept of PixelAudio. Gestures over the 2D
+ * space of an image become paths through audio buffers. The audio buffer is traversed either by a granular
+ * synthesis engine or by a sampling synthesizer. For the granular synth, a gesture corresponds to a
+ * non-linear traversal of an audio buffer, potentially as a continuous sequence of overlapping grains with
+ * a single envelope. The sampling synthesizer treats each point as a discrete event with its own envelope.
+ * Depending on how gestures and schedules are structured, the two synthesizers can sound very similar, but
+ * there are possibilities in each that the other cannot realize. As you might expect, GranularBrush
+ * implements granular synth events and SamplerBrush implements sampler synth events. Both rely on
+ * PACUrveMaker which, in addition to capturing the raw gesture of drawing a line, provides methods to
+ * reduce points / times and create Bezier paths. PACurveMaker data can also be modified by changing
+ * duration, interpolating samples, or non-linear time warping. DeadBodyWorkFlow uses 
  * <code>GestureScheduleBuilder</code> to interpolate and warp time and point lists. 
- * </p>
- * <p>The parameters for gesture modeling, granular and sampling synthesis, time and sample interpolation, and audio events are
- * modeled in the GUI, which uses <code>GestureGranularConfig.Builder gConfig</code> to track its current state. A GestureGranularConfig 
- * instance is associated with each AudioBrush. When you click on an AudioBrush and activate it, its configuration data is 
- * loaded to the GUI and you can edit it. It will be saved to the brush when you select another brush or change the edit mode. When 
- * a brush is activated with a click, the schedule is built from its PACurveMaker and GestureGranularConfig.Builder 
+ * </p><p>
+ * The parameters for gesture modeling, granular and sampling synthesis, time and sample interpolation, and
+ * audio events are modeled in the GUI, which uses <code>GestureGranularConfig.Builder gConfig</code> to
+ * track its current state. A GestureGranularConfig instance is associated with each AudioBrush. When you
+ * click on an AudioBrush and activate it, its configuration data is loaded to the GUI and you can edit it.
+ * It will be saved to the brush when you select another brush or change the edit mode. When a brush is
+ * activated with a click, the schedule is built from its PACurveMaker and GestureGranularConfig.Builder
  * instance variables:
  *     <pre>GestureSchedule schedule = scheduleBuilder.build(gb.curve(), cfg.build(), audioOut.sampleRate());</pre>
  * </p>
  * <p>The calling chain for a GranularBrush:<br>
  * <code>mouseClicked()</code> calls <code>scheduleGranularBrushClick(gb, x, y);</code>.<br>
  * 
- * In <code>scheduleGranularBrushClick(...)</code> we get a reference to the audio buffer <code>buf</code> and then 
- * use the PACurveMaker object <code>gb.curve()</code> and <code>gb.snapshot()</code> to build a <code>GestureSchedule</code>, <code>sched</code>. <br>
- * <code>sched</code> gets timing and location information for the gesture from <code>gb.curve()</code> and 
+ * In <code>scheduleGranularBrushClick(...)</code> we get a reference to the audio buffer <code>buf</code>
+ * and then use the PACurveMaker object <code>gb.curve()</code> and <code>gb.snapshot()</code> to build a
+ * <code>GestureSchedule</code>, <code>sched</code>. <br>
+ * 
+ * <code>sched</code> gets timing and location information for the gesture from <code>gb.curve()</code> and
  * modifies it with the settings from the control palette which are stored <code>gb.snapshot()</code>. <br>
  * 
  * We port the granular synthesis parameters from the brush to a <code>GestureGranularParams</code> object, and then call 
@@ -235,18 +244,18 @@ import net.paulhertz.pixelaudio.sampler.*;
  * </pre>
  * </p>
  * 
- * MacOS AUDIO TO MAX SETUP
+ * <h3>MacOS AUDIO TO MAX SETUP</h3>
  * 
- * In MacOS: 
- *   Ignore Sound.inputDevice() and Sound.outputDevice(), use the System Settings instead.
- *   Set Output to BlackHole 16ch
- *   Set Input to your external audio hardware, for an external mic: mine is Volt2
- *   
- * Then in Max Audio Status control panel:
- *   Set Input Device to BlackHole 16ch
- *   Set Output Device to your external audio hardware, e.g. Volt2
+ * In MacOS:<br> 
+ *   Ignore Sound.inputDevice() and Sound.outputDevice(), use the System Settings instead.<br>
+ *   Set Output to BlackHole 16ch<br>
+ *   Set Input to your external audio hardware, for an external mic: mine is Volt2<br>
+ *   <br>
+ * Then in Max Audio Status control panel:<br>
+ *   Set Input Device to BlackHole 16ch<br>
+ *   Set Output Device to your external audio hardware, e.g. Volt2<br>
  *   Create a patcher that gets signals from an adc~, route the adc~ to some sort of effects 
- *   and out to a dac~.
+ *   and out to a dac~.<br>
  * 
  * </DIV>
  * 

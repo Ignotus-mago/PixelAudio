@@ -111,7 +111,7 @@ import ddf.minim.*;
  * </p><p>
  * Press the spacebar to start or stop animation. 
  *   
- *   
+ * <pre>  
  * --------------------------------------------------------------------------------------------
  * ***>> NOTE: Key commands only work when the image display window is the active window. <<***
  * --------------------------------------------------------------------------------------------
@@ -148,9 +148,10 @@ import ddf.minim.*;
  * Press 'Z' to reset argosy 2 to inttial position.
  * Press 'h' or 'H' to show help message in console.
  * 
+ * </pre>
  * 
- * TODO save two image files, two audio files -- one for each Argosy
- * TODO bug fix, when changing gap color argosy resets with 0 shift
+ * TODO save two image files, two audio files -- one for each Argosy<br>
+ * TODO bug fix, when changing gap color argosy resets with 0 shift<br>
  * TODO reset animation with a key command 
  * 
  */
