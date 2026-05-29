@@ -19,7 +19,7 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * LoadImageToAudio shows how to load an image and turn it into an audio file
  * that can be played by clicking on the image. You can also load an audio file
  * and turn it into an image. 
- * 
+ * <p>
  * You can write the current image to the audio signal with the 'w' key command. 
  * The sound of an image will probably be noisy since it is not designed with cyclic 
  * functions along the arbitrary signal path we impose on it with a PixelMapGen.
@@ -30,13 +30,13 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * an audio file and it gets transcoded into an image, we still use the audio 
  * signal with all its resolution to play sounds. When you click in the image, 
  * you will be playing a sample from the signal. 
- * 
+ * </p><p>
  * You can write the audio signal to the image with the 'W' key command. This will 
  * convert the audioSignal into HSB Brightness values and write them to mapImage.
  * If you open this image in all color channels or in the HSB Brightness channel 
  * and then write it to the audio channel, you will get a reasonably good recreation
  * of the audio, at 8-bit resolution.
- * 
+ * </p><p>
  * An audio signal or image can be loaded to various channels of the image: Red, 
  * Green, Blue or all channels in the RGB color space or Hue, Brightness, or
  * Saturation in the HSB color space. HSB Hue operations on grayscale images may 
@@ -46,11 +46,12 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * will turn it gray. To work more effectively with HSB, we can load both hue and
  * saturation from a color image to another color image or to a grayscale image, 
  * maintaining the brightness channel of the target image, with the 'c' command key.
- * 
+ * </p><p>
  * You can enhance image contrast by stretching its histogram ('m' key).
  * You can make the image brighter ('=' and '+' keys) or darker ('-' or '_' key)
  * using a gamma function, a non-linear adjustment. 
- * 
+ * </p>
+ * <pre>
  * Press ' ' to toggle animation.
  * Press 'o' to open an audio or image file in all RGB channels.
  * Press 'r' to open an audio or image file in the RED channel of the image.
@@ -71,10 +72,10 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * Press 'w' to transcode the image and write it to the audio signal.
  * Press 'W' to transcode the audio signal and write it to the image.
  * Press '?' to show the Help Message in the console.
+ * </pre>
  * 
- * 
- * PLEASE NOTE: Hue (H) and Saturation (V) operations may have no effect on gray pixels.
- * ALSO: Image brightness determines image audio. Images with uniform brightness will be silent.
+ * PLEASE NOTE: Hue (H) and Saturation (V) operations may have no effect on gray pixels.<br>
+ * ALSO: Image brightness determines image audio. Images with uniform brightness will be silent.<br>
  * 
  */
 public class LoadImageToAudio extends PApplet {
@@ -257,7 +258,7 @@ public class LoadImageToAudio extends PApplet {
 		case ' ': // play audio for the point the mouse is currently over
 			audioMouseClick(mouseX, mouseY);
 			break;
-		case TAB:
+		case TAB: // toggle animation
 			isAnimating = !isAnimating;
 			break;
 		case 'o': // open an audio or image file in all RGB channels
