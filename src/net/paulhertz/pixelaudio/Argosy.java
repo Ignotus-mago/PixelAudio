@@ -98,7 +98,7 @@ public class Argosy {
 
 	/**
 	 * @param mapper		PixelAudioMapper
-	 * @param unitSize      size of a unit of the argosy
+	 * @param unitSize      size of a unit of the argosy -- powers of 2 or 4 are a good fit for the Hilbert PixelMapGen
 	 * @param reps          number of repetitions of the argosy pattern, pass in 0 for maximum that fit
 	 * @param isCentered    true if argosy array should be centered in bigArray
 	 */
@@ -127,7 +127,7 @@ public class Argosy {
 	 * @param colors        an array of colors for the argosy patterns
 	 * @param gapColor      a color for the spaces between argosy patterns
 	 * @param gapScale      scaling for number of units in gap between argosies
-	 * @param pattern        a pattern of numbers, will be copied to argosyPattern
+	 * @param pattern       a pattern of numbers, will be copied to argosyPattern
 	 */
 	public Argosy(PixelAudioMapper mapper, int unitSize, int reps, boolean isCentered, 
 					   int[] colors, int gapColor, float gapScale, int[] pattern) {

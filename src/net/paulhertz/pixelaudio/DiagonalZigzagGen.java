@@ -30,11 +30,20 @@ public class DiagonalZigzagGen extends PixelMapGen {
 
 
 
+	/**
+	 * @param width     PixelMapGen width
+	 * @param height    PixelMapGen height
+	 * @param type      an AffineTransformType to apply to the coordinates of the PixelMapGen
+	 */
 	public DiagonalZigzagGen(int width, int height, AffineTransformType type) {
 		super(width, height, type);
 		this.generate();
 	}
 
+	/**
+	 * @param width     PixelMapGen width
+	 * @param height    PixelMapGen height
+	 */
 	public DiagonalZigzagGen(int width, int height) {
 		super(width, height);
 		this.generate();

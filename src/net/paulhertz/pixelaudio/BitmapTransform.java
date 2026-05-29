@@ -479,7 +479,6 @@ public class BitmapTransform {
 	
 	// ------------- STATIC METHODS FOR SINGLE COORDINATE PAIR TRANSFORM ------------- //
 	
-	
 	/**
 	 * @param x		x-coordinate of pixel
 	 * @param y		y-coordinate of pixel

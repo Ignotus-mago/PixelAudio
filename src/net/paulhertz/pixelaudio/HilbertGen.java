@@ -21,9 +21,10 @@ package net.paulhertz.pixelaudio;
 import java.util.ArrayList;
 
 /**
- * Generates coordinates and LUTs for a Hilbert curve over a square bitmap starting at (0,0) and ending at (width-1, 0).
- * Width and height must be equal powers of 2. You can also call HilbertGen(int depth) and width and height will equal Math.pow(2, depth). 
- * See abstract class {@link PixelMapGen} for instance variables shared by all child classes. 
+ * Generates coordinates and LUTs for a Hilbert curve over a square bitmap starting at (0,0)
+ * and ending at (width-1, 0). Width and height must be equal powers of 2. You can also call
+ * HilbertGen(int depth) and width and height will equal Math.pow(2, depth). See abstract
+ * class {@link PixelMapGen} for instance variables shared by all child classes. 
  */
 public class HilbertGen extends PixelMapGen {
 	/** recursion depth */
@@ -50,10 +51,17 @@ public class HilbertGen extends PixelMapGen {
 		this.generate();										// last of all, once all parameters are set, go ahead and generate coordinates and LUTs.
 	}
 
+	/**
+	 * @param depth    depth of recursion of HIlbert curve, where 2^depth produces the width and height of the HilbertGen
+	 */
 	public HilbertGen(int depth) {
 		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)) );
 	}
 	
+	/**
+	 * @param depth    depth of recursion of HIlbert curve, where 2^depth produces the width and height of the HilbertGen
+	 * @param type     AfineTransformType to apply to the HilbertGen coordinates
+	 */
 	public HilbertGen(int depth, AffineTransformType type) {
 		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)), type);
 	}
@@ -69,7 +77,12 @@ public class HilbertGen extends PixelMapGen {
 		return HilbertGen.prevalidate(width, height);
 	}
 	
-	// static version of validate
+	/**
+	 * static version of <code>validate()</code> that we use to throw meaningful errors (or so we hope)
+	 * @param width     width of the HilbertGen
+	 * @param height    height of the HilbertGen
+	 * @return          true if width and height are legitimate values for a Hilbert curve: equal powers of 2
+	 */
 	public static boolean prevalidate(int width, int height) {
 		if (width < 2) {
 			System.out.println("HilbertGen Error: 2 is the minimum value for width and height, 1 is the minimum value for depth.");
@@ -93,11 +106,15 @@ public class HilbertGen extends PixelMapGen {
 	}
 	
 	
+	/**
+	 * @return    array of coordinates for the HilbertGen
+	 */
 	private ArrayList<int[]> generateCoordinates() {
 		return this.generateHilbertCoordinates(this.getSize());
 	}
 
 	/**
+	 * Handles the generation of coordinates for a HilbertGen.
 	 * @param n    size of the array of Hilbert curve coordinates, necessarily a power of 4
 	 * @return     an ArrayList of integer pairs {x,y} representing the coordinates of a Hilbert curve
 	 */
@@ -119,6 +136,12 @@ public class HilbertGen extends PixelMapGen {
 		return coordinates;
 	}
 	
+	/**
+	 * Calculates coordinate positions within a Hilbert curve.
+	 * @param n      size of the array of Hilbert curve coordinates
+	 * @param pos    index position within the Hilbert curve coordinates
+	 * @return
+	 */
 	private int[] d2xy(int n, int pos) {
 		int rx = 0;
 		int ry = 0;

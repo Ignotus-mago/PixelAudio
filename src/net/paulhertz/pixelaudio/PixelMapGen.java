@@ -81,13 +81,22 @@ import java.util.Random;
  *
  */
 public abstract class PixelMapGen {
+	/** width of the PixelMapGen in pixels, and by extension, width of images to which it is applied */
 	public int w;
+	/** height of the PixelMapGen in pixels, and by extension, height of images to which it is applied */
 	public int h;
+	/** the total number of pixels or audio samples handled by the PixelMapGen, == width * height */
 	public int size;
-	public int[] pixelMap;				// signalToImageLUT source for PixelAudioMapper, value at signal index returns index to pixel in bitmap
-	public int[] sampleMap;				// imageToSignalLUT source for PixelAudioMapper, value at bitmap index returns index to sample in signal
+	/** signalToImageLUT source for PixelAudioMapper, value at signal index returns index to pixel in bitmap */
+	public int[] pixelMap;
+	/** imageToSignalLUT source for PixelAudioMapper, value at bitmap index returns index to sample in signal */
+	public int[] sampleMap;
+	/** the 2D coordinates of the signal path as it traverses the bitmap of dimensions width * height */
 	public ArrayList<int[]> coords;
+	/** an <code>AffineTransformType</code> applied to the coordinate pairs in <code>coords</code> 
+	 * prior to generating <code>pixelMap</code> and <code>sampleMap</code> */
 	public AffineTransformType transformType = AffineTransformType.NADA;
+	/** a String that summarizes the features of a PixelMapGen class */
 	public final static String description = "Declare the description variable in your class and describe your PixelMapGen.";
 
 	// short names for transforms from
@@ -111,8 +120,10 @@ public abstract class PixelMapGen {
 	 * after any additional initializations or calculations required for your class. See {@link DiagonalZigzagGen}
 	 * and {@link HilbertGen} for examples of how to organize and initialize your own <code>PixelMapGen</code> class.
 	 *
-	 * @param width
-	 * @param height
+	 * @param width      width of the PixelMapGen in pixels
+	 * @param height     height of the PixelMapGen in pixels
+	 * @param type       an AffineTransformType to apply to the coordinates of the PixelMapGen prior to creating 
+	 *                   the index maps <code>pixelMap</code> and <code>sampleMap</code> 
 	 */
 	public PixelMapGen(int width, int height, AffineTransformType type) {
 		// TODO throw an exception instead? That's not the usual way of handling errors in Processing, AFAIK.
@@ -193,6 +204,10 @@ public abstract class PixelMapGen {
 		return this.pixelMap;	// return the pixelMap value, which can be ignored
 	}
 
+	/**
+	 * @param coordinates    an array of coordinate pairs
+	 * @param type           the AffineTransformType to apply
+	 */
 	public void transformCoords(ArrayList<int[]> coordinates, AffineTransformType type) {
 		ArrayList<int[]> transformedCoords = new ArrayList<int[]>(coordinates.size());
 		for (int[] xy : coordinates) {
@@ -211,6 +226,9 @@ public abstract class PixelMapGen {
 		}
 	}
 
+	/**
+	 * Creates pixelMap and sampleMap from coords, which must already be initialized.
+	 */
 	public void loadIndexMaps() {
 		int p = 0;										// pixelMap index, for the bitmap coordinates along the signal path
 		int i = 0;										// index through the list of coordinate pairs (which we expect to be in signal order)
@@ -228,8 +246,6 @@ public abstract class PixelMapGen {
 
 	/* ------------------------------ GETTERS AND NO SETTERS ------------------------------ */
 	/* For the most part, we don't want to alter variables once they have been initialized. */
-
-
 
 	/**
 	 * @return 	Width of the bitmap associated with this PixelMapGen.
@@ -284,7 +300,8 @@ public abstract class PixelMapGen {
 
 	/**
 	 * @return	<code>this.coords</code>, the array of coordinate pairs that mark a path 
-	 *          (the "signal path") through every pixel in a bitmap. 
+	 *          (the "signal path") through every pixel in a bitmap. getCoordinatesCopy()
+	 *          is the preferred method for obtaining the coordinates.
 	 */
 	public ArrayList<int[]> getCoordinates() {
 		return this.coords;

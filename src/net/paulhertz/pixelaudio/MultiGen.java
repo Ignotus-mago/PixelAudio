@@ -33,11 +33,12 @@ public class MultiGen extends PixelMapGen {
 	public final static String description = "MultiGen is a PixelMapGen that creates a single signal path over multiple PixelMapGens.";
 
 	
-	// we'll create two DiagonalZigzagGens by default.
 	/**
-	 * @param width
-	 * @param height
-	 * @param transform
+	 * Default constructor, creates two DiagonalZigzagGens.
+	 * 
+	 * @param width         total width of the MultiGen in pixels
+	 * @param height        total height of the MultiGen in pixels
+	 * @param transform     an AffineTransformType to apply the coordinates of the MultiGen
 	 */
 	public MultiGen(int width, int height, AffineTransformType transform) {
 		super(width, height, transform);
@@ -63,10 +64,25 @@ public class MultiGen extends PixelMapGen {
 	}
 
 	
+	/**
+	 * Calls the default constructor with AffineTransformType.NADA as the third parameter.
+	 * 
+	 * @param width         total width of the MultiGen in pixels
+	 * @param height        total height of the MultiGen in pixels
+	 */
 	public MultiGen(int width, int height) {
 		this(width, height, AffineTransformType.NADA);
 	}
 	
+	/**
+	 * Given an ArrayList of PixelMapGens, orders then in rows and columns to create a MultiGen. 
+	 * 
+	 * @param width         total width of the MultiGen in pixels
+	 * @param height        total height of the MultiGen in pixels
+	 * @param rows          number of rows of PixelMapGens
+	 * @param columns       number of columns of PixelMapGens
+	 * @param genList       an ArrayList of PixelMapGens, where genList.size() == rows * columns
+	 */
 	public MultiGen(int width, int height, int rows, int columns, ArrayList<PixelMapGen> genList) {
 		super(width, height);
 		this.rows = rows;
@@ -75,6 +91,16 @@ public class MultiGen extends PixelMapGen {
 		this.generate();
 	}
 
+	/**
+	 * Given an ArrayList of PixelMapGens and an ArrayList of coordinate offsets, arranges the 
+	 * upper left corner of each gen at the corresponding coordinate offset over the width and 
+	 * height of the MultiGen.
+	 * 
+	 * @param width         total width of the MultiGen in pixels
+	 * @param height        total height of the MultiGen in pixels
+	 * @param offsetList    a list of coordinate pairs, offsets to the upper left corner of each PixelMapGen in genList
+	 * @param genList       an ArrayList of PixelMapGens, where genList.size() == offsetList.size()
+	 */
 	public MultiGen(int width, int height, ArrayList<int[]> offsetList, ArrayList<PixelMapGen> genList) {
 		super(width, height);
 		this.genList = genList;
@@ -197,7 +223,9 @@ public class MultiGen extends PixelMapGen {
 	 * This method creates a MultiGen consisting of a mix of zigzag and Hilbert curves
 	 * in 6 columns and 4 rows arranged to provide a continuous loop. The resulting
 	 * MultiGen will be 6 * genW wide by 4 * genH high, where genW == genH and genW 
-	 * is a power of 2 (required for Hilbert gens). 
+	 * is a power of 2 (required for Hilbert gens). Shows how to use arrays of gens, 
+	 * coordinate pairs, and affine transforms to create a MultiGen, probably the 
+	 * most useful general strategy.
 	 * 
 	 * @param genW    width of each gen, must be a power of 2 and equal to genW
 	 * @param genH    height of each gen, must be a power of 2 and equal to genW

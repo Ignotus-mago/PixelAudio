@@ -29,24 +29,23 @@ import processing.core.PVector;
 
 /**
  * <p>
- * As of pre-release version 0.9.2-beta, PixelAudioMapper is substantially complete, though
- * there are a number of features that have not been tested or demonstrated with code examples. 
- * </p>
- * 
- * <p>
- * PixelAudioMapper maps between 1D "signal" arrays of audio samples formatted as floating point 
- * values in the range [-1, 1] and 2D "image" arrays formatted as RGBA integer pixel data. 
- * This class is designed to handle one-to-one mappings between signal and image arrays. 
- * The mappings are managed by lookup tables (LUTs) created by a separate mapping generator class, 
- * <code>PixelMapGen</code>. The values in the LUTs are index numbers of pixels in a bitmap or 
- * of samples in a signal. If you think of the signal as a path that visits each pixel in the image, 
- * one lookup table, <code>signalToImageLUT</code>, lists the index numbers of each pixel the path 
- * visits in the image, in the order that it traverses them. There is a similar lookup table 
- * for the image, <code>imageToSignalLUT</code>, that lets you look up the signal value 
- * corresponding to each pixel in the image. For example, when you load audio samples to the 
- * signal array, <code>signalToImageLUT</code> lets you find the corresponding pixels for each sample
- * and update them to visualize the signal as a 2D image. You can save the image to a file and
- * later load it to a bitmap for display. The pixel values can then be written to an audio buffer 
+ * PixelAudioMapper is designed to handle one-to-one mappings between 1D "signal" arrays  
+ * formatted as floating point values in the range [-1.0, 1.0] and 2D "image" arrays formatted 
+ * as RGBA integer pixel data. It provides an abundant suite of methods to handle data transcoding
+ * between RGBA values and floating point values, including extensive array-handling methods and 
+ * color channel encoding methods. 
+ * </p><p>
+ * PixelAudioMapper uses lookup tables (LUTs) created by a separate mapping generator class,
+ * <code>PixelMapGen</code>, which is a required argument in its constructor. The values in the
+ * LUTs are index numbers of pixels in a bitmap or of samples in a signal array. If you think
+ * of the signal as a path that visits each pixel in the image, one lookup table,
+ * <code>signalToImageLUT</code>, lists the index numbers of each pixel the path visits in the
+ * image, in the order that it traverses them. There is a similar lookup table for the image,
+ * <code>imageToSignalLUT</code>, that lets you look up the signal value corresponding to each
+ * pixel in the image. For example, when you load audio samples to the signal array,
+ * <code>signalToImageLUT</code> lets you find the corresponding pixels for each sample and
+ * update them to visualize the signal as a 2D image. You can save the image to a file and later
+ * load it to a bitmap for display. The pixel values can then be written to an audio buffer
  * using <code>imageToSignalLUT</code>. 
  * </p>
  * <div>
@@ -64,18 +63,22 @@ import processing.core.PVector;
  *
  * <h2>DATA REPRESENTATION</h2>
  * <p>
- * PixelAudioMapper requires image arrays to contain standard 24- or 32-bit RGB or RGBA pixel data, in row major order,
- * with (0,0) at upper left corner. It requires signal arrays to contain values in the range [-1.0, 1.0],
- * a standard format for audio samples. 
+ * PixelAudioMapper requires image arrays to contain standard 24- or 32-bit RGB or RGBA pixel
+ * data, in row major order, with (0,0) at upper left corner. It requires signal arrays to
+ * contain values in the range [-1.0, 1.0], a standard format for audio samples. 
  * </p><p>
  * For the sake of generality, the enclosing classes for image and audio data remain external to
- * PixelAudioMapper, which just works with the arrays of audio samples or image pixel data that they provide. 
- * In Processing, PImage wraps image data. You could also use Java's BufferedImage class. 
- * I have been using the minim library for audio, (https://code.compartmental.net/minim/).
- * The built-in audio in Processing 4 is definitely also an option. PImage and BufferedImage typically 
- * store color pixel data in an array of RGB or RGBA integer formatted values -- exactly what we need.
- * Audio classes use a variety of formats, particularly when reading from files, and provide methods for
- * setting and changing the format of audio sample data.  
+ * PixelAudioMapper, which just works with the arrays of audio samples or image pixel data that
+ * they provide. In Processing, PImage wraps image data. You could also use Java's BufferedImage
+ * class. I have been using the minim library for audio, (https://code.compartmental.net/minim/). 
+ * Minim classes are an integral part of the Sampler and Granular audio synthesis engines in 
+ * PixelAudio, but you can freely use other audio data formats, including Processing's audio 
+ * library classes. In PixelAudioMapper, the array of floats and ints are not tied to any particular
+ * data format. Though I do treat them as audio signals and pixels, they could be anything. 
+ * PImage and BufferedImage typically store color pixel data in an array of RGB
+ * or RGBA integer formatted values -- exactly what we need. Audio classes use a variety of
+ * formats, particularly when reading from files, and provide methods for setting and changing
+ * the format of audio sample data. 
  * </p>
  * 
  * <h3>Image</h3>
@@ -133,19 +136,25 @@ import processing.core.PVector;
  *	}
  *  </pre>
  * <p>
- * The LUTs are generated by a subclass of <code>PixelMapGen</code> that is passed as an argument to the <code>PixelAudioMapper</code> constructor. 
- * Each <code>PixelMapGen</code> subclass generates: 1. a set of coordinates for the path traced by the signal over the image, 
- * 2. <code>pixelMap</code> for mapping from signal to image (<code>signalToImageLUT</code> in <code>PixelAudioMapper</code>), 
- * and 3. <code>sampleMap</code> (<code>imageToSignalLUT</code> in <code>PixelAudioMapper</code>), for mapping from image to signal
- * <code>PixelAudioMapper</code> works with copies of the two LUTs, and can access or obtain a copy of the coordinates if needed. 
- * This strategy allows the generator classes to be compact and reusable, while the host class, PixelAudioMapper, can handle 
- * exchanges between audio and pixel data using its copies of the LUTs. Note the the pixel array and the signal array length 
- * must equal the image size = width * height.  
+ * The LUTs are generated by a subclass of <code>PixelMapGen</code> that is passed as an
+ * argument to the <code>PixelAudioMapper</code> constructor. Each <code>PixelMapGen</code>
+ * subclass generates: 
+ * 1. a set of coordinates for the path traced by the signal over the image, 
+ * 2. <code>pixelMap</code> for mapping from signal to image (<code>signalToImageLUT</code> in
+ *    <code>PixelAudioMapper</code>), and 
+ * 3. <code>sampleMap</code> (<code>imageToSignalLUT</code> in <code>PixelAudioMapper</code>), 
+ *    for mapping from image to signal.
+ * <code>PixelAudioMapper</code> works with copies of the two LUTs, and can access
+ * or obtain a copy of the coordinates if needed. This strategy allows the generator classes
+ * to be compact and reusable, while the host class, PixelAudioMapper, can handle exchanges
+ * between audio and pixel data using its copies of the LUTs. Note the the pixel array and
+ * the signal array length must equal the image size = width * height.  
  * </p><p>
- * To work with PixelAudioMapper, first create a PixMapGen instance with the width and height of the image you are addressing. 
- * The PixMapGen instance will generate the LUTs for its particular mapping for you. You can then pass it to the
- * PixelAudioMapper constructor, which will initialize its variables from copies of the PixMapGen LUTs.
- * Some of the logic behind this process is explained in my notes to the PixMapGen abstract class.
+ * To work with PixelAudioMapper, first create a PixMapGen instance with the width and height of
+ * the image you are addressing. The PixMapGen instance will generate the LUTs for its
+ * particular mapping for you. You can then pass it to the PixelAudioMapper constructor, which
+ * will initialize its variables from copies of the PixMapGen LUTs. Some of the logic behind
+ * this process is explained in my notes to the PixMapGen abstract class.
  * </p>
  *
  * <h2>MAPPING AND TRANSCODING</h2>
@@ -200,10 +209,10 @@ import processing.core.PVector;
  * The following are suggestions for methods that could be implemented using PixelArrayMapper.</p>
  * <ul>
  *	 <li>additive audio synthesis + color organ, implemented with the WaveSynth and WaveData classes</li>
- *	 <li>granular synthesis (AriaDemoApp is not quite GS, but very similar)</li>
+ *	 <li>granular synthesis</li>
  *	 <li>pattern generation (Argosy and Lindenmeyer classes)</li>
  * 	 <li>phase shifting, amplitude modulation, etc.  </li>
- *	 <li>FFT operations on both image and signal data (AriaDemoApp) </li>
+ *	 <li>FFT operations on both image and signal data </li>
  *	 <li>pixel sorting, typically on image data</li>
  *	 <li>blur, sharpen, etc.</li>
  *	 <li>blending images</li>
