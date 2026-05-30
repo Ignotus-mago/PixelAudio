@@ -28,7 +28,7 @@ import processing.core.PGraphics;
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 
 
-// This class was designed for lazy initialization, but it has a method for eager intitialization, calculateDerivedPoints(). 
+// This class was designed for lazy initialization, but it has a method for eager initialization, calculateDerivedPoints(). 
 // I would advise anyone using PixelAudio for live performance to initialize all structures up front and then avoid altering them,
 // but this class is designed to let you alter settings on the fly, if you want to. Just be *really* careful when it comes
 // to altering dragPoints or dragTimes. They must follow the rules set out in PAGesture, repeated below.
@@ -49,7 +49,9 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * <p>PACurveMaker is a utility and storage class for gestures and curve modeling, with
  * point reduction and drawing to on-screen PApplets or off-screen PGraphics. It implements
  * PAGesture and provides a pair of data structures, <code>dragPoints</code> and <code>dragTimes</code>, 
- * that together capture gestures made with a mouse or similar input device.
+ * that together capture gestures made with a mouse or similar input device. It is 
+ * a core component of the PixelAudio library.
+ * </p><p>
  * Each point in dragPoints is associated with a corresponding time in dragTimes. 
  * You can use PACurveMaker for data storage in interactive drawing applications, or 
  * implement your own storage with just the features you require. It is a key
@@ -78,7 +80,7 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * for drawing attributes, affine transforms, and point testing. For display and interaction, a brushstroke 
  * shape, <code>brushShape</code>, can be created from the curve. An array of PVectors, 
  * <code>eventPoints</code>, can be created from curveShape to facilitate timed event-staging along the curve. 
- * Another array of Pvectors, <code>brushPoly</code>, can be used to test points with <code>PABezShape.pointInPoly()</code>.
+ * Another array of PVectors, <code>brushPoly</code>, can be used to test points with <code>PABezShape.pointInPoly()</code>.
  * <br><br>
  * ---- TODO continue to revise documentation ----
  * 
@@ -89,9 +91,9 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * rdpPoints keep their drawing parameters (fill, stroke, weight) in PACurveMaker variables. PABezShapes
  * like curveShape and brushShape can store drawing parameters internally. 
  * </p><p>
- * There a several properties of PACurveMaker that can affect the appearance of curves. The value of <code>epsilon</code>
+ * There are several properties of PACurveMaker that can affect the appearance of curves. The value of <code>epsilon</code>
  * determines how closely the reduced point set in <code>rdpPoints</code> matches the dense point set in <code>dragPoints</code>.
- * Smaller values, down to 1.0, yield a reduced point set with more points and great precision. Some of the factory methods
+ * Smaller values, down to 1.0, yield a reduced point set with more points and greater precision. Some of the factory methods
  * allow you to supply your own value for epsilon, which defaults to 8.0. Weighted curves and brushstrokes are variations 
  * on the smooth Bezier curves that PACurveMaker generates by default. In the default curves, the rate of change in 
  * curvature is the same on either side of a Bezier anchor point. The weighted curves use a value, bezierBias, to 
@@ -103,14 +105,14 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * weighted curves. 
  * </p>
  * 	
- * NOTES 2025.12.14
- * 
+ * <h3>NOTES 2025.12.14</h3>
+ * <p>
  * <code>eventPoints</code> is a <code>List<PVector></code> derived from the gestural points captured during user interaction.
  * <code>dragPoints</code> is reduced to <code>rdpPoints</code>. <code>rdpPoints</code> is used to derive the 
  * Bezier path (PABezShape) <code>curveShape</code>. The polyline representation of curveShape is <code>eventPoints</code>, 
- * where display events tied to the curve can be located. 
+ * where display events tied to the curve can be located. <br>
  * To reduce confusion, I have created some alias methods in PACurveMaker:
- * 
+ * </p>
  *    <pre>
  * 	  // Alias method for getDragPoints().
  * 	  public ArrayList<PVector> getAllPoints() {
@@ -151,16 +153,16 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  *      return this.eventSteps;
  *    }
  *    </pre>
- * 
+ * <p>
  * In addition, I note that the primary point sets in PACUrveMaker are <code>dragPoints</code> (getAllPoints()), 
  * <code>rdpPoints</code> (getCurvePoints()), and <code>eventPoints</code> (getCurvePoints()). The full 
  * gesture is conveyed by <code>dragPoints</code> and <code>dragTimes</code>. The indices of <code>rdpPoints</code> are tracked 
  * and stored in <code>ArrayList<Integer> rdpIndices</code>, so that we can map back to the original gesture points 
  * if needed. The points in <code>rdpPoints</code> are also the anchor points in the Bezier path <code>curveShape</code>,
  * produced from <code>curveShape = PACurveUtility.calculateCurve(rdpPoints);</code>.
+ * </p>
  * 
- * 
- * We can also get the reduced time list:
+ * We can also get the reduced time list:<br>
  * 
  *    <pre>
  *    public int[] getReducedTimes() {
@@ -181,24 +183,24 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * is called from <code>setEpsilon()</code> and <code>public ArrayList<PVector> getReducedPoints(float epsilon)</code> The new reduced 
  * point time set can be derived from <code>rdpIndices</code> when needed. 
  * 
- * NOTES 2025.12.23
- * 
+ * <h3>NOTES 2025.12.23</h3>
+ * <p>
  * As much as possible, PACurveMaker now relies on lazy initialization, though end user can initialize all geometry up from with 
  * calculateDerivedPoints(). I have also introduced the interface PAGesture, to clarify how PACurveMaker structures originate
  * in capture gestures from a GUI or other source. A gesture is constructed from 
- * 
- *   1) a list of points and 
- *   2) a list of time offsets where
- *   3) both lists have the same cardinality and 
- *   4) time offsets increase monotonically. In addition, 
- *   5) the time list is expected (but not required) to start with a first element 0.  
- *   
+ * <ol>
+ *   <li>a list of points and </li> 
+ *   <li>a list of time offsets where</li>
+ *   <li>both lists have the same cardinality and </li> 
+ *   <li>time offsets increase monotonically. In addition, </li> 
+ *   <li>the time list is expected (but not required) to start with a first element 0.</li>  
+ * </ol>  
  * Absolute time of gesture creation can be stored in startTime, as millis from application start.
- * 
+ * <p>
  * I have also refactored the structure of dragTimes. It no longer has an absolute time stamp as its first element, 
- * thus adhering the the cardinality rule stated above. 
+ * thus adhering the the cardinality rule stated above. <br>
  * GestureSchedule provides some static methods to help enforce the invariants of gestures. 
- * 
+ * </p>
  * 
  * 
  */

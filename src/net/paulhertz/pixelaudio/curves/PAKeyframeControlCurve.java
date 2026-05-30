@@ -23,6 +23,8 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  *
  * This class makes no strong assumptions about the range of values.
  * For dynamics, values will usually be in [0,1], but other ranges are allowed.
+ * 
+ * @see Bagatelle example code.
  */
 public final class PAKeyframeControlCurve implements PAControlCurve {
 

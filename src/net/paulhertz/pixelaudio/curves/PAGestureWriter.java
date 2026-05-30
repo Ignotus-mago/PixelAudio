@@ -9,6 +9,12 @@ import net.paulhertz.pixelaudio.PixelAudioMapper;
 import processing.core.*;
 
 // TODO time data output
+// TODO evaluate for deletion
+
+/**
+ * Reduced set of Adobe Illustrator 3.0 (ancient but still useful) path operators for 
+ * recording curves. May be useful for future development. 
+ */
 public class PAGestureWriter {
 	static final char gPathOps[] = { 'N', 'n', 'S', 's', 'F', 'f', 'B', 'b' };
 	/** Binary flag for filled path operators. FILL, STROKE and CLOSE values can be summed to index a path operator tag */

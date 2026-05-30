@@ -2,6 +2,8 @@ package net.paulhertz.pixelaudio.curves;
 
 import java.util.Arrays;
 
+// TODO evaluate for deletion
+
 /**
  * PAIndexParametric
  *

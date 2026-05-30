@@ -3,6 +3,8 @@ package net.paulhertz.pixelaudio.curves;
 import java.util.List;
 import processing.core.PVector;
 
+// TODO evaluate for deletion (legacy class, safe to delete)
+
 /**
  * PAPathParametric
  *

@@ -36,7 +36,7 @@ import net.paulhertz.pixelaudio.PixelAudioMapper;
  * IgnoCodeLib is available in the Processing contributed libraries and at
  * https://paulhertz.net/ignocodelib/ and https://github.com/Ignotus-mago/IgnoCodeLib3
  * 
- * TODO add write methods to save curves to a (JSON) file, create (JSON) file reader.
+ * Methods to save and load curves in a (JSON) file are implemented in the Bagatelle example code.
  *
  */
 public class PABezShape {

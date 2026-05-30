@@ -147,32 +147,38 @@ public class PABezVertex implements PAVertex2DINF {
      pg.bezierVertex(cx1, cy1, cx2, cy2, x, y);
   }
 
-  public void mark(PApplet parent) {
-    int w = 6;
-    int d = w - 1;
-    parent.pushStyle();
-    parent.noStroke();
-    parent.fill(192);
-    parent.ellipse(cx1,cy1, d, d);
-    parent.ellipse(cx2,cy2, d, d);
-    parent.fill(160);
-    parent.square(x - w/2, y - w/2, w);
-    parent.popStyle();
-  }
+   /**
+    * Draw anchor and control vertices in a PApplet.
+    */
+   public void mark(PApplet parent) {
+	   int w = 6;
+	   int d = w - 1;
+	   parent.pushStyle();
+	   parent.noStroke();
+	   parent.fill(192);
+	   parent.ellipse(cx1,cy1, d, d);
+	   parent.ellipse(cx2,cy2, d, d);
+	   parent.fill(160);
+	   parent.square(x - w/2, y - w/2, w);
+	   parent.popStyle();
+   }
 
-  public void mark(PGraphics pg) {
-    int w = 6;
-    int d = w - 1;
-    pg.pushStyle();
-    pg.noStroke();
-    pg.fill(192);
-    pg.ellipse(cx1,cy1, d, d);
-    pg.ellipse(cx2,cy2, d, d);
-    pg.fill(160);
-    pg.square(x - w/2, y - w/2, w);
-    pg.popStyle();
-  }
-  
+   /**
+    * Draw anchor and control vertices in a PGraphics.
+    */
+   public void mark(PGraphics pg) {
+	   int w = 6;
+	   int d = w - 1;
+	   pg.pushStyle();
+	   pg.noStroke();
+	   pg.fill(192);
+	   pg.ellipse(cx1,cy1, d, d);
+	   pg.ellipse(cx2,cy2, d, d);
+	   pg.fill(160);
+	   pg.square(x - w/2, y - w/2, w);
+	   pg.popStyle();
+   }
+
   @Override
   public void write(PrintWriter output) {
 	  PAGestureWriter.psCurveTo(cx1, cy1, cx2, cy2, x, y, output);

@@ -1,3 +1,5 @@
+// TODO candidate for removal, only used by GestureGranularRenderer, also marked for removal
+
 package net.paulhertz.pixelaudio.curves;
 
 import processing.core.PVector;
