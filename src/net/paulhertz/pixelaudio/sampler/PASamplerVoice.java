@@ -34,9 +34,11 @@ public class PASamplerVoice {
     private float gain;
     private float pan;
 
+    
     // ------------------------------------------------------------------------
     // Envelope
     // ------------------------------------------------------------------------
+    
     private SimpleADSR envelope;
 
     // Optional pre-start processing
@@ -46,9 +48,11 @@ public class PASamplerVoice {
     private static final boolean DEBUG = false;
     private int frameCounter = 0;
 
+    
     // ------------------------------------------------------------------------
     // Constructor
     // ------------------------------------------------------------------------
+    
     public PASamplerVoice(float[] buffer, float sampleRate) {
         this.buffer = buffer;
         this.playbackSampleRate = sampleRate;
@@ -60,6 +64,7 @@ public class PASamplerVoice {
     // ------------------------------------------------------------------------
     // Activation
     // ------------------------------------------------------------------------
+    
     public void activate(int start, int length, float gain,
                          ADSRParams envParams, float pitch, float pan, boolean looping) {
         this.active = false;
@@ -100,6 +105,7 @@ public class PASamplerVoice {
 
         this.active = (this.start < this.end);
 
+        // intentionally dead code, can be reactivated for debugging
         if (DEBUG && frameCounter++ % 2000 == 0) {
             System.out.printf("[Voice %d] Activated: start=%d end=%d gain=%.3f pitch=%.3f pan=%.3f%n",
                     voiceId, start, end, gain, pitch, pan);
@@ -136,9 +142,11 @@ public class PASamplerVoice {
         return sample;
     }
 
+    
     // ------------------------------------------------------------------------
     // Lifecycle control
     // ------------------------------------------------------------------------
+    
     public void release() {
         if (!released) {
             released = true;
@@ -162,9 +170,11 @@ public class PASamplerVoice {
         this.finished = false;
     }
 
+    
     // ------------------------------------------------------------------------
     // Buffer management
     // ------------------------------------------------------------------------
+    
     public synchronized void setBuffer(float[] buffer) {
         this.buffer = buffer;
         resetPosition();
@@ -175,10 +185,12 @@ public class PASamplerVoice {
         this.playbackSampleRate = playbackSampleRate;
         resetPosition();
     }
+    
 
     // ------------------------------------------------------------------------
     // Accessors and state checks
     // ------------------------------------------------------------------------
+    
     public boolean isActive()     { return active; }
     public boolean isReleasing()  { return released && !finished; }
     public boolean isFinished()   { return finished; }
@@ -189,6 +201,7 @@ public class PASamplerVoice {
     public float getPan()         { return pan; }
     public long getVoiceId()      { return voiceId; }
 
+    
     // ------------------------------------------------------------------------
     // Optional features
     // ------------------------------------------------------------------------
@@ -226,7 +239,7 @@ public class PASamplerVoice {
     	this.playbackSampleRate = newRate;
     }
     
-    // TODO consider a utility class for tailoring audio sample arrays with normalization, DC subtraction, etc.
+    // Utility methods show up in {@link AudioUtility}. TODO adapt this method for AudioUtility.
     /*
      *   // worth considering for noise reduction, but the sum call is not supported in Java Arrays
     public float[] subtractDC(float[] buffer) {

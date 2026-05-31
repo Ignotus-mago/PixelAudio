@@ -1,9 +1,7 @@
 package net.paulhertz.pixelaudio.sampler;
 
 /**
- * PitchPolicy
- *
- * Determines how PASamplerInstrument / PASamplerVoice should interpret
+ * PitchPolicy determines how PASamplerInstrument / PASamplerVoice should interpret
  * their pitch parameter in combination with a given PASource.
  */
 public enum PitchPolicy {

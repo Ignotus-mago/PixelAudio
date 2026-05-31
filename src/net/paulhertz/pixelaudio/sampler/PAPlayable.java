@@ -4,6 +4,8 @@ package net.paulhertz.pixelaudio.sampler;
  * Generic interface for anything that can be "played."
  * Provides a minimal playback API plus backward-compatible overloads
  * for sampler instruments and other PAPlayable classes.
+ * Used for Sampler audio synthesis engine. 
+ * TODO use in Granular engine too? 
  */
 public interface PAPlayable {
 

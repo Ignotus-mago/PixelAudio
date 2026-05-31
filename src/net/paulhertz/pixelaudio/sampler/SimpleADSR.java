@@ -2,12 +2,15 @@ package net.paulhertz.pixelaudio.sampler;
 
 /**
  * SimpleADSR — software envelope generator with optional exponential curves.
- * 
+ * <p>
  * Features:
- *  - Sample-rate–based time scaling
- *  - Per-stage exponential curvature
- *  - Sustain-level clamping
- *  - `noteOn()`, `noteOff()`, `tick()`, and `isFinished()`
+ * <ul>
+ *  <li>Sample-rate–based time scaling</li>
+ *  <li>Per-stage exponential curvature</li>
+ *  <li>Sustain-level clamping</li>
+ *  <li>`noteOn()`, `noteOff()`, `tick()`, and `isFinished()`</li>
+ * </ul>
+ * </p>
  */
 public class SimpleADSR {
 

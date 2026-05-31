@@ -12,17 +12,20 @@ import java.util.*;
  * Manages a group of PASamplerInstruments sharing the same source buffer
  * and audio output. Provides polyphony management, buffer swapping, and
  * per-instrument voice recycling. 
- * 
+ * <p>
  * -- TODO Uses a Minim MultiChannelBuffer for its audio sample storage. This could change. 
- * -- TODO Duplicates the MultiChannelBuffer. This may be overkill. 
- *
+ * </p><p>
  * Features:
- *  - Configurable pool size (number of instruments)
- *  - Configurable max voices per instrument
- *  - Safe buffer and sample rate propagation
- *  - Voice stealing via release or stop()
- *  - Looping detection
- *  - Thread-safe access
+ * <ul>
+ *  <li>Sample-based instruments with ADSR envelopes</li>
+ *  <li>Configurable pool size (number of instruments)</li>
+ *  <li>Configurable max voices per instrument</li>
+ *  <li>Safe buffer and sample rate propagation</li>
+ *  <li>Voice stealing via release or stop()</li>
+ *  <li>Looping detection</li>
+ *  <li>Thread-safe access</li>
+ * </ul>
+ * </p>
  */
 public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------

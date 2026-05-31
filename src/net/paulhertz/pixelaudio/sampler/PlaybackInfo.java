@@ -1,8 +1,10 @@
 package net.paulhertz.pixelaudio.sampler;
 
+//  * TODO Review future use. Still a useful class to maintain. 
+
 /**
  * Holds information about a triggered playback event.
- * Returned by PASharedBufferSampler.play().
+ * Returned by PASharedBufferSampler.play(), where it can be used for debugging. 
  */
 public class PlaybackInfo {
     public final long voiceId;

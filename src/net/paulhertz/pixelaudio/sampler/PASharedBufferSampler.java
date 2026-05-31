@@ -11,15 +11,18 @@ import java.util.*;
  * UGen-based sampler that plays multiple PASamplerVoice instances
  * from a single shared mono buffer (channel 0 of a MultiChannelBuffer)
  * which is an array of floating point samples over (-1.0..1.0).
- *
+ * <p>
  * Features:
- *  - Shared buffer (no duplication)
- *  - Polyphony with voice pooling
- *  - Looping (global default + per-voice)
- *  - ADSR per voice via ADSRParams
- *  - Oldest-first voice recycling, optional smooth stealing
- *  - Thread-safe triggering
- *
+ * <ul>
+ *    <li>Shared buffer (no duplication)</li>
+ *    <li>Polyphony with voice pooling</li>
+ *    <li>Looping (global default + per-voice)</li>
+ *    <li>ADSR per voice via ADSRParams</li>
+ *    <li>Oldest-first voice recycling, optional smooth stealing</li>
+ *    <li>Thread-safe triggering</li>
+ *    <li>Presets for noise reduction with MixProfile and {@link PASamplerInstrumentPool} cycleMixProfile().</li>
+ * </ul>
+ * 
  * Automatically patches to the provided AudioOutput.
  * 
  */

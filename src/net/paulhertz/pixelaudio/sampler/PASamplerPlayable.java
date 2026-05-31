@@ -4,6 +4,7 @@ package net.paulhertz.pixelaudio.sampler;
  * Specialized playable interface for sample-based instruments.
  * Extends PAPlayable with buffer position, length, and envelope parameters.
  * Includes multiple overloads of playSample(...) for backward compatibility.
+ * TODO we may want to weed out legacy methods or label them as @Deprecated
  */
 public interface PASamplerPlayable extends PAPlayable {
 

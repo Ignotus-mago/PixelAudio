@@ -2,6 +2,10 @@ package net.paulhertz.pixelaudio.sampler;
 
 import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
+/**
+ * Stores values used for SamplerBrush event staging, used in tutorial examples
+ * such as {@link TutorialOne_03_Drawing}.
+ */
 public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
     // spatial (optional but useful for mapping / visualization)
 	/** x-coordinate associated with SamplerBrushEvent */

@@ -20,6 +20,8 @@ import java.util.Map;
  *  - Graceful resizing using PASamplerInstrumentPool’s gentle reinit
  *
  * Thread-safe and compatible with both PAPlayable and PASamplerPlayable.
+ * 
+ * TODO example sketches.
  */
 public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayable {
 	private final AudioOutput out;
