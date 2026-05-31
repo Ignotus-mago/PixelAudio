@@ -2,12 +2,18 @@ package net.paulhertz.pixelaudio.schedule;
 
 import java.util.List;
 
+import net.paulhertz.pixelaudio.curves.PAGesture;
 import processing.core.PVector;
  
 
-public final class GestureSchedule {
+/**
+ * Data container for a {@link PAGesture} with immutable points and times 
+ * and an optional start time (in milliseconds). 
+ */
+public final class GestureSchedule implements PAGesture {
     public final List<PVector> points; // gesture positions
     public final float[] timesMs;      // gesture times in ms, same length as points
+    public long startTimeMs = 0;       // optional start time, milliseconds
 
     public GestureSchedule(List<PVector> points, float[] timesMs) {
         if (points == null || timesMs == null) {
@@ -19,7 +25,26 @@ public final class GestureSchedule {
         this.points = points;
         this.timesMs = timesMs;
     }
+    
+	@Override
+	public List<PVector> getAllPoints() {
+		return points;
+	}
 
+	@Override
+	public float[] getTimeOffsetsMs() {
+		return timesMs;
+	}
+
+	@Override
+	public long getStartTimeMs() {
+		// absent a start time, return 0
+		return this.startTimeMs;
+	}
+	public void setStartTimeMs(long startTimeMs) {
+		this.startTimeMs = startTimeMs;
+	}
+    
     public int size() {
         return points.size();
     }
@@ -45,5 +70,5 @@ public final class GestureSchedule {
             if (t[i] < t[i-1]) t[i] = t[i-1];
         }
     }
-    
+   
 }
