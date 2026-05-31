@@ -515,7 +515,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	int baselineCount = 0;
 	int baselineDurationMs = 0;
 	GestureScheduleBuilder scheduleBuilder;
-	GestureGranularRenderer.DefaultMapping granularMapping;
 
 	enum DrawingMode { DRAW_EDIT_SAMPLER, DRAW_EDIT_GRANULAR, PLAY_ONLY }
 	DrawingMode drawingMode = DrawingMode.DRAW_EDIT_GRANULAR;
