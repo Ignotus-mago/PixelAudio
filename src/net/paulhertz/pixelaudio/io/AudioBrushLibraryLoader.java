@@ -8,6 +8,11 @@ import java.util.List;
 import net.paulhertz.pixelaudio.curves.PACurveMaker;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 
+/**
+ * Read AudioBrush library JSON format.
+ * Used in the example sketch {@link Bagatelle}.
+ * 
+ */
 public final class AudioBrushLibraryLoader {
 
     private AudioBrushLibraryLoader() {}

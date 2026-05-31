@@ -17,6 +17,9 @@ import processing.data.JSONObject;
  *
  * Filename convention suggestion:
  *   gesture_001_gesture.json
+ *   
+ * Used in the example sketch {@link Bagatelle}.
+ * 
  */
 public final class PACurveMakerIO {
 

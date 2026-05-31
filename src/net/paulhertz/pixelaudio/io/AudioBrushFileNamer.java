@@ -2,6 +2,10 @@ package net.paulhertz.pixelaudio.io;
 
 import java.io.File;
 
+/**
+ * Generate JSON filenames for AudioBrush "session" format, with gesture and audio synth settings. 
+ * Used in the example sketch {@link Bagatelle}.
+ */
 public final class AudioBrushFileNamer {
 
     private AudioBrushFileNamer() {}

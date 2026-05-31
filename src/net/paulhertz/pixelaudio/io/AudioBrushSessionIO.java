@@ -21,7 +21,10 @@ import processing.data.JSONObject;
  * Session manifest writer/reader for brush sets.
  *
  * Suggested filename:
- *   deadBodyWorkflow_rehearsalSet_session.json
+ *   bagatelle_rehearsalSet_session.json
+ *   
+ * Used in the example sketch {@link Bagatelle}.
+ * 
  */
 public final class AudioBrushSessionIO {
 

@@ -12,6 +12,12 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 import processing.data.JSONArray;
 import processing.data.JSONObject;
 
+/**
+ * Read AudioBrush session data form JSON files. 
+ * 
+ * Used in the example sketch {@link Bagatelle}.
+ * 
+ */
 public final class AudioBrushSessionLoader {
 
 	private AudioBrushSessionLoader() {}
