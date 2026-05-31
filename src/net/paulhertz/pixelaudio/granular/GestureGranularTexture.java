@@ -27,6 +27,7 @@ import ddf.minim.analysis.RectangularWindow;
  * </pre>
  *
  */
+@Deprecated
 public final class GestureGranularTexture {
 
     public enum TimeTransform {

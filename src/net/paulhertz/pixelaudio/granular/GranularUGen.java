@@ -3,7 +3,7 @@ package net.paulhertz.pixelaudio.granular;
 import ddf.minim.UGen;
 import java.util.Arrays;
 
-// ...
+// TODO Evaluate for deletion
 
 /**
  * GranularUGen
@@ -11,6 +11,7 @@ import java.util.Arrays;
  * A Minim UGen that uses BasicIndexGranularSource to generate audio
  * in blocks, but feeds it sample-by-sample via uGenerate().
  */
+@Deprecated
 public class GranularUGen extends UGen {
 
     private final BasicIndexGranularSource src;

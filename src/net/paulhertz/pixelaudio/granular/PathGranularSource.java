@@ -3,6 +3,8 @@ package net.paulhertz.pixelaudio.granular;
 import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
+// TODO candidate for deletion
+
 /**
  * PathGranularSource
  *
@@ -15,6 +17,7 @@ import net.paulhertz.pixelaudio.sampler.PitchPolicy;
  *      * use per-grain timeOffsetMs to approximate the original gesture timing,
  *  - uses a Minim WindowFunction.
  */
+@Deprecated 
 public class PathGranularSource implements PASource {
 
 	private final float[] source;

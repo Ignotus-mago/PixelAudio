@@ -1,3 +1,20 @@
+/*
+ *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as published
+ *   by the Free Software Foundation; either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 package net.paulhertz.pixelaudio.granular;
 
@@ -11,7 +28,13 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 import processing.core.PVector;
 
 /**
- * High-level facade: play a gesture schedule using a {@link PAGranularInstrument}.
+ * The top-level entry point for Granular Synthesis in the PixelAudio library, PAGranularInstrumentDirector
+ * acts as a facade to {@link PAGranularInstrument}, calling PAGranularInstrument.play(...)
+ * with a {@link PABurstGranularSource} instance as a PASource and all necessary gesture and timing data. 
+ * Calling chain: PAGranularInstrumentDirector -> PAGranularInstrument -> PAGranularSampler -> PAGranularVoice, with 
+ * PABurstGranularSource handling the complexities of the granular synthesis sample by sample. 
+ * See the scheduleEvents method, below, for details. 
+ * 
  */ 
 public final class PAGranularInstrumentDirector {
     private final PAGranularInstrument instrument;
@@ -149,6 +172,14 @@ public final class PAGranularInstrumentDirector {
         scheduleEvents(monoBuf, transformedSchedule, params, evtParams, resolveGrainWindow(params), startSampleTime);
     }
     
+    /**
+     * @param monoBuf            a buffer of floating point values in audio signal range (-1.0 to 1.0)
+     * @param sched              
+     * @param params
+     * @param evtParams
+     * @param wf
+     * @param startSampleTime
+     */
     private void scheduleEvents(float[] monoBuf,
             GestureSchedule sched,
             GestureGranularParams params,

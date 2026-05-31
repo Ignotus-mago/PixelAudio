@@ -9,6 +9,8 @@ package net.paulhertz.pixelaudio.granular;
  * Implementations are expected to:
  *  - be called on the audio thread,
  *  - be allocation-free inside renderBlock().
+ *  
+ *  @See PASource.
  */
 public interface PAFloatSource {
 

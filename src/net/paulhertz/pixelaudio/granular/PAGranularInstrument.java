@@ -1,3 +1,21 @@
+/*
+ *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as published
+ *   by the Free Software Foundation; either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.AudioOutput;
@@ -64,13 +82,16 @@ public class PAGranularInstrument {
     // ------------------------------------------------------------------------
 
     /**
-     * Main granular play() method.
+     * Main granular play() method. The PASource in the current Granular synthesis engine is 
+     * expected to be a PABurstGranularSource passed in by PAGranularInstrumentDirector, the 
+     * standard entry point for granular synthesis in the PixelAudio library. Earlier PASource
+     * classes such as BasicIndexGranularSource, PathGranularSource, etc., are deprecated. 
      *
-     * @param src     PASource (BasicIndexGranularSource, PathGranularSource, ...)
-     * @param amp     amplitude
-     * @param pan     stereo pan (-1..+1)
-     * @param env     envelope (or null → default)
-     * @param looping loop the grain path
+     * @param src       PASource (PABurstGranularSource)
+     * @param amp       amplitude
+     * @param pan       stereo pan (-1..+1)
+     * @param env       envelope (or null → default)
+     * @param looping   loop the grain path
      * @return voiceId or -1
      */
     public synchronized long play(PASource src,

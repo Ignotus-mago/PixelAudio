@@ -3,6 +3,12 @@ package net.paulhertz.pixelaudio.granular;
 import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
+
+// TODO evaluate for deletion. This was an early attempt at GS, and may be worth keeping around. 
+// Future development, however, goes to PAGranularInstrumentDirector, which calls 
+// PAGranularInstrument.play() with a PABurstGranularSource instance as PASource. 
+// PAGranularInstrument continues down chain to PAGranularSampler and PAGranularVoice. 
+
 /**
  * BasicIndexGranularSource
  *
@@ -22,6 +28,7 @@ import net.paulhertz.pixelaudio.sampler.PitchPolicy;
  * This class ignores per-grain pan for now; it writes mono into both outL and outR.
  * 
  */
+@Deprecated
 public class BasicIndexGranularSource implements PASource {
 
     // Underlying mono source buffer (no Minim dependency here).

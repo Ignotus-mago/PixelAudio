@@ -1,10 +1,29 @@
+/*
+ *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as published
+ *   by the Free Software Foundation; either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 package net.paulhertz.pixelaudio.granular;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Immutable, schedule-aligned per-event parameters for Model-A gesture playback.
+ * Immutable, schedule-aligned per-event parameters for gesture playback where each event
+ * accepts a buffer sample index and optional pan, gain, and pitch modifiers.
  *
  * <p>All arrays (when present) are parallel arrays with the same cardinality {@code n}
  * matching the {@link net.paulhertz.pixelaudio.schedule.GestureSchedule#size()} used to
@@ -13,7 +32,7 @@ import java.util.Objects;
  * <p>Design intent:
  * <ul>
  *   <li>{@code startIndices} is the primary "mapping result" (typically from PixelAudioMapper).</li>
- *   <li>Optional arrays (pan/gain/pitchRatio) override {@link GestureGranularTexture} defaults per event.</li>
+ *   <li>Optional arrays (pan/gain/pitchRatio) override defaults per event.</li>
  *   <li>Persist and reuse this object across re-triggers; refresh only the fields that depend on buffer/mapping.</li>
  * </ul>
  * </p>

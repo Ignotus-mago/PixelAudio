@@ -1,3 +1,21 @@
+/*
+ *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as published
+ *   by the Free Software Foundation; either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 package net.paulhertz.pixelaudio.granular;
 
 import ddf.minim.UGen;
@@ -172,7 +190,7 @@ public class PAGranularSampler extends UGen {
     /**
      * Play a granular source as a voice.
      *
-     * @param src    PASource (PathGranularSource or BasicIndexGranularSource)
+     * @param src    PASource (a PABurstGranularSource, in the current design using PAGranularInstrumentDirector)
      * @param env    ADSR for the macro envelope
      * @param gain   amplitude
      * @param pan    -1..+1

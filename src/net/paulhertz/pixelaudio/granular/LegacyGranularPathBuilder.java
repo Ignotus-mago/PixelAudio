@@ -26,7 +26,7 @@ import processing.core.PVector;
  * for example from a pressure-sensitive tablet.
  * 
  */
-@Deprecated(since="9.5", forRemoval=false)
+@Deprecated(since="9.5", forRemoval=true)
 public final class LegacyGranularPathBuilder {
 
 	private LegacyGranularPathBuilder() {}

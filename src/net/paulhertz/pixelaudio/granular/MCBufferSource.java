@@ -4,12 +4,16 @@ import ddf.minim.MultiChannelBuffer;
 import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
+// TODO candidate for deletion
+
 /**
  * MCBufferSource
  *
  * A simple PASource that wraps a Minim MultiChannelBuffer for linear playback.
  * This is a natural building block for PASamplerInstrument when you want
  * to work directly with buffer-backed sample sources.
+ * However, the current granular synthesis chain works with a different approach,
+ * so this is probably not compatib
  *
  * NOTE:
  *  - This class does not manage playback position on its own; typically a
@@ -18,6 +22,7 @@ import net.paulhertz.pixelaudio.sampler.PitchPolicy;
  *  - For mono buffers, MultiChannelBuffer should have 1 channel.
  *  - For stereo or multi-channel, the mixing logic belongs in renderBlock().
  */
+@Deprecated(forRemoval=true)
 public class MCBufferSource implements PASource {
 
     private final MultiChannelBuffer buffer;

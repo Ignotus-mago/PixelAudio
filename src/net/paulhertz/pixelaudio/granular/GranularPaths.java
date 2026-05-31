@@ -6,12 +6,15 @@ import java.util.List;
 /**
  * TODO Candidate for removal
  */
+
+@Deprecated
 public final class GranularPaths {
 
 	public enum EdgeMode { WRAP, CLAMP, BOUNCE }
 
 	private GranularPaths() {}
 
+	@Deprecated
 	public static GranularPath fixedHopReport(
 			long startIndex,
 			int numGrains,

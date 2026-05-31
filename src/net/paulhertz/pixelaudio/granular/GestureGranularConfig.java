@@ -1,3 +1,21 @@
+/*
+ *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as published
+ *   by the Free Software Foundation; either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 package net.paulhertz.pixelaudio.granular;
 
 import java.util.Objects;
@@ -5,6 +23,11 @@ import java.util.Objects;
 import net.paulhertz.pixelaudio.sampler.ADSRParams;
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 
+/**
+ * Class for storing core parameters for both granular and sample synthesis engine events, used extensively in 
+ * PixelAudio examples. See GesturePlayground and Bagatelle examples for a real live GUI to GestureGranularConfig
+ * where you can explore the effects of different parameter values. 
+ */
 public final class GestureGranularConfig {
 
   // ----- CORE ENUMS ----- //
@@ -149,7 +172,7 @@ public final class GestureGranularConfig {
     }
 
     /**
-     * Makes explicit to the caller that the envelope is beigd set for SAMPLER synthesis.
+     * Makes explicit to the caller that the envelope is being set for SAMPLER synthesis.
      * @param env    an ADSRParams instance to set the envelope, nominally for sampler synthesis
      * @return this
      */

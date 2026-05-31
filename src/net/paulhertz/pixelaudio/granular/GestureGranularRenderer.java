@@ -18,6 +18,7 @@ import java.util.List;
  * Option B renderer: schedule event i -> one burst starting at mapped sampleIndex(p_i),
  * scheduled at schedule.timesMs[i].
  */
+@Deprecated
 public final class GestureGranularRenderer {
 
 	private GestureGranularRenderer() {}

@@ -16,6 +16,7 @@ import java.util.List;
  * This class is intentionally independent of Minim and any image classes.
  * It just carries numeric parameters (indices, gains, pans, etc.).
  */
+@Deprecated
 public final class GranularPath {
 
     /**
