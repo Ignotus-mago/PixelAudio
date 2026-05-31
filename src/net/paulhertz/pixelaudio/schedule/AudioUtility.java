@@ -13,7 +13,13 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
 
-/** Utility conversions for audio. */
+// TODO add subtractDC() method, etc. 
+
+/** 
+ * Utility conversions for audio. 
+ * 
+ * 
+ */
 public final class AudioUtility {
     private AudioUtility() {}
     /** Constant: 2^(1/12), the ratio of one semitone. */

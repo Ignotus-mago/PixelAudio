@@ -1,9 +1,10 @@
 package net.paulhertz.pixelaudio.schedule;
 
+// TODO extended classes for different time-based events. 
 
 /**
  * Used to schedule or track events that take place at specific coordinate locations.
- * See WorkFlowApp3 and subsequent versions. 
+ * Used in multiple example sketches. 
  */
 public class TimedLocation implements Comparable<TimedLocation> {
 	private int x;

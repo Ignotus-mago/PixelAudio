@@ -6,9 +6,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * AudioScheduler
- *
- * A sample-accurate scheduler for things that should occur at specific times in an audio stream.
+ * AudioScheduler: A sample-accurate scheduler for things that should occur at specific times in an audio stream.
  *
  * <p><b>Two event shapes</b></p>
  * <ul>

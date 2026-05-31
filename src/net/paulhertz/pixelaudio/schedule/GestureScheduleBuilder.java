@@ -7,9 +7,13 @@ import java.util.List;
 
 import net.paulhertz.pixelaudio.curves.PACurveMaker;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
-//import net.paulhertz.pixelaudio.granular.GestureGranularConfig.HopMode;
-//import net.paulhertz.pixelaudio.granular.GestureGranularConfig.WarpShape;
 
+// TODO javadoc comments
+
+/**
+ * Build schedules for classes that implement PAGesture or use PAGesture implementers, for example to
+ * to build, interpolate, and warp time and point lists. 
+ */
 public final class GestureScheduleBuilder {
 
 	  public GestureSchedule build(PACurveMaker brush, GestureGranularConfig cfg, float sampleRate) {
