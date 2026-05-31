@@ -747,7 +747,7 @@ public class TutorialOne_06_WindowBuffer_back extends PApplet {
      * we make it possible to post key commands without an actual key event.
      * Methods and interfaces and even other threads can call parseKey(). 
      * This opens up many possibilities and a some dangers, too. 
-     * @see TutorialOne_04_UDP.java (Eclipse) or TutorialOne_05_UDP (Processing)
+     * @see TutorialOne_04_Network.java (Eclipse) or TutorialOne_05_Network (Processing)
      * for an example of external calls to parseKey().
      * 
      * @param key

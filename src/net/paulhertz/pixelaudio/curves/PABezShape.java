@@ -80,7 +80,7 @@ public class PABezShape {
 	public final static double KAPPA = 0.5522847498;
 	/**
 	 * A value for weighting Bezier splines based on the length of line segments between 
-	 * anchor points, derived from the ratio of the chord of a quarter circle to KAPPA. </br>
+	 * anchor points, derived from the ratio of the chord of a quarter circle to KAPPA. <br>
 	 * LAMBDA = KAPPA * (1/√2) = 0.39052429175f
 	 *
 	 */
@@ -861,7 +861,8 @@ public class PABezShape {
 	 * <a href="http://en.wikipedia.org/wiki/Tangent" target="new"><em>tangent</em> on Wikipedia</a>. 
 	 * Evaluation takes multiple calls, once each for x and y coordinates, in two dimensions.</p>
 	 *
-	 * <h3>From Processing GitHub repo:</h3> <p>Code submitted by Dave Bollinger (davbol) for release 0136.</p>
+	 * <p>From Processing GitHub repo:<br>
+	 * Code submitted by Dave Bollinger (davbol) for release 0136.</p>
 	 *
 	 * @param a 	coordinate of first point on the curve
 	 * @param b 	coordinate of first control point

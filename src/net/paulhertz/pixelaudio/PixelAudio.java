@@ -76,7 +76,6 @@ public class PixelAudio {
 	 * a Constructor, usually called in the setup() method in your sketch to
 	 * initialize and start the Library.
 	 *
-	 * @example Hello
 	 * @param theParent the parent PApplet
 	 */
 	public PixelAudio(PApplet theParent) {

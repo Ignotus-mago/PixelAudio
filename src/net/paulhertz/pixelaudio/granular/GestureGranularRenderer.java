@@ -127,9 +127,9 @@ public final class GestureGranularRenderer {
 	 * @param gSynth        PAGranularInstrument (sample-accurate scheduling)
 	 * @param sampleRate    output sample rate (audioOut.sampleRate())
 	 * @param mapping       maps points to (sampleIndex, pan)
-	 * @param burstGrains   grains per burst (>=1). 1 approximates old “one grain per event.”
 	 * @return number of events scheduled
 	 */
+	@Deprecated
 	public static int playBursts(float[] buf,
 			GestureSchedule schedule,
 			GestureGranularConfig cfg,

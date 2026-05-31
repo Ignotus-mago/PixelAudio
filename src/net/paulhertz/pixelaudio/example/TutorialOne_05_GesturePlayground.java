@@ -690,7 +690,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	/**
 	 * Preload an audio file using a file path and a filename.
 	 * @param path        the fully qualified path to the file's directory, ending with a '/' 
-	 * @param filename    the name of the file
+	 * @param fileName    the name of the file
 	 */
 	public void preloadFiles(String path, String fileName) {
 		// the audio file we want to open on startup
@@ -1773,7 +1773,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Calculate an envelope of length totalSamples. 
-	 * @param gainDb     desired gain in dB, currently ignored
+	 * @param linear     desired linear gain, currently ignored
 	 * @param totalMs    desired duration of the envelope in milliseconds
 	 * @return an ADSRParams envelope
 	 */
@@ -2389,7 +2389,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * This is a replacement operation: the old brush should be removed
 	 * from its list immediately after conversion.
 	 * 
-	 * @param brush    AudioBrush to convert, GranularBrush <-> SamplerBrush
+	 * @param brush    AudioBrush to convert, GranularBrush to/from SamplerBrush
 	 */
 	AudioBrush toggleBrushType(AudioBrush brush) {
 	    if (brush == null) return null;

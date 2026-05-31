@@ -200,12 +200,11 @@ import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.schedule.*;
 //audio library
 import ddf.minim.*;
-import ddf.minim.ugens.*;
 
 //video export library
 import com.hamoid.*;
 
-
+@Deprecated (since="0.9.7-beta", forRemoval=true)
 public class TutorialOneWindowBuffer extends PApplet {
 	// PixelAudio vars and objects
 	PixelAudio pixelaudio;     // our shiny new library

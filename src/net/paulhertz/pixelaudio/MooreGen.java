@@ -89,7 +89,8 @@ public class MooreGen extends PixelMapGen {
 	
 	
 	/**
-	 * @return		an ArrayList<int[]> of x, y coordinate pairs that are the points traversed by a generalized space-filling curve over a bitmap of dimensions w * h.
+	 * @return		an ArrayList of int[]: x, y coordinate pairs that are the points traversed by a 
+	 * generalized space-filling curve over a bitmap of dimensions w * h.
 	 */
 	private ArrayList<int[]> generateCoordinates() {
 		return this.generateMooreCoordinates(this.getSize());
@@ -98,7 +99,8 @@ public class MooreGen extends PixelMapGen {
 	/**
 	 * 
 	 * @param n		the number of coordinate pairs to generate.
-	 * @return		an ArrayList<int[]> of x, y coordinate pairs that are the points traversed by a generalized space-filling curve over a bitmap of dimensions w * h.
+	 * @return		an ArrayList of int[]: x, y coordinate pairs that are the points traversed by a 
+	 * generalized space-filling curve over a bitmap of dimensions w * h.
 	 */
 	private ArrayList<int[]> generateMooreCoordinates(int n) {
 		ArrayList<int[]> mooreCoordinates = new ArrayList<>(n);

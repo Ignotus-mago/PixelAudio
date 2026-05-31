@@ -19,7 +19,7 @@ import ddf.minim.analysis.WindowFunction;
 public final class GranularSettings {
 	// -------- Core granular parameters --------
 
-	/** Default grain length in samples (used if grainLengthSamples <= 0). */
+	/** Default grain length in samples (used if grainLengthSamples LT 0). */
 	public int defaultGrainLength = 2048;
 	/** Default hop size in samples: determines overlap factor. */
 	public int hopSamples = 256;

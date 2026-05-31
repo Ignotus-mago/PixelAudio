@@ -76,7 +76,7 @@ public class BoustropheGen extends PixelMapGen {
 	 * Additional initializations belong here, if required by your coordinate generation method,
 	 * rather than in the generate() method.
 	 *
-	 * @return 	An ArrayList<int[]> of bitmap coordinates in the order the signal mapping would visit them.
+	 * @return 	An ArrayList of int[], bitmap coordinates in the order the signal mapping would visit them.
 	 *
 	 */
 	private ArrayList<int[]> generateCoordinates() {

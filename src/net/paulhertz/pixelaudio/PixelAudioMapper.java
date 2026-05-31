@@ -702,7 +702,7 @@ public class PixelAudioMapper {
 	 * @param img    an array of int, typically of RGB values
 	 * @param lut    a look up table of the same size as <code>img</code>
 	 * @return       a new array of int with the values in img reordered by the lookup table
-	 * @throw IllegalArgumentException if img.length != lut.length
+	 * @throws IllegalArgumentException if img.length != lut.length
 	 */
 	public static int[] remapPixels(int[] img, int[] lut) {
 		if (img.length != lut.length) throw new IllegalArgumentException("img and lut arrays must be the same size");
@@ -720,7 +720,7 @@ public class PixelAudioMapper {
 	 * @param sig    an array of float, typically audio samples
 	 * @param lut	 a lookup table
 	 * @return       a new array with the values in sig reordered by the lookup table
-	 * @throw IllegalArgumentException if sig.length != lut.length
+	 * @throws IllegalArgumentException if sig.length != lut.length
 	 */
 	public static float[] remapSamples(float[] sig, int[] lut) {
 		if (sig.length != lut.length) throw new IllegalArgumentException("sig and lut arrays must be the same size");
@@ -739,7 +739,7 @@ public class PixelAudioMapper {
 	 * @param sig    source array of floats in the audio range  [-1.0, 1.0]
 	 * @param img    target array of RGB pixel values
 	 * @return array of RGB int values derived from sig, loaded to all channels (audio as grayscale)
-	 * @throw IllegalArgumentException if sig.length != img.length
+	 * @throws IllegalArgumentException if sig.length != img.length
 	 */
 	public int[] mapSigToImg(float[] sig, int[] img) {
 		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
@@ -755,7 +755,7 @@ public class PixelAudioMapper {
 	 * @param img			an array of RGB pixel values
 	 * @param toChannel		the channel to write transcoded values to
 	 * @return array of RGB int values derived from sig, loaded to specified channel
-	 * @throw IllegalArgumentException if sig.length != img.length
+	 * @throws IllegalArgumentException if sig.length != img.length
 	 */
 	public int[] mapSigToImg(float[] sig, int[] img, ChannelNames toChannel) {
 	    if (sig == null) throw new IllegalArgumentException("sig cannot be null");
@@ -790,7 +790,7 @@ public class PixelAudioMapper {
 	 * @param sig	an array of floats in the audio range  [-1.0, 1.0]
 	 * @param img	an array of RGB pixel values
 	 * @return array of audio range float values derived from Brightness channel of color values
-	 * @throw IllegalArgumentException if img.length != sig.length
+	 * @throws IllegalArgumentException if img.length != sig.length
 	 */
 	public float[] mapImgToSig(int[] img, float[] sig) {
 		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
@@ -807,9 +807,8 @@ public class PixelAudioMapper {
 	 * @param sig			an array of floats in the audio range [-1.0, 1.0]
 	 * @param img			an array of RGB pixel values
 	 * @param fromChannel	the color channel to get a value from
-	 * @param hsbPixel      a float[3] array for use with color channel extraction
 	 * @return array of audio range float values derived from specified channel of color values
-	 * @throw IllegalArgumentException if img.length != sig.length
+	 * @throws IllegalArgumentException if img.length != sig.length
 	 */
 	public float[] mapImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
 		if (img.length != sig.length) throw new IllegalArgumentException("img and sig arrays must be the same size");
@@ -836,7 +835,7 @@ public class PixelAudioMapper {
 	 *
 	 * @param img		source array of RGB pixel values
 	 * @param sig		target array of audio samples in the range [-1.0, 1.0]
-	 * @throw IllegalArgumentException if img.length != sig.length
+	 * @throws IllegalArgumentException if img.length != sig.length
 	 */
 	public void writeImgToSig(int[] img, float[] sig) {
 		if (img.length != sig.length) throw new IllegalArgumentException("img and sig arrays must be the same size");
@@ -848,7 +847,7 @@ public class PixelAudioMapper {
 	 * @param img			an array of RGB pixel values, source
 	 * @param sig			an array of audio samples in the range [-1.0, 1.0], target
 	 * @param fromChannel	channel in RGB or HSB color space, from ChannelNames enum
-	 * @throw IllegalArgumentException if img.length != sig.length
+	 * @throws IllegalArgumentException if img.length != sig.length
 	 */
 	public void writeImgToSig(int[] img, float[] sig, ChannelNames fromChannel) {
 		if (img.length != sig.length) throw new IllegalArgumentException("img and sig arrays must be the same size");
@@ -859,7 +858,7 @@ public class PixelAudioMapper {
 	/**
 	 * @param sig		an array of audio samples in the range [-1.0, 1.0], source
 	 * @param img		an array of RGB pixel values, target
-	 * @throw IllegalArgumentException if sig.length != img.length
+	 * @throws IllegalArgumentException if sig.length != img.length
 	 */
 	public void writeSigToImg(float[] sig, int[] img) {
 		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
@@ -870,7 +869,7 @@ public class PixelAudioMapper {
 	 * @param sig			an array of audio samples in the range [-1.0, 1.0], source
 	 * @param img			an array of RGB pixel values, target
 	 * @param toChannel		channel in RGB or HSB color space, from ChannelNames enum
-	 * @throw IllegalArgumentException if sig.length != img.length
+	 * @throws IllegalArgumentException if sig.length != img.length
 	 */
 	public void writeSigToImg(float[] sig, int[] img, ChannelNames toChannel) {
 		if (sig.length != img.length) throw new IllegalArgumentException("sig and img arrays must be the same size");
@@ -1717,10 +1716,10 @@ public class PixelAudioMapper {
 	/**
 	 * Helper method for applying a color channel from a  to an RGB pixel. 
 	 * 
-	 * @param sample    RGB source of color value
-	 * @param rgb       destination color value
-	 * @param chan      the color channel to use
-	 * @param hsbPixel  array of 3 floats to maintain HSB color data
+	 * @param rgbSource    RGB source of color value
+	 * @param rgbTarget    destination color value
+	 * @param chan         the color channel to use
+	 * @param hsbPixel     array of 3 floats to maintain HSB color data
 	 * @return
 	 */
 	public static int applyChannelToColor(int rgbSource, int rgbTarget, ChannelNames chan, float[] hsbPixel) {

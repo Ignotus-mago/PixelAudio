@@ -397,7 +397,7 @@ public class PACurveMaker implements PAGesture {
 	 * Entries in the time offsets list dragTimes will be set to 0 and startTimesMs will be set to 0. If you 
 	 * set values for dragTimes and startTimeMs later, dragTimes and dragPoints must be the same size.
 	 * 
-	 * @param dragPoints     a list of points (PVector), where no two successive points are identical
+	 * @param points         a list of points (PVector), where no two successive points are identical
 	 * @param epsilon        controls amount of thinning of points to derive the reduced point set rdpPoints from dragPoints
 	 * @param brushSize      the width in pixels of a simulated brushstroke created from the Bezier path derived from rdpPoints
 	 * @param brushColor     the color assigned to the brushstroke
@@ -582,7 +582,7 @@ public class PACurveMaker implements PAGesture {
 	 * Changes the value of dragPoints and immediately calls calculateDerivedPoints() 
 	 * to refresh all drawing objects. 
 	 * 
-	 * @param dragPoints	ArrayList<PVector>, a dense set of points for drawing a line
+	 * @param dragPoints	ArrayList of PVector, a dense set of points for drawing a line
 	 */
 	@Deprecated
 	public void setDragPoints(ArrayList<PVector> dragPoints) {
@@ -1472,7 +1472,7 @@ public class PACurveMaker implements PAGesture {
 	 * Draws the stored brushShape to an offscreen PGraphics using supplied fill color, 
 	 * stroke color, and weight. If brushWeight == 0, there is no stroke. 
 	 * 
-	 * @param parent
+	 * @param pg
 	 * @param brushColor
 	 * @param strokeColor
 	 * @param brushWeight
@@ -1485,7 +1485,7 @@ public class PACurveMaker implements PAGesture {
 	 * Draws the stored brushShape to an offscreen PGraphics using local properties 
 	 * this.brushColor, this.brushColor, this.brushWeight.
 	 * 
-	 * @param parent
+	 * @param pg
 	 */
 	public void brushDraw(PGraphics pg) {
 		PACurveUtility.shapeDraw(pg, this.getBrushShape(), this.brushColor, this.brushColor, this.brushWeight);
@@ -1494,7 +1494,7 @@ public class PACurveMaker implements PAGesture {
 	/**
 	 * Draws the stored brush shape to an offscreen PGraphics using its properties as a PABezShape.
 	 * 
-	 * @param parent
+	 * @param pg
 	 */
 	public void brushDrawDirect(PGraphics pg) {
 		PACurveUtility.shapeDraw(pg, this.getBrushShape());

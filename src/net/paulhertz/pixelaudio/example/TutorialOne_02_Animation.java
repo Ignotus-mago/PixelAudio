@@ -1192,7 +1192,7 @@ public class TutorialOne_02_Animation extends PApplet {
 	 * @param samplePos    position of the sample in the audio buffer
 	 * @param samplelen    length of the sample (will be adjusted)
 	 * @param amplitude    amplitude of the sample on playback
-	 * @param adsr         an ADSR envelope for the sample
+	 * @param env          an ADSRParams envelope for the sample
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {

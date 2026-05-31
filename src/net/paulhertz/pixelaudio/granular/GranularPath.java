@@ -26,7 +26,7 @@ public final class GranularPath {
     public static final class GrainSpec {
         /** Sample index in the source buffer where this grain is anchored (e.g., center or start). */
         public final long sourceSampleIndex;
-        /** Grain length in samples; if <= 0, a default grain length may be used. */
+        /** Grain length in samples; if LT 0, a default grain length may be used. */
         public final int grainLengthSamples;
         /**
          * Per-grain transposition hint.

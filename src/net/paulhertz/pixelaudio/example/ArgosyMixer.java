@@ -86,7 +86,7 @@ import ddf.minim.*;
  *   Gap          -- the number of pixels between each repeated pattern
  *   Gap color    -- select a preset gap color from a drop down list
  *   Gap opacity  -- enter the alpha channel value 0-255 for the gap color
- *   >> ANIMATION <<
+ *   == ANIMATION ==
  *   Show         -- show or hide Argosy 1 or Argosy 2
  *   Freeze       -- freeze animation of Argosy 1 or Argsoy 2
  *   Step         -- number of pixels to shift on each animation step (negative to shift right)
@@ -113,7 +113,7 @@ import ddf.minim.*;
  *   
  * <pre>  
  * --------------------------------------------------------------------------------------------
- * ***>> NOTE: Key commands only work when the image display window is the active window. <<***
+ * ***++ NOTE: Key commands only work when the image display window is the active window. ++***
  * --------------------------------------------------------------------------------------------
  * 
  * Key Commands

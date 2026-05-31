@@ -943,7 +943,7 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	/**
 	 * Preload an audio file using a file path and a filename.
 	 * @param path        the fully qualified path to the file's directory, ending with a '/' 
-	 * @param filename    the name of the file
+	 * @param fileName    the name of the file
 	 */
 	public void preloadFiles(String path, String fileName) {
 		// the audio file we want to open on startup
@@ -2715,8 +2715,8 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Calculate an envelope of length totalSamples. 
-	 * @param gainDb     desired gain in dB, currently ignored
-	 * @param totalMs    desired duration of the envelope in milliseconds
+	 * @param linear     linear gain, ignored
+	 * @param totalMs    duration of envelope in milliseconds
 	 * @return an ADSRParams envelope
 	 */
 	public ADSRParams calculateEnvelopeLinear(float linear, float totalMs) {
@@ -3824,13 +3824,13 @@ public class DeadBodyWorkFlow extends PApplet implements PANetworkClientINF {
 	// -------------- CONVERT BRUSH TYPES ------------- //
 	
 	/**
-	 * Convert a brush to the opposite type, reusing the same PACurveMaker
-	 * and the same GestureGranularConfig.Builder instance.
+	 * Convert a brush to the opposite type, GranularBrush to/from SamplerBrush,
+	 * reusing their PACurveMaker and the GestureGranularConfig.Builder instances.
 	 *
 	 * This is a replacement operation: the old brush should be removed
 	 * from its list immediately after conversion.
 	 * 
-	 * @param brush    AudioBrush to convert, GranularBrush <-> SamplerBrush
+	 * @param brush    AudioBrush to convert
 	 */
 	AudioBrush toggleBrushType(AudioBrush brush) {
 	    if (brush == null) return null;

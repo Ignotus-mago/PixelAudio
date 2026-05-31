@@ -379,7 +379,7 @@ public class WaveSynthSequencer extends PApplet {
 	}
 
 	/**
-	 * Save audio buffer to a file called "wavesynth_<wsIndex>.wav".
+	 * Save audio buffer to a file called "wavesynth_(wsIndex).wav".
 	 */
 	public void saveToAudio() {
 		renderSignal();
@@ -460,7 +460,7 @@ public class WaveSynthSequencer extends PApplet {
 	 * @param samplePos    position of the sample in the audio buffer
 	 * @param samplelen    length of the sample (will be adjusted)
 	 * @param amplitude    amplitude of the sample on playback
-	 * @param defaultEnv         an ADSR envelope for the sample
+	 * @param env          an ADSR envelope for the sample
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {

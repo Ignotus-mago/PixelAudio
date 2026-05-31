@@ -254,7 +254,7 @@ public class PACurveUtility {
 	 * value, such as PACurveUtility.LAMBDA.
 	 * It's most useful when a short control line segment follows a long segment. 
 	 * 
-	 * @param weightedCurveShape
+	 * @param bezPoints
 	 * @param bias
 	 */
 	public static PABezShape calculateWeightedCurve(PABezShape bezPoints, float bias) {
@@ -890,7 +890,7 @@ public class PACurveUtility {
 	/**
 	 * Applies flip/scale, then rotation, then translation to a point.
 	 * Flip/scale and rotation are performed around (xctr, yctr).
-	 * Returns a new ArrayList<PVector>.
+	 * Returns a new <code>ArrayList<PVector></code>.
 	 * 
 	 * @param points
 	 * @param xctr

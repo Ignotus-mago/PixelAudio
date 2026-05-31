@@ -136,7 +136,7 @@ public class MultiGen extends PixelMapGen {
 	 * rather than in the generate() method, which will then only handle coords initialization and the
 	 * built-in pixelMap and sampleMap initializations.
 	 *
-	 * @return 	An ArrayList<int[]> of bitmap coordinates in the order the signal mapping would visit them.
+	 * @return 	An ArrayList of int[]: bitmap coordinates in the order the signal mapping would visit them.
 	 *
 	 */
 	private ArrayList<int[]> generateCoordinates() {
