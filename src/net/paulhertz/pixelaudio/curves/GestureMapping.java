@@ -10,6 +10,7 @@ import processing.core.PVector;
  * mappingSnapshot is assumed to be a dense array of sample indices
  * indexed by a raster address (x,y)->i, or any other scheme defined by the implementation.
  */
+@Deprecated
 public interface GestureMapping {
     /**
      * @param p gesture point (typically in pixel coordinates)
