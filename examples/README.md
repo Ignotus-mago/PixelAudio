@@ -1,19 +1,18 @@
-As of March 9, 2026, we have these examples, in the suggested order for learning about PixelAudio:
+As of June 1, 2026, we have these examples, in the suggested order for learning about PixelAudio:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
-- **QuickAnimation**: a simple way to animate a bitmap using PixelAudioMapper.
-- **TransformPimage**: introduces the affine transforms available in the BitmapTransform class.
+- **SimpleAnimation**: a simple way to animate a bitmap using PixelAudioMapper.
 - **MultiGenDemo**: chain PixelMapGens together to generate a large image.
 - **MultiGenLookupTables**: lookup tables in MultiGens, a useful place to test your MultiGenCode.
+- **TransformPimage** (optional): introduces the affine transforms available in the BitmapTransform class.
 - **Tutorial Folder**
-   1. **TutorialOne_00_BeginHere**: Basics of creating a MultiGen and a PixelAudioMapper.
-   2. **TutorialOne_01_FileIO**: Load audio and image files, turn images into sound, sound into images.
-   3. **TutorialOne_02_Animation**: Add animation and video output.
-   4. **TutorialOne_03_Drawing**: Create interactive drawing tools to trigger audio events.
-   5. **TutorialOne_04_Network**: Communicate with Max and other media apps with UDP. 
-   6. **GesturePlayground**: Explore the intricacies of granular and sampler synthesis with a GUI.
-   7. **TutorialOne_06_WindowBuffer**: Use a windowed buffer to move through and interact with a large audio file.
+   1. **TutorialOne_01_FileIO**: Load audio and image files, turn images into sound, sound into images.
+   2. **TutorialOne_02_Animation**: Add animation and video output.
+   3. **TutorialOne_03_Drawing**: Create interactive drawing tools to trigger audio events.
+   4. **TutorialOne_04_Network**: Communicate with Max and other media apps with UDP. 
+   5. **TutorialOne_05_GesturePlayground**: Explore granular and sampler synthesis with a GUI.
+   6. **TutorialOne_06_WindowBuffer**: Use a windowed buffer to interact with a large audio file.
 - **LoadAudioToImage**: read an audio file, trancode it into an image and then play audio samples. 
 - **LoadImageToAudio**: read, write, play, and mix channels of images and audio files. 
 - **BuildFromPathGenDemo**: read and write data from a PixelMapGen in JSON format. 
