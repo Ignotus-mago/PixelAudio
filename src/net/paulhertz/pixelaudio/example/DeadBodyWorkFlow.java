@@ -46,7 +46,9 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
- * TODO
+ * TODO Bagatelle.java handles two performance structures, for Bagatelle 1 and DeadBodyWorkFlow. 
+ * I may be break this out for exclusive use with DeadBodyWorkFlow. It should not be included in 
+ * the PixelAudio example sketches.
  */
 
 /**

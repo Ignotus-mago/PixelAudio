@@ -204,7 +204,7 @@ import ddf.minim.*;
 //video export library
 import com.hamoid.*;
 
-@Deprecated (since="0.9.7-beta", forRemoval=true)
+@Deprecated (since="0.9.7.0-beta", forRemoval=true)
 public class TutorialOneWindowBuffer extends PApplet {
 	// PixelAudio vars and objects
 	PixelAudio pixelaudio;     // our shiny new library

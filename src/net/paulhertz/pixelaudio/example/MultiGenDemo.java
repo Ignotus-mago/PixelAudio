@@ -8,8 +8,8 @@ import net.paulhertz.pixelaudio.*;
 //import net.paulhertz.pixelaudio.AffineTransformType.*;
 
 /**
- * MultiGenDemo: How to Combine Gens into a MultiGen
- * 
+ * <h2>MultiGenDemo: How to Combine Gens into a MultiGen</h2>
+ * <p>
  * MultiGen is child class of PixelMapGen that allows you to combine multiple PixelMapGens 
  * into a single PixelMapGen, with a single signal path through all the gens. There are four  
  * different constructors that you can use. The first two, MultiGen(int width, int height) 
@@ -17,13 +17,13 @@ import net.paulhertz.pixelaudio.*;
  * to fill whatever width and height you provide. Things get interesting with the two custom constructors, 
  * MultiGen(int width, int height, int rows, int columns, ArrayList<PixelMapGen> genList) 
  * and MultiGen(int width, int height, ArrayList<int[]> offsetList, ArrayList<PixelMapGen> genList).
- * 
+ * </p><p>
  * Both custom constructors require an ArrayList of PixelMapGens. The dimensions 
  * of the gens should be tailored for the width and height of the application window, 
  * so that width == rows * genWidth and height == columns * genHeight. In the first 
  * custom constructor, the number of rows and columns is used to calculate the 
  * dimensions of the gens. It's easy to use.
- * 
+ * </p><p>
  * The second custom constructor is the more flexible of the two. In the second
  * constructor, you can specify the location of the top left corner of each gen
  * in offsetList, an ArrayList of int[] arrays that specify x and y offsets for
@@ -31,14 +31,14 @@ import net.paulhertz.pixelaudio.*;
  * AffineTransformType applied to each gen in the genlist, you can often create
  * a continuous signal path through the final image. This application
  * demonstrates how to do that with HilbertGens. 
- * 
+ * </p><p>
  * The PixelMapGen subclasses HilbertGen, DiagonalZigzagGen, and BoustropheGen
  * include various static methods to generate MultiGen objects. Check them out. 
- *  
+ * </p><p>
  * Animation helps to visualize the orientation of PixelMapGen objects.
  * Press 'a' to toggle animation that shifts pixels along the signal path.
- * 
- * 
+ * </p><p> 
+ * <pre>
  * KEY COMMANDS
  * 
  * Press 'a' to toggle animation.
@@ -48,9 +48,8 @@ import net.paulhertz.pixelaudio.*;
  * Press 'c' to show a MultiGen made of HilbertGen objects with a continuous signal path.
  * Press 'C' to show a MultiGen made with a mix of HilbertGen and DiagonalZigzagGen objects with a continuous path.
  * Press 'h' to show help message in Console.
- * 
+ * </pre>
  */
-
 public class MultiGenDemo extends PApplet {
 	PixelAudio pixelaudio;        // PixelAudio library instance
 	HilbertGen hGen;              // a HilbertGen
@@ -105,9 +104,9 @@ public class MultiGenDemo extends PApplet {
 		multigen = new MultiGen(width, height);     // 2. create a PixelMapGen object
 		mapper = new PixelAudioMapper(multigen);    // 3. initialize a PixelAudioMapper object with the gen
 		mapImage = createImage(width, height, RGB); // 4. create an image for display
-		spectrum = getColors();                     // get colors for displaying on signal path
-		refreshImages();                            // set up images for display and animation
-		showHelp();                                 // some things to do with key commands
+		spectrum = getColors();                     // 5. get colors for displaying on signal path
+		refreshImages();                            // 6. set up images for display and animation
+		showHelp();                                 // 7. some things to do with key commands
 	}
 	
 	public MultiGen defaultMultiGen() {

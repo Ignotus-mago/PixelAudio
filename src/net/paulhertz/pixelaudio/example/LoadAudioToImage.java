@@ -13,8 +13,9 @@ import ddf.minim.*;
  * 
  * LoadAudioToImage shows how you can open audio files and transcode their image data to an image.
  * Once the image is loaded, you can click on it to play back the audio using a PASamplerInstrument. 
- * The hightlightSample() method will highlight the pixels that correspond to the audio signal 
- * that is played. The highlight will change the pixels and can change the audio, too: just press 
+ * Hovering over the image and pressing the spacebar will also trigger an audio event.
+ * The hightlightSample() method highlights the pixels that correspond to the audio signal 
+ * that is played. The highlight changes the pixels and can change the audio, too: just press 
  * the 'w' key to transcode the image to an audio signal and write it to the PASamplerInstrument.
  * You can also load audio to individual RGB or HSB Hue and Brightness channels. To hear the 
  * results of loading to different channels, write the image to the audio signal ('w' key) and 

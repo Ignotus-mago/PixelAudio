@@ -20,7 +20,7 @@ public class Starter extends PApplet {
 		  size(512, 512);                          // Hilbert curves require dimensions that are powers of 2. 		
 	}
 
-	// PixelAudio sketches typically begin like this.
+	// PixelAudio sketches typically require these variables
 	public void setup() {
 	  pixelaudio = new PixelAudio(this);           // 1. initialize PixelAudio library
 	  hGen = new HilbertGen(width, height);        // 2. create a PixelMapGen: here it's the Hilbert curve generator

@@ -104,18 +104,23 @@ public class LookupTables extends PApplet {
 	}
 
 	public void setup() {
-		pixelaudio = new PixelAudio(this);   // 1. initialize PixelAudio library
+		// 1. initialize PixelAudio library
+		pixelaudio = new PixelAudio(this);   
 		println("---- generator size: " + genW + " * " + genH);
-		initGens();                          // 2. create various gens
-		initMapper(hGen);                    // 3. create a PixelAudioMapper, mapper
-		spectrum = getColors(mapper.getSize());    // get a color spectrum to write to the signal path
-		// set up the layout
+		// 2. create various gens
+		initGens(); 
+		// 3. create a PixelAudioMapper, mapper
+		initMapper(hGen);
+		// 4. get a color spectrum to write to the signal path
+		spectrum = getColors(mapper.getSize());    
+		// 5. set up the layout
 		drawingScale = imageWidth / gen.getWidth();
 		offset = drawingScale / 2;
 		if (genW > 8)
 			isHideNumbers = true;
 		if (genW > 128)
 			isHideLines = true;
+		// 6. show help message
 		showHelp();
 	}
 
@@ -124,14 +129,14 @@ public class LookupTables extends PApplet {
 	 * that fit the width and height of this sketch.
 	 */
 	public void initGens() {
-		// get a HIlbert curve generator
+		// get a Hilbert curve generator
 		hGen = new HilbertGen(genW, genH);
 		// get a diagonal zigzag generator and flip the x-coordinates (same as
 		// reflecting it on the y-axis)
 		zGen = new DiagonalZigzagGen(genW, genH, AffineTransformType.FLIPX);
 		// get a Moore curve generator
 		mGen = new MooreGen(genW, genH);
-		// get a bou curve generator
+		// get a boustrophedon curve generator
 		bGen = new BoustropheGen(genW, genH, AffineTransformType.R270);
 	}
 
@@ -257,6 +262,33 @@ public class LookupTables extends PApplet {
 		default:
 			break;
 		}
+	}
+
+	public void showHelp() {
+		println("\n----- HELP -----\n");
+		println(" * Signal path index numbers are small white numbers, bitmap index numbers are big black numbers.");
+		println(" * Read the imageToSignalLUT values by following the pixel index order and reading the white numbers.");
+		println(" * Read the signalToImageLUT values by following the signal path order and reading the black numbers.\n");
+		println(" * Press 'a' to advance animation by one step.");
+		println(" * Press 'A' to rewind animation by one step.");
+		println(" * Press 'd' to print the current PixelMapGen's description String.");
+		println(" * Press 'g' to swap in a new PixelMapGen.");
+		println(" * Press 'n' to hide the numbers overlay.");
+		println(" * Press 'l' to hide the lines overlay.");
+		// println(" * Press 'k'or 'K'  to print the Lookup Tables and coordinates for the current PixelMapGen.");
+		// println(" * Press 't' or 'T' to print affine map geometric transforms.");
+		if (genW <= 4)
+			println(" * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
+		if (genW <= 4)
+			println(" * Press 't' to print affine maps to the console."); // omit for published version
+		println(" * Press 'f' to rotate current gen 90 degrees clockwise.");
+		println(" * Press 'b' to rotate current gen 90 degrees counterclockwise.");
+		println(" * Press 'r' to rotate current gen 180 degrees.");
+		println(" * Press 'x' to flip x-coordinates (reflect on y-axis).");
+		println(" * Press 'y' to flip y-coordinates (reflect on x-axis).");
+		println(" * Press '1' to mirror current gen on the primary diagonal, upper left to lower right.");
+		println(" * Press '2' to mirror current gen on the secondary diagonal, upper right to lower left.");
+		println(" * Press 'h' to show this help text in the console.");
 	}
 
 	/**
@@ -406,33 +438,6 @@ public class LookupTables extends PApplet {
 
 	public void stepAnimation(int step) {
 		PixelAudioMapper.rotateLeft(spectrum, step);
-	}
-
-	public void showHelp() {
-		println("\n----- HELP -----\n");
-		println(" * Signal path index numbers are small white numbers, bitmap index numbers are big black numbers.");
-		println(" * Read the imageToSignalLUT values by following the pixel index order and reading the white numbers.");
-		println(" * Read the signalToImageLUT values by following the signal path order and reading the black numbers.\n");
-		println(" * Press 'a' to advance animation by one step.");
-		println(" * Press 'A' to rewind animation by one step.");
-		println(" * Press 'd' to print the current PixelMapGen's description String.");
-		println(" * Press 'g' to swap in a new PixelMapGen.");
-		println(" * Press 'n' to hide the numbers overlay.");
-		println(" * Press 'l' to hide the lines overlay.");
-		// println(" * Press 'k'or 'K'  to print the Lookup Tables and coordinates for the current PixelMapGen.");
-		// println(" * Press 't' or 'T' to print affine map geometric transforms.");
-		if (genW <= 4)
-			println(" * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
-		if (genW <= 4)
-			println(" * Press 't' to print affine maps to the console."); // omit for published version
-		println(" * Press 'f' to rotate current gen 90 degrees clockwise.");
-		println(" * Press 'b' to rotate current gen 90 degrees counterclockwise.");
-		println(" * Press 'r' to rotate current gen 180 degrees.");
-		println(" * Press 'x' to flip x-coordinates (reflect on y-axis).");
-		println(" * Press 'y' to flip y-coordinates (reflect on x-axis).");
-		println(" * Press '1' to mirror current gen on the primary diagonal, upper left to lower right.");
-		println(" * Press '2' to mirror current gen on the secondary diagonal, upper right to lower left.");
-		println(" * Press 'h' to show this help text in the console.");
 	}
 
 }

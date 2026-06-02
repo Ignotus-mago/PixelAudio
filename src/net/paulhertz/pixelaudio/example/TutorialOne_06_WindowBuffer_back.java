@@ -207,6 +207,7 @@ import ddf.minim.ugens.*;
 import com.hamoid.*;
 
 
+@Deprecated (since="0.9.7.0-beta", forRemoval=true)
 public class TutorialOne_06_WindowBuffer_back extends PApplet {
 	// PixelAudio vars and objects
 	PixelAudio pixelaudio;     // our shiny new library

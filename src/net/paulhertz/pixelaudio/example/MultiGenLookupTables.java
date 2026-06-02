@@ -20,6 +20,7 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * lookup table, connects a 1D audio signal with a 2D bitmap, putting audio
  * samples and RGB pixels in one-to-one correspondence within a single
  * PixelMapGen instance such as a Hilbert, Moore, or DiagonalZigzag.
+ * <p>
  * MultiGenLookupTables does the same thing for MultiGens, which connect
  * multiple PixelMapGens. Imagine the audio signal as line that visits every
  * pixel in a bitmap: the signal's lookup table is simply the list of pixels it
@@ -32,20 +33,21 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * the abstract PixelMapGen abstract class generate the lookup tables. The "gen"
  * objects plug in to PixelAudioMapper, a class that handles mapping of audio
  * signals and RGB data using lookup tables.
- *
+ * </p><p>
  * This example also shows basic affine transforms of PixelMapGen objects, such
  * as rotation and reflection, how to change the PixelMapGen a PixelAudioMapper
  * instance is using, and basic animation using array rotation.
- * 
+ * </p><p>
  * Signal path index numbers are small white numbers, bitmap index numbers are
  * big black numbers. Read the imageToSignalLUT values by following the pixel
  * index order and reading the white numbers. Read the signalToImageLUT values
  * by following the signal path order and reading the black numbers. Read the
  * imageToSignalLUT values by following the black pixel numbers in order and
  * reading the white numbers.
- * 
+ * </p><p>
  * This example can be a good place to test your own MultiGen creation methods.  
- * 
+ * </p>
+ * <pre>
  * KEY COMMANDS
  * 
  * Press 'a' or 'A' to rotate the array of colors one step left or right.
@@ -59,7 +61,7 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * Press 'x' to flip x-coordinates (reflect on y-axis).
  * Press 'y' to flip y-coordinates (reflect on x-axis).
  * Press 'h' to show this help text in the console.
- * 
+ * </pre>
  * 
  * TODO There are some annoying bugs associated with some of the transforms and window resizing. 
  * For the moment, I've commented out the key commands for the r90, r270, fx90, and fx270 
@@ -315,8 +317,8 @@ public class MultiGenLookupTables extends PApplet {
 
 			// I omit transforms that exchange width and height
 			// There's enough to deal with in this sketch
-			// without adding coordinates swapping. Feel free
-			// to uncomment and experiment. 
+			// without adding coordinate swapping and window resizing. 
+			// Feel free to uncomment and experiment. 
 /*
  		case 'f':
 			currentTransform = r270;
@@ -582,6 +584,8 @@ public class MultiGenLookupTables extends PApplet {
 	 * If mapImage is bigger than the display, mapImage is fit to the screen on startup
 	 * and resizing shows it at full size, partially filling the window. 
 	 * 
+	 * 
+	 * @param isVerbose    if true, post comments to the console
 	 */
 	public void setScaling(boolean isVerbose) {
 	    // max window width is a little less than the screen width of the screen
