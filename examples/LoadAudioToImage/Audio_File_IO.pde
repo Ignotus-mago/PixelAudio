@@ -21,12 +21,10 @@ public void fileSelected(File selectedFile) {
       println("----- Selected file " + fileName + "." + fileTag + " at "
         + filePath.substring(0, filePath.length() - fileName.length()));
       loadAudioFile(audioFile);
-    } 
-    else {
+    } else {
       println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
     }
-  } 
-  else {
+  } else {
     println("----- No audio file was selected.");
   }
 }
@@ -68,22 +66,6 @@ public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, 
   img.loadPixels();
   mapper.mapSigToImg(sig, img.pixels, chan);
   img.updatePixels();
-}
-
-/**
- * Plays an audio sample with PASamplerInstrument and default ADSR.
- *
- * @param samplePos    position of the sample in the audio buffer
- * @param sampleCount      number of samples to play
- * @param amplitude    amplitude of the samples on playback
- * @return the calculated sample length in samples
- */
-public int playSample(int samplePos, int sampleCount, float amplitude) {
-  sampleCount = synth.playSample(samplePos, sampleCount, amplitude);
-  int durationMS = (int)(sampleCount/sampleRate * 1000);
-  println("----- audio event duration = "+ durationMS +" millisconds");
-  // return the length of the sample
-  return sampleCount;
 }
 
 public void writeImageToAudio() {

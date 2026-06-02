@@ -2,8 +2,9 @@
  *
  * LoadAudioToImage shows how you can open audio files and transcode their image data to an image.
  * Once the image is loaded, you can click on it to play back the audio using a PASamplerInstrument.
- * The hightlightSample() method will highlight the pixels that correspond to the audio signal
- * that is played. The highlight will change the pixels and can change the audio, too: just press
+ * Hovering over the image and pressing the spacebar will also trigger an audio event.
+ * The hightlightSample() method highlights the pixels that correspond to the audio signal
+ * that is played. The highlight changes the pixels and can change the audio, too: just press
  * the 'w' key to transcode the image to an audio signal and write it to the PASamplerInstrument.
  * You can also load audio to individual RGB or HSB Hue and Brightness channels. To hear the
  * results of loading to different channels, write the image to the audio signal ('w' key) and
@@ -14,6 +15,7 @@
  * the range of brightness values in an image. These operations will change the audio, too, if
  * you write the image to the audio signal. The gamma operations both make the audio quieter,
  * while the histogram stretch usually makes the audio louder.
+ *
  *
  * Press 'o' or 'O' to open an audio file and load it to the signal and all channels of the image.
  * Press 'r' to open an audio file and load it to the signal and the RED channel of the image.
@@ -35,21 +37,10 @@ import java.util.Random;
 import java.util.Arrays;
 import java.io.File;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.util.Random;
-
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.UnsupportedAudioFileException;
-
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.sampler.*;
-
 import ddf.minim.*;
+
 
 /** PixelAudio library */
 PixelAudio pixelaudio;        // PixelAudio library for Processing
@@ -128,11 +119,11 @@ public void setup() {
 }
 
 public void initMapper() {
-  pixelaudio = new PixelAudio(this);     // load the PixelAudio library
+  pixelaudio = new PixelAudio(this);      // load the PixelAudio library
   hGen = new HilbertGen(width, height);   // create a Hilbert curve that fills our display
-  mapper = new PixelAudioMapper(hGen);   // initialize mapper with the HIlbert curve generator
-  mapSize = mapper.getSize();        // size of mapper's various arrays and of mapImage
-  colors = getColors();           // create an array of colors
+  mapper = new PixelAudioMapper(hGen);    // initialize mapper with the HIlbert curve generator
+  mapSize = mapper.getSize();             // size of mapper's various arrays and of mapImage
+  colors = getColors();                   // create an array of colors
   mapImage = createImage(width, height, ARGB); // an image to use with mapper
   mapImage.loadPixels();
   mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
@@ -171,6 +162,9 @@ public void draw() {
 
 public void keyPressed() {
   switch (key) {
+  case ' ': // play audio for the point the mouse is currently over
+    audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
+    break;
   case 'o': // open an audio file and load it to the signal and all channels of the image
   case 'O':
     chan = PixelAudioMapper.ChannelNames.ALL;
@@ -254,18 +248,49 @@ public void showHelp() {
   println(" * Press '?' to show Help Message in the console.");
 }
 
-public void mousePressed() {
-  pixelPos = mouseX + mouseY * width;
-  samplePos = mapper.lookupSignalPos(mouseX, mouseY);
+public void applyColor(int[] colorSource, int[] graySource, int[] lut) {
+  float[] hsbPixel = new float[3];
+  for (int i = 0; i < mapImage.pixels.length; i++) {
+    graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
+  }
+}
+
+public void mouseClicked() {
+  int x = clipToWidth(mouseX);
+  int y = clipToHeight(mouseY);
+  audioMouseClick(x, y);
+}
+
+/**
+ * Respond to a mouse click with an audio event.
+ */
+public void audioMouseClick(int x, int y) {
+  pixelPos = x + y * width;
+  samplePos = mapper.lookupSignalPos(x, y);
   // println("----- sample position for "+ mouseX +", "+ mouseY +" is "+ samplePos);
   int varyDuration = calcSampleLen(duration);
   int sampleLength = playSample(samplePos, varyDuration, 0.9f);
   if (sampleLength > 0) {
     hightlightSample(samplePos, (int)(2 * sampleRate));
-    // int c = mapImage.get(mouseX, mouseY);
-    // String str = PixelAudioMapper.colorString(c);
-    // println("--- samplePos:", samplePos, "sampleLength:", sampleLength, "size:", width * height, "end:", samplePos + sampleLength + ", " + str);
+    int c = mapImage.get(x, y);
+    String str = PixelAudioMapper.colorString(c);
+    println("--- samplePos:", samplePos, "sampleLength:", sampleLength, "size:", width * height, "end:", samplePos + sampleLength + ", " + str);
   }
+}
+
+/**
+ * @param x    a value to constrain to the current window width
+ * @return the constrained value
+ */
+public int clipToWidth(int x) {
+  return min(max(0, x), width - 1);
+}
+/**
+ * @param y    a value to constrain to the current window height
+ * @return the constrained value
+ */
+public int clipToHeight(int y) {
+  return min(max(0, y), height - 1);
 }
 
 /**
@@ -280,6 +305,24 @@ public int calcSampleLen(int durationMS) {
   int len = (int)(abs((vary * durationMS) * sampleRate / 1000.0f));
   println("---- calcSampleLen result = "+ len +" samples at "+ sampleRate +" Hz sample rate");
   return len;
+}
+
+
+
+/**
+ * Plays an audio sample with PASamplerInstrument and default ADSR.
+ *
+ * @param samplePos    position of the sample in the audio buffer
+ * @param sampleCount      number of samples to play
+ * @param amplitude    amplitude of the samples on playback
+ * @return the calculated sample length in samples
+ */
+public int playSample(int samplePos, int sampleCount, float amplitude) {
+  sampleCount = synth.playSample(samplePos, sampleCount, amplitude);
+  int durationMS = (int)(sampleCount/sampleRate * 1000);
+  println("----- audio event duration = "+ durationMS +" millisconds");
+  // return the length of the sample
+  return sampleCount;
 }
 
 public void hightlightSample(int pos, int length) {
@@ -297,27 +340,4 @@ public void hightlightSample(int pos, int length) {
   }
   mapper.plantPixels(signalPathPixelSequence, mapImage.pixels, pos, length);
   mapImage.updatePixels();
-}
-
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
-public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
-  if (colorSource == null || graySource == null || lut == null)
-    throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
-  if (colorSource.length != graySource.length || colorSource.length != lut.length)
-    throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
-  // initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
-  float[] hsbPixel = new float[3];
-  for (int i = 0; i < graySource.length; i++) {
-    graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
-  }
-  return graySource;
 }

@@ -1,4 +1,3 @@
-
 /*----------------------------------------------------------------*/
 /*                                                                */
 /*                   BEGIN FILE I/O METHODS                       */
@@ -76,7 +75,7 @@ public void applyImageColor(File imgFile, PImage targetImage) {
 // -------- END FILE I/O FOR APPLYING COLOR --------- //
 
 /*
- * Here is a section of "regular" file i/o methods for audio and image files.
+   * Here is a section of "regular" file i/o methods for audio and image files.
  */
 
 
@@ -112,8 +111,7 @@ public void fileSelected(File selectedFile) {
         + filePath.substring(0, filePath.length() - fileName.length()));
       // if (nd != null) nd.oscSendFileInfo(filePath, fileName, fileTag);
       loadAudioFile(audioFile);
-    } 
-    else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
+    } else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
       || fileTag.equalsIgnoreCase("jpeg")) {
       // we chose an image file
       imageFile = selectedFile;
@@ -121,12 +119,10 @@ public void fileSelected(File selectedFile) {
       imageFileName = fileName;
       imageFileTag = fileTag;
       loadImageFile(imageFile);
-    } 
-    else {
+    } else {
       println("----- File is not a recognized audio format ending with \"mp3\", \"wav\", \"aif\", or \"aiff\".");
     }
-  } 
-  else {
+  } else {
     println("----- No audio or image file was selected.");
   }
   isAnimating = oldIsAnimating;
@@ -198,8 +194,7 @@ public void loadImageFile(File imgFile) {
   if (chan == PixelAudioMapper.ChannelNames.ALL) {
     // copy the image directly using Processing copy command
     mapImage.copy(img, 0, 0, w, h, 0, 0, w, h);
-  } 
-  else {
+  } else {
     // copy only specified channels of the new image
     PImage mixImage = createImage(w, h, RGB);
     mixImage.copy(mapImage, 0, 0, w, h, 0, 0, w, h);

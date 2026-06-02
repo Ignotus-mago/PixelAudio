@@ -16,9 +16,8 @@ public void fileSelectedWrite(File selection) {
   // Do we have a .json at the end?
   if (selection.getName().length() < 5 || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
     // missing ".json"
-    currentFileName = selection.getAbsolutePath() + ".json"; 
-  } 
-  else {
+    currentFileName = selection.getAbsolutePath() + ".json";
+  } else {
     currentFileName = selection.getAbsolutePath();
   }
   JSONObject genJSON = new JSONObject();
@@ -47,8 +46,9 @@ public JSONObject getJSONHeader() {
 
 
 public void importGenData() {
-  // we only use this data for this example, so it's in the usual "data" folder
-  File folderToStartFrom = new File(dataPath("") + "//*.json");
+  oldIsAnimating = isAnimating;
+  isAnimating = false;
+  File folderToStartFrom = new File(dataFolder + "//*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }
 
@@ -64,8 +64,7 @@ public void fileSelectedOpen(File selection) {
   boolean goodHeader = checkJSONHeader(json, "PXAU", "BGEN");
   if (goodHeader) {
     println("--->> JSON file contains BuildFromPathGen data. It should load correctly.");
-  }
-  else {
+  } else {
     println("--->> JSON file apparently does not contain BuildFromPathGen data. Will try to load,anyhow.");
   }
   PixelMapGen myGen = importGenDataJSON(json);
@@ -76,27 +75,22 @@ public void fileSelectedOpen(File selection) {
     if (mapper.getWidth() != width || mapper.getHeight() != height) {
       windowResize(mapper.getWidth(), mapper.getHeight());
     }
-    mapImage = createImage(width, height, RGB);
-    mapImage.loadPixels();
-    colors = getColors();
-    mapper.plantPixels(colors, mapImage.pixels, 0, mapper.getSize());
-    mapImage.updatePixels();
+    initImages();
   }
+  isAnimating = oldIsAnimating;
 }
 
 boolean checkJSONHeader(JSONObject json, String key, String val) {
   JSONObject header = (json.isNull("header") ? null : json.getJSONObject("header"));
   String pxau;
   if (header != null) {
-    pxau = (header.isNull(key)) ? "" : header.getString(key);  
-  }
-  else {
+    pxau = (header.isNull(key)) ? "" : header.getString(key);
+  } else {
     pxau = (json.isNull(key)) ? "" : json.getString(key);
   }
   if (pxau.equals(val)) {
     return true;
-  }
-  else {
+  } else {
     return false;
   }
 }
@@ -109,11 +103,11 @@ public PixelMapGen importGenDataJSON(JSONObject json) {
     BuildFromPathGen myGen = new BuildFromPathGen(w, h);
     // BuildFromPathGen myGen = new BuildFromPathGen(w, h, AffineTransformType.ROT90);
     int[] pixelMap = map.toIntArray();
+    // always call BuildFromPathGen.setPixelMap() before you call BuildFromPathGen.generate()
     myGen.setPixelMap(pixelMap);
     myGen.generate();
     return myGen;
-  } 
-  else {
+  } else {
     return null;
   }
 }

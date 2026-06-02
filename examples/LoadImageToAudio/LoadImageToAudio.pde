@@ -2,7 +2,7 @@
  * LoadImageToAudio shows how to load an image and turn it into an audio file
  * that can be played by clicking on the image. You can also load an audio file
  * and turn it into an image.
- *
+ * 
  * You can write the current image to the audio signal with the 'w' key command.
  * The sound of an image will probably be noisy since it is not designed with cyclic
  * functions along the arbitrary signal path we impose on it with a PixelMapGen.
@@ -13,13 +13,13 @@
  * an audio file and it gets transcoded into an image, we still use the audio
  * signal with all its resolution to play sounds. When you click in the image,
  * you will be playing a sample from the signal.
- *
+ * 
  * You can write the audio signal to the image with the 'W' key command. This will
  * convert the audioSignal into HSB Brightness values and write them to mapImage.
  * If you open this image in all color channels or in the HSB Brightness channel
  * and then write it to the audio channel, you will get a reasonably good recreation
  * of the audio, at 8-bit resolution.
- *
+ * 
  * An audio signal or image can be loaded to various channels of the image: Red,
  * Green, Blue or all channels in the RGB color space or Hue, Brightness, or
  * Saturation in the HSB color space. HSB Hue operations on grayscale images may
@@ -29,11 +29,12 @@
  * will turn it gray. To work more effectively with HSB, we can load both hue and
  * saturation from a color image to another color image or to a grayscale image,
  * maintaining the brightness channel of the target image, with the 'c' command key.
- *
+ * 
  * You can enhance image contrast by stretching its histogram ('m' key).
  * You can make the image brighter ('=' and '+' keys) or darker ('-' or '_' key)
  * using a gamma function, a non-linear adjustment.
- *
+ * 
+ * 
  * Press ' ' to toggle animation.
  * Press 'o' to open an audio or image file in all RGB channels.
  * Press 'r' to open an audio or image file in the RED channel of the image.
@@ -54,6 +55,7 @@
  * Press 'w' to transcode the image and write it to the audio signal.
  * Press 'W' to transcode the audio signal and write it to the image.
  * Press '?' to show the Help Message in the console.
+ * 
  *
  * PLEASE NOTE: Hue (H) and Saturation (V) operations may have no effect on gray pixels.
  * ALSO: Image brightness determines image audio. Images with uniform brightness will be silent.
@@ -64,15 +66,14 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
+
 import javax.sound.sampled.*;
 
 import ddf.minim.*;
-
 import net.paulhertz.pixelaudio.*;
-import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
-import net.paulhertz.pixelaudio.schedule.*;
-
+import net.paulhertz.pixelaudio.sampler.*;
+import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
 // PixelAudio vars and objects
 PixelAudio pixelaudio;     // our shiny new library
@@ -247,7 +248,10 @@ public void drawCircle(int x, int y) {
 
 public void keyPressed() {
   switch (key) {
-  case ' ': // toggle animation
+  case ' ': // play audio for the point the mouse is currently over
+    audioMouseClick(mouseX, mouseY);
+    break;
+  case TAB: // toggle animation
     isAnimating = !isAnimating;
     break;
   case 'o': // open an audio or image file in all RGB channels
@@ -290,14 +294,12 @@ public void keyPressed() {
     if (isLoadFromImage) {
       if (imageFile == null) {
         chooseFile();
-      } 
-      else {
+      } else {
         // reload image
         loadImageFile(imageFile);
         println("-------->>>>> Reloaded image file");
       }
-    } 
-    else {
+    } else {
       if (audioFile == null) {
         chooseFile();
       } else {
@@ -399,12 +401,31 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   return graySource;
 }
 
-public void mousePressed() {
-  sampleX = mouseX;
-  sampleY = mouseY;
-  samplePos = getSamplePos(sampleX, sampleY);
+public void mouseClicked() {
+  audioMouseClick(mouseX, mouseY);
+}
+
+/**
+ * @param x    a value to constrain to the current window width
+ * @return the constrained value
+ */
+public int clipToWidth(int x) {
+  return min(max(0, x), width - 1);
+}
+/**
+ * @param y    a value to constrain to the current window height
+ * @return the constrained value
+ */
+public int clipToHeight(int y) {
+  return min(max(0, y), height - 1);
+}
+
+public int audioMouseClick(int x, int y) {
+  sampleX = clipToWidth(x);
+  sampleY = clipToHeight(y);
+  samplePos = getSamplePos(x, y);
   int varyDuration = calcSampleLen(durationMS);
-  int sampleLength = playSample(samplePos, varyDuration, 0.9f);
+  return playSample(samplePos, varyDuration, 0.9f);
 }
 
 /**
@@ -479,6 +500,7 @@ public void writeImageToAudio() {
   playBuffer.setChannel(0, audioSignal);
   if (playBuffer != null) println("--->> audioBuffer length channel 0 = "+ playBuffer.getChannel(0).length);
 }
+
 
 // ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- //
 
