@@ -49,11 +49,13 @@ GOption customWarpOption;
 GOption arcLengthTimeOption;
 GLabel envelopeLabel;
 GDropList envelopeMenu;
+GLabel envelopeValuesLabel;
 
 
 GTextArea commentsField;    // testing
 
-String[] adsrItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad"};
+static final String ENV_CUSTOM = "Custom";
+String[] envPresetItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad"};
 
 /**
  * Create all the GUI controls.
@@ -326,8 +328,14 @@ public void createControls() {
   envelopeLabel.setText("Sampler\nEnvelope");
   envelopeLabel.setOpaque(true);
   envelopeMenu = new GDropList(controlWindow, 100, yPos, 120, 80, 3, 10);
-  envelopeMenu.setItems(adsrItems, 0);
+  envelopeMenu.setItems(envPresetItems, 0);
   envelopeMenu.addEventHandler(this, "envelopeMenu_clicked");
+  // ADSR label
+  envelopeValuesLabel = new GLabel(controlWindow, 230, yPos, 210, 40);
+  envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
+  envelopeValuesLabel.setOpaque(false);
+  envelopeValuesLabel.setText("");
+
   // arc length time option3
 
   arcLengthTimeOption = new GOption(controlWindow, 280, yPos, 120, 20);
@@ -406,6 +414,7 @@ public void addControlsToPanel() {
   // envelope
   controlPanel.addControl(envelopeLabel);
   controlPanel.addControl(envelopeMenu);
+  controlPanel.addControl(envelopeValuesLabel);
   controlPanel.setCollapsed(false);
   // arcLengthTime
   controlPanel.addControl(arcLengthTimeOption);
@@ -440,9 +449,18 @@ synchronized public void winDraw(PApplet appc, GWinData data) {
   appc.background(color(212, 220, 228));
 }
 
+boolean isGuiTyping() {
+  if (pitchShiftText != null && pitchShiftText.hasFocus()) {
+    return true;
+  }
+  return false;
+}
+
 // respond to key in window
 public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
-  if (evt.getAction() == KeyEvent.RELEASE) parseKey(evt.getKey(), evt.getKeyCode());
+  if (evt.getAction() != KeyEvent.RELEASE) return;
+  if (isGuiTyping()) return;
+  parseKey(evt.getKey(), evt.getKeyCode());
 }
 
 
@@ -684,6 +702,7 @@ public void warpSlider_changed(GSlider source, GEvent event) {
   if (event == GEvent.RELEASED) println("gConfig.warpExponent = "+ gConfig.warpExponent);
 }
 
+// currently not used
 public void arcLengthTimeOption_clicked(GOption source, GEvent event) {
   if (!isEditable()) return;
   if (guiSyncing) return;
@@ -697,12 +716,22 @@ public void envelopeMenu_clicked(GDropList source, GEvent event) {
   if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
     return;
   }
-  // if (mode != Mode.DRAW_EDIT_GRANULAR) return;
   int itemHit = source.getSelectedIndex();
-  String itemName = adsrItems[itemHit];
+  if (itemHit < 0 || itemHit >= envPresetItems.length) return;
+
+  String itemName = envPresetItems[itemHit];
+  if (ENV_CUSTOM.equals(itemName)) {
+    // Read-only sentinel for loaded / non-preset envelopes.
+    // Do not overwrite gConfig.env.
+    return;
+  }
   println("-- envelope "+ itemName +" selected");
-  gConfig.env = envPreset(itemName);
-  if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = envPreset(itemName);
+  ADSRParams env = envPreset(itemName);
+  gConfig.env = env;
+  if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = env;
+  if (envelopeValuesLabel != null) {
+    envelopeValuesLabel.setText(formatEnv(gConfig.env));
+  }
   // println("envelopeMenu - GDropList >> GEvent." + event + " @ " + millis());
 }
 
@@ -721,21 +750,67 @@ public void printGConfigStatus() {
  */
 static ADSRParams envPreset(String name) {
   switch (name) {
+    // sharp attack, fast decay to 0
   case "Pluck"      :
     return new ADSRParams(1.0f, 0.005f, 0.18f, 0.0f, 0.12f);
+    // medium fast attack, medium decay to 0.15, short tail
   case "Soft"       :
-    return new ADSRParams(1.0f, 0.020f, 0.60f, 0.15f, 0.25f); // new
+    return new ADSRParams(1.0f, 0.020f, 0.60f, 0.15f, 0.25f);
+    // sharp attack, fast decay to 0.1, short tail
   case "Percussion" :
     return new ADSRParams(1.0f, 0.002f, 0.20f, 0.10f, 0.18f);
+    // trapezoid, medium tail
   case "Fade"       :
-    return new ADSRParams(1.0f, 0.05f, 0.0f, 1.0f, 0.50f);   // your trapezoid
+    return new ADSRParams(1.0f, 0.05f, 0.0f, 1.0f, 0.50f);
+    // soft attack, medium decay, medium long tail
   case "Swell"      :
     return new ADSRParams(1.0f, 0.90f, 0.40f, 0.70f, 0.90f);
+    // long attack, slight decay, long tail
   case "Pad"        :
     return new ADSRParams(1.0f, 1.40f, 0.60f, 0.85f, 1.80f);
+    // fast attack, fast decay to 0.75, medium tail
   default           :
     return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);
   }
+}
+
+static boolean nearlyEqual(float a, float b) {
+  return Math.abs(a - b) < 0.0001f;
+}
+
+static boolean envEquals(ADSRParams a, ADSRParams b) {
+  if (a == b) return true;
+  if (a == null || b == null) return false;
+  return nearlyEqual(a.getMaxAmp(), b.getMaxAmp())
+    && nearlyEqual(a.getAttack(), b.getAttack())
+    && nearlyEqual(a.getDecay(), b.getDecay())
+    && nearlyEqual(a.getSustain(), b.getSustain())
+    && nearlyEqual(a.getRelease(), b.getRelease());
+}
+
+String envNameFor(ADSRParams env) {
+  if (env == null) return ENV_CUSTOM;
+  for (int i = 0; i < envPresetItems.length; i++) {
+    String name = envPresetItems[i];
+    if (ENV_CUSTOM.equals(name)) continue;
+    if (envEquals(env, envPreset(name))) return name;
+  }
+  return ENV_CUSTOM;
+}
+
+int envMenuIndex(String name) {
+  for (int i = 0; i < envPresetItems.length; i++) {
+    if (envPresetItems[i].equals(name)) return i;
+  }
+  return envPresetItems.length - 1; // Custom
+}
+
+String formatEnv(ADSRParams env) {
+  if (env == null) return "A --   D --   S --   R --";
+  return "A " + nf(env.getAttack(), 0, 3)
+    + "  D " + nf(env.getDecay(), 0, 3)
+    + "  S " + nf(env.getSustain(), 0, 3)
+    + "  R " + nf(env.getRelease(), 0, 3);
 }
 
 /** Quantize an integer to the nearest multiple of step. */
@@ -794,6 +869,14 @@ void syncGuiFromConfig() {
     shownDur = clampInt(shownDur, 50, 10000);
     durationSlider.setLimits(shownDur, 50, 16000);
     durationField.setText("" + shownDur);
+
+    // envelope settings
+    ADSRParams envToShow = gConfig.env;
+    String envName = envNameFor(envToShow);
+    envelopeMenu.setSelected(envMenuIndex(envName));
+    if (envelopeValuesLabel != null) {
+      envelopeValuesLabel.setText(formatEnv(envToShow));
+    }
 
     // warp radio + exponent
     linearWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.LINEAR);

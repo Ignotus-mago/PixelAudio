@@ -5,14 +5,14 @@
 
 // select a file of WaveData objects in JSON format to open
 public void loadWaveData() {
-  File folderToStartFrom = new File(jsonFolder + "//*.json");
+  File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }
 
 public void fileSelectedOpen(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
-    //isAnimating = oldIsAnimating;
+    isAnimating = oldIsAnimating;
     return;
   }
   currentDataFile = selection;
@@ -109,7 +109,7 @@ public void fileSelectedWrite(File selection) {
   println("User selected " + selection.getAbsolutePath());
   // Do we have a .json at the end?
   if (selection.getName().length() < 5
-      || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
+    || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
     // problem missing ".json"
     currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
   } else {
@@ -149,7 +149,7 @@ public void fileSelectedWrite(File selection) {
     stateData.setString("comments", "---");
   else
     stateData.setString("comments", synth.comments);
-  // String videoName = selection.getName(); 
+  // String videoName = selection.getName();
   String videoName = synth.videoFilename;
   if (videoName == null || videoName.equals("")) {
     videoName = selection.getName();

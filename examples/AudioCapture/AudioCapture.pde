@@ -146,6 +146,8 @@ int pixelPos;
 int samplePos;
 
 boolean isVerbose = false;    // set true to get feedback in console
+String daPath;                // filoe path to resources, set in setup() method
+
 
 
 /**
@@ -156,6 +158,7 @@ public void settings() {
 }
 
 public void setup() {
+  daPath = sketchPath("") + "../examples_data/";
   pixelaudio = new PixelAudio(this);
   initMapper();
   mapSize = mapper.getSize();

@@ -89,7 +89,7 @@ public void removeOldestBrush() {
  * This is a replacement operation: the old brush should be removed
  * from its list immediately after conversion.
  *
- * @param brush    AudioBrush to convert, GranularBrush <-> SamplerBrush
+ * @param brush    AudioBrush to convert, GranularBrush to/from SamplerBrush
  */
 AudioBrush toggleBrushType(AudioBrush brush) {
   if (brush == null) return null;
@@ -295,10 +295,10 @@ AudioBrush toggleActiveBrushType() {
  */
 void syncDrawingModeToBrush(AudioBrush brush) {
   if (brush instanceof GranularBrush) {
-    drawingMode = DrawingMode.DRAW_EDIT_GRANULAR;
+    setMode(DrawingMode.DRAW_EDIT_GRANULAR);
     controlWindow.setTitle("Granular Synth");
   } else if (brush instanceof SamplerBrush) {
-    drawingMode = DrawingMode.DRAW_EDIT_SAMPLER;
+    setMode(DrawingMode.DRAW_EDIT_SAMPLER);
     controlWindow.setTitle("Sampler Synth");
   }
 }

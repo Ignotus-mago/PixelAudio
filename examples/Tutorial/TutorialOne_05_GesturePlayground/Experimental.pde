@@ -1,9 +1,13 @@
 /*----------------------------------------------------------------*/
 /*                                                                */
-/*                          EXPERIMENTS                           */
+/*                          EXPERIMENTAL                          */
 /*                                                                */
 /*----------------------------------------------------------------*/
 
+// optimization of granular synth grain distribution, probably ends up in a utility class
+// See opening comments, rubric 7:
+// The 'q' command key will calculate the optimal number of grains in a gesture (usually in
+// GESTURE Path Mode) and update the control palette. This can provide smooth granular synthesis.
 
 /**
  * Print suggested values for optimizing grain overlap for a brush.

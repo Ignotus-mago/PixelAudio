@@ -1,6 +1,13 @@
 import oscP5.*;
 import netP5.*;
 
+/*----------------------------------------------------------------*/
+/*                                                                */
+/*                       NETWORK DELEGATE                         */
+/*                                                                */
+/*----------------------------------------------------------------*/
+
+
 /**
  * A class to handle network connections over UDP, for example, with a Max or Pd patch.
  * Used by applications that implement the PANetworkClientINF.
@@ -189,6 +196,20 @@ public class NetworkDelegate {
 
   public void oscSendTrig(int index) {
     OscMessage msg = new OscMessage("/trig");
+    msg.add(index);
+    osc.send(msg, this.remoteTo);
+  }
+
+  public void oscSendOnOff(int index, boolean state) {
+    OscMessage msg = new OscMessage("/onoff");
+    msg.add(state ? 1 : 0);
+    msg.add(index);
+    osc.send(msg, this.remoteTo);
+  }
+
+  public void oscSendSetnum(int index, float value) {
+    OscMessage msg = new OscMessage("/setnum");
+    msg.add(value);
     msg.add(index);
     osc.send(msg, this.remoteTo);
   }

@@ -1,12 +1,13 @@
 /**
  * BigWaveSynth shows how you can load a WaveSynth into the pixel array of a
  * MultiGen. MultiGen is child class of PixelMapGen that allows you to use
- * multiple PixelMapGens as if they were a single image with a single signal
- * path through them. This example also allows you to load JSON files in 
- * this example's data folder to reconfigure the WaveSynth. Initially, we 
- * call initWaveDataList() to create a WaveData array with two operators. 
- * 
+ * multiple PixelMapGens to cover a single image with a single signal
+ * path through them. This example also allows you to load JSON files in
+ * this example's data folder to reconfigure the WaveSynth. Initially, we
+ * call initWaveDataList() to create a WaveData array with two operators.
+ *
  * Press ' ' to turn animation on or off.
+ * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.
  * Press 'o' to open a JSON file that defines a WaveSynth .
  * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.
  * Press 'j' or 'J' to save WaveSynth data to a JSON file.
@@ -14,19 +15,31 @@
  * Press 'r' to animation step to 0.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'h' to show help and key commands.
- * 
+ *
+ * See WaveSynthEditor for the complete set of WaveSynth parameters
+ * you can edit in a GUI, load and save to files, and output as video. <br>
  * See also: BigWaveSynthAudio, WaveSynthSequencer.
- * 
+ *
  */
+
+import processing.core.*;
+import processing.data.JSONArray;
+import processing.data.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
-import com.hamoid.*;
 import net.paulhertz.pixelaudio.*;
 
+import com.hamoid.*;
+
+
 PixelAudio pixelaudio;
-HilbertGen hGen;
-MultiGen multigen;
+PixelMapGen gen;
+
+MultiGen hilb3x2Gen;
+BoustropheGen bGen;
+DiagonalZigzagGen zGen;
+
 int rows = 3;
 int columns = 2;
 int genWidth = 256;
@@ -35,13 +48,12 @@ PixelAudioMapper mapper;
 ArrayList<WaveData> wdList;
 WaveSynth wavesynth;
 PImage synthImage;
-
 // WaveSynth variables
 float myGamma = 1.0f;      // a non-linear brightness adjustment
-int animSteps = 240;       // number of steps in the animation
-int animStop = animSteps;  // The step at which the animation should stop (not used here)
-int step = 0;              // the current step in the animation
-String comments;           // a JSON field that provides information about the WaveSynth effects it produces
+int animSteps = 240;      // number of steps in the animation
+int animStop = animSteps;    // The step at which the animation should stop (not used here)
+int step = 0;          // the current step in the animation
+String comments;        // a JSON field that provides information about the WaveSynth effects it produces
 
 // file i/o
 String jsonFolder = "/JSON_data/";
@@ -59,13 +71,20 @@ boolean isRecordingVideo = false;
 VideoExport videx = null;    // hamoid library class for video export (requires ffmpeg)
 String videoFilename = "pixelAudio_video.mp4";
 
+
 public void settings() {
+  // display window is scaled by 2 with respect to PixelMapGen instances
   size(2 * rows * genWidth, 2 * columns * genHeight);
 }
+
 public void setup() {
   pixelaudio = new PixelAudio(this);
-  multigen = hilbertLoop3x2(genWidth, genHeight);
-  mapper = new PixelAudioMapper(multigen);
+  hilb3x2Gen = hilbertLoop3x2(genWidth, genHeight);
+  println("-- hilb3x2Gen dimensions: ", hilb3x2Gen.getWidth(), hilb3x2Gen.getHeight());
+  bGen = new BoustropheGen(rows * genWidth, columns * genHeight);
+  zGen = new DiagonalZigzagGen(rows * genWidth, columns * genHeight);
+  gen = hilb3x2Gen;
+  mapper = new PixelAudioMapper(gen);
   wdList = initWaveDataList();
   wavesynth = new WaveSynth(mapper, wdList);
   initWaveSynth(wavesynth);
@@ -74,21 +93,19 @@ public void setup() {
 }
 
 /**
- * Copied from HilbertGen's static method hilbertLoop3x2(int genW, int genH)
- * 
  * Generates a looping fractal signal path consisting of 6 HilbertGens,
- * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image. 
- * This particular MultiGen configuration is used so extensively in my 
+ * arranged 3 wide and 2 tall, to fit a 3 * genW by 2 * genH image.
+ * This particular MultiGen configuration is used so extensively in my
  * sample code that I've given it a factory method in the HilbertGen class.
- * It's written out here so you can see how it works. 
- * 
- * Note that genH must equal genW and both must be powers of 2. For the 
- * image size we're using in this example, genW = image width / 3 and 
+ * It's written out here so you can see how it works.
+ *
+ * Note that genH must equal genW and both must be powers of 2. For the
+ * image size we're using in this example, genW = image width / 3 and
  * genH = image height / 2.
- * 
- * @param genW    width of each HilbertGen 
+ *
+ * @param genW    width of each HilbertGen
  * @param genH    height of each HilbertGen
- * @return a 3 x 2 array of Hilbert curves, connected in 
+ * @return a 3 x 2 array of Hilbert curves, connected in
  *         a loop (3 * genWidth by 2 * genHeight pixels)
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
@@ -106,14 +123,14 @@ public MultiGen hilbertLoop3x2(int genW, int genH) {
   offsetList.add(new int[] { 2 * genW, genH });
   genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
   offsetList.add(new int[] { genW, genH });
-  genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
   offsetList.add(new int[] { 0, genH });
   return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 /**
  * Initializes a list of WaveData for use by a WaveSynth.
- * 
+ *
  * @return an ArrayList of WaveData objects
  */
 public ArrayList<WaveData> initWaveDataList() {
@@ -137,9 +154,9 @@ public ArrayList<WaveData> initWaveDataList() {
 }
 
 /**
- * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables 
+ * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
  * of a WaveSynth object and generates its first frame of animation.
- * 
+ *
  * @param synth    a WaveSynth object whose attributes will be set
  * @return      the WaveSynth object with attributes set
  */
@@ -160,14 +177,41 @@ public void draw() {
   if (isAnimating) stepAnimation();
 }
 
+/**
+ * Sets a new PixelMapGen for a PixelAudioMapper
+ * @param gen
+ */
+public void swapGen(PixelMapGen gen) {
+  mapper.setGenerator(gen);
+  // if we had a new mapper, we would call wavesynth.setMapper(mapper) and reset
+  // synthImage locally.
+  // As it is, mapper only changed its variables, so the swap is really simple
+}
+
 public void keyPressed() {
   switch (key) {
   case ' ': // turn animation on or off
     isAnimating = !isAnimating;
     println(isAnimating ? "Starting animation at frame " + step + " of " + animSteps
-        : "Stopping animation at frame " + step + " of " + animSteps);
+      : "Stopping animation at frame " + step + " of " + animSteps);
     break;
-  case 'o': // open a JSON file that defines a WaveSynth 
+  case 'g': // swap in a new gen to replace the one in use for mapper
+    if (gen == zGen) {
+      gen = hilb3x2Gen;
+      swapGen(gen);
+      break;
+    }
+    if (gen == hilb3x2Gen) {
+      gen = bGen;
+      swapGen(gen);
+      break;
+    }
+    if (gen == bGen) {
+      gen = zGen;
+      swapGen(gen);
+    }
+    break;
+  case 'o': // open a JSON file that defines a WaveSynth
     // turn off animation while reading new settings for wavesynth
     oldIsAnimating = isAnimating;
     isAnimating = false;
@@ -176,22 +220,24 @@ public void keyPressed() {
   case 'O': // reopen JSON file, if one is already open, or open a new JSON file
     if (currentDataFile == null) {
       loadWaveData();
-    } 
-    else {
+    } else {
       fileSelectedOpen(currentDataFile);
       println("-------->>>>> Reloaded file");
     }
     break;
-  case 'j': case 'J': // save WaveSynth data to a JSON file
+  case 'j':
+  case 'J': // save WaveSynth data to a JSON file
     saveWaveData();
     break;
   case 'f': // print the frameRate to the console
     println("--->> frame rate: "+ frameRate);
-  case 'r': case 'R': // reset animation step to 0 
+  case 'r':
+  case 'R': // reset animation step to 0
     step = 0;
     wavesynth.renderFrame(step);
     break;
-  case 'v': case 'V': // toggle video recording
+  case 'v':
+  case 'V': // toggle video recording
     isRecordingVideo = !isRecordingVideo;
     println("isRecordingVideo is "+ isRecordingVideo);
     if (isRecordingVideo) {
@@ -209,6 +255,7 @@ public void keyPressed() {
 
 public void showHelp() {
   println(" * Press ' ' to turn animation on or off.");
+  println(" * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.");
   println(" * Press 'o' to open a JSON file that defines a WaveSynth .");
   println(" * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.");
   println(" * Press 'j' or 'J' to save WaveSynth data to a JSON file.");
@@ -227,8 +274,7 @@ public void stepAnimation() {
       isRecordingVideo = false;
       videx.endMovie();
     }
-  }
-  else {
+  } else {
     step += 1;
     if (isRecordingVideo) {
       if (videx == null) {

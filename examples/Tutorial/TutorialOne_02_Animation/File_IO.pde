@@ -84,6 +84,7 @@ public void applyImageColor(File imgFile, PImage targetImage) {
 
 // -------- END FILE I/O FOR APPLYING COLOR --------- //
 
+
 /*
      * Here is a section of "regular" file i/o methods for audio and image files.
  */
@@ -163,18 +164,13 @@ public void loadAudioFile(File audFile) {
     println("---- file sample rate = "+ this.fileSampleRate
       +", buffer sample rate = "+ bufferSampleRate
       +", audio output sample rate = "+ audioOut.sampleRate());
-  } else {
+  } 
+  else {
     println("-- Unable to load file. File may be empty, wrong format, or damaged.");
     return;
   }
-  // adjust buffer size to mapper.getSize()
-  if (buff.getBufferSize() != mapper.getSize()) buff.setBufferSize(mapper.getSize());
-  playBuffer = buff;
-  // read channel 0 the buffer into audioSignal, truncated or padded to fit mapSize
-  audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-  audioLength = audioSignal.length;
-  // load the buffer of our PASamplerInstrument at the sample rate of the buffer
-  synth.setBuffer(playBuffer, bufferSampleRate);
+  // update dependent audio sources
+  updateAudioChain(buff.getChannel(0), fileSampleRate);
   // automatically write the signal to mapImage -- this will change in later tutorials
   renderAudioToMapImage(chan, 0);
   commitMapImageToBaseImage();
@@ -227,8 +223,7 @@ public void loadImageFile(File imgFile) {
   if (chan == PixelAudioMapper.ChannelNames.ALL) {
     // copy the image directly using Processing copy command
     mapImage.copy(img, 0, 0, w, h, 0, 0, w, h);
-  } 
-  else {
+  } else {
     // copy only specified channels of the new image
     PImage mixImage = createImage(w, h, RGB);
     mixImage.copy(mapImage, 0, 0, w, h, 0, 0, w, h);
@@ -238,32 +233,45 @@ public void loadImageFile(File imgFile) {
     mixImage.updatePixels();
     mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
   }
-  // prepare to copy image data to audio variables
-  // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-  if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-  audioSignal = playBuffer.getChannel(0);
-  writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-  totalShift = 0;    // reset animation shift
-  // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-  playBuffer.setChannel(0, audioSignal);
-  audioLength = audioSignal.length;
-  synth.setBuffer(playBuffer);
+  // create a new array for the audio signal
+  float[] sig = new float[mapper.getSize()];
+  audioSignal = sig;
+  // write transcoded pixel data from HSB Brightness channel to audioSignal
+  renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+  // update all dependent audio data
+  updateAudioChain(sig);
+  // update baseImage from mapImage
   commitMapImageToBaseImage();
+  // uncomment next line to get automatic color overlay update on image file load
+  // applyColorMapToDisplay(true);
 }
 
+
 /**
- * This method writes a color channel from the an image to playBuffer, fulfilling a
+ * This method writes a color channel from an image to playBuffer, fulfilling a
  * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
  * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
  * img.width * img.height != mapper.getWidth() * mapper.getHeight().
+ * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
  *
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
  * @param sig       an target array of float in audio format
  * @param chan      a color channel
+ * @param shift     number of indices to shift
  */
-public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
-  sig = mapper.mapImgToSig(img.pixels, sig, chan);
+public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan, int shift) {
+  // If img is the *display* (shifted) image, commit its phase into audio:
+  sig = mapper.mapImgToSigShifted(img.pixels, sig, chan, shift);
+}
+
+/**
+ * Writes a specified channel of mapImage to audioSignal.
+ *
+ * @param chan    the selected color channel
+ */
+public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
+  writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
 }
 
 public void commitMapImageToBaseImage() {
@@ -282,6 +290,9 @@ public void refreshMapImageFromBase() {
   mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
   mapImage.updatePixels();
 }
+
+
+// -------- AUDIO AND IMAGE FILE OUTPUT --------- //
 
 public void saveToAudio() {
   // File folderToStartFrom = new File(dataPath("") + "/");

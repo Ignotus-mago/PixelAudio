@@ -5,7 +5,7 @@
 
 // select a file of WaveData objects in JSON format to open
 public void loadWaveData() {
-  File folderToStartFrom = new File(jsonFolder + "*.json");
+  File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }
 
@@ -51,7 +51,6 @@ public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
     float f = waveElement.getFloat("freq");
     float a = waveElement.getFloat("amp");
     float p = waveElement.getFloat("phase");
-    // phase increment is calculated by WaveSynth, we don't need to set it
     // float pInc = waveElement.getFloat("phaseInc");
     float dc = 0.0f;
     if (!waveElement.isNull("dc")) {
@@ -72,7 +71,7 @@ public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
 }
 
 /**
- * Prints fields from a WaveSynth and its waveDataList
+ * Outputs current wavesynth settings and WaveData list.
  */
 public void printWaveData(WaveSynth synth) {
   java.nio.file.Path path = java.nio.file.Paths.get(currentFileName);
@@ -130,6 +129,7 @@ public void fileSelectedWrite(File selection) {
     waveElement.setFloat("phaseInc", wd.phaseInc);
     waveElement.setFloat("cycles", wd.phaseCycles);
     waveElement.setFloat("dc", wd.dc);
+    // BADSR settings
     int[] rgb = PixelAudioMapper.rgbComponents(wd.waveColor);
     JSONObject rgbColor = new JSONObject();
     rgbColor.setInt("r", rgb[0]);
@@ -149,7 +149,7 @@ public void fileSelectedWrite(File selection) {
     stateData.setString("comments", "---");
   else
     stateData.setString("comments", synth.comments);
-  // String videoName = selection.getName(); 
+  // String videoName = selection.getName();
   String videoName = synth.videoFilename;
   if (videoName == null || videoName.equals("")) {
     videoName = selection.getName();

@@ -13,7 +13,6 @@ public void initAudio() {
   streamCap = new StreamCapture();
   // path to the folder where PixelAudio examples keep their data files 
   // such as image, audio, .json, etc.
-  String daPath = sketchPath("") + "../examples_data/";
   if (isVerbose) println("daPath: ", daPath);
   anthem = minim.loadFile(daPath + "youthorchestra.wav");
 }  

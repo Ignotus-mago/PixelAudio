@@ -1,6 +1,6 @@
 /*----------------------------------------------------------------*/
 /*                                                                */
-/*                 TIME/LOCATION/ACTION METHODS                   */
+/*                 TIME/LOCATION EVENTS METHODS                   */
 /*                                                                */
 /*----------------------------------------------------------------*/
 
@@ -22,7 +22,6 @@ void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
 }
 
 public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
-  if (this.samplerTimeLocs == null) samplerTimeLocs = new ArrayList<>();
   int i = 0;
   startTime = millis() + 5;
   // we store the point and the current time + time offset, where timesMs[0] == 0
@@ -93,7 +92,6 @@ void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
 }
 
 public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
-  if (this.grainTimeLocs == null) grainTimeLocs = new ArrayList<>();
   int i = 0;
   //int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
   //int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
@@ -164,3 +162,7 @@ public void drawCircle(int x, int y) {
   noStroke();
   circle(x, y, 18);
 }
+
+
+
+// REMOVED OLD LISTENER-STYLE CODE, see Eclipse version of this sketch for details //

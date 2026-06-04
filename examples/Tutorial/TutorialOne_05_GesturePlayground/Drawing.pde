@@ -53,7 +53,6 @@ public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, i
 
 /**
  * Applies the Hue and Saturation of pixel values in the colors[] array to mapImage and baseImage.
- *
  */
 public void applyColorMap() {
   mapImage.loadPixels();
@@ -71,7 +70,7 @@ public void initAllPoints() {
   allPoints = new ArrayList<PVector>();
   allTimes = new ArrayList<Integer>();
   startTime = millis();
-  addPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+  addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
 }
 
 /**
@@ -115,7 +114,7 @@ boolean isOverAnyBrush(int x, int y) {
  * accumulates new points to allPoints and event times to allTimes. Coordinates should be
  * constrained to display window bounds.
  */
-public void addPoint(int x, int y) {
+public void addDrawingPoint(int x, int y) {
   // we do some very basic point thinning to eliminate successive duplicate points
   if (x != currentPoint.x || y != currentPoint.y) {
     currentPoint = new PVector(x, y);
@@ -233,8 +232,7 @@ void setActiveBrush(AudioBrush brush, int idx) {
     activeGranularIndex = idx;
     activeSamplerBrush = null;
     activeSamplerIndex = -1;
-  } 
-  else if (brush instanceof SamplerBrush) {
+  } else if (brush instanceof SamplerBrush) {
     SamplerBrush sb = (SamplerBrush) brush;
     activeBrush = sb;
     activeSamplerBrush = sb;

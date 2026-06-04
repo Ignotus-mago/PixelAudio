@@ -13,38 +13,40 @@ public void initAllPoints() {
   startTime = millis();
   int x = clipToWidth(mouseX);
   int y = clipToHeight(mouseY);
-  addPoint(x, y);
-  // *****>>> NETWORKING <<<***** //
-  if (nd != null) nd.oscSendMousePressed(x, y, samplePos);
+  addDrawingPoint(x, y);
 }
 
 /**
  * While user is dragging the mouses and isDrawMode == true, accumulates new points
  * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
  * We constrain points outside the bounds of the display window. An alternative approach
- * is be to ignore them (isIgnoreOutsideBounds == true), which may give a more "natural"
- * appearance for fast drawing.
+ * is be to ignore them, which may give a more "natural" appearance for fast drawing.
+ *
+ * @param x    x-coordinate of point to add to allPoints
+ * @param y    y-coordinate of point to add to allPoints
  */
-public void addPoint(int x, int y) {
+public void addDrawingPoint(int x, int y) {
   if (x != currentPoint.x || y != currentPoint.y) {
     currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
     allPoints.add(currentPoint);
     allTimes.add(millis() - startTime);
+    // *****>>> NETWORKING <<<***** //
+    if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));
   }
 }
 
 /**
  * Clips parameter i to the interval (0..width-1)
- * @param i
- * @return
+ * @param i    integer to clip to width
+ * @return     value within the range 0..width-1
  */
 public int clipToWidth(int i) {
   return min(max(0, i), width - 1);
 }
 /**
  * Clips parameter i to the interval (0..width-1)
- * @param i
- * @return
+ * @param i    integer to clip to height
+ * @return     value within the range 0..height-1
  */
 public int clipToHeight(int i) {
   return min(max(0, i), height - 1);
@@ -70,7 +72,7 @@ public PVector jitterCoord(int x, int y, int deviationPx) {
  * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
  * @param length            length of the returned array
  * @param deviationPitch    expected average deviation of the pitch
- * @return                  and array of Gaussian values centered on 1.0
+ * @return                  an array of Gaussian values centered on 1.0
  */
 float[] generateJitterPitch(int length, float deviationPitch) {
   float[] pitch = new float[length];
@@ -82,11 +84,27 @@ float[] generateJitterPitch(int length, float deviationPitch) {
 }
 
 /**
+ * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
+ * @param length            length of the returned array
+ * @param deviationPitch    expected average deviation of the pitch around center pitch ratio
+ * @param centerPitch       ratio of center pitch, 1.0 => no change in source
+ * @return                  an array of Gaussian values centered on 1.0
+ */
+float[] generateJitterPitch(int length, float deviationPitch, float centerPitch) {
+  float[] pitch = new float[length];
+  double variance = deviationPitch * deviationPitch;
+  for (int i = 0; i < pitch.length; i++) {
+    pitch[i] = (float) PixelAudio.gauss(centerPitch, variance);
+  }
+  return pitch;
+}
+
+/**
  * Initializes a PACurveMaker instance with allPoints as an argument to the factory method
  * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables from
  * variables in the calling class (TutorialOneDrawing, here).
  */
-public void initCurveMakerAndAddBrush() {
+public AudioBrushLite initCurveMakerAndAddBrush() {
   curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
   // configure from globals
   curveMaker.setEpsilon(epsilon);
@@ -100,18 +118,29 @@ public void initCurveMakerAndAddBrush() {
   BrushConfig cfg = new BrushConfig();
   cfg.rdpEpsilon = epsilon;
   cfg.curveSteps = curveSteps;
-  cfg.pathMode = PathMode.ALL_POINTS; // tutorial default
+  cfg.pathMode = PathMode.REDUCED_POINTS; // tutorial default
   // Default output for newly drawn strokes: SAMPLER (tutorial-centric)
   AudioBrushLite b = new AudioBrushLite(curveMaker, cfg, BrushOutput.SAMPLER, HopMode.GESTURE);
   b.cfg.pathMode = defaultPathModeFor(b.output());
   brushes.add(b);
   // Optionally auto-select the new brush
   activeBrush = b;
-  if (nd != null) {
-    nd.oscSendMousePressed(clipToWidth(mouseX), clipToHeight(mouseY), samplePos);
+  if (this.doPlayOnNewBrush) {
+    if (b.output() == BrushOutput.GRANULAR) {
+      scheduleGranularBrushClick(b);
+    } else {
+      scheduleSamplerBrushClick(b);
+    }
+  }
+  // *****>>> NETWORKING <<<***** //
+  if (nd != null && isNetSendGestures) {
+    int x = clipToWidth(mouseX);
+    int y = clipToHeight(mouseY);
+    nd.oscSendMousePressed(x, y, getSamplePos(x, y));
     nd.oscSendDrawPoints(curveMaker.getRdpPoints());
     nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
   }
+  return b;
 }
 
 /**
@@ -124,25 +153,35 @@ PathMode defaultPathModeFor(BrushOutput out) {
 }
 
 /**
- * Enrty point for drawing brushstrokes on the screen.
+ * Entry point for drawing brushstrokes on the screen.
+ * TODO distinguish brush types by color.
  */
 public void drawBrushShapes() {
   if (brushes == null || brushes.isEmpty()) return;
-  drawBrushes(brushes, readyBrushColor1, hoverBrushColor1, selectedBrushColor1);
+  drawBrushes(brushes);
 }
 
 /**
  * Draw brushstrokes on the display image.
  *
- * @param list             a list of all the brushstrokes (AudioBrushLite)
- * @param readyColor       color for a selectable brush
- * @param hoverColor       color for a brush when the mouse hovers over it
- * @param selectedColor    color for a selected brush (click or spacebar selects)
+ * @param list    a list of all the brushstrokes (AudioBrushLite)
  */
-public void drawBrushes(List<AudioBrushLite> list, int readyColor, int hoverColor, int selectedColor) {
+public void drawBrushes(List<AudioBrushLite> list) {
   // step through the list of all brushes
+  int readyColor;
+  int hoverColor;
+  int selectedColor;
   for (int i = 0; i < list.size(); i++) {
     AudioBrushLite b = list.get(i);
+    if (b.output == BrushOutput.GRANULAR) {
+      readyColor = readyBrushColor1;
+      hoverColor = hoverBrushColor1;
+      selectedColor = selectedBrushColor1;
+    } else {
+      readyColor = readyBrushColor2;
+      hoverColor = hoverBrushColor2;
+      selectedColor = selectedBrushColor2;
+    }
     PACurveMaker cm = b.curve();
     boolean isHover = (b == hoverBrush);
     boolean isSelected = (b == activeBrush);
@@ -164,20 +203,26 @@ public void drawBrushes(List<AudioBrushLite> list, int readyColor, int hoverColo
     int cc = isSelected ? circleColor : dimCircleColor;
     // selected the appropriate point set for drawing
     switch (b.cfg().pathMode) {
-    case REDUCED_POINTS:
-      PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
-      PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
-      break;
-
-    case CURVE_POINTS:
-      PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
-      PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
-      break;
-
-    case ALL_POINTS:
-      PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
-      PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
-      break;
+      case REDUCED_POINTS: {
+        PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
+        PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
+        break;
+      }
+      case CURVE_POINTS: {
+        PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
+        PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
+        break;
+      }
+      case ALL_POINTS: {
+        PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
+        PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+        break;
+      }
+      default: {
+        PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
+        PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+        break;
+      }
     }
   }
 }
@@ -196,6 +241,21 @@ public void setBrushEpsilon(AudioBrushLite b, float e) {
   cm.calculateDerivedPoints();
 }
 
+
+/**
+ * Sets epsilon value for the PACurveMaker associated with an AudioBrushLite instance.
+ *
+ * @param b    an AudioBrushLite instance
+ * @param cs    desired epsilon value to control point reduction
+ */
+public void setBrushCurveSteps(AudioBrushLite b, int cs) {
+  PACurveMaker cm = b.curve();
+  BrushConfig cfg = b.cfg();
+  cfg.curveSteps = cs;
+  cm.setCurveSteps(cs);
+  cm.calculateDerivedPoints();
+}
+
 /**
  * Get the path points of a brushstroke, with the representation determined by the BrushConfig's path mode.
  *
@@ -205,10 +265,10 @@ public void setBrushEpsilon(AudioBrushLite b, float e) {
 ArrayList<PVector> getPathPoints(AudioBrushLite b) {
   PACurveMaker cm = b.curve();
   switch (b.cfg().pathMode) {
-    case ALL_POINTS:    return cm.getAllPoints();
-    case REDUCED_POINTS:return cm.getReducedPoints();
-    case CURVE_POINTS:  return cm.getCurvePoints();
-    default: throw new IllegalStateException();
+    case ALL_POINTS: return cm.getAllPoints();
+    case REDUCED_POINTS: return cm.getReducedPoints();
+    case CURVE_POINTS: return cm.getCurvePoints();
+    default:  return cm.getAllPoints();
   }
 }
 
@@ -220,33 +280,80 @@ ArrayList<PVector> getPathPoints(AudioBrushLite b) {
 public GestureSchedule getScheduleForBrush(AudioBrushLite b) {
   GestureSchedule sched;
   switch (b.cfg().pathMode) {
-    case REDUCED_POINTS:
-      sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
+    case REDUCED_POINTS: {
+      sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon); 
       break;
-    case CURVE_POINTS:
-      sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, curveSteps, isAnimating);
-      break; 
-    case ALL_POINTS:
-    default:
-      sched = b.curve.getAllPointsSchedule();
+    }
+    case CURVE_POINTS: {
+      sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating); 
       break;
+    }
+    case ALL_POINTS: {
+      sched = b.curve.getAllPointsSchedule(); 
+      break;
+    }
+    default: {
+      sched = b.curve.getAllPointsSchedule(); 
+      break;
+    }
   }
   return sched;
 }
 
 /**
+ * @param b    an AudioBrushLIte instance
+ * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
+ */
+GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
+  GestureSchedule sched = getScheduleForBrush(b);
+  if (b.output == BrushOutput.SAMPLER) {
+    // divide gesture duration by number of gesture intervals and multiply result a fixed value
+    envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
+    println("-- envelope duration = "+ envDuration);
+  }
+  return boundsPolicy.applySchedule(sched);
+}
+
+
+int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+  int n = sched.points.size();
+  if (n < 2) return fallbackMs;
+  float avgStepMs = sched.durationMs() / (float)(n - 1);
+  float factor;
+  switch (envName) {
+  case "Pluck":
+  case "Percussion":
+    factor = 4.0f;
+    break;
+  case "Soft":
+  case "Fade":
+    factor = 3.0f;
+    break;
+  case "Swell":
+  case "Pad":
+    factor = 2.0f;
+    break;
+  default:
+    factor = 3.0f;
+  }
+  int minEnvMs = envMinDurationMs;
+  int maxEnvMs = envMaxDurationMs;
+  return PApplet.constrain(Math.round(avgStepMs * factor), minEnvMs, maxEnvMs);
+}
+
+/**
  * Schedule a Sampler brush audio / animation event.
  *
- * @param b    an AudioBrushLite instance
+ * @param sb    an AudioBrushLite instance
  */
-void scheduleSamplerBrushClick(AudioBrushLite b) {
-  if (b == null) return;
-  ArrayList<PVector> pts = getPathPoints(b);
+void scheduleSamplerBrushClick(AudioBrushLite sb) {
+  if (sb == null) return;
+  ArrayList<PVector> pts = getPathPoints(sb);
   if (pts == null || pts.size() < 2) return;
-  GestureSchedule sched = getScheduleForBrush(b);
-  storeSamplerCurveTL(sched, millis() + 10);
+  GestureSchedule sched = getPlaybackScheduleForBrush(sb);
+  storeSamplerCurveTL(sb, sched, millis() + 10);
   // *****>>> NETWORKING <<<***** //
-  if (nd != null) nd.oscSendTrig(getBrushIndex(b));
+  if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(sb));
 }
 
 /**
@@ -254,7 +361,7 @@ void scheduleSamplerBrushClick(AudioBrushLite b) {
  * @param sched        a GestureSchedule (points + timing for a brush)
  * @param startTime    time to start a series of events
  */
-public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
+public synchronized void storeSamplerCurveTL(AudioBrushLite b, GestureSchedule sched, int startTime) {
   if (this.samplerTimeLocs == null) samplerTimeLocs = new ArrayList<>();
   int i = 0;
   startTime = millis() + 5;
@@ -263,8 +370,14 @@ public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTim
     int x = Math.round(loc.x);
     int y = Math.round(loc.y);
     int t = startTime + Math.round(sched.timesMs[i++]);
+    int pos = getSamplePos(x, y);
+    int len = calcSampleLen();
     int d = 200;
-    this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
+    float gain = samplerGain;
+    float pitch = b.pitchRatio;
+    ADSRParams env = defaultEnv.copy();
+    float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+    this.samplerTimeLocs.add(new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, env, pan));
   }
   Collections.sort(samplerTimeLocs);
 }
@@ -275,39 +388,42 @@ public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTim
 public synchronized void runSamplerBrushEvents() {
   if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
   int currentTime = millis();
-  samplerTimeLocs.forEach(tl -> {
-    if (tl.eventTime() < currentTime) {
-      int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-      int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
-      float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-      int pos = getSamplePos(sampleX, sampleY);
-      playSample(pos, calcSampleLen(), synthGain, panning);
-      pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
-      tl.setStale(true);
+  int durationMs = 200;
+  samplerTimeLocs.forEach(stl -> {
+    if (stl.eventTimeMs() < currentTime) {
+      // sched points from storeSamplerCurveTL are already in bounds
+      int sampleX = Math.round(stl.getX());
+      int sampleY = Math.round(stl.getY());
+      // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
+      playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
+      pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
+      stl.setStale(true);
     } else {
       return;
     }
   }
   );
-  samplerTimeLocs.removeIf(TimedLocation::isStale);
+  samplerTimeLocs.removeIf(SamplerBrushEvent::isStale);
 }
 
 /**
  * Schedule a Granular brush audio / animation event.
  *
- * @param b    an AudioBrushLite instance
+ * @param gb    an AudioBrushLite instance
  */
-void scheduleGranularBrushClick(AudioBrushLite b) {
-  if (b == null) return;
-  ArrayList<PVector> pts = getPathPoints(b);
+void scheduleGranularBrushClick(AudioBrushLite gb) {
+  if (gb == null) return;
+  ArrayList<PVector> pts = getPathPoints(gb);
   if (pts == null || pts.size() < 2) return;
   ensureGranularReady();
   float[] buf = (granSignal != null) ? granSignal : audioSignal;
-  boolean isGesture = (b.hopMode() == HopMode.GESTURE);
+  boolean isGesture = (gb.hopMode() == HopMode.GESTURE);
   GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
-  GestureSchedule sched = getScheduleForBrush(b);
-  playGranularGesture(buf, sched, gParams);
+  GestureSchedule sched = getPlaybackScheduleForBrush(gb);
+  playGranularGesture(buf, sched, gParams, gb.pitchRatio);
   storeGranularCurveTL(sched, millis() + 10, isGesture);
+  // *****>>> NETWORKING <<<***** //
+  if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(gb));
 }
 
 /**
@@ -325,9 +441,6 @@ public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTi
   for (PVector loc : sched.points) {
     int x = Math.round(loc.x);
     int y = Math.round(loc.y);
-    // we can rely on sched for accurate times -- TODO drop in next iteration
-    // int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
-    // int d = (isGesture) ? 200 : durMsFixed;
     int t = startTime + Math.round(sched.timesMs[i++]);
     int d = 200;
     this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
@@ -385,26 +498,6 @@ public synchronized void runPointEvents() {
 public boolean mouseInPoly(ArrayList<PVector> poly) {
   return PABezShape.pointInPoly(poly, mouseX, mouseY);
 }
-
-int getBrushIndex(AudioBrushLite brush) {
-    if (brush == null) return -1;
-    return brushes.indexOf(brush);
-}  
-
-/**
- * Reinitializes audio and clears event lists.
- * -- TODO drop, this used to be the "emergency off" switch for runaway audio processing
- */
-@Deprecated
-public void reset() {
-  // if rescued from the deprecated:
-  if (nd != null) {
-    nd.oscSendMousePressed(clipToWidth(mouseX), clipToHeight(mouseY), samplePos);
-    nd.oscSendDrawPoints(curveMaker.getRdpPoints());
-    nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
-  }
-}
-
 
 /**
  * Removes the current active AudioBrushLite instance.

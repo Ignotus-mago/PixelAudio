@@ -11,13 +11,12 @@
 public void initAudio() {
   minim = new Minim(this);
   // Use the getLineOut method of the Minim object to get an AudioOutput object.
-  // PixelAudio instruments require a STEREO output. 1024 is a standard number
-  // of samples for the output buffer to process at one time. You should usually
-  // set the output sampleRate to either 41500 or 48000, standards for digital
-  // audio recordings.
+  // PixelAudio instruments require a STEREO output. 1024 is a standard number of
+  // samples for the output buffer to process at one time. You should usually set
+  // the output sampleRate to either 41500 or 48000, standards for digital audio.
   this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
   // reduce the output level by 6.0 dB.
-  audioOut.setGain(-6.0f);
+  audioOut.setGain(audioGain);
   // create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
   // playBuffer will not contain audio data until we load a file
   this.playBuffer = new MultiChannelBuffer(mapSize, 1);
@@ -27,9 +26,21 @@ public void initAudio() {
   defaultEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
   initADSRList();
   // create a PASamplerInstrument with 8 voices, adsrParams will be its default envelope
-  synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv);
+  ensureSamplerReady();
   // initialize mouse event tracking array
   timeLocsArray = new ArrayList<TimedLocation>();
+}
+
+/**
+ * Prepares Sampler instruments and assets
+ */
+void ensureSamplerReady() {
+  if (synth == null) {
+    synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv);
+    println("-- initilialized audio sampler synth");
+    // set the synth gain with a linear value derived from a dB value
+    synth.setGain(AudioUtility.dbToLinear(samplerGain));
+  }
 }
 
 public void initADSRList() {
@@ -61,36 +72,26 @@ public void initADSRList() {
 }
 
 /**
- * Prepares audioSignal before it is used as an instrument source.
- * Modify as needed to prepare your audio signal data.
- */
-public void renderSignals() {
-  writeImageToAudio(mapImage, mapper, audioSignal, PixelAudioMapper.ChannelNames.L);
-  playBuffer.setChannel(0, audioSignal);
-  audioLength = audioSignal.length;
-}
-
-/**
  * Typically called from mousePressed with mouseX and mouseY, generates audio events.
  *
  * @param x    x-coordinate within a PixelAudioMapper's width
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
-public void audioMousePressed(int x, int y) {
-  samplePos = getSamplePos(x, y);
-  float panning = map(x, 0, width, -0.8f, 0.8f);
-  // update audioSignal and playBuffer if audioSignal hasn't been initialized or if
-  // playBuffer needs to be refreshed after changes to its data source (isBufferStale == true).
-  if (audioSignal == null || isBufferStale) {
-    renderSignals();
-    isBufferStale = false;
-  }
+public void audioMouseClick(int x, int y) {
+  ensureSamplerReady();
+  int samplePos = getSamplePos(x, y);
+  float panning = map(x, 0, width, -0.875f, 0.875f);
   if (isRandomADSR) {
     ADSRParams env = adsrList.get((int)random(adsrList.size()));
-    println("-- "+ env.toString());
-    playSample(samplePos, calcSampleLen(), 0.6f, env, panning);
+    int len = calcSampleLen();
+    // don't output envelope information for automated events
+    if (!isPlayMusicBox || isRaining) {
+      print("-- envelope: "+ env.toString());
+      println("; pos = "+ samplePos +", length = "+ len);
+    }
+    playSample(samplePos, len, 0.8f, env, panning);
   } else {
-    playSample(samplePos, calcSampleLen(), 0.6f, panning);
+    playSample(samplePos, calcSampleLen(), 0.8f, panning);
   }
 }
 
@@ -129,7 +130,7 @@ public int getSamplePos(int x, int y) {
  * @param samplePos    position of the sample in the audio buffer
  * @param samplelen    length of the sample (will be adjusted)
  * @param amplitude    amplitude of the sample on playback
- * @param adsr         an ADSR envelope for the sample
+ * @param env          an ADSRParams envelope for the sample
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
@@ -164,36 +165,54 @@ public int calcSampleLen() {
   while (vary <= 0) {
     vary = (float) PixelAudio.gauss(1.0, 0.0625);
   }
-  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
+  int samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
   // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 
 /**
- * Run the animation for audio events.
+ * Bottleneck "commit" method for audio state.
+ *
+ * Takes an arbitrary input signal and installs it as the canonical audio signal
+ * used by the application. This method:
+ *
+ *  - Resizes/pads/truncates the input to mapper.getSize()
+ *  - Copies the data to ensure no external aliasing
+ *  - Updates audioSignal (canonical signal handled by application code)
+ *  - Updates playBuffer (audio buffer used by Minim audio library methods)
+ *  - Propagates the buffer to active instruments: edit for your own instruments
+ *
+ * This is the ONLY method that should mutate the global audio signal state.
+ *
+ * In PixelAudio examples, the signal is typically loaded from a file, but
+ * it could also be signal cached in memory, a signal generated by code, audio
+ * captured live, etc.
+ *
+ * @param sig                 an audio signal
+ * @param bufferSampleRate    audio sample rate for sig,
+ *                            usually obtained when reading an audio file
  */
-public void runTimeArray() {
-  int currentTime = millis();
-  timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
-    }
+void updateAudioChain(float[] sig, float bufferSampleRate) {
+  // 0) Decide target length (make this a single source of truth)
+  int targetSize = mapper.getSize();
+  if (targetSize <= 0) return;
+  // 1) Ensure playBuffer matches target
+  float[] canonical = new float[targetSize];
+  if (sig != null) {
+    System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
   }
-  );
-  timeLocsArray.removeIf(TimedLocation::isStale);
+  // 3) Set audioSignal and other audio arrays
+  audioSignal = canonical;
+  audioLength = targetSize;
+  if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+    playBuffer = new MultiChannelBuffer(targetSize, 1);
+  }
+  // 4) Set playBuffer
+  playBuffer.setChannel(0, canonical);
+  // 5) Propagate into synths (adjust to your actual API)
+  if (synth != null) synth.setBuffer(playBuffer, bufferSampleRate);
 }
 
-/**
- * Draws a circle at the location of an audio trigger (mouseDown event).
- * @param x    x coordinate of circle
- * @param y    y coordinate of circle
- */
-public void drawCircle(int x, int y) {
-  //float size = isRaining? random(10, 30) : 60;
-  fill(color(233, 220, 199));
-  noStroke();
-  circle(x, y, 60);
+void updateAudioChain(float[] sig) {
+  updateAudioChain(sig, audioOut.sampleRate());
 }
-
-/*        END AUDIO METHODS                        */

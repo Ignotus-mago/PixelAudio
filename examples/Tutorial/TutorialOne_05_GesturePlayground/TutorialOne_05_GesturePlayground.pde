@@ -1,0 +1,1058 @@
+/**
+ * GesturePlayground uses a GUI to provide a tour of curve drawing with an interface to the
+ * two audio synthesis engines available in PixelAudio: the Sampler synth and the Granular synth.
+ *
+ * QUICK START
+ *
+ * 1. Launch the sketch. A display window and a palette of Graphical User Interface (GUI) controls appears.
+ * The display window has an audio file preloaded. The grayscale values in the image are transcoded audio
+ * samples. An overlaid rainbow spectrum traces the Signal Path, which maps an audio signal to the image
+ * pixels. The Signal Path is created by the PixelMapGen multigen and managed by the
+ * PixelAudioMapper mapper. The Signal Path starts in the upper left corner and ends
+ * in the lower right corner.
+ *
+ * 2. Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing,
+ * a brushstroke appears when you release the mouse. TutorialOne_03_Drawing gave you limited control over
+ * the attributes of the brushstroke and its associated audio parameters. In GesturePlayground, you can
+ * control nearly all the available parameters with the control palette.
+ *
+ * 3. At the top of the control palette, you'll find Path Source radio buttons and sliders for setting
+ * the geometry of the brush curve. When the curve is set to Reduced Points or Curve Points, the epsilon
+ * slider will allow you to visualize changes in the curve. For the curve points representation of the
+ * curve, the Curve Points slider will add or subtract subdivision points.
+ *
+ * 4. The GUI palette displays controls for the current audio synthesis instrument.
+ * Press the 't' key to change the instrument. The control palette will reflect the changes. The
+ * control palette provides three play modes: one for editing granular synthesis parameters, another
+ * for the sampler synthesizer, and a "play only" mode where you can play both instruments but
+ * don't have editing enabled.
+ *
+ * 5. The controls for the Sampler are fairly simple. You can change the number of points in the curve
+ * with the geometry controls. You can also change the duration of the gesture and the number of
+ * points in it with the Resample and Duration sliders. Finally, there's a Sampler Envelope menu
+ * that will change the ADSR envelope of each sampler event point.
+ *
+ * 6. The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus
+ * many controls for granular synthesis:
+ *
+ *   1. The Hop Mode radio buttons determine if the duration of the granular event is determined
+ *   by the gesture timing data in the brushstroke's PACurveMaker instance, or by the Grain
+ *   Length and Hop Length sliders.
+ *   2. Burst Count sets the number of linear grains at each event point. Its effect is to expand
+ *   the sound of each grain.
+ *   3. Grain Length and Hop Length sliders control the spacing of the grains. Hop Length is only
+ *   used for Fixed Hop Mode. Grain and Hop durations are in milliseconds.
+ *   4. The Warp radio buttons and slider control non-linear timing changes to the gesture.
+ *   Experiment to find out how they work.
+ *
+ * 7. There are many key commands too, including the 'o' command to load a new audio files. Some
+ * commands are particularly useful with granular synthesis:
+ *
+ *   1. The 'q' command key will calculate the optimal number of grains in a gesture (usually in
+ *   GESTURE Path Mode) and update the control palette. This can provide smooth granular synthesis
+ *   even as it preserves the timing characteristic of the gesture.
+ *   2. The 'c' command key will print configuration data to the console.
+ *   3. The 'x' command key deletes the brush you are hovering over, if it is editable.
+ *   4. The 'w' command key swaps the instrument type of the brush you are hovering over and changes
+ *   edit mode to match.
+ *
+ * About GesturePlayground
+ *
+ * GesturePlayground uses a GUI to provide a tour of the usage and properties of the
+ * AudioBrush subclasses GranularBrush and SamplerBrush, the GestureSchedule class, and
+ * the Sampler and Granular audio synthesis instruments PASamplerInstrumentPool and
+ * PAGranularInstrumentDirector. An AudioBrush combines a PACurveMaker and a
+ * GestureGranularConfig.Builder. PACurveMaker models gestures, one of the core concepts
+ * of PixelAudio. In its simplest encoded form, the PAGesture interface, a gesture
+ * consists of an array of points and an array of times. The times array records the
+ * times when something as-yet-unspecified will happen at the corresponding point in the
+ * points array. The times array and the points array must be the same size.
+ *
+ * In my demos for PixelAudio, what happens at a point is typically an audio event and
+ * an animation event. A very specific sound happens at every point in the bitmap image
+ * because bitmap locations map onto audio buffer indices with a one-to-one
+ * correspondence. The mapping is generated by a PixelMapGen instance and managed by a
+ * PixelMapper instance. Gestures over the 2D space of an image become paths through
+ * audio buffers. The audio buffer is accessed either by a granular synthesis engine or
+ * by a sampling synthesizer. For the granular synth, a gesture corresponds to a
+ * non-linear traversal of an audio buffer, potentially as a continuous sequence of
+ * overlapping grains with a single envelope. The sampling synthesizer treats each point
+ * as a discrete event with its own envelope. Depending on how gestures and schedules
+ * are structured, the two synthesizers can sound very similar, but there are
+ * possibilities in each that the other cannot realize. As you might expect,
+ * GranularBrush implements granular synth events and SamplerBrush implements sampler
+ * synth events. Both rely on PACUrveMaker which, in addition to capturing the raw
+ * gesture of drawing a line, provides methods to reduce points and times, create Bezier
+ * paths, and generate event schedules. PACurveMaker scheduling data can be modified by
+ * changing duration, interpolating samples, or by non-linear time warping.
+ * GesturePlayground uses GestureScheduleBuilder to interpolate and warp time and point
+ * lists.
+ *
+ * The parameters for gesture modeling, granular and sampling synthesis, time and sample
+ * interpolation, and audio events are modeled in the GUI, which uses
+ * GestureGranularConfig.Builder gConfig to track its current state. A
+ * GestureGranularConfig instance is associated with each AudioBrush. When you click on
+ * an AudioBrush and activate it, its configuration data is loaded to the GUI and you
+ * can edit it. It will be saved to the brush when you select another brush or change
+ * the edit mode. When a brush is activated with a click, the schedule is built from its
+ * PACurveMaker and GestureGranularConfig.Builder instance variables:
+ *     GestureSchedule schedule = scheduleBuilder.build(gb.curve(), cfg.build(), audioOut.sampleRate());
+ *
+ * Code Details
+ *
+ * The calling chain for a GranularBrush:
+ * mouseClicked() calls scheduleGranularBrushClick(gb, x, y);.
+ *
+ * In scheduleGranularBrushClick(...) we get a reference to the audio buffer buf
+ * and then use the PACurveMaker object gb.curve() and gb.snapshot() to build
+ * a GestureSchedule, sched. sched gets timing and location information for the
+ * gesture from gb.curve() and modifies it with the settings from the control
+ * palette which are stored gb.snapshot().
+ *
+ * We port the granular synthesis parameters from the brush to a
+ * GestureGranularParams object, and then call playGranularGesture(buf, sched,
+ * gParams) to play the granular synth. We also call storeGranularCurveTL(...),
+ * which sets up UI animation events to track the grains.
+ *
+ * Parameter buf is the audio signal that is the source of our grains, parameter
+ * sched provides the points and times for grains and parameter params
+ * provides the core parameters for granular synthesis.
+ *
+ * playGranularGesture() builds arrays for buffer position and pan for each
+ * individual grain and then calls gDir.playGestureNow(buf, sched, params, startIndices,
+ * panPerGrain) to play the PAGranularInstrumentDirector granular synth. The 'p' command
+ * key can toggle per-grain pitch jitter, which calls playGestureNow()in a slightly
+ * different way. See playGranularGesture() for details.
+ *
+ * PAGranularInstrumentDirector its own calling chain that goes all the way down to
+ * the individual sample level using the Minim library's UGen interface. If you just want to
+ * play music, you'll probably never have to deal with the hierarchy of classes directly, but
+ * comments PAGranularInstrumentDirector may be useful.
+ *
+ *
+ * Part of the calling chain for a SamplerBrush:
+ * mouseClicked() calls scheduleSamplerBrushClick(sb, x, y).
+ *
+ * In scheduleSamplerBrushClick() we get array of points on the curve with
+ * getPathPoints(sb) and then use sb.snapshot() and scheduleBuilder.build() to
+ * build a GestureSchedule
+ *
+ * Finally, we pass the schedule and a small time offset to storeSamplerCurveTL(),
+ * an array of TimedLocation objects that is checked at every pass through the
+ * draw() loop and posts both Sampler instrument triggers and animation events.
+ * Unlike the Granular instrument, which requires very accurate timing, the
+ * Sampler synth requires less precision, so we can handle it through the UI
+ * frames. Sample-accurate timing is a topic for another as-yet-unreleased
+ * example sketch.
+ *
+ * The runSamplerBrushEvents() method executes the UI brushstroke animation and the
+ * Sampler audio events. Sampler events all pass through pool.playSample(samplePos,
+ * samplelen, amplitude, env, pitch, pan).
+ *
+ * KEY COMMANDS
+ *
+ * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
+ * Press 'c' or 'C' to print the current configuration status to the console.
+ * Press 't' to switch between Granular and Sampler editing and playing.
+ * Press 'z' to change the drawing mode of the hover brush.
+ * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.
+ * Press 'p' to jitter the pitch of granular gestures.
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
+ * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
+ * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
+ * Press 'f' or 'F' to toggle verbose output to the console.
+ * Press 'o' to open an audio file.
+ * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.
+ * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
+ * Press 'x' to delete the current active brush shape or the oldest brush shape.
+ * Press 'X' to delete the most recent brush shape.
+ * Press 'h' or 'H' to print help.
+ *
+ *
+ * See also: Bagatelle.java for a performance-oriented application with a GUI, presets, and networking.
+ *
+ */
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
+
+// video export
+import com.hamoid.VideoExport;
+
+// Minim audio library
+import ddf.minim.AudioOutput;
+import ddf.minim.Minim;
+import ddf.minim.MultiChannelBuffer;
+import ddf.minim.AudioListener;
+
+//GUI library for Processing
+import g4p_controls.*;
+
+// our red leaf lettuce of a library, so crisp and delicious
+import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
+import net.paulhertz.pixelaudio.curves.*;
+import net.paulhertz.pixelaudio.schedule.*;
+import net.paulhertz.pixelaudio.granular.*;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.HopMode;
+import net.paulhertz.pixelaudio.sampler.*;
+
+
+/* ------------------------------------------------------------------ */
+/*                       PIXELAUDIO VARIABLES                         */
+/* ------------------------------------------------------------------ */
+
+PixelAudio pixelaudio;     // our shiny new library
+MultiGen multigen;         // a PixelMapGen that links together multiple PixelMapGens
+int genWidth = 512;        // width of multigen PixelMapGens
+int genHeight = 512;       // height of  multigen PixelMapGens
+PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
+int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
+// baseImage is a reference image that generally should not be changed except when you load a new file
+PImage baseImage;          // unchanging source image
+// mapImage can change, and often does so with reference to the stable baseImage, for example when animating
+PImage mapImage;           // image for display, may be animated
+PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // also try ChannelNames.L (HSB brightness channel)
+int[] colors;              // array of spectral colors
+
+/* ------------------------------------------------------------------ */
+/*                        FILE I/O VARIABLES                          */
+/* ------------------------------------------------------------------ */
+
+// audio file
+File audioFile;
+String audioFilePath;
+String audioFileName;
+String audioFileTag;
+int audioFileLength;
+
+// image file
+File imageFile;
+String imageFilePath;
+String imageFileName;
+String imageFileTag;
+int imageFileWidth;
+int imageFileHeight;
+
+boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video
+boolean isBlending = false;
+
+
+/* ------------------------------------------------------------------ */
+/*                          AUDIO VARIABLES                           */
+/* ------------------------------------------------------------------ */
+
+/** Minim audio library */
+Minim minim;                    // library that handles audio
+AudioOutput audioOut;           // line out to sound hardware
+boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
+float sampleRate = 44100;       // target audio engine rate used to configure audioOut
+float fileSampleRate;           // sample rate of most recently opened file (before resampling)
+float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
+float[] audioSignal;            // the audio signal as an array of floats
+MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
+int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
+int audioLength;        // length of the audioSignal, same as the number of pixels in the display image
+
+// ADSR and its parameters
+ADSRParams samplerEnv;          // good old attack, decay, sustain, release for Sampler instrument
+ADSRParams granularEnv;         // envelope for a granular-style series of samples
+float maxAmplitude = 0.75f;     // 0..1
+float attackTime = 0.4f;        // seconds
+float decayTime = 0.0f;         // seconds, no decay
+float sustainLevel = 0.75f;     // 0..1, same as maxAmplitude
+float releaseTime = 0.5f;       // seconds, same as attack
+float pitchScaling = 1.0f;      // factor for changing pitch
+float defaultPitchScaling = 1.0f;
+float lowPitchScaling = 0.5f;
+float highPitchScaling = 2.0f;
+
+boolean envIsGranular = false;  // if true, sets all envelopes to the same size, with 50% overlap when playing
+int grainDuration = 120;        // granular envelope duration in milliseconds
+
+// ====== Sampler Synth ====== //
+
+// SampleInstrument setup
+int noteDuration = 1000;        // average sample synth note duration, milliseconds
+int samplelen;                  // calculated sample synth note length, samples
+float samplerGain = 0.95f;      // linear gain setting for Sampler instrument
+float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
+float outputGain = -6.0f;       // gain setting for audio output, decibels
+boolean isMuted = false;
+PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
+int poolSize = 8;               // number of instruments in the pool
+int sMaxVoices = 64;            // number of voices to allocate to pool or synth
+
+// ====== Granular Synth ====== //
+
+public float[] granSignal;
+public PAGranularInstrument gSynth;
+public int curveSteps = 16;
+public int granLength = 4096;
+public int granHop = 1024;
+public int gMaxVoices = 256;
+public ADSRParams granEnvelope = new ADSRParams(1.0f, 0.02f, 0.06f, 0.9f, 0.10f);
+
+String currentGranStatus = "";
+
+// TODO -- ADD FOR REFACTOR
+public PAGranularInstrumentDirector gDir;   // director of granular events
+public float granularGain = 1.0f;           // gain for a granular gesture event
+public float granularPointGain = 0.9f;      // gain for a granular point event ("granular burst")
+// parameters for granular synthesis
+boolean useShortGrain = true;               // default to short grains, if true
+int longSample = 4096;                      // number of samples for a moderately long grain
+int shortSample = 512;                      // number of samples for a relatively short grain
+int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
+int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
+GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED, for granular point event
+boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
+int maxBurstGrains = 4;
+int burstGrains = 1;
+boolean usePitchedGrains = false;
+
+
+/* ------------------------------------------------------------------ */
+/*                   ANIMATION AND VIDEO VARIABLES                    */
+/* ------------------------------------------------------------------ */
+
+// This example concentrates on audio synthesis, we don't do pixel-shift
+// animation, but the hooks for handling it are all here
+
+int shift = 1024;                    // number of pixels to shift the animation
+int totalShift = 0;                  // cumulative shift
+boolean isAnimating = false;         // do we run animation or not?
+boolean oldIsAnimating;              // keep track of animation state when opening a file
+boolean isTrackMouse = false;        // if true, drag the mouse to change shift value
+// animation variables
+int animSteps = 720;                 // how many steps in an animation loop
+boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
+int videoFrameRate = 24;             // fps, frames per second
+int step;                            // number of current step in animation loop
+VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
+
+
+/* ------------------------------------------------------------------ */
+/*                         DRAWING VARIABLES                          */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Drawing uses classes in the package net.paulhertz.pixelaudio.curves to store drawing data
+ * and draw Bezier curves and lines. It also provides very basic brushstroke modeling code.
+ * Unlike most of the code in PixelAudio, which avoids dependencies on Processing, the
+ * curves.* classes interface with Processing to draw to PApplets and PGraphics instances.
+ * See the PACurveMaker class for details of how drawing works.
+ *
+ */
+
+// curve drawing and interaction
+public PACurveMaker curveMaker;                     // class for tracking and storing drawing data
+public boolean isDrawMode = false;                  // is drawing on or not?
+public float epsilon = 4.0f;            // controls how much reduction is applied to points
+
+public PVector currentPoint = new PVector(-1, -1);  // point to add to brushstroke points
+public ArrayList<PVector> allPoints;                // in-progress brushstroke points
+public ArrayList<Integer> allTimes;                 // in-progress brushstroke times
+public int startTime;                               // in-progress brushstroke start time
+
+public int dragColor = color(233, 199, 89, 128);  // color for initial drawing
+public float dragWeight = 8.0f;            // weight (brush diameter) of initial line drawing
+
+public int polySteps = 5;              // number of steps in polygon representation of a Bezier curve
+
+// ====== Visual styling for brushstrokes ======
+
+// the next series of colors seems to be all we need
+int readyBrushColor1 = color(34, 55, 89, 178);    // color for a brushstroke when available to be clicked
+int hoverBrushColor1 = color(55, 89, 144, 178);     // color for brushstroke under the cursor
+int selectedBrushColor1 = color(199, 123, 55, 233);  // color for the selected (clicked or currently active for editing) brushstroke
+int readyBrushColor2 = color(55, 34, 89, 178);    // color for a brushstroke when available to be clicked
+int hoverBrushColor2 = color(89, 55, 144, 178);     // color for brushstroke under the cursor
+int selectedBrushColor2 = color(123, 199, 55, 233);  // color for the selected (clicked or currently active for editing) brushstroke
+
+int dimmedBrushColor = color(55, 55, 55, 178);      // color for a brush that cannot be selected
+
+int circleColor = color(233, 178, 144);             // interior circles in brushstrokes
+int dimCircleColor = color(178, 168, 136);
+int lineColor = color(233, 220, 178);               // interior lines in brushStrokes
+int dimLineColor = color(178, 168, 136);
+int animatedCircleColor = color(233, 220, 199);     // color for animated circles when playing audio
+
+boolean isIgnoreOutsideBounds = true;               // when drawing, clip or ignore points outside display bounds
+
+
+/* ------------------------------------------------------------------ */
+/*                        INTERACTION VARIABLES                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Simple container for a brush hit-test result.
+ * Holds the brush that was hit and its index in the corresponding list.
+ */
+static class BrushHit {
+  final AudioBrush brush;
+  final int index;
+
+  BrushHit(AudioBrush brush, int index) {
+    this.brush = brush;
+    this.index = index;
+  }
+}
+
+/** AudioBrush wraps a PACurveMaker (gesture) and a GestureGranularConfig.Builder (granular synthesis parameters) */
+private AudioBrush hoverBrush;         // the brush the mouse is over, if there is one
+private int hoverIndex;                // index of hoverBrush in a brush list
+private AudioBrush activeBrush;        // brush slotted for selection/highlight/editing in GUI
+
+// AudioBrushes for use with PAGranularInstrument
+ArrayList<GranularBrush> granularBrushes;
+GranularBrush activeGranularBrush = null;
+int activeGranularIndex = -1; // index of activeStroke in strokes, optional convenience
+
+// AudioBrushes for use with PASamplerInstrument
+ArrayList<SamplerBrush> samplerBrushes;
+SamplerBrush activeSamplerBrush;             // the currently active PACurveMaker, collecting points as user drags the mouse
+int activeSamplerIndex = 0;                  // index of current brush in brushShapesList, useful for UDP/OSC messages, replaced
+
+// TimedLocation events
+ArrayList<TimedLocation> pointTimeLocs;      // a list of timed events for mouse clicks
+ArrayList<TimedLocation> samplerTimeLocs;    // a list of timed events for Sampler brushes
+ArrayList<TimedLocation> grainTimeLocs;      // a list of timed events for Granular brushes
+
+boolean pointEventUseSampler = true;
+
+/* ------------------------------------------------------------------ */
+/*                  GRAPHIC USER INTERFACE VARIABLES                  */
+/* ------------------------------------------------------------------ */
+
+// configuration for the GUI to control, also part of the audio synthesis chain
+GestureGranularConfig.Builder gConfig = new GestureGranularConfig.Builder();
+// for reset to default configuration, optionally set to non-default values
+final GestureGranularConfig.Builder defaultGranConfig = new GestureGranularConfig.Builder().gainDb(0.0f);
+final GestureGranularConfig.Builder defaultSampConfig  = new GestureGranularConfig.Builder().gainDb(-6.0f);
+
+boolean guiSyncing = false;   // prevents event feedback loops
+int baselineCount = 0;
+int baselineDurationMs = 0;
+GestureScheduleBuilder scheduleBuilder;
+
+enum DrawingMode {
+  DRAW_EDIT_SAMPLER, DRAW_EDIT_GRANULAR, PLAY_ONLY
+}
+DrawingMode drawingMode = DrawingMode.DRAW_EDIT_GRANULAR;
+
+static final int CURVE_STEPS_HARD_MAX = 128;   // Curve steps GUI slider max
+static final int CURVE_STEPS_SAFE_MAX = 32;    // Curve steps preferred max threshold
+static final int CURVE_STEPS_FLOOR = 4;        // don't go too low
+
+
+/* ------------------------------------------------------------------ */
+/*                    TIME/LOCATION/ACTION VARIABLES                  */
+/* ------------------------------------------------------------------ */
+
+
+// grain density mod
+float hopScale = 1.0f;
+// optimal number of grains for specified time
+int optGrainCount = 2;
+
+int eventStep = 90;    // milliseconds between events, formerly used by Sampler instrument
+
+/* ------------------------------------------------------------------ */
+/*                       DEBUGGING & LOCAL SETTINGS                   */
+/* ------------------------------------------------------------------ */
+
+boolean isVerbose = true;
+boolean isDebugging = false;
+
+boolean isRunWordGame = false;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
+boolean doPlayOnDraw = false;     // play audio when a curve is drawn
+
+// system-specific path to example files data
+// in Processing, for PixelAudio Tutorial examples, use this in setup(): 
+// daPath = sketchPath("") + "../../examples_data/";
+String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";
+String daFilename = "audioBlend.wav";
+
+
+//------------- APPLICATION CODE -------------//
+
+public void settings() {
+  size(3 * genWidth, 2 * genHeight);
+}
+
+public void setup() {
+  // set daPath relative to the sketchPath
+  daPath = sketchPath("") + "../../examples_data/";
+  // Set video framerate, window title, screen location
+  frameRate(24);
+  surface.setTitle("Granular Playground");
+  surface.setLocation(60, 20);
+  // 1) Initialize our library
+  pixelaudio = new PixelAudio(this);
+  // 2) Create a PixelMapGen instance with dimensions equal to the display window.
+  //    We supply two different gens which can be selected by setting isRunWordGame
+  if (isRunWordGame) {
+    sampleRate = 48000;
+    multigen = loadWordGen(genWidth/4, genHeight/4);
+    daFilename = "workflow_48Khz.wav";
+  } else {
+    multigen = HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
+  }
+  // 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
+  mapper = new PixelAudioMapper(multigen);
+  mapSize = mapper.getSize();
+  scheduleBuilder = new GestureScheduleBuilder();
+  colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
+  initImages();                   // load baseImage and mapImage
+  initAudio();                    // set up Minima and our granular and sampling synths
+  // initListener();              // PLACEHOLDER: sample-accurate audio timer -- TODO future implementation
+  initConfig();                   // set up configuration for granular and sampling instruments
+  initDrawing();                  // set up drawing variables
+  initGUI();                      // set up the G4P control window and widgets
+  resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
+  preloadFiles(daPath, daFilename);    // load files - BEWARE system dependent file references!
+  applyColorMap();                // apply spectrum to mapImage and baseImage
+  showHelp();                     // print key commands to console
+}
+
+/**
+ * turn off audio processing when we exit
+ */
+public void stop() {
+  if (pool != null) pool.close();
+  if (minim != null) minim.stop();
+  super.stop();
+}
+
+/**
+ * Adds PixelMapGen objects to the local variable genList. The genList
+ * initializes a MultiGen, which can be used to map audio and pixel data.
+ * This method follows the words in the workFlowPanel.png graphic.
+ */
+public MultiGen loadWordGen(int wordGenW, int wordGenH) {
+  // list of PixelMapGens that create an image using mapper
+  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
+  // list of x,y coordinates for placing gens from genList
+  ArrayList<int[]> offsetList = new ArrayList<int[]>();
+  // first column top
+  for (int y = 0; y < 4; y++) {
+    for (int x = 0; x < 4; x++) {
+      genList.add(new HilbertGen(wordGenW, wordGenH));
+      offsetList.add(new int[] {x * wordGenW, y * wordGenH});
+    }
+  }
+  // first column bottom
+  for (int y = 4; y < 8; y++) {
+    for (int x = 0; x < 4; x++) {
+      genList.add(new HilbertGen(wordGenW, wordGenH));
+      offsetList.add(new int[] {x * wordGenW, y * wordGenH});
+    }
+  }
+  // second column top
+  for (int y = 0; y < 4; y++) {
+    for (int x = 4; x < 8; x++) {
+      genList.add(new HilbertGen(wordGenW, wordGenH));
+      offsetList.add(new int[] {x * wordGenW, y * wordGenH});
+    }
+  }
+  // second column bottom
+  for (int y = 4; y < 8; y++) {
+    for (int x = 4; x < 8; x++) {
+      genList.add(new HilbertGen(wordGenW, wordGenH));
+      offsetList.add(new int[] {x * wordGenW, y * wordGenH});
+    }
+  }
+  // third column top
+  for (int y = 0; y < 4; y++) {
+    for (int x = 8; x < 12; x++) {
+      genList.add(new HilbertGen(wordGenW, wordGenH));
+      offsetList.add(new int[] {x * wordGenW, y * wordGenH});
+    }
+  }
+  // third column bottom
+  for (int y = 4; y < 8; y++) {
+    for (int x = 8; x < 12; x++) {
+      genList.add(new HilbertGen(wordGenW, wordGenH));
+      offsetList.add(new int[] {x * wordGenW, y * wordGenH});
+    }
+  }
+  return new MultiGen(width, height, offsetList, genList);
+}
+
+
+/**
+ * Generates an array of rainbow colors using the HSB color space.
+ * @param size    the number of entries in the colors array
+ * @return an array of RGB colors ordered by hue
+ */
+public int[] getColors(int size) {
+  int[] colorWheel = new int[size]; // an array for our colors
+  pushStyle(); // save styles
+  colorMode(HSB, colorWheel.length, 100, 100); // pop over to the HSB color space and give hue a very wide range
+  for (int i = 0; i < colorWheel.length; i++) {
+    colorWheel[i] = color(i, 30, 50); // fill our array with colors, gradually changing hue
+  }
+  popStyle(); // restore styles, including the default RGB color space
+  return colorWheel;
+}
+
+/**
+ * Initializes <code>mapImage</code> with the colors array, copies it to <code>baseImage</code>.
+ * MapImage handles the color data for mapper and also serves as our display image.
+ * BaseImage is a reference image that typically changes only when you load a new image.
+ */
+public void initImages() {
+  mapImage = createImage(width, height, ARGB);
+  mapImage.loadPixels();
+  mapper.plantPixels(colors, mapImage.pixels, 0, mapSize); // load colors to mapImage following signal path
+  mapImage.updatePixels();
+  baseImage = mapImage.copy();
+}
+
+/**
+ * Initializes drawing and drawing interaction variables.
+ */
+public void initDrawing() {
+  currentPoint = new PVector(-1, -1);    // used for drawing to the display
+  granularBrushes = new ArrayList<>();
+  samplerBrushes = new ArrayList<>();
+  hoverBrush = null;
+  hoverIndex = -1;
+  activeBrush = null;
+}
+
+/**
+ * Initializes default settings for granular synthesis, <code>defaultGranConfig</code>,
+ * and for sampler synthesis, <code>defaultSampConfig</code>.
+ */
+public void initConfig() {
+  defaultGranConfig.grainLengthSamples = granLength;
+  defaultGranConfig.hopLengthSamples = granHop;
+  defaultGranConfig.curveSteps = curveSteps;
+  defaultGranConfig.env = envPreset("Triangle");
+  defaultSampConfig.env = envPreset("Pluck");
+}
+
+/**
+ * Initializes the control palette and its draw loop.
+ */
+public void initGUI() {
+  createGUI();
+  controlWindow.loop();
+}
+
+/**
+ * Preload an audio file using a file path and a filename.
+ * @param path        the fully qualified path to the file's directory, ending with a '/'
+ * @param fileName    the name of the file
+ */
+public void preloadFiles(String path, String fileName) {
+  // the audio file we want to open on startup
+  File audioSource = new File(path + fileName);
+  // load the file into audio buffer and Brightness channel of display image (mapImage)
+  // if audio is also loaded to the image, will set baseImage to the new image
+  fileSelected(audioSource);
+  // overlay colors on mapImage
+  mapImage.loadPixels();
+  applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+  mapImage.updatePixels();
+  // write mapImage to baseImage
+  commitMapImageToBaseImage();
+}
+
+
+public void draw() {
+  image(mapImage, 0, 0);
+  handleDrawing();          // handle interactive drawing and audio events created by drawing
+}
+
+// WE OMIT ANIMATION METHODS
+// But we keep animation code.
+// See Bagatelle for complete animation example with GUI.
+
+/**
+ * Handles user's drawing actions, draws previously recorded brushstrokes,
+ * tracks and generates animation and audio events.
+ */
+public void handleDrawing() {
+  // 1) draw existing brushes
+  drawBrushShapes();
+  // 2) update hover state (pure state update, no action)
+  updateHover();
+  // 3) if in the process of drawing, accumulate points while mouse is held down
+  if (isEditable()) {
+    if (mousePressed) {
+      addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+    }
+    if (allPoints != null && allPoints.size() > 2) {
+      PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
+    }
+  }
+  // 4) depending on your event dispatching model, run scheduled events
+  runSamplerBrushEvents();
+  runPointEvents();
+  runGrainEvents();
+}
+
+/**
+ * @return a reference to the brushstroke the mouse is over, or null if there's no brushstroke.
+ */
+BrushHit findHoverHit() {
+  // Decide z-order: check the list you draw last *first*, so topmost brushes win.
+  // granular on top here, descending for loop means most recent brushes are on top
+  if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
+    if (granularBrushes != null && !granularBrushes.isEmpty()) {
+      for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+        GranularBrush b = granularBrushes.get(i);
+        if (mouseInPoly(b.curve().getBrushPoly())) {
+          return new BrushHit(b, i);
+        }
+      }
+    }
+  }
+  if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER || drawingMode == DrawingMode.PLAY_ONLY) {
+    if (samplerBrushes != null && !samplerBrushes.isEmpty()) {
+      for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+        SamplerBrush b = samplerBrushes.get(i);
+        if (mouseInPoly(b.curve().getBrushPoly())) {
+          return new BrushHit(b, i);
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Update the hoverBrush and hoverIndex global variables.
+ */
+void updateHover() {
+  BrushHit hit = findHoverHit();
+  if (hit != null) {
+    hoverBrush = hit.brush;
+    hoverIndex = hit.index;
+  } else {
+    hoverBrush = null;
+    hoverIndex = -1;
+  }
+}
+
+/**
+ * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
+ * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
+ *
+ * @param msg     message to write
+ * @param x       x coordinate
+ * @param y       y coordinate
+ * @param weight  font weight
+ * @param isWhite if true, white text, otherwise, black text
+ */
+public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
+  int fill1 = isWhite? 0 : 255;
+  int fill2 = isWhite? 255 : 0;
+  pushStyle();
+  textSize(weight);
+  float tw = textWidth(msg);
+  int pad = 4;
+  fill(fill1);
+  rect(x - pad, y - pad - weight, x + tw + pad, y + weight/2 + pad);
+  fill(fill2);
+  text(msg, x, y);
+  popStyle();
+}
+
+
+/**
+ * The built-in mousePressed handler for Processing, used to begin drawing.
+ */
+public void mousePressed() {
+  if (isEditable()) {
+    initAllPoints();
+  }
+  // expand here to call a handler for mousePressed when editing is not on (mode == PLAY_ONLY)
+}
+
+public void mouseDragged() {
+  // we don't need to handle dragging -- the draw() loop takes care of drawing to the display
+}
+
+public void mouseReleased() {
+  // if (!(isEditable() && allPoints != null)) return; // EDIT to go ahead in all modes
+  if (allPoints.size() > 2) {
+    initCurveMakerAndAddBrush();    // create a new brush
+    // possible preview action, play on draw
+  } else {  // handle the event as a click in mouseClicked()
+    // nothing
+  }
+  allPoints.clear();
+}
+
+public void mouseClicked() {
+  int x = this.clipToWidth(mouseX);
+  int y = this.clipToHeight(mouseY);
+  BrushHit hit = findHoverHit();
+  if (hit != null) {
+    setActiveBrush(hit.brush);      // flag the hit brush as the activeBrush
+    if (hit.brush instanceof SamplerBrush) {
+      SamplerBrush sb = (SamplerBrush) hit.brush;
+      scheduleSamplerBrushClick(sb, x, y);
+    } else if (hit.brush instanceof GranularBrush) {
+      GranularBrush gb = (GranularBrush) hit.brush;
+      scheduleGranularBrushClick(gb, x, y);
+    }
+    return;
+  }
+  if (isVerbose) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
+  handleClickOutsideBrush(x, y);
+}
+
+/**
+ * built-in keyPressed handler, forwards events to parseKey.
+ */
+@Override
+  public void keyPressed() {
+  if (key != CODED) {
+    parseKey(key, keyCode);
+  } else {
+    if (keyCode == UP) {
+      adjustAudioGain(3.0f);
+      println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+    } else if (keyCode == DOWN) {
+      adjustAudioGain(- 3.0f);
+      println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
+    } else if (keyCode == RIGHT) {
+    } else if (keyCode == LEFT) {
+    }
+  }
+}
+
+/**
+ * Handles key press events passed on by the built-in keyPressed method.
+ * By moving key event handling outside the built-in keyPressed method,
+ * we make it possible to post key commands without an actual key event.
+ * Methods and interfaces and even other threads can call parseKey().
+ * This opens up many possibilities and a some risks, too.
+ *
+ * @param key
+ * @param keyCode
+ */
+public void parseKey(char key, int keyCode) {
+  String msg;
+  switch(key) {
+  case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
+    if (hoverBrush != null) {
+      if (hoverBrush instanceof SamplerBrush) {
+        SamplerBrush sb = (SamplerBrush) hoverBrush;
+        scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
+      } else if (hoverBrush instanceof GranularBrush) {
+        GranularBrush gb = (GranularBrush) hoverBrush;
+        scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
+      }
+    } else {
+      handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+    }
+    break;
+  case 'c':
+  case 'C': // print the current configuration status to the console
+    printGConfigStatus();
+    break;
+  case 't': // switch between Granular and Sampler editing and playing
+    if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+      setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+      controlWindow.setTitle("Sampler Synth");
+    } else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+      setMode(DrawingMode.PLAY_ONLY);
+      controlWindow.setTitle("Play Only: Both Synths");
+    } else if (drawingMode == DrawingMode.PLAY_ONLY) {
+      setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+      controlWindow.setTitle("Granular Synth");
+    }
+    println("---> mode is "+ drawingMode.toString());
+    break;
+  case 'z': // change the drawing mode of the hover brush
+    AudioBrush changed = null;
+    if (hoverBrush != null) {
+      changed = toggleHoveredBrushType();
+      syncDrawingModeToBrush(changed);
+    } else if (activeBrush != null) {
+      changed = toggleActiveBrushType();
+      syncDrawingModeToBrush(changed);
+    } else {
+      handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+    }
+    break;
+  case 'd': // toggle doPlayOnDraw to play when a drawing gesture ends or not
+    doPlayOnDraw = !doPlayOnDraw;
+    println("-- play on draw is "+ doPlayOnDraw);
+    break;
+  case 'p': // jitter the pitch of granular gestures
+    usePitchedGrains = !usePitchedGrains;
+    msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
+    println("-- Play granular synth with "+ msg);
+    break;
+  case 'j': // turn audio and image blending on or off
+    isBlending = !isBlending;
+    println("-- isBlending is "+ isBlending +" (images blend only if chan = ChannelNames.ALL)");
+    break;
+  case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
+    refreshMapImageFromBase();
+    mapImage.loadPixels();
+    applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
+    mapImage.updatePixels();
+    break;
+  case 'K': // apply hue and saturation in colors to baseImage and mapImage
+    baseImage.loadPixels();
+    applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
+    baseImage.updatePixels();
+    refreshMapImageFromBase();
+    break;
+  case 'l':
+  case 'L': // toggle loading data to both image and audio buffers when you open either an image or an audio file
+    isLoadToBoth = !isLoadToBoth;
+    println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
+    break;
+  case 'f':
+  case 'F': // toggle verbose output to the console
+    isVerbose = !isVerbose;
+    println("-- isVerbose == "+ isVerbose);
+    break;
+  case 'o': // open an audio file
+    chooseFile();
+    break;
+  case 'r':
+  case 'R': // reset synths to defaults -- TODO may be dropped
+    resetToDefaults();
+    break;
+  case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
+    if (activeBrush instanceof SamplerBrush) {
+      println("-- please choose a Granular Brush to adjust resampling and duration values.");
+      return;
+    }
+    printGOptHints(hopScale);
+    if (activeBrush != null) {
+      activeBrush.cfg().resampleCount = optGrainCount;
+      syncGuiFromConfig();
+    }
+    break;
+  case 'x': // delete the current active brush shape or the oldest brush shape
+    if (hoverBrush != null) {
+      removeHoverBrush();
+    } else {
+      removeOldestBrush();
+    }
+    break;
+  case 'X': // delete the most recent brush shape
+    removeNewestBrush();
+    break;
+  case 'h':
+  case 'H': // show help message
+    showHelp();
+    break;
+  default:
+    break;
+  }
+}
+
+/**
+ * to generate help output, run RegEx search/replace on parseKey case lines with:
+ * // case ('.'): // (.+)
+ * // println(" * Press $1 to $2.");
+ */
+public void showHelp() {
+  println(" * Press UP ARROW to increase audio gain by 3 dB (when focus in display window).");
+  println(" * Press DOWN ARROW to decrease audio gain by 3 dB (when focus in display window).");
+  println(" * Press ' ' (spacebar) triggers a brush if we're hovering over a brush, otherwise it triggers a point event.");
+  println(" * Press 'c' or 'C' to print the current configuration status to the console.");
+  println(" * Press 't' to switch between Granular and Sampler editing and playing.");
+  println(" * Press 'z' to change the drawing mode of the hover brush.");
+  println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.");
+  println(" * Press 'p' to jitter the pitch of granular gestures.");
+  println(" * Press 'j' to turn audio and image blending on or off.");
+  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
+  println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
+  println(" * Press 'l' or'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
+  println(" * Press 'f' or 'F' to toggle verbose output to the console.");
+  println(" * Press 'o' to open an audio file.");
+  println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
+  println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
+  println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
+  println(" * Press 'X' to delete the most recent brush shape.");
+  println(" * Press 'h' or 'H' to show help message.");
+}
+
+/**
+ * Sets audioOut.gain.
+ * @param g   gain value for audioOut, in decibels
+ */
+public void adjustAudioGain(float g) {
+  float ag = audioOut.getGain();
+  ag += g;
+  if (ag > 12.0f || ag < -64.0f) return;
+  audioOut.setGain(ag);
+  outputGain = audioOut.getGain();
+}
+
+/**
+ * Sets the drawing mode.
+ * @param newMode
+ */
+void setMode(DrawingMode newMode) {
+  if (newMode == drawingMode) return;
+  drawingMode = newMode;
+  // Clear hover because the hover rules changed
+  hoverBrush = null;
+  hoverIndex = -1;
+  // Choose what should be "active" in the new mode
+  AudioBrush nextActive = null;
+  switch (drawingMode) {
+  case DRAW_EDIT_GRANULAR:
+    nextActive = activeGranularBrush;
+    gConfig.env = granEnvelope;
+    break;
+  case DRAW_EDIT_SAMPLER:
+    nextActive = activeSamplerBrush;
+    break;
+  case PLAY_ONLY:
+    nextActive = (activeBrush != null) ? activeBrush
+      : (activeGranularBrush != null ? activeGranularBrush : activeSamplerBrush);
+    break;
+  default:
+    {
+    }
+  }
+  if (nextActive != null) {
+    // Keep indices consistent: use stored index for the corresponding type
+    int idx = (nextActive instanceof GranularBrush) ? activeGranularIndex : activeSamplerIndex;
+    setActiveBrush(nextActive, idx);     // this also syncs GUI
+  } else {
+    // No selection for this mode
+    activeBrush = null;
+    resetConfigForMode();    // reset the GUI control palette
+  }
+  setControlsEnabled();        // enable or disable controls, depending on the drawing mode
+}
+
+/**
+ * Reset tool config to defaults (copy, so default config never mutates).
+ */
+void resetConfigForMode() {
+  if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+    gConfig = defaultGranConfig.copy();
+  } else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+    gConfig = defaultSampConfig.copy();
+  } else {
+    // PLAY_ONLY: choose what you want the GUI to show
+    // Option: keep last gConfig; or keep a neutral preset:
+    // gConfig = defaultGranularConfig.copy();
+  }
+  syncGuiFromConfig();    // enable or disable controls, depending on the drawing mode
+}
