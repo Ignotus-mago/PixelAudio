@@ -1,4 +1,4 @@
-/*
+/**
  * This example application modifies the TutorialOne_03_Drawing code for the PixelAudio
  * library for Processing. Some of the changes:
  * 

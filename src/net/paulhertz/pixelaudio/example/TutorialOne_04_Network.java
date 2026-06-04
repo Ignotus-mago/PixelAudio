@@ -28,6 +28,7 @@ import oscP5.OscMessage;
 import oscP5.OscP5;
 import net.paulhertz.pixelaudio.granular.*;
 import net.paulhertz.pixelaudio.sampler.*;
+
 //audio library
 import ddf.minim.*;
 
@@ -64,7 +65,7 @@ import com.hamoid.*;
  * <li>In the Input and Output section, select BlackHole 16ch as the Output.</li>
  * <li>In the Max Audio Status control panel, set Input Device to BlackHole 16ch.</li>
  * <li>If you have external audio hardware, set that to your output.</li> 
- * <li>Turn on audio processing in simpleAudioIO.</li>
+ * <li>Open simpleAudioIO.maxpat in Max and turn on audio processing.</li>
  * <li>Run TutorialOne_04_Network and play some sounds.</li> 
  * </ol>
  * <h3>UDP: User Datagram Protocol</h3>

@@ -41,19 +41,22 @@ import com.hamoid.*;
  * sampler, granular, bounds, and envelope code from TutorialOne_03_Drawing,
  * but changes the audio source model to load large audio files into a 
  * windowed buffer:
- *
- *   - anthemSignal / anthemBuffer hold the entire loaded audio file,
- *   - windowBuff is a moving window over anthemSignal,
- *   - audioSignal / playBuffer / mapImage hold only the current visible window,
- *   - Display coordinates map first to the visible window, then to the backing
- *     full-file source by adding windowBuff.getIndex().
- * 
- * The new features are fit on top of Tutorial_03_Drawing variables and methods. 
+ * <ul>
+ *   <li>anthemSignal / anthemBuffer hold the entire loaded audio file,</li>
+ *   <li>windowBuff is a moving window over anthemSignal,</li>
+ *   <li>audioSignal / playBuffer / mapImage hold only the current visible window,</li>
+ *   <li>Display coordinates map first to the visible window, then to the backing
+ *     full-file source by adding windowBuff.getIndex().</li>
+ * </ul>
+ * <p>
+ * The new features are fit on top of Tutorial_03_Drawing variables and methods.
+ * Support for WindowedBuffer is flagged with "// *** WindowedBuffer support *** //".
+ * Look for the flag to how TutorialOne_03_Drawing was adapted. 
  * See Tutorial_03_Drawing for information about drawing, audio synthesis,
- * audio events and animation. Here we'll document just the new features. 
- * 
+ * audio events and animation. Here we'll document just the new features.
+ * </p><p>
  * See {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing}
- * 
+ * </p>
  * <h2>NEW FEATURES</h2>
  * <p>
  * This sketch adds a windowed audio buffer to the drawing, interaction and
@@ -93,8 +96,27 @@ import com.hamoid.*;
  * <h2>QUICK START</h2>
  * <p>
  * <ol>
- *   Launch the sketch. 
- * 
+ *    <li>Run the sketch. It will load the audio file specified in daPath and daFile, and write 
+ *    it to the display image as colors overlaid on a visualization of the audio values along
+ *    the signal path. You can change the file with the 'o' key command.</li> 
+ *    
+ *    <li>The drawing and audio synthesis features are the same as in TutorialOne_03_Drawing, 
+ *    but now mouse interactions will trigger audio events based on the current position of 
+ *    the windowed buffer within the backing buffer. You can trigger audio events at different 
+ *    locations in the audio file by moving the window and clicking on the display image.</li>
+ *    
+ *    <li>Press spacebar or click to trigger audio events at audio index corresponding to the
+ *    mouse location. Draw brushstrokes for both Sampler and Granular events.</li> 
+ *    
+ *    <li>Press 'T' to toggle automatic window advancement. Press '{' or '}' to jump back/forward 
+ *    one full window. Press '(' or ')' to jump back/forward one half window. Press 'R' to 
+ *    rewind the WindowBuffer.</li>
+ *    
+ *    <li>Press 'Y' to toggle raindrop point events while windowing.</li>
+ *    
+ *    <li>Experiment with drawing brushstrokes and triggering audio events while moving through 
+ *    the buffer.</li>
+ * </ol>
  * <pre>
  * Here are the key commands for this sketch:
  * 
@@ -141,6 +163,13 @@ import com.hamoid.*;
  * Press 'u' to mute audio.
  * Press 'V' to record a video.
  * Press 'h' or 'H' to show help message in the console.
+ *
+ * WindowBuffer additions:
+ * Press 'T' to toggle automatic WindowBuffer traversal.
+ * Press '{' or '}' to jump back/forward one full window.
+ * Press '(' or ')' to jump back/forward one half window.
+ * Press 'R' to rewind the WindowBuffer.
+ * Press 'Y' to toggle raindrop point events while windowing.
  * </pre>
  * </div>
  * 
@@ -477,6 +506,8 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	// system-specific path to example files data
     String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    
     String daFile = "_sonic/FullMoonTonight_22050Hz.mp3";    // _sonic/FullMoonTonight_22050Hz.mp3, Saucer_mixdown.wav
+    
+    boolean isDebugging = false;
 
 
     // ---------------- APPLICATION ---------------- //
@@ -597,6 +628,9 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	public void draw() {
         if (isWindowing && windowBuff != null) {
             refreshWindowFromBacking(true);
+    		mapImage.loadPixels();
+    		applyColor(spectrum, mapImage.pixels, mapper.getImageToSignalLUT());
+    		mapImage.updatePixels();           
             if (isRaining) raindrops(3);
         }
 		image(mapImage, 0, 0);    // draw mapImage to the display window
@@ -1165,13 +1199,13 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		println(" * Press 'X' to delete the most recent brush shape.");
 		println(" * Press 'u' to mute audio.");
 		println(" * Press 'V' to record a video.");
-        println("\nWindowBuffer additions:");
-        println("Press 'T' to toggle automatic WindowBuffer traversal.");
-        println("Press '{' or '}' to jump back/forward one full window.");
-        println("Press '(' or ')' to jump back/forward one half window.");
-        println("Press 'R' to rewind the WindowBuffer.");
-        println("Press 'Y' to toggle raindrop point events while windowing.\n");
 		println(" * Press 'h' or 'H' to show help message in the console.");
+        println("\n * WindowBuffer additions:");
+        println(" * Press 'T' to toggle automatic WindowBuffer traversal.");
+        println(" * Press '{' or '}' to jump back/forward one full window.");
+        println(" * Press '(' or ')' to jump back/forward one half window.");
+        println(" * Press 'R' to rewind the WindowBuffer.");
+        println(" * Press 'Y' to toggle raindrop point events while windowing.\n");
 	}
 
 	/**
@@ -1899,9 +1933,11 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
         if (!windowAudioReady) return;
         // Prefer anthemBuffer as our source
         MultiChannelBuffer source = (anthemBuffer != null) ? anthemBuffer : playBuffer;
-        if (source == anthemBuffer) println("-- sampler source is anthemBuffer");
-        if (source == playBuffer) println("-- sampler source is playBuffer");
-        if (source == null) println("-- sampler source is null");
+        if (isDebugging) {
+        	if (source == anthemBuffer) println("-- sampler source is anthemBuffer");
+        	if (source == playBuffer) println("-- sampler source is playBuffer");
+        	if (source == null) println("-- sampler source is null");
+        }
         float sr = (bufferSampleRate > 0) ? bufferSampleRate : sampleRate;
         if (source == null) return;
         // Rebuild the Sampler instrument, pool, when required
@@ -2372,7 +2408,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	/*                    BEGIN DRAWING METHODS                       */
 	/*                                                                */
 	/*----------------------------------------------------------------*/
-	
+
 	/**
 	 * Initializes allPoints and adds the current mouse location to it. 
 	 */
@@ -2384,7 +2420,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    int y = clipToHeight(mouseY);
 	    addDrawingPoint(x, y);
 	}
-	
+
 	/**
 	 * While user is dragging the mouses and isDrawMode == true, accumulates new points
 	 * to allPoints and event times to allTimes. Sets sampleX, sampleY and samplePos variables.
@@ -2401,14 +2437,14 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	        allTimes.add(millis() - startTime);
 	    }
 	}
-		
+	    
 	/**
 	 * Clips parameter i to the interval (0..width-1)
 	 * @param i    integer to clip to width
 	 * @return     value within the range 0..width-1
 	 */
 	public int clipToWidth(int i) {
-		return min(max(0, i), width - 1);
+	    return min(max(0, i), width - 1);
 	}
 	/**
 	 * Clips parameter i to the interval (0..width-1)
@@ -2416,9 +2452,9 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @return     value within the range 0..height-1
 	 */
 	public int clipToHeight(int i) {
-		return min(max(0, i), height - 1);
+	    return min(max(0, i), height - 1);
 	}
-	
+
 	/**
 	 * @param x              x-coordinate
 	 * @param y              y-coordinate
@@ -2433,8 +2469,8 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    int ny = clipToHeight(y + jy);
 	    return new PVector(nx, ny);
 	}
-	
-	
+
+
 	/**
 	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
 	 * @param length            length of the returned array
@@ -2442,14 +2478,14 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @return                  an array of Gaussian values centered on 1.0
 	 */
 	float[] generateJitterPitch(int length, float deviationPitch) {
-		float[] pitch = new float[length];
-		double variance = deviationPitch * deviationPitch;
-		for (int i = 0; i < pitch.length; i++) {
-			pitch[i] = (float) PixelAudio.gauss(1, variance);
-		}
-		return pitch;
+	    float[] pitch = new float[length];
+	    double variance = deviationPitch * deviationPitch;
+	    for (int i = 0; i < pitch.length; i++) {
+	        pitch[i] = (float) PixelAudio.gauss(1, variance);
+	    }
+	    return pitch;
 	}
-			
+	        
 	/**
 	 * Generates an array of Gaussian values for shifting pitch, where 1.0 = no shift.
 	 * @param length            length of the returned array
@@ -2458,12 +2494,12 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @return                  an array of Gaussian values centered on 1.0
 	 */
 	float[] generateJitterPitch(int length, float deviationPitch, float centerPitch) {
-		float[] pitch = new float[length];
-		double variance = deviationPitch * deviationPitch;
-		for (int i = 0; i < pitch.length; i++) {
-			pitch[i] = (float) PixelAudio.gauss(centerPitch, variance);
-		}
-		return pitch;
+	    float[] pitch = new float[length];
+	    double variance = deviationPitch * deviationPitch;
+	    for (int i = 0; i < pitch.length; i++) {
+	        pitch[i] = (float) PixelAudio.gauss(centerPitch, variance);
+	    }
+	    return pitch;
 	}
 
 	/**
@@ -2493,11 +2529,11 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    // Optionally auto-select the new brush
 	    activeBrush = b;
 	    if (this.doPlayOnNewBrush) {
-	    	if (b.output() == BrushOutput.GRANULAR) {
-	    		scheduleGranularBrushClick(b);
-	    	} else {
-	    		scheduleSamplerBrushClick(b);
-	    	}
+	        if (b.output() == BrushOutput.GRANULAR) {
+	            scheduleGranularBrushClick(b);
+	        } else {
+	            scheduleSamplerBrushClick(b);
+	        }
 	    }
 	    return b;
 	}
@@ -2516,8 +2552,8 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * TODO distinguish brush types by color.
 	 */
 	public void drawBrushShapes() {
-		if (brushes == null || brushes.isEmpty()) return;
-		drawBrushes(brushes);
+	    if (brushes == null || brushes.isEmpty()) return;
+	    drawBrushes(brushes);
 	}
 
 	/**
@@ -2526,59 +2562,67 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param list    a list of all the brushstrokes (AudioBrushLite)
 	 */
 	public void drawBrushes(List<AudioBrushLite> list) {
-		// step through the list of all brushes
-		int readyColor; 
-		int hoverColor; 
-		int selectedColor;
-		for (int i = 0; i < list.size(); i++) {
-			AudioBrushLite b = list.get(i);
-			if (b.output == BrushOutput.GRANULAR) {
-				readyColor = readyBrushColor1;
-				hoverColor = hoverBrushColor1;
-				selectedColor = selectedBrushColor1;
-			} else {
-				readyColor = readyBrushColor2;
-				hoverColor = hoverBrushColor2;
-				selectedColor = selectedBrushColor2;
-			}
-			PACurveMaker cm = b.curve();
-			boolean isHover = (b == hoverBrush);
-			boolean isSelected = (b == activeBrush);
-			int fill = readyColor;
-			if (isSelected) {
-				fill = selectedColor;
-				// keep selected brush geometry consistent with cfg
-				cm.setEpsilon(b.cfg().rdpEpsilon);
-				cm.setCurveSteps(b.cfg().curveSteps);
-				cm.calculateDerivedPoints();
-			} 
-			else if (isHover) {
-				fill = hoverColor;
-			}
-			// brush body
-			PACurveUtility.shapeDraw(this, cm.getBrushShape(), fill, fill, 2);
-			// overlay points/lines depending on PathMode
-			int w = 1, d = 5;
-			int lc = isSelected ? lineColor : dimLineColor;
-			int cc = isSelected ? circleColor : dimCircleColor;
-			// selected the appropriate point set for drawing
-			switch (b.cfg().pathMode) {
-			case REDUCED_POINTS -> {
-				PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
-				PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
-			}
-			case CURVE_POINTS -> {
-				PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
-				PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
-			}
-			case ALL_POINTS -> {
-				PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
-				PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
-			}
-			}
-		}
+	    // step through the list of all brushes
+	    int readyColor; 
+	    int hoverColor; 
+	    int selectedColor;
+	    for (int i = 0; i < list.size(); i++) {
+	        AudioBrushLite b = list.get(i);
+	        if (b.output == BrushOutput.GRANULAR) {
+	            readyColor = readyBrushColor1;
+	            hoverColor = hoverBrushColor1;
+	            selectedColor = selectedBrushColor1;
+	        } else {
+	            readyColor = readyBrushColor2;
+	            hoverColor = hoverBrushColor2;
+	            selectedColor = selectedBrushColor2;
+	        }
+	        PACurveMaker cm = b.curve();
+	        boolean isHover = (b == hoverBrush);
+	        boolean isSelected = (b == activeBrush);
+	        int fill = readyColor;
+	        if (isSelected) {
+	            fill = selectedColor;
+	            // keep selected brush geometry consistent with cfg
+	            cm.setEpsilon(b.cfg().rdpEpsilon);
+	            cm.setCurveSteps(b.cfg().curveSteps);
+	            cm.calculateDerivedPoints();
+	        } 
+	        else if (isHover) {
+	            fill = hoverColor;
+	        }
+	        // brush body
+	        PACurveUtility.shapeDraw(this, cm.getBrushShape(), fill, fill, 2);
+	        // overlay points/lines depending on PathMode
+	        int w = 1, d = 5;
+	        int lc = isSelected ? lineColor : dimLineColor;
+	        int cc = isSelected ? circleColor : dimCircleColor;
+	        // selected the appropriate point set for drawing
+	        switch (b.cfg().pathMode) {
+	        case REDUCED_POINTS: {
+	            PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
+	            PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
+	            break;
+	        }
+	        case CURVE_POINTS: {
+	            PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
+	            PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
+	            break;
+	        }
+	        case ALL_POINTS: {
+	            PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
+	            PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+	            break;
+	        }
+	        default: {
+	            PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
+	            PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+	            break;
+	        }
+	    }
+	    }
 	}
-	
+
 	/**
 	 * Sets epsilon value for the PACurveMaker associated with an AudioBrushLite instance.
 	 * 
@@ -2586,14 +2630,14 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param e    desired epsilon value to control point reduction
 	 */
 	public void setBrushEpsilon(AudioBrushLite b, float e) {
-		PACurveMaker cm = b.curve();
-		BrushConfig cfg = b.cfg();
-		cfg.rdpEpsilon = e;
-		cm.setEpsilon(e);
-		cm.calculateDerivedPoints();
+	    PACurveMaker cm = b.curve();
+	    BrushConfig cfg = b.cfg();
+	    cfg.rdpEpsilon = e;
+	    cm.setEpsilon(e);
+	    cm.calculateDerivedPoints();
 	}
 
-	
+
 	/**
 	 * Sets epsilon value for the PACurveMaker associated with an AudioBrushLite instance.
 	 * 
@@ -2601,11 +2645,11 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param cs    desired epsilon value to control point reduction
 	 */
 	public void setBrushCurveSteps(AudioBrushLite b, int cs) {
-		PACurveMaker cm = b.curve();
-		BrushConfig cfg = b.cfg();
-		cfg.curveSteps = cs;
-		cm.setCurveSteps(cs);
-		cm.calculateDerivedPoints();
+	    PACurveMaker cm = b.curve();
+	    BrushConfig cfg = b.cfg();
+	    cfg.curveSteps = cs;
+	    cm.setCurveSteps(cs);
+	    cm.calculateDerivedPoints();
 	}
 
 	/**
@@ -2615,12 +2659,12 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @return     an all points, reduced, or curve representation of the path points of an AudioBrushLite instance
 	 */
 	ArrayList<PVector> getPathPoints(AudioBrushLite b) {
-		PACurveMaker cm = b.curve();
-		return switch (b.cfg().pathMode) {
-		case ALL_POINTS -> cm.getAllPoints();
-		case REDUCED_POINTS -> cm.getReducedPoints();
-		case CURVE_POINTS -> cm.getCurvePoints();
-		};
+	    PACurveMaker cm = b.curve();
+	    return switch (b.cfg().pathMode) {
+	    case ALL_POINTS -> cm.getAllPoints();
+	    case REDUCED_POINTS -> cm.getReducedPoints();
+	    case CURVE_POINTS -> cm.getCurvePoints();
+	    };
 	}
 
 	/**
@@ -2629,24 +2673,24 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @return     GestureSchedule for the current pathMode of the brush
 	 */
 	public GestureSchedule getScheduleForBrush(AudioBrushLite b) {
-		GestureSchedule sched;
-		switch (b.cfg().pathMode) {
-		case REDUCED_POINTS -> {
-			sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
-		}
-		case CURVE_POINTS -> {
-			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
-		}
-		case ALL_POINTS -> {
-			sched = b.curve.getAllPointsSchedule();
-		}
-		default -> {
-			sched = b.curve.getAllPointsSchedule();
-		}
-		}
-		return sched;
+	    GestureSchedule sched;
+	    switch (b.cfg().pathMode) {
+	    case REDUCED_POINTS -> {
+	        sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
+	    }
+	    case CURVE_POINTS -> {
+	        sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
+	    }
+	    case ALL_POINTS -> {
+	        sched = b.curve.getAllPointsSchedule();
+	    }
+	    default -> {
+	        sched = b.curve.getAllPointsSchedule();
+	    }
+	    }
+	    return sched;
 	}
-	
+
 	/**
 	 * @param b    an AudioBrushLIte instance
 	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
@@ -2654,14 +2698,14 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
 	    GestureSchedule sched = getScheduleForBrush(b);
 	    if (b.output == BrushOutput.SAMPLER) {
-	    	// divide gesture duration by number of gesture intervals and multiply result a fixed value
-	    	envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
-	    	println("-- envelope duration = "+ envDuration);
+	        // divide gesture duration by number of gesture intervals and multiply result a fixed value
+	        envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
+	        println("-- envelope duration = "+ envDuration);
 	    }
 	    return boundsPolicy.applySchedule(sched);
 	}
-	
-	
+
+
 	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
 	    int n = sched.points.size();
 	    if (n < 2) return fallbackMs;
@@ -2687,18 +2731,18 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    int maxEnvMs = envMaxDurationMs;
 	    return PApplet.constrain(Math.round(avgStepMs * factor), minEnvMs, maxEnvMs);
 	}
-	
+
 	/**
 	 * Schedule a Sampler brush audio / animation event.
 	 * 
 	 * @param b    an AudioBrushLite instance
 	 */
 	void scheduleSamplerBrushClick(AudioBrushLite b) {
-		if (b == null) return;
-		ArrayList<PVector> pts = getPathPoints(b);
-		if (pts == null || pts.size() < 2) return;
-		GestureSchedule sched = getPlaybackScheduleForBrush(b);
-		storeSamplerCurveTL(b, sched, millis() + 10);
+	    if (b == null) return;
+	    ArrayList<PVector> pts = getPathPoints(b);
+	    if (pts == null || pts.size() < 2) return;
+	    GestureSchedule sched = getPlaybackScheduleForBrush(b);
+	    storeSamplerCurveTL(b, sched, millis() + 10);
 	}
 
 	/**
@@ -2707,23 +2751,23 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param startTime    time to start a series of events
 	 */
 	public synchronized void storeSamplerCurveTL(AudioBrushLite b, GestureSchedule sched, int startTime) {
-		int i = 0;
-		startTime = millis() + 5;
-		// we store the point and the current time + time offset, where timesMs[0] == 0
-		for (PVector loc : sched.points) {
-			int x = Math.round(loc.x);
-			int y = Math.round(loc.y);
-			int t = startTime + Math.round(sched.timesMs[i++]);
-			int pos = getSamplePos(x, y);
-			int len = calcSampleLen();
-			int d = 200;
-			float gain = samplerGain;
-			float pitch = b.pitchRatio;
-			ADSRParams env = defaultEnv.copy();
-			float pan = map(x, 0, width - 1, -0.875f, 0.875f);
-			this.samplerTimeLocs.add(new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, env, pan));
-		}
-		Collections.sort(samplerTimeLocs);
+	    int i = 0;
+	    startTime = millis() + 5;
+	    // we store the point and the current time + time offset, where timesMs[0] == 0
+	    for (PVector loc : sched.points) {
+	        int x = Math.round(loc.x);
+	        int y = Math.round(loc.y);
+	        int t = startTime + Math.round(sched.timesMs[i++]);
+	        int pos = getSamplePos(x, y);
+	        int len = calcSampleLen();
+	        int d = 200;
+	        float gain = samplerGain;
+	        float pitch = b.pitchRatio;
+	        ADSRParams env = defaultEnv.copy();
+	        float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+	        this.samplerTimeLocs.add(new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, env, pan));
+	    }
+	    Collections.sort(samplerTimeLocs);
 	}
 
 	/**
@@ -2735,12 +2779,12 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    int durationMs = 200;
 	    samplerTimeLocs.forEach(stl -> {
 	        if (stl.eventTimeMs() < currentTime) {
-	        	// sched points from storeSamplerCurveTL are already in bounds
+	            // sched points from storeSamplerCurveTL are already in bounds
 	            int sampleX = Math.round(stl.getX());
 	            int sampleY = Math.round(stl.getY());
 	            // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
-                playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
-        		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
+	            playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
+	            pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
 	            stl.setStale(true);
 	        } 
 	        else {
@@ -2750,7 +2794,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    samplerTimeLocs.removeIf(SamplerBrushEvent::isStale);
 	}
 
-    // *** WindowedBuffer support *** //	
+	// *** WindowedBuffer support *** //  
 	/**
 	 * Schedule a Granular brush audio / animation event.
 	 * 
@@ -2762,11 +2806,11 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    if (pts == null || pts.size() < 2) return;
 	    ensureGranularReady();
 	    boolean isGesture = (b.hopMode() == HopMode.GESTURE);
-		GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
-		GestureSchedule sched = getPlaybackScheduleForBrush(b); 
-        playGranularGesture(backingGranularSignal(), sched, gParams, b.pitchRatio());
-        storeGranularCurveTL(sched, millis() + 10, isGesture);
-	}	
+	    GestureGranularParams gParams = isGesture ? gParamsGesture : gParamsFixed;
+	    GestureSchedule sched = getPlaybackScheduleForBrush(b); 
+	    playGranularGesture(backingGranularSignal(), sched, gParams, b.pitchRatio());
+	    storeGranularCurveTL(sched, millis() + 10, isGesture);
+	}  
 
 	/**
 	 * Store scheduled granular synth / animation events for future activation. 
@@ -2775,45 +2819,45 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param isGesture    is the schedule for a GESTURE or FIXED granular event (ignored)
 	 */
 	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
-		int i = 0;
-		int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
-		// we store the point and the current time + time offset, where timesMs[0] == 0
-		for (PVector loc : sched.points) {
-			int x = Math.round(loc.x);
-			int y = Math.round(loc.y);
-			int t = startTime + Math.round(sched.timesMs[i++]);
-			int d = 200;
-			this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
-		}
-		Collections.sort(grainTimeLocs);
+	    int i = 0;
+	    int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+	    int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
+	    // we store the point and the current time + time offset, where timesMs[0] == 0
+	    for (PVector loc : sched.points) {
+	        int x = Math.round(loc.x);
+	        int y = Math.round(loc.y);
+	        int t = startTime + Math.round(sched.timesMs[i++]);
+	        int d = 200;
+	        this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
+	    }
+	    Collections.sort(grainTimeLocs);
 	}
-		
+	    
 	/**
 	 * Tracks and runs TimedLocation events in the grainLocsArray list, which is 
 	 * associated with granular synthesis gestures.
 	 */
 	public synchronized void runGrainEvents() {
-	    if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;	
+	    if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;  
 	    int t = millis();
-		for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
-			TimedLocation tl = iter.next();
-			int low = tl.eventTime();
-			int high = (tl.eventTime() + tl.getDurationMs());
-			if (t >= low && t < high) { // event in the interval between low and high
-				drawCircle(tl.getX(), tl.getY());
-			}
-			else {
-				if (t >= high) {        // event in the past
-					tl.setStale(true);
-					iter.remove();
-				}
-				if (t < low) {          // event in the future
-					break;
-				}
-			}
-		}
-		// grainLocsArray.removeIf(TimedLocation::isStale);		// not necessary if we remove in loop
+	    for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
+	        TimedLocation tl = iter.next();
+	        int low = tl.eventTime();
+	        int high = (tl.eventTime() + tl.getDurationMs());
+	        if (t >= low && t < high) { // event in the interval between low and high
+	            drawCircle(tl.getX(), tl.getY());
+	        }
+	        else {
+	            if (t >= high) {        // event in the past
+	                tl.setStale(true);
+	                iter.remove();
+	            }
+	            if (t < low) {          // event in the future
+	                break;
+	            }
+	        }
+	    }
+	    // grainLocsArray.removeIf(TimedLocation::isStale);    // not necessary if we remove in loop
 	}
 
 	/**
@@ -2821,27 +2865,27 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * associated with mouse clicks that trigger audio a the click point.
 	 */
 	public synchronized void runPointEvents() {
-		int currentTime = millis();
-		for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
-			TimedLocation tl = iter.next();
-			tl.setStale(tl.eventTime() < currentTime);
-			if (!tl.isStale()) {
-				drawCircle(tl.getX(), tl.getY());
-			}
-		}
-		pointTimeLocs.removeIf(TimedLocation::isStale);		
+	    int currentTime = millis();
+	    for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
+	        TimedLocation tl = iter.next();
+	        tl.setStale(tl.eventTime() < currentTime);
+	        if (!tl.isStale()) {
+	            drawCircle(tl.getX(), tl.getY());
+	        }
+	    }
+	    pointTimeLocs.removeIf(TimedLocation::isStale);    
 	}
-	
+
 
 	/**
 	 * @param poly    a polygon described by an ArrayList of PVector
 	 * @return        true if the mouse is within the bounds of the polygon, false otherwise
 	 */
 	public boolean mouseInPoly(ArrayList<PVector> poly) {
-		return PABezShape.pointInPoly(poly, mouseX, mouseY);
+	    return PABezShape.pointInPoly(poly, mouseX, mouseY);
 	}
 
-	
+
 	/**
 	 * Reinitializes audio and clears event lists.   
 	 * -- TODO drop, this used to be the "emergency off" switch for runaway audio processing
@@ -2866,7 +2910,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	        brushes.remove(0);
 	    }
 	}
-	
+
 	/**
 	 * Removes the most recent AudioBrushLite instance.
 	 */
@@ -2880,8 +2924,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    }
 	}
 
-	/*             END DRAWING METHODS              */
-	
+	/*             END DRAWING METHODS              */	
 	
 	/*----------------------------------------------------------------*/
 	/*                                                                */

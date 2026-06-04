@@ -19,6 +19,8 @@ import net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool;
 import processing.core.PApplet;
 import processing.core.PVector;
 
+// DO NOT DELETE //
+
 /**
  * TutorialOne_06_WB_Retrofit
  *

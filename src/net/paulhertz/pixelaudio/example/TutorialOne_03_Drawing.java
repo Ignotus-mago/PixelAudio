@@ -2240,8 +2240,8 @@ public class TutorialOne_03_Drawing extends PApplet {
 		case "Soft"       : return new ADSRParams(1.0f, 0.02f, 0.80f, 0.7f, 0.2f);   
 		// sharp attack, fast decay to 0.1, short tail
         case "Percussion" : return new ADSRParams(1.0f, 0.005f, 0.04f, 0.20f, 0.06f);   
-        // long attack, slight decay, long tail
-		case "Pad"        : return new ADSRParams(1.0f, 0.50f, 0.25f, 0.75f, 1.0f);    
+        // med slow attack, med slow decay, long tail
+		case "Pad"        : return new ADSRParams(1.0f, 0.25f, 0.25f, 0.75f, 1.0f);    
         // fast attack, fast decay to 0.75, medium tail
 		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);    
 		}
@@ -2831,17 +2831,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 	public boolean mouseInPoly(ArrayList<PVector> poly) {
 		return PABezShape.pointInPoly(poly, mouseX, mouseY);
 	}
-
-	
-	/**
-	 * Reinitializes audio and clears event lists.   
-	 * -- TODO drop, this used to be the "emergency off" switch for runaway audio processing
-	 */
-	@Deprecated
-	public void reset() {
-
-	}
-
 
 	/**
 	 * Removes the current active AudioBrushLite instance.

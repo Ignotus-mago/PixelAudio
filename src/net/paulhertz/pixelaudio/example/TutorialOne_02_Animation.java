@@ -1,6 +1,4 @@
-
 package net.paulhertz.pixelaudio.example;
-
 
 import processing.core.PApplet;
 import processing.core.PImage;
@@ -127,7 +125,8 @@ import com.hamoid.*;
  * to playSample(), is centered in the stereo field. We calculate the panning
  * value by mapping the x-coordinate of the mouse position to the stereo pan
  * value.
- * </p> * <div>    
+ * </p>    
+ * 
  * Still to come, as the tutorial advances:<br>
  * -- drawing to trigger audio events<br>
  * -- the Granular Synthesis instruments<br>
@@ -159,7 +158,7 @@ import com.hamoid.*;
  * <li>Press 'h' or 'H' to show help message.</li>
  * </ul>
  * </p>
- * </div>
+ * 
  */
 public class TutorialOne_02_Animation extends PApplet {
 
@@ -339,7 +338,7 @@ public class TutorialOne_02_Animation extends PApplet {
 			doRain();
 		runTimeArray();    // animate audio event markers
 		if (isAnimating) {
-			if (isPlayMusicBox) audioMouseClick(width/2 - 32, height/2 - 32);
+		    if (isPlayMusicBox) audioMouseClick(width/2 - 1, height/2 - 192);
 			animate();
 		}
 		if (isShowOverlay) {
@@ -857,7 +856,7 @@ public class TutorialOne_02_Animation extends PApplet {
 			return;
 		}
 		// update dependent audio sources
-		updateAudioChain(playBuffer.getChannel(0), fileSampleRate);
+		updateAudioChain(buff.getChannel(0), fileSampleRate);
 		// automatically write the signal to mapImage -- this will change in later tutorials
         renderAudioToMapImage(chan, 0);
         commitMapImageToBaseImage();

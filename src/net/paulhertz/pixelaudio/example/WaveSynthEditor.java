@@ -204,10 +204,10 @@ public class WaveSynthEditor extends PApplet {
 	/* ------------------------------------------------------------------ */
 
 	PixelAudio pixelaudio;      // our shiny new library
-	HilbertGen hGen;            // a PixelMapGen to draw Hilbert curves
-	MooreGen mGen;              // a PixelMapGen to draw Moore curves
+	HilbertGen hGen;            // a HilbertGen
 	DiagonalZigzagGen zGen;     // a PixelMapGen to draw zigzag curves
-	MultiGen multigen;          // a PixelMapGen that handles multiple gens
+	BoustropheGen bGen;         // a PixelMapGen with boustrophedon ordering
+	MultiGen mGen;              // a PixelMapGen that blends multiple gens
 	PixelMapGen gen;            // any PixelMapGen
 	PixelAudioMapper mapper;    // object for reading, writing, and transcoding audio and image data
 	int mapSize;                // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
@@ -364,8 +364,12 @@ public class WaveSynthEditor extends PApplet {
 		bgFillColor = color(0, 0, 0, 255);
 		// 1. Initialize PixelAudio
 		pixelaudio = new PixelAudio(this);
-		// 2. Create a PixelMapGen object with dimensions equal to the display window.
-		gen = isDesignMode ? createHilbertGen(genWidth) : hilbertLoop3x2(genWidth, genHeight);
+		// 2. Create PixelMapGen objects
+		hGen = createHilbertGen(genWidth);
+		mGen = hilbertLoop3x2(genWidth, genHeight);
+		gen = isDesignMode ? hGen : mGen;
+		bGen = new BoustropheGen(width, height);
+		zGen = new DiagonalZigzagGen(width, height);
 		// 3. Initialize a PixelAudioMapper to handle mapping between audio and image
 		mapper = new PixelAudioMapper(gen);
 		// area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
@@ -735,232 +739,235 @@ public class WaveSynthEditor extends PApplet {
 	 * is the active window. Click in the image display window to make it the active window.
 	 * @param theKey    char value of the key that was pressed
 	 */
-	public void parseKey(char theKey, int keyCode) {
-	  switch(theKey) {
-		case ' ': // play audio for the point the mouse is currently over
-			audioMouseClick(mouseX, mouseY);
-			break;
-		case TAB: // turn animation on or off
-	    toggleAnimation();
-	    break;
-	  case 'a': // scale all active WaveSynth amplitudes by ampFac
-	    scaleAmps(wavesynth.getWaveDataList(), ampFac);
-	    loadWaveDataPanelValues(currentWD);
-	    markWaveSynthAudioDirty();
-	    break;
-	  case 'A': // scale all active WaveSynth amplitudes by 1/ampFac
-	    scaleAmps(wavesynth.getWaveDataList(), 1/ampFac);
-	    loadWaveDataPanelValues(currentWD);
-	    markWaveSynthAudioDirty();
-	    break;
-	  case 'c': // shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space
-	    shiftColors(wavesynth.getWaveDataList(), colorShift);
-	    wavesynth.updateWaveColors();
-	    refreshGlobalPanel();
-	    markWaveSynthVisualDirty();
-	    break;
-	  case 'C': // shift all active WaveSynth colors by -colorShift * 360 degrees in the HSB color space
-	    shiftColors(wavesynth.getWaveDataList(), -colorShift);
-	    wavesynth.updateWaveColors();
-	    refreshGlobalPanel();
-	    markWaveSynthVisualDirty();
-	    break;
-	  case 'd': // print animation data to the console
-	    println(isAnimating ? "-- running animation frame " + step + " of " + animStop : "-- stopped at frame " + step +" of " + animStop);
-	    break;
-	  case 'D': // print WaveSynth data to the console
-	    println(wavesynth.toString());
-	    break;
-	  case 'f': // scale all active WaveSynth frequencies by freqFac
-	    scaleFreqs(wavesynth.getWaveDataList(), freqFac);
-	    loadWaveDataPanelValues(currentWD);
-	    markWaveSynthAudioDirty();
-	    markWaveSynthVisualDirty();
-	    break;
-	  case 'F': // scale all active WaveSynth frequencies by 1/freqFac
-	    scaleFreqs(wavesynth.getWaveDataList(), 1/freqFac);
-	    loadWaveDataPanelValues(currentWD);
-	    markWaveSynthAudioDirty();
-	    markWaveSynthVisualDirty();
-	    break;
-	  case 'p': // shift all active WaveSynth phases by phaseFac
-	    shiftPhases(wavesynth.getWaveDataList(), phaseShift);
-	    loadWaveDataPanelValues(currentWD);
-	    markWaveSynthAudioDirty();
-	    markWaveSynthVisualDirty();
-	    break;
-	  case 'P': // shift all active WaveSynth phases by -phaseFac
-	    shiftPhases(wavesynth.getWaveDataList(), -phaseShift);
-	    loadWaveDataPanelValues(currentWD);
-	    markWaveSynthAudioDirty();
-	    markWaveSynthVisualDirty();
-	    break;
-	  case 'k': // show all current phase values in the console
-	    showPhaseValues(wavesynth.getWaveDataList());
-	    break;
-	  case 'K': // set all phase values so that first frame looks like the current frame, then go to first frame
-	    capturePhaseValues(wavesynth.getWaveDataList());
-	    step = 0;
-	    markWaveSynthVisualDirty();
-	    break;
-	  case '+': // make the image brighter
-	  case '=':
-	    wavesynth.setGain(wavesynth.gain + gainInc);
-	    refreshGlobalPanel();
-	    if (!isAnimating) markWaveSynthVisualDirty();
-	    break;
-	  case '-': // make the image darker
-	  case '_':
-	    wavesynth.setGain(wavesynth.gain - gainInc);
-	    refreshGlobalPanel();
-	    if (!isAnimating) markWaveSynthVisualDirty();
-	    break;
-	    // ------------- BEGIN COMMANDS FOR ANIMATION STEPPING ------------- //
-	  case 'e': // fast forward animation 1/8 of total steps
-	    step = (step + animSteps/8) % animSteps;
-	    mapImage = renderFrame(step);
-	    println("-- step = "+ step);
-	    break;
-	  case 'E': // rewind animation 1/8 of total steps (loops back from end, if required)
-	    int leap = animSteps/8;
-	    step = (step > leap) ? step - leap : animSteps - (leap - step);
-	    mapImage = renderFrame(step);
-	    println("-- step = "+ step);
-	    break;
-	  case 'i': // reset current animation step to initial value, 0
-	    step = 0;
-	    mapImage = renderFrame(0);
-	    println("-- step = "+ step);
-	    break;
-	  case 'u': // advance animation by 1 step
-	    step = (step + 1) % animSteps;
-	    mapImage = renderFrame(step);
-	    println("-- step = "+ step);
-	    break;
-	  case 'U': // advance animation by 10 steps
-	    step = (step + 10) % animSteps;
-	    mapImage = renderFrame(step);
-	    println("-- step = "+ step);
-	    break;
-	  case 'y': // rewind animation by 1 step
-	    step = (step > 0) ? (step - 1) : animSteps - 1;
-	    mapImage = renderFrame(step);
-	    println("-- step = "+ step);
-	    break;
-	  case 'Y': // rewind animation by 10 steps
-	    step = (step > 10) ? (step - 10) : animSteps - (10 - step);
-	    mapImage = renderFrame(step);
-	    println("-- step = "+ step);
-	    break;
-	  case 'l': // toggle animation looping on or off
-	  case 'L':
-	    toggleLooping();
-	    break;
-	    // ------------- END COMMANDS FOR ANIMATION STEPPING ------------- //
-	    // ------------- BEGIN MUTING COMMANDS ------------- //
-	  case '1':
-	  case '2':
-	  case '3':
-	  case '4':
-	  case '5':
-	  case '6':
-	  case '7':
-	  case '8':
-	    // keys 1-8 mute or unmute WaveDataList elements 0-7
-	    int k = Character.getNumericValue(theKey) - 1;
-	    toggleWDMute(k);
-	    refreshGlobalPanel();
-	    markWaveSynthAudioDirty();
-	    break;
-	  case 'm': // print current WaveData states to console
-	    printWDStates(wavesynth.getWaveDataList());
-	    break;
-	  case 'M': // unmute all WaveData operators
-		unmuteAllWD(wavesynth.getWaveDataList());
-	    refreshGlobalPanel();
-	    markWaveSynthAudioDirty();
-	    break;
-	    // ------------- END MUTING COMMANDS ------------- //
-	  case 'j': // save WaveSynth settings to a JSON file
-	  case 'J':
-	    saveWaveData();
-	    break;
-	  case 'o': // open a new JSON file
-	    loadWaveData();
-	    markWaveSynthAudioDirty();
-	    break;
-	  case 'O': // reload the current JSON file, if there is one, reverting all edits
-	    if (this.currentDataFile == null) {
-	      loadWaveData();
-	      markWaveSynthAudioDirty();
-	    } else {
-	      fileSelectedOpen(currentDataFile);
-	      markWaveSynthAudioDirty();
-	      if (isVerbose) println("--->> reloaded JSON file");
-	    }
-	    break;
-	  case 'r': // toggles display window to fit screen or display at size
-	    isFitToScreen = !isFitToScreen;
-	    resizeWindow();
-	    println("----->>> window width: "+ width +", window height: "+ height);
-	    break;
-	  case 's': // save the current image to a .png file
-	    if (currentDataFile != null) {
-	      java.nio.file.Path path = java.nio.file.Paths.get(currentDataFile.getAbsolutePath());
-	      String fname = path.getFileName().toString();
-	      fname = fname.substring(0, fname.length() - 5);
-	      println("----->>> fname = "+ fname);
-	      mapImage.save(fname + ".png");
-	    } 
-	    else {
-	      mapImage.save("wavesynth_"+ ".png");
-	    }
-	    break;
-	  case 'S': // save audio from WaveSynth
-		  saveToAudio();
-		  break;
-	  case 'v': // toggle video recording
-	    toggleRecording();
-	    break;
-	  case 'V': // record a complete video loop from frame 0 to stop frame
-	    // Go to frame 0, turn recording on, turn animation on.
-	    // This will record a complete video loop, from frame 0 to the
-	    // stop frame value in the GUI control panel.
-	    step = 0;
-	    mapImage = renderFrame(step);
-	    isRecordingVideo = true;
-	    isAnimating = true;
-	    break;
-	  case 't': // sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON
-	    Collections.sort(wavesynth.waveDataList, new CompareWaveData());
-	    currentWD = wavesynth.waveDataList.get(0);
-	    wavesynth.prepareAnimation();
-	    refreshGlobalPanel();
-	    if (!isAnimating) mapImage = renderFrame(step);
-	    if (isVerbose) {
-	      println("--->> Sorted wave data operators by frequency.");
-	    }
-	    break;
-	  case 'z': // find nearest zero crossing in the audio signal and play from there
-		  isFindZeroCrossing = !isFindZeroCrossing;
-		  println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
-		  toggleZeroCrossing(isFindZeroCrossing);
-		  break;
-	  case '?': // print some global information to the console
-		  println("-- window dimensions = "+ width +" x "+ height);
-		  println("-- current frame = "+ step);
-		  println("-- frame rate = "+ frameRate);
-		  println("-- audio gain = "+ audioOut.getGain());
-		  println("-- audio sample rate = "+ audioOut.sampleRate());
-		  break;
-	  case 'h': // show Help Message in console
-	  case 'H':
-	    showHelp();
-	    break;
-	  default:
-	    break;
-	  }
-	}
+    public void parseKey(char theKey, int keyCode) {
+    	switch(theKey) {
+    	case ' ': // play audio for the point the mouse is currently over
+    		audioMouseClick(mouseX, mouseY);
+    		break;
+    	case TAB: // turn animation on or off
+    		toggleAnimation();
+    		break;
+    	case 'g': 
+    		swapGen();
+    		break;
+    	case 'a': // scale all active WaveSynth amplitudes by ampFac
+    		scaleAmps(wavesynth.getWaveDataList(), ampFac);
+    		loadWaveDataPanelValues(currentWD);
+    		markWaveSynthAudioDirty();
+    		break;
+    	case 'A': // scale all active WaveSynth amplitudes by 1/ampFac
+    		scaleAmps(wavesynth.getWaveDataList(), 1/ampFac);
+    		loadWaveDataPanelValues(currentWD);
+    		markWaveSynthAudioDirty();
+    		break;
+    	case 'c': // shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space
+    		shiftColors(wavesynth.getWaveDataList(), colorShift);
+    		wavesynth.updateWaveColors();
+    		refreshGlobalPanel();
+    		markWaveSynthVisualDirty();
+    		break;
+    	case 'C': // shift all active WaveSynth colors by -colorShift * 360 degrees in the HSB color space
+    		shiftColors(wavesynth.getWaveDataList(), -colorShift);
+    		wavesynth.updateWaveColors();
+    		refreshGlobalPanel();
+    		markWaveSynthVisualDirty();
+    		break;
+    	case 'd': // print animation data to the console
+    		println(isAnimating ? "-- running animation frame " + step + " of " + animStop : "-- stopped at frame " + step +" of " + animStop);
+    		break;
+    	case 'D': // print WaveSynth data to the console
+    		println(wavesynth.toString());
+    		break;
+    	case 'f': // scale all active WaveSynth frequencies by freqFac
+    		scaleFreqs(wavesynth.getWaveDataList(), freqFac);
+    		loadWaveDataPanelValues(currentWD);
+    		markWaveSynthAudioDirty();
+    		markWaveSynthVisualDirty();
+    		break;
+    	case 'F': // scale all active WaveSynth frequencies by 1/freqFac
+    		scaleFreqs(wavesynth.getWaveDataList(), 1/freqFac);
+    		loadWaveDataPanelValues(currentWD);
+    		markWaveSynthAudioDirty();
+    		markWaveSynthVisualDirty();
+    		break;
+    	case 'p': // shift all active WaveSynth phases by phaseFac
+    		shiftPhases(wavesynth.getWaveDataList(), phaseShift);
+    		loadWaveDataPanelValues(currentWD);
+    		markWaveSynthAudioDirty();
+    		markWaveSynthVisualDirty();
+    		break;
+    	case 'P': // shift all active WaveSynth phases by -phaseFac
+    		shiftPhases(wavesynth.getWaveDataList(), -phaseShift);
+    		loadWaveDataPanelValues(currentWD);
+    		markWaveSynthAudioDirty();
+    		markWaveSynthVisualDirty();
+    		break;
+    	case 'k': // show all current phase values in the console
+    		showPhaseValues(wavesynth.getWaveDataList());
+    		break;
+    	case 'K': // set all phase values so that first frame looks like the current frame, then go to first frame
+    		capturePhaseValues(wavesynth.getWaveDataList());
+    		step = 0;
+    		markWaveSynthVisualDirty();
+    		break;
+    	case '+': // make the image brighter
+    	case '=':
+    		wavesynth.setGain(wavesynth.gain + gainInc);
+    		refreshGlobalPanel();
+    		if (!isAnimating) markWaveSynthVisualDirty();
+    		break;
+    	case '-': // make the image darker
+    	case '_':
+    		wavesynth.setGain(wavesynth.gain - gainInc);
+    		refreshGlobalPanel();
+    		if (!isAnimating) markWaveSynthVisualDirty();
+    		break;
+    		// ------------- BEGIN COMMANDS FOR ANIMATION STEPPING ------------- //
+    	case 'e': // fast forward animation 1/8 of total steps
+    		step = (step + animSteps/8) % animSteps;
+    		mapImage = renderFrame(step);
+    		println("-- step = "+ step);
+    		break;
+    	case 'E': // rewind animation 1/8 of total steps (loops back from end, if required)
+    		int leap = animSteps/8;
+    		step = (step > leap) ? step - leap : animSteps - (leap - step);
+    		mapImage = renderFrame(step);
+    		println("-- step = "+ step);
+    		break;
+    	case 'i': // reset current animation step to initial value, 0
+    		step = 0;
+    		mapImage = renderFrame(0);
+    		println("-- step = "+ step);
+    		break;
+    	case 'u': // advance animation by 1 step
+    		step = (step + 1) % animSteps;
+    		mapImage = renderFrame(step);
+    		println("-- step = "+ step);
+    		break;
+    	case 'U': // advance animation by 10 steps
+    		step = (step + 10) % animSteps;
+    		mapImage = renderFrame(step);
+    		println("-- step = "+ step);
+    		break;
+    	case 'y': // rewind animation by 1 step
+    		step = (step > 0) ? (step - 1) : animSteps - 1;
+    		mapImage = renderFrame(step);
+    		println("-- step = "+ step);
+    		break;
+    	case 'Y': // rewind animation by 10 steps
+    		step = (step > 10) ? (step - 10) : animSteps - (10 - step);
+    		mapImage = renderFrame(step);
+    		println("-- step = "+ step);
+    		break;
+    	case 'l': // toggle animation looping on or off
+    	case 'L':
+    		toggleLooping();
+    		break;
+    		// ------------- END COMMANDS FOR ANIMATION STEPPING ------------- //
+    		// ------------- BEGIN MUTING COMMANDS ------------- //
+    	case '1':
+    	case '2':
+    	case '3':
+    	case '4':
+    	case '5':
+    	case '6':
+    	case '7':
+    	case '8':
+    		// keys 1-8 mute or unmute WaveDataList elements 0-7
+    		int k = Character.getNumericValue(theKey) - 1;
+    		toggleWDMute(k);
+    		refreshGlobalPanel();
+    		markWaveSynthAudioDirty();
+    		break;
+    	case 'm': // print current WaveData states to console
+    		printWDStates(wavesynth.getWaveDataList());
+    		break;
+    	case 'M': // unmute all WaveData operators
+    		unmuteAllWD(wavesynth.getWaveDataList());
+    		refreshGlobalPanel();
+    		markWaveSynthAudioDirty();
+    		break;
+    		// ------------- END MUTING COMMANDS ------------- //
+    	case 'j': // save WaveSynth settings to a JSON file
+    	case 'J':
+    		saveWaveData();
+    		break;
+    	case 'o': // open a new JSON file
+    		loadWaveData();
+    		markWaveSynthAudioDirty();
+    		break;
+    	case 'O': // reload the current JSON file, if there is one, reverting all edits
+    		if (this.currentDataFile == null) {
+    			loadWaveData();
+    			markWaveSynthAudioDirty();
+    		} else {
+    			fileSelectedOpen(currentDataFile);
+    			markWaveSynthAudioDirty();
+    			if (isVerbose) println("--->> reloaded JSON file");
+    		}
+    		break;
+    	case 'r': // toggles display window to fit screen or display at size
+    		isFitToScreen = !isFitToScreen;
+    		resizeWindow();
+    		println("----->>> window width: "+ width +", window height: "+ height);
+    		break;
+    	case 's': // save the current image to a .png file
+    		if (currentDataFile != null) {
+    			java.nio.file.Path path = java.nio.file.Paths.get(currentDataFile.getAbsolutePath());
+    			String fname = path.getFileName().toString();
+    			fname = fname.substring(0, fname.length() - 5);
+    			println("----->>> fname = "+ fname);
+    			mapImage.save(fname + ".png");
+    		} 
+    		else {
+    			mapImage.save("wavesynth_"+ ".png");
+    		}
+    		break;
+    	case 'S': // save audio from WaveSynth
+    		saveToAudio();
+    		break;
+    	case 'v': // toggle video recording
+    		toggleRecording();
+    		break;
+    	case 'V': // record a complete video loop from frame 0 to stop frame
+    		// Go to frame 0, turn recording on, turn animation on.
+    		// This will record a complete video loop, from frame 0 to the
+    		// stop frame value in the GUI control panel.
+    		step = 0;
+    		mapImage = renderFrame(step);
+    		isRecordingVideo = true;
+    		isAnimating = true;
+    		break;
+    	case 't': // sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON
+    		Collections.sort(wavesynth.waveDataList, new CompareWaveData());
+    		currentWD = wavesynth.waveDataList.get(0);
+    		wavesynth.prepareAnimation();
+    		refreshGlobalPanel();
+    		if (!isAnimating) mapImage = renderFrame(step);
+    		if (isVerbose) {
+    			println("--->> Sorted wave data operators by frequency.");
+    		}
+    		break;
+    	case 'z': // find nearest zero crossing in the audio signal and play from there
+    		isFindZeroCrossing = !isFindZeroCrossing;
+    		println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
+    		toggleZeroCrossing(isFindZeroCrossing);
+    		break;
+    	case '?': // print some global information to the console
+    		println("-- window dimensions = "+ width +" x "+ height);
+    		println("-- current frame = "+ step);
+    		println("-- frame rate = "+ frameRate);
+    		println("-- audio gain = "+ audioOut.getGain());
+    		println("-- audio sample rate = "+ audioOut.sampleRate());
+    		break;
+    	case 'h': // show Help Message in console
+    	case 'H':
+    		showHelp();
+    		break;
+    	default:
+    		break;
+    	}
+    }
 	
 	public void showHelp() {
 		println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
@@ -1033,6 +1040,32 @@ public class WaveSynthEditor extends PApplet {
 		outputGain = audioOut.getGain();
 	}
 	
+	public void swapGen() {
+		if (gen == zGen) {
+			gen = isDesignMode ? hGen : mGen;
+			swapGen(gen);
+		}
+		else if (gen == hGen || gen == mGen) {
+			gen = bGen;
+			swapGen(gen);
+		}
+		else if (gen == bGen) {
+			gen = zGen;
+			swapGen(gen);
+		}
+		println(gen.describe());
+	}
+
+	/**
+	 * Sets a new PixelMapGen for a PixelAudioMapper
+	 * @param gen
+	 */
+	public void swapGen(PixelMapGen gen) {
+		mapper.setGenerator(gen);
+		// wavesynth.setMapper(mapper);
+		markWaveSynthAudioDirty();
+	}
+
 	/**
 	 * Turn animation on or off.
 	 */
