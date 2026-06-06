@@ -14,6 +14,7 @@ public void scaleAmps(ArrayList<WaveData> waveDataList, float scale) {
       continue;
     }
     wd.setAmp(wd.amp * scale);
+    wd.invalidateFrameState();
     if (isVerbose) println("----- set amplitude " + i + " to " + wd.amp);
     i++;
   }
@@ -46,7 +47,9 @@ public void scaleFreqs(ArrayList<WaveData> waveDataList, float scale) {
       continue;
     }
     wd.setFreq(wd.freq * scale);
+    wd.invalidateFrameState();
     if (isVerbose) println("----- set frequency " + i + " to " + wd.freq);
+    i++;
   }
 }
 
@@ -61,6 +64,7 @@ public void shiftPhases(ArrayList<WaveData> waveDataList, float shift) {
       continue;
     // wd.setPhase(wd.phase + shift - floor(wd.phase + shift));
     wd.setPhase(wd.phase + shift);
+    wd.invalidateFrameState();
   }
   if (isVerbose) println("----->>> shiftPhase " + shift);
 }
@@ -111,12 +115,11 @@ public void toggleWDMute(int elem) {
   wd.isMuted = !wd.isMuted;
   if (wd.isMuted) {
     wd.waveState = WaveState.MUTE;
-  } 
-  else {
+  } else {
     wd.waveState = WaveState.ACTIVE;
   }
   if (!isAnimating) {
-    wavesynth.renderFrame(step);
+    mapImage = renderFrame(step);
   }
 }
 

@@ -43,7 +43,7 @@ void listDisplays() {
  *
  */
 public void setScaling() {
-  // max window width is a little less than the screen width of the screen
+  // max window width is a little less than the full width of the screen
   maxWindowWidth = displayWidth - 80;
   // leave window height some room for title bar, etc.
   maxWindowHeight = displayHeight - 80;
@@ -53,8 +53,7 @@ public void setScaling() {
     sc = maxWindowHeight / (float) mapImage.height;
     scaledWindowHeight = Math.round(mapImage.height * sc);
     scaledWindowWidth = Math.round(mapImage.width * sc);
-  } 
-  else {
+  } else {
     scaledWindowWidth = Math.round(mapImage.width * sc);
   }
   // even width and height allow ffmpeg to save to video
@@ -74,6 +73,22 @@ public void resizeWindow() {
   } else {
     surface.setSize(mapImage.width, mapImage.height);
   }
+}
+
+int screenToSampleX(int x) {
+  return constrain(Math.round(x * windowScale), 0, mapImage.width - 1);
+}
+
+int screenToSampleY(int y) {
+  return constrain(Math.round(y * windowScale), 0, mapImage.height - 1);
+}
+
+int sampleToScreenX(int x) {
+  return Math.round(x / windowScale);
+}
+
+int sampleToScreenY(int y) {
+  return Math.round(y / windowScale);
 }
 
 // ------------- END DISPLAY SCALING METHODS ------------- //

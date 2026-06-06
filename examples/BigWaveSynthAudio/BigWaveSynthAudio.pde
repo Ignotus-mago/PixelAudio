@@ -1,3 +1,6 @@
+// TODO revise for more recent UI formats. This is an early sketch, 
+// but it has some useful features even if it needs revision. 
+
 /**
  * BigWaveSynthAudio shows how you can load the color output of WaveSynth into the pixel
  * array of a MultiGen and play the WaveSynth's audio output with a PASamplerInstrument.

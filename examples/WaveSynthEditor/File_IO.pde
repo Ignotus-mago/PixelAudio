@@ -5,6 +5,9 @@
 
 // select a file of WaveData objects in JSON format to open
 public void loadWaveData() {
+  if (isAnimating) {
+    toggleAnimation();    // avoid concurrent modification of WaveData
+  }
   File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
 }
@@ -22,8 +25,7 @@ public void fileSelectedOpen(File selection) {
   boolean goodHeader = checkJSONHeader(json, "PXAU", "WSYN");
   if (goodHeader) {
     println("--->> JSON file contains WaveSynthEditor data. It should load correctly.");
-  } 
-  else {
+  } else {
     println("--->> JSON file may not contain WaveSynthEditor data. Will try to load,anyhow.");
   }
   setWaveSynthFromJSON(json, wavesynth);
@@ -36,14 +38,12 @@ boolean checkJSONHeader(JSONObject json, String key, String val) {
   String pxau;
   if (header != null) {
     pxau = (header.isNull(key)) ? "" : header.getString(key);
-  } 
-  else {
+  } else {
     pxau = (json.isNull(key)) ? "" : json.getString(key);
   }
   if (pxau.equals(val)) {
     return true;
-  } 
-  else {
+  } else {
     return false;
   }
 }
@@ -102,6 +102,7 @@ public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
   loadGlobalPanelValues();
   loadWaveDataPanelValues(currentWD);
   printWaveData(synth);
+  markWaveSynthAudioDirty();
 }
 
 /**
@@ -150,8 +151,7 @@ public void fileSelectedWrite(File selection) {
     || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
     // problem missing ".json"
     currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
-  } 
-  else {
+  } else {
     currentFileName = selection.getAbsolutePath();
   }
   // put WaveData objects into an array
@@ -193,8 +193,7 @@ public void fileSelectedWrite(File selection) {
     videoName = selection.getName();
     if (videoName.indexOf(".json") != -1) {
       videoName = videoName.substring(0, videoName.indexOf(".json")) + ".mp4";
-    } 
-    else {
+    } else {
       videoName += ".mp4";
     }
   }
@@ -229,11 +228,11 @@ public JSONObject getWaveSynthJSONHeader() {
 /* ----->>>      BEGIN IMAGE AND AUDIO FILE I/O     <<<----- */
 //-----------------------------------------------------------//
 
-
 public void saveToImage() {
   // File folderToStartFrom = new File(dataPath(""));
   selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
 }
+
 public void imageFileSelectedWrite(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");

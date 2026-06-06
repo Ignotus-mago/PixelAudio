@@ -1,8 +1,14 @@
 /**
- * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns
- * that can be saved to video or played as an additive synthesis audio source.
+ * Additive audio synthesis engine produces colorful animated patterns and electronic synth sounds.
  *
- * Use this application to edit a PixelAudio WaveSynth, including its individual WaveData
+ * WaveSynth Editor Sketch
+ *
+ * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns
+ * that can be saved to video or played as an additive synthesis audio source. It
+ * provides an introduction to the WaveSynth class and the WaveData objects
+ * that WaveSynths use to generate visual patterns and audio signals.
+ *
+ * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
  * some of what you can do with the HilbertGen for making patterns with the WaveSynth. There
  * are lots of other possibilities. Patterns can be loaded from and saved to JSON files.
@@ -12,13 +18,13 @@
  * example sketches also produce audio with a WaveSynth. This example provides a graphical
  * user interface for editing the colors and other properties of a WaveSynth.
  *
- * Click on the WaveSynth image to hear what it sounds like. Note that the appearance of the
- * image is determined by the current sampling frequency, set in the initWaveSynth() method.
- * For a higher sampling rate, there are more samples. One sampling rate we use for the
- * WaveSynth Editor is the number of pixels in the WaveSynth image, 1024 * 1024 = 1048576.
- * Though it may have more or less samples, the sound of the audio will not vary, as its
- * frequency is governed by the sampling rate. If you want to save the audio to a file,
- * you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
+ * Click on the WaveSynth image or press spacebar to hear the audio version of the image. Note
+ * that the appearance of the image is determined by the current sampling frequency, set in the
+ * initWaveSynth() method. For a higher sampling rate, there are more samples. One sampling rate
+ * I commonly use for the WaveSynth Editor is the number of pixels in the WaveSynth image,
+ * 1024 * 1024 = 1048576. Though it may have more or less samples, the sound of the audio will not
+ * vary, as its frequency is governed by the sampling rate. If you want to save the audio to a
+ * file, you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
  *
  * A WaveSynth is organized around attributes, such as gain (i.e. loudness or brightness)
  * and gamma (a sort of contrast setting), and data objects. The data objects include a
@@ -28,10 +34,15 @@
  * PixelAudioMapper signal path, and an array of WaveData objects that define the individual
  * sine wave components of the WaveSynth.
  *
+ * NOTE: Changes to data fields in the Control Panel will not be applied immediately to the
+ * WaveSynth image and audio. Click the Refresh button to force an update. Stepping to the
+ * next or previous operator will also refresh audio and image. If the display window is
+ * active, stepping to another frame 'y', 'u', or 'e' key commands) will also force an update.
+ *
  * When a WaveSynth is used to produce color patterns, each WaveData object in the waveDataList
  * controls a color. The colors of the various WaveData objects are added together. The
  * amplitude of the controlling sine wave controls the brightness of each color. The control
- * panel in this example allows to isolate individual WaveData operators to see how they
+ * panel in this example allows you to isolate individual WaveData operators to see how they
  * affect the color patterns.
  *
  * SAMPLING RATES FOR AUDIO AND FOR WAVESYNTH IMAGES
@@ -48,11 +59,11 @@
  *
  * In addition to the GUI commands, there are some useful key commands.
  *
- * --------------------------------------------------------------------------------------------
- * ***>> NOTE: Key commands only work when the image display window is the active window. <<***
- * --------------------------------------------------------------------------------------------
+ * ---------------------------------------------------------------------------------------------
+ * ***>>  NOTE: Key commands only work when the image display window is the front window.  <<***
+ * ---------------------------------------------------------------------------------------------
  *
- * Key commands will not work when the control panel is the active window.
+ * Key commands will NOT work when the control panel is the active window.
  * Click on the display window to make it the active window and then try the commands.
  * See the parseKey() method and the methods it calls for more information about key commands.
  *
@@ -62,9 +73,13 @@
  * The code in this example is extensively annotated. We the author heartily recommend you
  * read the notes for the various methods.
  *
+ *
+ * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
+ 
  * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
- * press ' ' to turn animation on or off.
+ * Press ' ' (spacebar) to trigger audio playback at the current mouse position.
+ * Press TAB to turn animation on or off.
  * Press 'a' to scale all active WaveSynth amplitudes by ampFac.
  * Press 'A' to scale all active WaveSynth amplitudes by 1/ampFac.
  * Press 'c' to shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space.
@@ -104,12 +119,15 @@
  * Press 'V' to record a complete video loop from frame 0 to stop frame.
  * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.
  * Press 'z' to find nearest zero crossing in the audio signal and play from there.
- * press 'h' or 'H' to show this help message in the console. *
+ * Press '?' to print window dimensions, video frame rate, and audio settings to the console.
+ * press 'h' or 'H' to show this help message in the console.
+ 
+ * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
  *
- * TODO can the audioBuffer be updated for all image and audio amplitude/brightness changes. How?
+ *
+ *
  *
  */
-
 
 //Java imports
 import java.util.ArrayList;
@@ -121,6 +139,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
@@ -130,15 +149,11 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import java.util.Collections;
 
-import processing.core.*;
-import processing.data.*;
-
 // Mama's ever-lovin' blue-eyed baby library
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.WaveData.WaveState;
-// Other handy class in local project
 import net.paulhertz.pixelaudio.sampler.*;
-import net.paulhertz.pixelaudio.schedule.*;
+import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
 // audio library
 import ddf.minim.*;
@@ -150,6 +165,10 @@ import com.hamoid.*;
 import g4p_controls.*;
 
 
+/* ------------------------------------------------------------------ */
+/*                        DIMENSION SETTINGS                          */
+/* ------------------------------------------------------------------ */
+
 int bgFillColor;
 /**
  * Set designMode true to use designWidth and designHeight for display width
@@ -157,7 +176,7 @@ int bgFillColor;
  * width and height. Set renderWidth and renderHeight to the dimensions
  * of the PixelMapGen you want render and animate.
  */
-boolean isDesignMode = true;
+boolean isDesignMode = false;
 int genWidth = isDesignMode ? 1024 : 512;         // for Hilbert and Moore curves, genWidth must be a power of 2
 int genHeight = isDesignMode ? 1024 : 512;        // for Hilbert and Moore curves, genHeight must be a power of 2
 int designWidth = genWidth;
@@ -175,18 +194,27 @@ int scaledWindowWidth;                 // scaled window width
 int scaledWindowHeight;                // scaled window height
 float windowScale = 1.0f;              // scaling ratio, used to calculate scaled mouse location
 
-// PixelAudio vars and objects
+
+/* ------------------------------------------------------------------ */
+/*                       PIXELAUDIO VARIABLES                         */
+/* ------------------------------------------------------------------ */
+
 PixelAudio pixelaudio;      // our shiny new library
-HilbertGen hGen;            // a PixelMapGen to draw Hilbert curves
-MooreGen mGen;              // a PixelMapGen to draw Moore curves
+HilbertGen hGen;            // a HilbertGen
 DiagonalZigzagGen zGen;     // a PixelMapGen to draw zigzag curves
-MultiGen multigen;          // a PixelMapGen that handles multiple gens
+BoustropheGen bGen;         // a PixelMapGen with boustrophedon ordering
+MultiGen mGen;              // a PixelMapGen that blends multiple gens
 PixelMapGen gen;            // any PixelMapGen
 PixelAudioMapper mapper;    // object for reading, writing, and transcoding audio and image data
 int mapSize;                // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
 PImage mapImage;            // image for display
 PGraphics offscreen;        // offscreen PGraphics
 int[] rgbSignal;            // the pixel values in mapImage, in the order the signal path visits them
+
+
+/* ------------------------------------------------------------------ */
+/*                        WAVESYNTH VARIABLES                         */
+/* ------------------------------------------------------------------ */
 
 // WaveSynth vars
 ArrayList<WaveData> wdList;    // list of WaveData objects used by a WaveSynth
@@ -209,7 +237,11 @@ String videoPath;              // directory for saving video
 String jsonFile = "test327.json";
 String jsonFolder = "JSON";
 
-/* -------------------------- RENDER SETTINGS -------------------------- */
+
+/* ------------------------------------------------------------------ */
+/*                         RENDER SETTINGS                            */
+/* ------------------------------------------------------------------ */
+
 /** Sets how much to shift phase with shiftPhases() */
 float phaseShift = (float) (Math.PI * 1.0 / 1536.0);
 /** Sets how much to shift colors with shiftColors()
@@ -217,7 +249,8 @@ float phaseShift = (float) (Math.PI * 1.0 / 1536.0);
  * expressed as a fraction in the range (0..1).
  */
 float colorShift = 1.0f/24;
-/** Sets how much to scale frequencies with scaleFreqs() */
+/** Sets how much to scale frequencies with scaleFreqs()
+ *  tritone (half octave): (Math.sqrt(2.0)); semitone: (Math.pow(2.0, 1.0/12)); */
 float freqFac = (float) (Math.sqrt(2.0));
 /** Sets how much to scale amplitudes with scaleAmps() */
 float ampFac = 0.9375f; // 15/16
@@ -235,21 +268,19 @@ int step;                               // number of current step in animation l
 int startTime;                          // set when animation starts
 int stopTime;                           // used to calculate animation time until finish and duration
 
-/* ---------------------------------------------------------------------- */
 boolean isVerbose = true;               // if true, post lots of debugging messages to console
 boolean isSecondScreen = false;         // for a two screen display
 int screen2x;                           // second screen x-coord, will be set by setScaling()
 int screen2y;                           // second window y-coord, will be set by setScaling()
 
+
 /* ------------------------------------------------------------------ */
-/*                                                                    */
 /*                          AUDIO VARIABLES                           */
-/*                                                                    */
 /* ------------------------------------------------------------------ */
+
 /** Minim audio library */
 Minim minim;                       // library that handles audio
 AudioOutput audioOut;              // line out to sound hardware
-boolean isBufferStale = false;     // flags that audioBuffer needs to be reset: i.e., after loading JSON data to wavesynth
 float sampleRate = 48000;          // sample rate for audio playback and output to file, see notes above
 float[] audioSignal;               // the audio signal as an array of floats
 MultiChannelBuffer audioBuffer;    // data structure to hold audio samples
@@ -260,9 +291,14 @@ float outputGain = -6.0f;          // audio output gain
 int noteDuration = 2000;        // average sample synth note duration, milliseconds
 int samplelen;                  // calculated sample synth note length, samples
 PASamplerInstrumentPool pool;   // pool of instruments
+int poolSize = 4;               // number of instruments
+int samplerMaxVoices = 8;       // number of voices per instrument
+float samplerGain = 0.875f;     // instrument gain
+
+
 
 // ADSR and params
-ADSRParams adsr;                   // good old attack, decay, sustain, release
+ADSRParams samplerEnv;                   // good old attack, decay, sustain, release
 float maxAmplitude = 0.9f;
 float attackTime = 0.3f;
 float decayTime = 0.1f;
@@ -279,11 +315,22 @@ int wsIndex = 0;
 
 boolean isFindZeroCrossing = false;    // default setting for PASamplerVoice
 
-/* ---------------- end audio variables ---------------- */
 
+/* ------------------------------------------------------------------ */
+/*                          UPDATE RENDERING                          */
+/* ------------------------------------------------------------------ */
+
+boolean imageDirty = true;
+boolean audioDirty = true;
+
+
+
+/* ------------------------------------------------------------------ */
+/*                           APPLICATION                              */
+/* ------------------------------------------------------------------ */
 
 /**
- * A call to the settings() method is required when setting size from variables
+ * The settings() method is required when setting size from variables
  */
 public void settings() {
   if (isDesignMode) {
@@ -301,17 +348,33 @@ public void settings() {
  * set the window scaling variables. Finally, build the GUI (using G4P library).
  */
 public void setup() {
+  this.frameRate(24);
   bgFillColor = color(0, 0, 0, 255);
+  // 1. Initialize PixelAudio
   pixelaudio = new PixelAudio(this);
-  gen = isDesignMode ? createHilbertGen(genWidth) : hilbertLoop3x2(genWidth, genHeight);
+  // 2. Create PixelMapGen objects
+  hGen = createHilbertGen(genWidth);
+  mGen = hilbertLoop3x2(genWidth, genHeight);
+  gen = isDesignMode ? hGen : mGen;
+  bGen = new BoustropheGen(width, height);
+  zGen = new DiagonalZigzagGen(width, height);
+  // 3. Initialize a PixelAudioMapper to handle mapping between audio and image
   mapper = new PixelAudioMapper(gen);
-  mapSize = mapper.getSize();                    // size of the image, and of various other entities
+  // area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
+  mapSize = mapper.getSize();
+  // 4. Create a list of WaveData objects
   wdList = initWaveDataList();
+  // 5. Create a WaveSynth with mapper and wdList
   wavesynth = new WaveSynth(mapper, wdList);
+  //    Set the initial values of the WaveSynth
   initWaveSynth(wavesynth);
-  initAudio();
+  //    Point currentWD to the first item in wavesynth's waveDataList field
   currentWD = wavesynth.waveDataList.get(0);
+  //    Point mapImage to wavesynth.mapImage, for drawing to the screen
   mapImage = wavesynth.mapImage;
+  // 6. Initialize audio
+  initAudio();
+  // 7. Set up displays and window scaling
   listDisplays();
   setScaling();
   if (isOversize) {
@@ -319,7 +382,9 @@ public void setup() {
     resizeWindow();
     println("Window is resized");
   }
+  // 8. Create the Graphical User Interface control panel
   createGUI();
+  // 9. Show some help
   showHelp();
 }
 
@@ -353,8 +418,8 @@ public HilbertGen createHilbertGen(int edgeLength) {
  *
  * @param genW    width of each HilbertGen
  * @param genH    height of each HilbertGen
- * @return              a 3 x 2 array of Hilbert curves, connected in
- *                      a loop (3 * genWidth by 2 * genHeight pixels)
+ * @return        a 3 x 2 array of Hilbert curves, connected in
+ *                a loop (3 * genWidth by 2 * genHeight pixels)
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
   // list of PixelMapGens that create an image using mapper
@@ -430,33 +495,41 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
 }
 
 public void draw() {
-  // draw the image
-  // mapImage points to wavesynth.mapImage, which gets updated by animation, etc.
-  image(mapImage, 0, 0, width, height);
-  // do one step of animation, if conditions are right
+  applyPendingWaveEdits();
   if (isAnimating) {
-    stepAnimation();
+    stepAnimation();      // only updates step / recording state
+    imageDirty = true;
   }
-  runTimeArray();    // animate audio event markers
+  refreshAudioIfDirty();
+  if (imageDirty) {
+    renderVisualFrame();  // calls wavesynth.renderFrame(step)
+  }
+  image(mapImage, 0, 0, width, height);
+  runTimeArray();
+  if (isRecordingVideo && videx != null) {
+    videx.saveFrame();
+    println("-- video recording frame " + step + " of " + animStop);
+  }
 }
 
 /**
  * Step through the animation, called by the draw() method.
- * Will also record a frame of video, if we're recording.
+ * Updates step and video recording state, but does not render or save frames.
  */
 public void stepAnimation() {
   if (step >= animStop) {
     println("--- Completed video at frame " + animStop);
     if (!isLooping) {
       isAnimating = false;
+      enableWDListControls(true);
     }
     step = 0;
     if (isRecordingVideo) {
       isRecordingVideo = false;
       videx.endMovie();
+      videx = null;    // discard the videx instance
     }
-  } 
-  else {
+  } else {
     step += 1;
     if (isRecordingVideo) {
       if (videx == null) {
@@ -465,43 +538,82 @@ public void stepAnimation() {
         videx.setFrameRate(wavesynth.videoFrameRate);
         videx.startMovie();
       }
-      videx.saveFrame();
-      println("-- video recording frame " + step + " of " + animStop);
     }
   }
-  renderFrame(step);
 }
 
-public void renderFrame(int frame) {
-  wavesynth.renderFrame(frame);
+public PImage renderFrame(int frame) {
+  wavesynth.prepareAnimation();
+  return wavesynth.renderFrame(frame);
 }
 
-public void mousePressed() {
+void markWaveSynthVisualDirty() {
+  imageDirty = true;
+}
+
+void markWaveSynthAudioDirty() {
+  imageDirty = true;
+  audioDirty = true;
+}
+
+void renderVisualFrame() {
+  mapImage = renderFrame(step);
+  imageDirty = false;
+}
+
+void refreshAudioIfDirty() {
+  if (!audioDirty) return;
+  wavesynth.prepareAnimation();
+  float[] sig = wavesynth.renderAudioRaw(0);  // audio for frame 0, stable source
+  sig = WaveSynth.normalize(sig, 0.9f);
+  updateAudioChain(sig);
+  audioDirty = false;
+}
+
+public void mouseClicked() {
   // Demo of how to scale mousePressed events works when window is resized.
-  int x = (this.isFitToScreen) ?  (int)(mouseX * windowScale) : mouseX;
-  int y = (this.isFitToScreen) ?  (int)(mouseY * windowScale) : mouseY;
-  audioMousePressed(constrain(x, 0, width - 1), constrain(y, 0, height - 1));
+  audioMouseClick(mouseX, mouseY);
+}
+
+/**
+ * Bottleneck method for triggering an audio event at display/mouse coordinates (mx, my).
+ * @param mx
+ * @param my
+ */
+void audioMouseClick(int mx, int my) {
+  sampleX = isFitToScreen ? screenToSampleX(mx) : mx;
+  sampleY = isFitToScreen ? screenToSampleY(my) : my;
+  if (sampleX < 0 || sampleX >= mapImage.width ||
+    sampleY < 0 || sampleY >= mapImage.height) return;
+  samplePos = mapper.lookupSignalPosShifted(sampleX, sampleY, 0);
+  //
+  // For WindowBuffer version:
+  // int backingPos = posInVisibleWindow + windowBuff.getIndex();
+  //
+  // use sampleX/sampleY for logical event storage
+  // use backingPos for sampler/granular source position
+  //
+  refreshAudioIfDirty();
+  playSample(samplePos, calcSampleLen(), 0.9f, samplerEnv);
 }
 
 /**
  * built-in keyPressed handler, forwards events to parseKey.
  */
-public void keyPressed() {
+@Override
+  public void keyPressed() {
   if (key != CODED) {
     parseKey(key, keyCode);
-  } 
-  else {
-    float g = audioOut.getGain();
+  } else {
     if (keyCode == UP) {
-      setAudioGain(g + 3.0f);
+      adjustAudioGain(3.0f);
       println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
-    } 
-    else if (keyCode == DOWN) {
-      setAudioGain(g - 3.0f);
+    } else if (keyCode == DOWN) {
+      adjustAudioGain(-3.0f);
       println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
-    } 
-    else if (keyCode == RIGHT) {} 
-    else if (keyCode == LEFT) {}
+    } else if (keyCode == RIGHT) {
+    } else if (keyCode == LEFT) {
+    }
   }
 }
 
@@ -513,28 +625,36 @@ public void keyPressed() {
  */
 public void parseKey(char theKey, int keyCode) {
   switch(theKey) {
-  case ' ': // turn animation on or off
+  case ' ': // play audio for the point the mouse is currently over
+    audioMouseClick(mouseX, mouseY);
+    break;
+  case TAB: // turn animation on or off
     toggleAnimation();
+    break;
+  case 'g':
+    swapGen();
     break;
   case 'a': // scale all active WaveSynth amplitudes by ampFac
     scaleAmps(wavesynth.getWaveDataList(), ampFac);
     loadWaveDataPanelValues(currentWD);
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
     break;
   case 'A': // scale all active WaveSynth amplitudes by 1/ampFac
     scaleAmps(wavesynth.getWaveDataList(), 1/ampFac);
     loadWaveDataPanelValues(currentWD);
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
     break;
   case 'c': // shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space
     shiftColors(wavesynth.getWaveDataList(), colorShift);
     wavesynth.updateWaveColors();
     refreshGlobalPanel();
+    markWaveSynthVisualDirty();
     break;
   case 'C': // shift all active WaveSynth colors by -colorShift * 360 degrees in the HSB color space
     shiftColors(wavesynth.getWaveDataList(), -colorShift);
     wavesynth.updateWaveColors();
     refreshGlobalPanel();
+    markWaveSynthVisualDirty();
     break;
   case 'd': // print animation data to the console
     println(isAnimating ? "-- running animation frame " + step + " of " + animStop : "-- stopped at frame " + step +" of " + animStop);
@@ -545,22 +665,26 @@ public void parseKey(char theKey, int keyCode) {
   case 'f': // scale all active WaveSynth frequencies by freqFac
     scaleFreqs(wavesynth.getWaveDataList(), freqFac);
     loadWaveDataPanelValues(currentWD);
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
+    markWaveSynthVisualDirty();
     break;
   case 'F': // scale all active WaveSynth frequencies by 1/freqFac
     scaleFreqs(wavesynth.getWaveDataList(), 1/freqFac);
     loadWaveDataPanelValues(currentWD);
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
+    markWaveSynthVisualDirty();
     break;
   case 'p': // shift all active WaveSynth phases by phaseFac
     shiftPhases(wavesynth.getWaveDataList(), phaseShift);
     loadWaveDataPanelValues(currentWD);
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
+    markWaveSynthVisualDirty();
     break;
   case 'P': // shift all active WaveSynth phases by -phaseFac
     shiftPhases(wavesynth.getWaveDataList(), -phaseShift);
     loadWaveDataPanelValues(currentWD);
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
+    markWaveSynthVisualDirty();
     break;
   case 'k': // show all current phase values in the console
     showPhaseValues(wavesynth.getWaveDataList());
@@ -568,55 +692,55 @@ public void parseKey(char theKey, int keyCode) {
   case 'K': // set all phase values so that first frame looks like the current frame, then go to first frame
     capturePhaseValues(wavesynth.getWaveDataList());
     step = 0;
-    renderFrame(step);
+    markWaveSynthVisualDirty();
     break;
   case '+': // make the image brighter
   case '=':
     wavesynth.setGain(wavesynth.gain + gainInc);
     refreshGlobalPanel();
-    if (!isAnimating) renderFrame(step);
+    if (!isAnimating) markWaveSynthVisualDirty();
     break;
   case '-': // make the image darker
   case '_':
     wavesynth.setGain(wavesynth.gain - gainInc);
     refreshGlobalPanel();
-    if (!isAnimating) renderFrame(step);
+    if (!isAnimating) markWaveSynthVisualDirty();
     break;
     // ------------- BEGIN COMMANDS FOR ANIMATION STEPPING ------------- //
   case 'e': // fast forward animation 1/8 of total steps
     step = (step + animSteps/8) % animSteps;
-    renderFrame(step);
+    mapImage = renderFrame(step);
     println("-- step = "+ step);
     break;
   case 'E': // rewind animation 1/8 of total steps (loops back from end, if required)
     int leap = animSteps/8;
     step = (step > leap) ? step - leap : animSteps - (leap - step);
-    renderFrame(step);
+    mapImage = renderFrame(step);
     println("-- step = "+ step);
     break;
   case 'i': // reset current animation step to initial value, 0
     step = 0;
-    renderFrame(0);
+    mapImage = renderFrame(0);
     println("-- step = "+ step);
     break;
   case 'u': // advance animation by 1 step
     step = (step + 1) % animSteps;
-    renderFrame(step);
+    mapImage = renderFrame(step);
     println("-- step = "+ step);
     break;
   case 'U': // advance animation by 10 steps
     step = (step + 10) % animSteps;
-    renderFrame(step);
+    mapImage = renderFrame(step);
     println("-- step = "+ step);
     break;
   case 'y': // rewind animation by 1 step
     step = (step > 0) ? (step - 1) : animSteps - 1;
-    renderFrame(step);
+    mapImage = renderFrame(step);
     println("-- step = "+ step);
     break;
   case 'Y': // rewind animation by 10 steps
     step = (step > 10) ? (step - 10) : animSteps - (10 - step);
-    renderFrame(step);
+    mapImage = renderFrame(step);
     println("-- step = "+ step);
     break;
   case 'l': // toggle animation looping on or off
@@ -637,7 +761,7 @@ public void parseKey(char theKey, int keyCode) {
     int k = Character.getNumericValue(theKey) - 1;
     toggleWDMute(k);
     refreshGlobalPanel();
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
     break;
   case 'm': // print current WaveData states to console
     printWDStates(wavesynth.getWaveDataList());
@@ -645,7 +769,7 @@ public void parseKey(char theKey, int keyCode) {
   case 'M': // unmute all WaveData operators
     unmuteAllWD(wavesynth.getWaveDataList());
     refreshGlobalPanel();
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
     break;
     // ------------- END MUTING COMMANDS ------------- //
   case 'j': // save WaveSynth settings to a JSON file
@@ -654,16 +778,15 @@ public void parseKey(char theKey, int keyCode) {
     break;
   case 'o': // open a new JSON file
     loadWaveData();
-    isBufferStale = true;
+    markWaveSynthAudioDirty();
     break;
   case 'O': // reload the current JSON file, if there is one, reverting all edits
     if (this.currentDataFile == null) {
       loadWaveData();
-      isBufferStale = true;
-    } 
-    else {
+      markWaveSynthAudioDirty();
+    } else {
       fileSelectedOpen(currentDataFile);
-      isBufferStale = true;
+      markWaveSynthAudioDirty();
       if (isVerbose) println("--->> reloaded JSON file");
     }
     break;
@@ -679,8 +802,7 @@ public void parseKey(char theKey, int keyCode) {
       fname = fname.substring(0, fname.length() - 5);
       println("----->>> fname = "+ fname);
       mapImage.save(fname + ".png");
-    } 
-    else {
+    } else {
       mapImage.save("wavesynth_"+ ".png");
     }
     break;
@@ -691,19 +813,23 @@ public void parseKey(char theKey, int keyCode) {
     toggleRecording();
     break;
   case 'V': // record a complete video loop from frame 0 to stop frame
-    // Go to frame 0, turn recording on, turn animation on.
+    if (videx != null) {
+      videx.endMovie();   // optional only if you might interrupt a live recording
+      videx = null;
+    }
     // This will record a complete video loop, from frame 0 to the
     // stop frame value in the GUI control panel.
     step = 0;
-    renderFrame(step);
+    mapImage = renderFrame(step);
     isRecordingVideo = true;
     isAnimating = true;
+    break;
   case 't': // sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON
     Collections.sort(wavesynth.waveDataList, new CompareWaveData());
     currentWD = wavesynth.waveDataList.get(0);
     wavesynth.prepareAnimation();
     refreshGlobalPanel();
-    if (!isAnimating) renderFrame(step);
+    if (!isAnimating) mapImage = renderFrame(step);
     if (isVerbose) {
       println("--->> Sorted wave data operators by frequency.");
     }
@@ -712,6 +838,13 @@ public void parseKey(char theKey, int keyCode) {
     isFindZeroCrossing = !isFindZeroCrossing;
     println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
     toggleZeroCrossing(isFindZeroCrossing);
+    break;
+  case '?': // print some global information to the console
+    println("-- window dimensions = "+ width +" x "+ height);
+    println("-- current frame = "+ step);
+    println("-- frame rate = "+ frameRate);
+    println("-- audio gain = "+ audioOut.getGain());
+    println("-- audio sample rate = "+ audioOut.sampleRate());
     break;
   case 'h': // show Help Message in console
   case 'H':
@@ -723,9 +856,11 @@ public void parseKey(char theKey, int keyCode) {
 }
 
 public void showHelp() {
+  println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
   println("\n * Press the UP arrow to increase audio output gain by 3.0 dB.");
   println(" * Press the DOWN arrow to decrease audio output gain by 3.0 dB.");
-  println(" * press ' ' to turn animation on or off.");
+  println(" * Press ' ' (spacebar) to trigger audio playback at the current mouse position.");
+  println(" * Press TAB to turn animation on or off.");
   println(" * Press 'a' to scale all active WaveSynth amplitudes by ampFac.");
   println(" * Press 'A' to scale all active WaveSynth amplitudes by 1/ampFac.");
   println(" * Press 'c' to shift all active WaveSynth colors by colorShift * 360 degrees in the HSB color space.");
@@ -765,7 +900,9 @@ public void showHelp() {
   println(" * Press 'V' to record a complete video loop from frame 0 to stop frame.");
   println(" * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.");
   println(" * Press 'z' to find nearest zero crossing in the audio signal and play from there.");
+  println(" * Press '?' to print window dimensions, video frame rate, and audio settings to the console.");
   println(" * press 'h' or 'H' to show this help message in the console.");
+  println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
 }
 
 /**
@@ -777,6 +914,41 @@ public void setAudioGain(float g) {
   outputGain = audioOut.getGain();
 }
 
+/**
+ * Sets audioOut.gain.
+ * @param g   gain value for audioOut, in decibels
+ */
+public void adjustAudioGain(float g) {
+  float ag = audioOut.getGain();
+  ag += g;
+  if (ag > 12.0f || ag < -64.0f) return;
+  audioOut.setGain(ag);
+  outputGain = audioOut.getGain();
+}
+
+public void swapGen() {
+  if (gen == zGen) {
+    gen = isDesignMode ? hGen : mGen;
+    swapGen(gen);
+  } else if (gen == hGen || gen == mGen) {
+    gen = bGen;
+    swapGen(gen);
+  } else if (gen == bGen) {
+    gen = zGen;
+    swapGen(gen);
+  }
+  println(gen.describe());
+}
+
+/**
+ * Sets a new PixelMapGen for a PixelAudioMapper
+ * @param gen
+ */
+public void swapGen(PixelMapGen gen) {
+  mapper.setGenerator(gen);
+  // wavesynth.setMapper(mapper);
+  markWaveSynthAudioDirty();
+}
 
 /**
  * Turn animation on or off.
@@ -791,8 +963,7 @@ public void toggleAnimation() {
     runVideoBtn.setText("Pause");
     startTime = millis();
     println("-----> start time is " + startTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
-  } 
-  else {
+  } else {
     runVideoBtn.setText("Run");
     stopTime = millis();
     println("-----> stop time is " + stopTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
@@ -822,16 +993,13 @@ public void toggleRecording() {
   if (isRecordingVideo) {
     if (!isAnimating) {
       println(" Press spacebar to start animation and video recording from frame "+ step);
-    } 
-    else {
+    } else {
       println(" Recording animation from frame "+ step);
     }
-  } 
-  else {
+  } else {
     if (isAnimating) {
       println(" Recording is off. Continuing animation from frame "+ step);
-    } 
-    else {
+    } else {
       println(" Video recording and animation are off at frame "+ step);
     }
   }

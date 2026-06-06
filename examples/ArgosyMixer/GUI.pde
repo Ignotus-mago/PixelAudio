@@ -5,6 +5,7 @@
 /*                                                                  */
 /* ---------------------------------------------------------------- */
 
+
 // Variable declarations
 GWindow controlWindow;
 GLabel argo1Label;

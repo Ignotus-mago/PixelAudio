@@ -1,6 +1,6 @@
 /**
  * 
- * ArgosyMixer demonstrates how you can use the Argosy class to create and animate patterns 
+ * ArgosyMixer demonstrates use of the Argosy class to create and animate patterns 
  * and save them to video. This is still a work in progress, with the new PASamplerInstrument 
  * class and audio events not yet handled in the most efficient way. There will be updates.
  * 
@@ -31,6 +31,7 @@
  * 
  * In the GUI, the following parameters are exposed for each Argosy pattern:
  * 
+ * 
  *   Map          -- select the PixelMapGen for each Argosy instance
  *   Colors       -- select a preset palette from a drop down list
  *   Opacity      -- opacity of the colors in the palette, 0-255
@@ -40,7 +41,7 @@
  *   Gap          -- the number of pixels between each repeated pattern
  *   Gap color    -- select a preset gap color from a drop down list
  *   Gap opacity  -- enter the alpha channel value 0-255 for the gap color
- *   >> ANIMATION <<
+ *   == ANIMATION ==
  *   Show         -- show or hide Argosy 1 or Argosy 2
  *   Freeze       -- freeze animation of Argosy 1 or Argsoy 2
  *   Step         -- number of pixels to shift on each animation step (negative to shift right)
@@ -56,7 +57,7 @@
  * repeating patterns of one or two elements. Setting the Unit value (the number of pixels
  * in each pattern element) to a power of 2 or a sum of powers of 2 is a good place to start, 
  * especially with the Hilbert PixelMapGens in the Map menu. 
- *
+ * 
  * Click on the image to hear the sounds made by the patterns with sampling rate 48KHz. The patterns
  * produce step or pulse (square) waves, so they are buzzy. Opacity will change how loud the sound is.
  * 
@@ -67,13 +68,11 @@
  *   
  *   
  * --------------------------------------------------------------------------------------------
- * ***>> NOTE: Key commands only work when the image display window is the active window. <<***
+ * ***++ NOTE: Key commands only work when the image display window is the active window. ++***
  * --------------------------------------------------------------------------------------------
  * 
  * Key Commands
  * 
- * Press the UP arrow to increase audio output gain by 3.0 dB.
- * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
  * Press ' ' to toggle animation.
  * Press 'e' to trigger elliptical trail of audio events.
  * Press 'a' to shift left one argosy unit.
@@ -104,27 +103,4 @@
  * Press 'Z' to reset argosy 2 to inttial position.
  * Press 'h' or 'H' to show help message in console.
  * 
- * 
- * TODO save two image files, two audio files -- one for each Argosy
- * TODO bug fix, when changing gap color argosy resets with 0 shift
- * TODO reset animation with a key command 
- * 
- */
- 
- /*
- *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
- *
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of the GNU Library General Public License as published
- *   by the Free Software Foundation; either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU Library General Public License for more details.
- *
- *   You should have received a copy of the GNU Library General Public
- *   License along with this program; if not, write to the Free Software
- *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */

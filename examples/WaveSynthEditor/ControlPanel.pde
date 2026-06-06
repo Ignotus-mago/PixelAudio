@@ -1,4 +1,49 @@
 /* ------------------------------------------------------------- */ //<>// //<>//
+/* ----->>>             INITIALIZE GUI                  <<<----- */
+/* ------------------------------------------------------------- */
+
+/* initialize currentWD and wavesynth.waveDataList before setting up the GUI */
+
+/**
+ * Initialize GUI and control window -- initialize wavesynth before calling this method.
+ */
+public void createGUI() {
+  createControlWindow();
+  initGlobalPanel();
+  createGlobalControls();
+  buildGlobalPanel();
+  loadGlobalPanelValues();
+  initWaveDataPanel();
+  createWaveDataControls();
+  buildWaveDataPanel();
+  loadWaveDataPanelValues(currentWD);
+  // get crackin'
+  controlWindow.loop();
+}
+
+
+/* ------------------------------------------------------------- */
+/* ----->>>               GUI SUPPORT                   <<<----- */
+/* ------------------------------------------------------------- */
+
+/**
+ * Storage for deferred edits to draw() loop.
+ */
+final ConcurrentLinkedQueue<Runnable> pendingWaveEdits = new ConcurrentLinkedQueue<>();
+
+/**
+ * Run deferred GUI edits.
+ */
+void applyPendingWaveEdits() {
+  Runnable r;
+  while ((r = pendingWaveEdits.poll()) != null) {
+    synchronized (wavesynth) {
+      r.run();
+    }
+  }
+}
+
+/* ------------------------------------------------------------- */
 /* ----->>>              BEGIN G4P GUI                  <<<----- */
 /* ------------------------------------------------------------- */
 
@@ -64,29 +109,11 @@ GView colorView;
 GLabel colorTitle;
 PGraphics colorPG;
 int sel_col = -1;
-/* ----->>> initialize GUI and control window <<<----- */
-/* ----->>> initialize currentWD and wavesynth.waveDataList before setting up the GUI  <<<----- */
-
-/**
- * Initialize GUI and control window -- initialize wavesynth before calling this method.
- */
-public void createGUI() {
-  createControlWindow();
-  initGlobalPanel();
-  createGlobalControls();
-  buildGlobalPanel();
-  loadGlobalPanelValues();
-  initWaveDataPanel();
-  createWaveDataControls();
-  buildWaveDataPanel();
-  loadWaveDataPanelValues(currentWD);
-  // get crackin'
-  controlWindow.loop();
-}
 
 /********************************************************************/
 /* ----->>>                CONTROL WINDOW                  <<<----- */
 /********************************************************************/
+
 /* ----->>> set up GUI and initialize the control window <<<----- */
 public void createControlWindow() {
   G4P.messagesEnabled(false);
@@ -99,15 +126,17 @@ public void createControlWindow() {
   controlWindow.noLoop();
   controlWindow.setActionOnClose(G4P.KEEP_OPEN);
   controlWindow.addDrawHandler(this, "winDraw");
-  // ignore mouse and key events in our control panel, they just get in the way of other events
+  // the key handler under development, don't load
+  // controlWindow.addKeyHandler(this, "winKey");
+  // ignore mouse events in our control panel, they just get in the way of other events
   //controlWindow.addMouseHandler(this, "winMouse");
-  //controlWindow.addKeyHandler(this, "winKey");
   // we don't need these events
   //controlWindow.addPreHandler(this, "winPre");
   //controlWindow.addPostHandler(this, "winPost");
   //controlWindow.addOnCloseHandler(this, "winClose");
   createCommentsField();
 }
+
 public void createCommentsField() {
   commentsField = new GTextArea(controlWindow, 5, 480, 470, 70, G4P.SCROLLBARS_NONE);
   commentsField.setOpaque(true);
@@ -115,9 +144,11 @@ public void createCommentsField() {
   commentsField.addEventHandler(this, "comments_hit");
   commentsField.setText(comments);
 }
+
 /********************************************************************/
 /* ----->>>                 GLOBAL PANEL                   <<<----- */
 /********************************************************************/
+
 /* ----->>> initialize global panel <<<----- */
 public void initGlobalPanel() {
   globalPanel = new GPanel(controlWindow, 5, 5, 230, 470, "Globals");
@@ -128,6 +159,7 @@ public void initGlobalPanel() {
   globalPanel.setOpaque(true);
   globalPanel.addEventHandler(this, "globalPanel_hit");
 }
+
 /* ----->>> add controls to global panel <<<----- */
 public void createGlobalControls() {
   int ypos = 30;
@@ -252,6 +284,7 @@ public void createGlobalControls() {
   saveAsBtn.setText("Save As");
   saveAsBtn.addEventHandler(this, "saveAsBtn_hit");
 }
+
 /* ----->>> populate the global panel with controls <<<----- */
 public void buildGlobalPanel() {
   globalPanel.addControl(blendField);
@@ -282,6 +315,7 @@ public void buildGlobalPanel() {
   globalPanel.addControl(saveAsBtn);
   globalPanel.setCollapsed(false);
 }
+
 public void loadGlobalPanelValues() {
   blendField.setText(str(wavesynth.gain));
   gammaField.setText(str(wavesynth.gamma));
@@ -301,14 +335,15 @@ public void loadGlobalPanelValues() {
   videoNameField.setText(wavesynth.videoFilename);
   commentsField.setText(wavesynth.getComments());
 }
+
 // called for globals that may be affected by a keypress
 public void refreshGlobalPanel() {
   wavesynth. prepareAnimation();
   loadGlobalPanelValues();
   loadWaveDataPanelValues(currentWD);
 }
-/* ----->>> end of the global panel setup <<<----- */
 
+/* ----->>> end of the global panel setup <<<----- */
 /********************************************************************/
 /* ----->>>               WAVE DATA PANEL                  <<<----- */
 /********************************************************************/
@@ -478,25 +513,29 @@ public void loadWaveDataPanelValues(WaveData wd) {
   setWaveDataPanelColor(wd.waveColor);
   if (wd.isMuted) wd.waveState = WaveData.WaveState.MUTE;
   switch (wd.waveState) {
-  case ACTIVE: {
+  case ACTIVE:
+    {
       wd.isMuted = false;
       muteWave.setSelected(false);
       soloWave.setSelected(false);
       break;
     }
-  case SOLO: {
+  case SOLO:
+    {
       wd.isMuted = false;
       muteWave.setSelected(false);
       soloWave.setSelected(true);
       break;
     }
-  case MUTE: {
+  case MUTE:
+    {
       wd.isMuted = true;
       muteWave.setSelected(true);
       soloWave.setSelected(false);
       break;
     }
-  case SUSPENDED: {
+  case SUSPENDED:
+    {
       wd.isMuted = true;
       muteWave.setSelected(true);
       soloWave.setSelected(false);
@@ -504,20 +543,61 @@ public void loadWaveDataPanelValues(WaveData wd) {
     }
   }
   // rely on the global blendChannels
-  if (!isAnimating) renderFrame(step);
+  if (!isAnimating) mapImage = renderFrame(step);
+  /*
+    muteWave.setText("Mute");
+   newWaveBtn.setText("New");
+   dupWaveBtn.setText("Dupe");
+   delWaveBtn.setText("Delete");
+   */
 }
 
 /********************************************************************/
 /*            Window and Global Control Panel Handlers              */
 /********************************************************************/
+
 // our draw method, call each time through the event loop
 synchronized public void winDraw(PApplet appc, GWinData data) {
   appc.background(color(254, 233, 178));
 }
 
-public void globalPanel_hit(GPanel panel, GEvent event) {
-  // nothing doing
-}
+/*
+// respond to key in window
+ // not loaded
+ // old method under development, the new one below is better
+ public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
+ if (!evt.isControlDown()) {
+ println("-- exit winKey");
+ return;
+ }
+ if (evt.getAction() == KeyEvent.RELEASE) {
+ println("-- continue winKey");
+ parseKey(evt.getKey(), evt.getKeyCode());
+ }
+ 
+ }
+ */
+
+/*
+ // validate all text entry fields...
+ boolean isGuiTyping() {
+ if (pitchShiftText != null && pitchShiftText.hasFocus()) {
+ return true;
+ }
+ return false;
+ }
+ 
+ // respond to key in window (new method)
+ public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
+ if (evt.getAction() != KeyEvent.RELEASE) return;
+ if (isGuiTyping()) return;
+ parseKey(evt.getKey(), evt.getKeyCode());
+ }
+ 
+ public void globalPanel_hit(GPanel panel, GEvent event) {
+ // nothing doing
+ }
+ */
 
 /*
     Dropped:
@@ -527,75 +607,119 @@ public void globalPanel_hit(GPanel panel, GEvent event) {
  synchronized public void winPost(PApplet appc, GWinData data)
  public void winClose(GWindow window)
  */
- 
+
 public void comments_hit(GTextArea source, GEvent event) {
   // println("commentsField - GTextField >> GEvent." + event + " @ " + millis() + " value: " + commentsField.getText());
-  wavesynth.setComments(commentsField.getText());
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    final String comment = commentsField.getText();
+    pendingWaveEdits.add(() -> {
+      wavesynth.setComments(comment);
+    }
+    );
+  }
 }
 
 public void blendField_hit(GTextField source, GEvent event) {
-  // println("blendField - GTextField >> GEvent." + event + " @ " + millis() + " value: " + blendField.getValueF());
-  wavesynth.setGain(blendField.getValueF());
-  //if (!isAnimating) blendChannels(step)(step);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    final float g = blendField.getValueF();
+    pendingWaveEdits.add(() -> {
+      wavesynth.setGain(g);
+      imageDirty = true;
+    }
+    );
+  }
 }
 
 public void gammaField_hit(GTextField source, GEvent event) {
-  // println("gammaField - GTextField >> GEvent." + event + " @ " + millis());
-  wavesynth.setGamma(gammaField.getValueF());
-  //if (!isAnimating) blendChannels(step)(step);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    final float gamma = gammaField.getValueF();
+    pendingWaveEdits.add(() -> {
+      wavesynth.setGamma(gamma);
+      imageDirty = true;
+    }
+    );
+  }
 }
 
 public void stepsSpinner_hit(GSpinner source, GEvent event) {
-  // println("stepsSpinner - GSpinner >> GEvent." + event + " @ " + millis());
-  // @TODO recalculate global wd settings when animSteps changes
-  animSteps = stepsSpinner.getValue();
-  wavesynth.setAnimSteps(animSteps);
-  for (WaveData wd : wavesynth.waveDataList) {
-    wd.phaseInc = (wd.phaseCycles * TWO_PI)/wavesynth.animSteps;
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    final int newSteps = stepsSpinner.getValue();
+    pendingWaveEdits.add(() -> {
+      animSteps = Math.max(1, newSteps);
+      wavesynth.setAnimSteps(animSteps);
+      for (WaveData wd : wavesynth.waveDataList) {
+        wd.setAnimationSteps(newSteps);
+        wd.invalidateFrameState();
+      }
+      imageDirty = true;
+    }
+    );
   }
-  //if (!isAnimating) blendChannels(step)(step);
 }
 
 public void stopSpinner_hit(GSpinner source, GEvent event) {
-  // println("stepsSpinner - GSpinner >> GEvent." + event + " @ " + millis());
-  animStop = stopSpinner.getValue();
-  //if (!isAnimating) blendChannels(step)(step);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    final int newStop = stopSpinner.getValue();
+    pendingWaveEdits.add(() -> {
+      animStop = Math.max(1, newStop);
+      wavesynth.setStop(newStop);
+    }
+    );
+    // no change to appearance or audio
+  }
 }
 
 public void histoCheck_hit(GCheckbox source, GEvent event) {
-  // println("histoCheck - GCheckbox >> GEvent." + event + " @ " + millis());
-  wavesynth.setScaleHisto(histoCheck.isSelected());
-  //if (!isAnimating) blendChannels(step)(step);
+  if (event == GEvent.CHANGED) {
+    final boolean sel = histoCheck.isSelected();
+    pendingWaveEdits.add(() -> {
+      wavesynth.setScaleHisto(sel);
+      imageDirty = true;
+    }
+    );
+  }
 }
 
 public void histoHigh_hit(GTextField source, GEvent event) {
-  // println("histoHigh - GTextField >> GEvent." + event + " @ " + millis());
-  wavesynth.setHistoHigh(histoHighField.getValueI());
-  //if (!isAnimating) blendChannels(step)(step);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    final int high = histoHighField.getValueI();
+    pendingWaveEdits.add(() -> {
+      wavesynth.setHistoHigh(high);
+      imageDirty = true;
+    }
+    );
+  }
 }
 
 public void histoLow_hit(GTextField source, GEvent event) {
-  // println("histoLow - GTextField >> GEvent." + event + " @ " + millis());
-  wavesynth.setHistoLow(histoLowField.getValueI());
-  //if (!isAnimating) blendChannels(step)(step);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    final int low = histoLowField.getValueI();
+    pendingWaveEdits.add(() -> {
+      wavesynth.setHistoLow(low);
+      imageDirty = true;
+    }
+    );
+  }
 }
 
 public void videoNameField_hit(GTextField source, GEvent event) {
-  // println("videoNameField - GTextField >> GEvent." + event + " @ " + millis());
-  wavesynth.setVideoFilename(videoNameField.getText());
-  // update global videoFilename
-  videoFilename = wavesynth.getVideoFilename();
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    wavesynth.setVideoFilename(videoNameField.getText());
+    // update global videoFilename
+    videoFilename = wavesynth.getVideoFilename();
+  }
+  // no changes to waavesynth
 }
 
 public void fpsMenu_hit(GDropList source, GEvent event) {
-  // println("fpsMenu - GDropList >> GEvent." + event + " @ " + millis());
-  wavesynth.setVideoFrameRate(Integer.valueOf(fpsMenu.getSelectedText()));
-  println("----->>> videoFPS = "+ wavesynth.videoFrameRate);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+    wavesynth.setVideoFrameRate(Integer.valueOf(fpsMenu.getSelectedText()));
+    println("----->>> videoFPS = "+ wavesynth.videoFrameRate);
+  }
 }
 
 // this stays global
 public void recordCheck_hit(GCheckbox source, GEvent event) {
-  println("recordCheck - GCheckbox >> GEvent." + event + " @ " + millis());
   isRecordingVideo = recordCheck.isSelected();
   if (isRecordingVideo) {
     if (isOversize) {
@@ -610,21 +734,20 @@ public void recordCheck_hit(GCheckbox source, GEvent event) {
 
 // prob want a refresh call in WaveSynth
 public void refreshBtn_hit(GButton source, GEvent event) {
-  // println("refreshBtn - GButton >> GEvent." + event + " @ " + millis());
   if (!isDesignMode) {
+    // ?
   }
-  renderFrame(step);
+  markWaveSynthVisualDirty();
+  markWaveSynthAudioDirty();
 }
 
 // stays global
 public void capSpinner_hit(GSpinner source, GEvent event) {
-  // println("capSpinner - GSpinner >> GEvent." + event + " @ " + millis());
   snapCount = capSpinner.getValue();
 }
 
 // stays global
 public void capCheck_hit(GCheckbox source, GEvent event) {
-  // println("capSpinner - GSpinner >> GEvent." + event + " @ " + millis());
   isCaptureFrames = capCheck.isSelected();
   println("----->>> isCaptureFrames = "+ isCaptureFrames);
 }
@@ -635,14 +758,12 @@ public void runVideoBtn_hit(GButton source, GEvent event) {
 }
 
 public void openBtn_hit(GButton source, GEvent event) {
-  // println("openBtn - GButton >> GEvent." + event + " @ " + millis());
   if (isAnimating) toggleAnimation();
   loadWaveData();
   // isAnimating = oldIsAnimating;
 }
 
 public void saveBtn_hit(GButton source, GEvent event) {
-  // println("saveBtn - GButton >> GEvent." + event + " @ " + millis());
   if (isAnimating) toggleAnimation();
   if ((currentDataFile == null) || (currentDataFile.getAbsolutePath().equals(""))) {
     saveWaveData();
@@ -650,8 +771,8 @@ public void saveBtn_hit(GButton source, GEvent event) {
     fileSelectedWrite(currentDataFile);
   }
 }
+
 public void saveAsBtn_hit(GButton source, GEvent event) {
-  // println("saveAsBtn - GButton >> GEvent." + event + " @ " + millis());
   if (isAnimating) toggleAnimation();
   saveWaveData();
 }
@@ -660,51 +781,65 @@ public void saveAsBtn_hit(GButton source, GEvent event) {
 /*                Wave Data Control Panel Handlers                  */
 /********************************************************************/
 
+/**
+ * Single commit method for all WaveData fields.
+ */
+void commitCurrentWaveData() {
+  float freq   = freqField.getValueF();
+  float amp    = ampField.getValueF();
+  float phase  = phaseField.getValueF();
+  float dc     = dcField.getValueF();
+  float cycles = cyclesField.getValueF();
+  // currentWD is selected from wavesynth.waveDataList,
+  // where wavesynth is the (current) WaveSynth instance
+  pendingWaveEdits.add(() -> {
+    currentWD.setFreq(freq);
+    currentWD.setAmp(amp);
+    currentWD.setPhase(phase);
+    currentWD.setDc(dc);
+    currentWD.setCycles(cycles);
+    currentWD.invalidateFrameState();
+    imageDirty = true;
+    audioDirty = true;
+  }
+  );
+}
+
 // not active
 public void waveDataPanel_hit(GPanel source, GEvent event) {
   println("waveDataPanel - GPanel >> GEvent." + event + " @ " + millis());
 }
 
 public void freqField_hit(GTextField source, GEvent event) {
-  // println("freqField - GTextField >> GEvent." + event + " @ " + millis());
-  float newFreq = freqField.getValueF();
-  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-  currentWD.setFreq(newFreq);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+    commitCurrentWaveData();
 }
 
 public void ampField_hit(GTextField source, GEvent event) {
-  // println("ampField - GTextField >> GEvent." + event + " @ " + millis());
-  float newAmp = ampField.getValueF();
-  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-  currentWD.setAmp( newAmp);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+    commitCurrentWaveData();
 }
 
 public void phaseField_hit(GTextField source, GEvent event) {
-  // println("phaseField - GTextField >> GEvent." + event + " @ " + millis());
-  float newPhase = phaseField.getValueF();
-  // we only need the decimal fraction, which is a portion of TWO_PI
-  // next time we load the GUI the newPhase value will appear
-  newPhase -= floor(newPhase);
-  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-  // TODO verify compatibility with older JSON format
-  currentWD.setPhase(newPhase);
-  if (!isAnimating) renderFrame(step);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+    commitCurrentWaveData();
 }
 
 public void cycles_hit(GTextField source, GEvent event) {
-  // println("cyclesField - GTextField >> GEvent." + event + " @ " + millis());
-  float newCycles = cyclesField.getValueF();
-  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-  currentWD.setCycles(newCycles);
-}
-public void dc_hit(GTextField source, GEvent event) {
-  // println("dcField - GTextField >> GEvent." + event + " @ " + millis());
-  float newDc = dcField.getValueF();
-  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-  currentWD.setDc(newDc);
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+    commitCurrentWaveData();
 }
 
-// G4P code for colour chooser
+public void dc_hit(GTextField source, GEvent event) {
+  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+    commitCurrentWaveData();
+}
+
+/**
+ * G4P code for color chooser.
+ * @param button
+ * @param event
+ */
 public void handleColorChooser(GButton button, GEvent event) {
   // println("btnColor - GButton >> GEvent." + event + " @ " + millis());
   sel_col = G4P.selectColor(currentWD.waveColor);
@@ -715,11 +850,17 @@ public void handleColorChooser(GButton button, GEvent event) {
   currentWD = wavesynth.waveDataList.get(waveDataIndex);
   if (isVerbose) println("==> selected color: "+ PixelAudioMapper.colorString(sel_col));
   // be sure to set color value in wavesynth.waveColors array, otherwise the display won't update
-  currentWD.setWaveColor(sel_col);
-  wavesynth.waveColors[waveDataIndex] = sel_col;
-  if (step != 0) wavesynth.prepareAnimation();
-  renderFrame(step);
-  mapImage = wavesynth.mapImage;
+  // avoid dependencies in the lambda by capturing values
+  final int idx = waveDataIndex;
+  final int col = sel_col;
+  pendingWaveEdits.add(() -> {
+    WaveData wd = wavesynth.waveDataList.get(idx);
+    wd.setWaveColor(col);
+    wavesynth.waveColors[idx] = col;
+    imageDirty = true;
+    // audioDirty not needed for color edits
+  }
+  );
 }
 
 public void prev_hit(GButton source, GEvent event) {
@@ -753,7 +894,7 @@ public void dupWave_hit(GButton source, GEvent event) {
 }
 
 public void delWave_hit(GButton source, GEvent event) {
-  // println("delWaveBtn - GButton >> GEvent." + event + " @ " + millis());
+  println("delWaveBtn - GButton >> GEvent." + event + " @ " + millis());
   int remIndex = waveDataIndex;
   if (waveDataIndex == wavesynth.waveDataList.size() - 1) waveDataIndex = 0;
   wavesynth.waveDataList.remove(remIndex);
@@ -784,8 +925,7 @@ public void soloWave_hit(GCheckbox source, GEvent event) {
         wd.isMuted = true;
       }
     }
-  } 
-  else {
+  } else {
     boolean listHasSolos = false;
     for (WaveData wd : wavesynth.waveDataList) {
       if (wd.waveState == WaveData.WaveState.SOLO) listHasSolos = true;

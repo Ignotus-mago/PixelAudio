@@ -3,27 +3,28 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
+
 import javax.sound.sampled.UnsupportedAudioFileException;
+
+//audio library
+import ddf.minim.*;
+
+//G4P library for GUI
+import g4p_controls.*;
+
+//video export library
+import com.hamoid.*;
 
 //Mama's ever-lovin' blue-eyed PixelAudio library
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.sampler.*;
-import net.paulhertz.pixelaudio.schedule.*;
-
-//video export library
-import com.hamoid.*;
-
-//G4P library for GUI
-import g4p_controls.*;
-
-// Minim audio library
-import ddf.minim.*;
+import net.paulhertz.pixelaudio.schedule.AudioUtility;
+import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
 /* ------------------------------------------------------------------ */
 /*                          PAPPLET SETTINGS                          */
 /* ------------------------------------------------------------------ */
-
 int imageWidth = 1536;
 int imageHeight = 1024;
 int bgColor = color(0, 0, 0);
@@ -31,7 +32,6 @@ int bgColor = color(0, 0, 0);
 /* ------------------------------------------------------------------ */
 /*                       PIXELAUDIO VARIABLES                         */
 /* ------------------------------------------------------------------ */
-
 PixelAudio pixelaudio;
 int mapSize;
 PImage mapImage;
@@ -48,40 +48,30 @@ AffineTransformType     fx90      = AffineTransformType.FX90;
 AffineTransformType     flipy     = AffineTransformType.FLIPY;
 AffineTransformType     nada      = AffineTransformType.NADA;
 // transArray is useful for random selections
-AffineTransformType[]   transArray = {r270, r90, r180, flipx, fx270, fx90, flipy, nada};
+AffineTransformType[]   transArray = {r270, r90, r180, flipx, fx270, fx90, flipy, nada}; 
 Random rand;
 
 /* ------------------------------------------------------------------ */
 /*                         ARGOSY VARIABLES                           */
 /* ------------------------------------------------------------------ */
-
-int roig = 0xfff64c2f;
-int groc = 0xfff6e959;
-int blau = 0xff5990e9;
-int blau2 = 0xff90b2dc;
-int blanc = 0xfffef6e9;
-int gris = 0xffa09faa;
-int negre = 0xff080d15;
-int grana = 0xffe56ad8;
-int vert = 0xff7bb222;
-int taronja = 0xfffea537;
-int roigtar = 0xffE9907B;
-int violet = 0xffb29de9;
+int roig = 0xfff64c2f; int groc = 0xfff6e959; int blau = 0xff5990e9; int blau2 = 0xff90b2dc; 
+int blanc = 0xfffef6e9; int gris = 0xffa09faa; int negre = 0xff080d15; int grana = 0xffe56ad8;
+int vert = 0xff7bb222; int taronja = 0xfffea537; int roigtar = 0xffE9907B; int violet = 0xffb29de9;
 // Standard black, gray, white colors without transparency
 int black = color(0, 0, 0);
 int white = color(255, 255, 255);
 int gray = color(128, 128, 128);
 // Argosy pattern variables
 int[] theOne = new int[]{1};
-int[] oneOne = new int[]{1, 1};
+int[] oneOne = new int[]{1,1};
 int[] countToFive = {1, 2, 3, 4, 5};   // use unit = gap = 64: (1 + 2 + 3 + 4 + 5) * 64 + 64 = 1024
-int[] oddOneToSeven = {1, 3, 5, 7};    // first four odd numbers sum to 16
+int[] oddOneToSeven = {1, 3, 5, 7};   // first four odd numbers sum to 16
 int[] fourPower = {16, 64, 256};       // use unit = 16: (16 + 64 + 256) = 336; 336 + 48 = 384; gap = 16 * 48 = 768
-int[] sevenFortyNine = {7, 49};        // a gap of 8 * unit will repeat patterns in Hilbert gens
+int[] sevenFortyNine = {7, 49};         // a gap of 8 * unit will repeat patterns in Hilbert gens
 int[] fiboLSystem55 = new int[]{ 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
-  1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
-  1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2 };
-// use unit = 64, gap = 448: sum(fiboLSystem55) = 89; 89 * 64 + 448 = 6144 = 6 * 1024
+      1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2,
+      1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2 };
+      // use unit = 64, gap = 448: sum(fiboLSystem55) = 89; 89 * 64 + 448 = 6144 = 6 * 1024
 int[] fibonacciNums = {21, 34, 55, 13};     // sum to 123; 128 - 123 = 5; 5 * 64 = 320;
 int[] lucasNums = {18, 29, 47, 29};         // sum TO 123; 128 - 123 = 5; 5 * 64 = 320;
 // Argosy color palette variables
@@ -90,35 +80,35 @@ int[] blackWhite = {black, white};
 int[] whiteBlack = {white, black};
 int[] blackGrayWhite = {black, gray, white};
 int[] grayRamp = {color(16), color(48), color(80), color(112), color(144), color(176), color(208), color(240)};
-int[] grayTriangle = {color(12), color(41), color(70), color(99), color(128), color(157), color(186), color(215),
-  color(244), color(215), color(186), color(157), color(128), color(99), color(70), color(41)};
+int[] grayTriangle = {color(12), color(41), color(70), color(99), color(128), color(157), color(186), color(215), 
+            color(244), color(215), color(186), color(157), color(128), color(99), color(70), color(41)};
 int[] espectroOcho = {roig, roigtar, taronja, groc, vert, blau, violet, grana};
 int[] espectroSeis = {roig, taronja, groc, vert, blau, violet};
 int[] totsElsColors = {roig, roigtar, taronja, groc, vert, blau, blau2, violet, grana, blanc, gris, negre};
-int[] multicolor = {roig, blau, groc, vert, violet};
+int[] multicolor = {roig, blau, groc, vert, violet}; 
 int[] blueCream = {color(144, 157, 186), color(233, 220, 199)};
 int[] creamBlue = {color(233, 220, 199), color(144, 157, 186)};
 int[] fourColor = {color(204, 212, 164), color(81, 121, 127), color(210, 202, 250), color(136, 97, 90)};
 int[] fiveColor = {color(206, 166, 237), color(224, 99, 128), color(161, 156, 6), color(60, 186, 81), color(150, 199, 227)};
 // variables for first Argosy instance
 // set argo1, argo2 and animation values in initArgosies()
-Argosy argo1;                // Argosy object 1, bottom layer
-PixelMapGen argo1Gen;        // Gen for mapping argo1
-PixelAudioMapper argo1Mapper;    // PixelAudioMapper for argo1
-int[] argo1Pattern;          // array for argo1 pattern
-int[] argo1Colors;           // argo1 colors
-int argo1Alpha;              // alpha channel value for argo1
-int argo1Reps;               // number of repetitions of argo1 pattern (0 --> fill argo1Image)
-int argo1Unit;               // number of pixels in a unit for argo1
-int argo1Gap;                // number of pixels in argo1 gap, between patterns
-int argo1GapColor;           // color for pixels in the gap
-int argo1GapColorIndex = 0;  // menu item index for argo1 gap color
-int argo1GapAlpha;           // alpha channel value for argo1 gap color
-boolean argo1IsCentered;     // center argosy pixels in the signal path
-PImage argo1Image;           // image derived from argo1 (like mapImage in other sketches)
-boolean isShowArgo1 = true;  // visibility of argo1
+Argosy argo1;
+PixelMapGen argo1Gen;
+PixelAudioMapper argo1Mapper;
+int[] argo1Pattern;
+int[] argo1Colors;
+int argo1Alpha;
+int argo1Reps;
+int argo1Unit;
+int argo1Gap;
+int argo1GapColor;
+int argo1GapColorIndex = 0;
+int argo1GapAlpha;
+boolean argo1IsCentered;
+PImage argo1Image;
+boolean isShowArgo1 = true;
 Argosy argo2;
-// variables for second Argosy instance, just like the first Argosy instance
+// variables for second Argosy instance
 PixelMapGen argo2Gen;
 PixelAudioMapper argo2Mapper;
 int[] argo2Pattern;
@@ -138,22 +128,22 @@ boolean isShowArgo2 = true;
 /*                     ARGOSY ANIMATION VARIABLES                     */
 /* ------------------------------------------------------------------ */
 
-int argo1Step;                   // number of pixels to advance argo1 with each animation step
-int argo2Step;                   // number of pixels to advance argo2 with each animation step
-int animOpen;                    // number of frames to pause at the beginning of a video recording
-int animClose;                   // number of frames to pause at the end of a video recording
-int animRun1;                    // number of frames to run argo1 before holding
-int animHold1;                   // number of frames to hold argo1
-int animRun2;                    // number of frames to run argo2 before holding
-int animHold2;                   // number of frames to hold argo2
-int animDuration;                // total number of frames in the animation
+int argo1Step;
+int argo2Step;
+int animOpen;
+int animClose;
+int animRun1;
+int animHold1;
+int animRun2;
+int animHold2;
+int animDuration; 
 // animation shift left or right, 'l' and 'r' key commands, usually a power of 4
 int argoStep = 64;
 // animation tracking variables, set here
 boolean isAnimating = false;     // start with animation off
 boolean isLooping = false;       // currently not used
 int animstep1 = 1;               // count steps of animation for argo1
-int runCount1 = 0;               // track animRun1
+int runCount1 = 0;               // track animRun1 
 int holdCount1 = 0;              // track animHold1
 int animstep2 = 1;               // count steps of animation for argo2
 int runCount2 = 0;               // track animRun2
@@ -163,7 +153,7 @@ boolean isArgo2Freeze = false;   // ready to animate argo2
 int argo1PixelCount;             // keep track of pixels shifted by animation of argo1
 int argo2PixelCount;             // keep track of pixels shifted by animation of argo2
 // video output variables
-// video export
+// video export 
 VideoExport videx;         // hamoid library class for video export (requires ffmpeg)
 String videoPath;          // directory for saving video
 String videoFilename = "argosy_demo.mp4";  // default video name
@@ -176,9 +166,8 @@ boolean isSavePatterns = false;   // for future use
 /* ------------------------------------------------------------------ */
 /*                           AUDIO VARIABLES                          */
 /* ------------------------------------------------------------------ */
-
-Minim minim;                    // library that handles audio
-AudioOutput audioOut;           // line out to sound hardware
+Minim minim;          // library that handles audio 
+AudioOutput audioOut;      // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 float sampleRate = 48000;       // a critical value for display and audio, see the setup method
 int audioLength;        // length of the audioSignal == number of pixels in the display image == mapSize
@@ -198,7 +187,7 @@ int sampleY;
 ArrayList<TimedLocation> timeLocsArray;
 ArrayList<TimedLocation> animationLocsArray;
 ArrayList<PVector> aniPoints;
-int count = 0;
+int count = 0;  
 int fileIndex = 0;
 
 // ** LOCAL AUDIO VARIABLES ** Audio variables for ArgosyMixer class
@@ -206,13 +195,16 @@ MultiChannelBuffer argo1Buffer;  // data structure to hold audio samples from ar
 MultiChannelBuffer argo2Buffer;  // data structure to hold audio samples from argo2
 PASamplerInstrument argo1Synth;  // class to wrap a Minim audioSampler
 PASamplerInstrument argo2Synth;  // class to wrap a Minim audioSampler
-float[] argo1Signal;             // audio signal (float array) for argo1
-float[] argo2Signal;             // audio signal (float array) for argo2
-int argo1SamplePos;              // position of a mouse click along the argo1 signal path, index into the argo1 audio array
-int argo2SamplePos;              // position of a mouse click along the argo2 signal path, index into the argo2 audio array
+float[] argo1Signal;            // audio signal (float array) for argo1
+float[] argo2Signal;            // audio signal (float array) for argo2
+int argo1SamplePos;             // position of a mouse click along the argo1 signal path, index into the argo1 audio array
+int argo2SamplePos;             // position of a mouse click along the argo2 signal path, index into the argo2 audio array
+
 
 /* ---------------- end audio variables ---------------- */
 
+
+/* ---------------- APPLICATION ---------------- */
 
 public void settings() {
   size(imageWidth, imageHeight, JAVA2D);
@@ -237,7 +229,7 @@ public void setup() {
 }
 
 // -- SELECTORS FOR MENU ITEMS -- //
-// if you want the initial menus to match your settings for argo1 and argo2,
+// if you want the initial menus to match your settings for argo1 and argo2, 
 // set them here or in initArgosies()
 int argo1GenSelect;
 int argo2GenSelect;
@@ -247,9 +239,9 @@ int argo1PatternSelect;
 int argo2PatternSelect;
 
 /**
- * Initializes argo1 and argo2 Argosy instances, sets some values for GUI,
- * sets animation variables: your one-stop setup method for the argosies.
- *
+ * Initializes argo1 and argo2 Argosy instances, sets some values for GUI, 
+ * sets animation variables: your one-stop setup method for the argosies. 
+ *  
  */
 public void initArgosies() {
   // first Argosy instance
@@ -300,9 +292,9 @@ public void initArgosies() {
 }
 
 /**
- * Applies alpha channel value <code>alpha</code> to all the RGB colors in <code>colorArray</code>
+ * Applies alpha channel value <code>alpha</code> to all the RGB colors in <code>colorArray</code> 
  * and returns a new array with the modified colors.
- *
+ * 
  * @param colorArray    an array of RGB colors
  * @param alpha         alpha channel value to apply to RGB colors
  * @return              a new array with the modified colors.
@@ -318,7 +310,7 @@ public int[] setArgoColorsAlpha(int[] colorArray, int alpha) {
 
 /**
  * Initializes Argosy instance <code>argo1</code> and then shifts its pixels by <code>shift</code> pixels.
- *
+ * 
  * @param shift    number of pixels to rotate left argo1.argosyArray
  */
 public void initArgo1(int shift) {
@@ -335,7 +327,7 @@ public void initArgo1(int shift) {
 
 /**
  * Initializes Argosy instance <code>argo2</code> and then shifts its pixels by <code>shift</code> pixels.
- *
+ * 
  * @param shift    number of pixels to rotate left argo2.argosyArray
  */
 public void initArgo2(int shift) {
@@ -351,11 +343,11 @@ public void initArgo2(int shift) {
 }
 
 /**
- * Creates a new Argosy instance using supplied arguments. Display of the Argosy array of color values
- * is managed through the supplied PixelAudioMapper argument. The array is created by stepping through
- * the pattern and color values, creating blocks of color of argosyUnitSize, separated by argosyGap
- * pixels.
- *
+ * Creates a new Argosy instance using supplied arguments. Display of the Argosy array of color values 
+ * is managed through the supplied PixelAudioMapper argument. The array is created by stepping through 
+ * the pattern and color values, creating blocks of color of argosyUnitSize, separated by argosyGap 
+ * pixels. 
+ * 
  * @param mapper            a PixelAudioMapper instance, with width and height appropriate for display window
  * @param argosyPattern     a pattern of ints to step through in creating the argosy array
  * @param argosyUnitSize    number of pixels in each block of same-colored pixels in the Argosy.argosyArray
@@ -367,8 +359,8 @@ public void initArgo2(int shift) {
  * @param argoStep          the number of pixels to rotate when animating, mostly ignored in this app
  * @return
  */
-public Argosy getArgosy(PixelAudioMapper mapper, int[] argosyPattern, int argosyUnitSize, int argosyReps, boolean isCentered,
-  int[] argosyColors, int argosyGap, int argosyGapColor, int argoStep) {
+public Argosy getArgosy(PixelAudioMapper mapper, int[] argosyPattern, int argosyUnitSize, int argosyReps, boolean isCentered, 
+            int[] argosyColors, int argosyGap, int argosyGapColor, int argoStep) {
   return new Argosy(mapper, argosyPattern, argosyUnitSize, argosyReps, isCentered, argosyColors, argosyGap, argosyGapColor, argoStep);
 }
 
@@ -436,7 +428,8 @@ public void animateArgosies() {
   }
   if (holdCount1 > 0) {
     holdCount1--;
-  } else {
+  }
+  else {
     if (!isArgo1Freeze) argo1.shift(argo1Step, true);
     animstep1++;
   }
@@ -447,7 +440,8 @@ public void animateArgosies() {
   }
   if (holdCount2 > 0) {
     holdCount2--;
-  } else {
+  }
+  else {
     if (!isArgo2Freeze) argo2.shift(argo2Step, true);
     animstep2++;
   }
@@ -470,7 +464,7 @@ public void recordVideo() {
       videx.endMovie();
       videx = null;
     }
-  } 
+  }
   else {
     if (videx == null) {
       println("----->>> start video recording at "+ frameRate +" frames per second");
@@ -499,7 +493,7 @@ public void mousePressed() {
 }
 
 /**
- * Detects Caps Lock state. We use Caps Lock state to switch between audio and graphics command sets.
+ * Detects Caps Lock state. We use Caps Lock state to switch between audio and graphics command sets. 
  * @return true if Caps Lock is down, false otherwise.
  */
 public boolean isCapsLockDown() {
@@ -512,24 +506,29 @@ public boolean isCapsLockDown() {
 public void keyPressed() {
   if (key != CODED) {
     parseKey(key, keyCode);
-  } 
+  }
   else {
     float g = audioOut.getGain();
     if (keyCode == UP) {
       setAudioGain(g + 3.0f);
       println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
-    } else if (keyCode == DOWN) {
+    }
+    else if (keyCode == DOWN) {
       setAudioGain(g - 3.0f);
       println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2));
-    } 
-    else if (keyCode == RIGHT) {} 
-    else if (keyCode == LEFT) {}
+    }
+    else if (keyCode == RIGHT) {
+
+    }
+    else if (keyCode == LEFT) {
+
+    }
   }
 }
 
 /**
- * Handles key press events passed on by the built-in keyPressed method.
- *
+ * Handles key press events passed on by the built-in keyPressed method. 
+ * 
  * @param key
  * @param keyCode
  */
@@ -537,206 +536,172 @@ public void parseKey(char key, int keyCode) {
   argo1PixelCount =  argo1.getArgosySize() * argo1.getUnitSize();
   argo2PixelCount =  argo2.getArgosySize() * argo2.getUnitSize();
   switch(key) {
-  case ' ':
-    { // toggle animation
-      isAnimating = ! isAnimating;
-      break;
+  case ' ': { // toggle animation
+    isAnimating = ! isAnimating;
+    break;
+  }
+  case 'e': { // trigger elliptical trail of audio events
+    animationPoints(width - 40, height - 40, 120);
+    break;
+  }
+  case 'a': { // shift left one argosy unit
+    if (!isArgo1Freeze) argo1.shift(argo1.getUnitSize(), true);
+    if (!isArgo2Freeze) argo2.shift(argo2.getUnitSize(), true);
+    break;
+  }
+  case 'A': { // shift right one argosy unit
+    if (!isArgo1Freeze) argo1.shift(-argo1.getUnitSize(), true);
+    if (!isArgo2Freeze) argo2.shift(-argo2.getUnitSize(), true);
+    break;
+  }
+  case 'b': { // shift left one argosy length
+    if (!isArgo1Freeze) argo1.shift(argo1PixelCount, true);
+    if (!isArgo2Freeze) argo2.shift(argo2PixelCount, true);
+    break;
+  }
+  case 'B': { // shift right one argosy length
+    if (!isArgo1Freeze) argo1.shift(-argo1PixelCount, true);
+    if (!isArgo2Freeze) argo2.shift(-argo2PixelCount, true);
+    break;
+  }
+  case 'c': { // shift left one argosy length + argosy gap
+    if (!isArgo1Freeze) argo1.shift(argo1PixelCount + argo1.getArgosyGap(), true);
+    if (!isArgo2Freeze) argo2.shift(argo2PixelCount + argo2.getArgosyGap(), true);
+    break;
+  }
+  case 'C': { // shift right one argosy length + argosy gap
+    if (!isArgo1Freeze) argo1.shift(-argo1PixelCount - argo1.getArgosyGap(), true);
+    if (!isArgo2Freeze) argo2.shift(-argo2PixelCount - argo2.getArgosyGap(), true);
+    break;
+  }
+  case 'd': { // advance one animation step
+    if (!isArgo1Freeze) argo1.shift(argo1Step, true);
+    if (!isArgo2Freeze) argo2.shift(argo2Step, true);
+    count++;
+    break;
+  }
+  case 'D': { // go back one animation step
+    if (!isArgo1Freeze) argo1.shift(-argo1Step, true);
+    if (!isArgo2Freeze) argo2.shift(-argo2Step, true);
+    count = 0;
+    break;
+  }
+  case 'g': case 'G': { // set the pixelShift of argosies to zero (reset return point)
+    if (!isArgo1Freeze) {
+      argo1.zeroArgosyPixelShift();
+      println("--->> argosy 1 pixel shift set to 0");
     }
-  case 'e':
-    { // trigger elliptical trail of audio events
-      animationPoints(width - 40, height - 40, 120);
-      break;
+    if (!isArgo2Freeze) {
+      argo2.zeroArgosyPixelShift();
+      println("--->> argosy 2 pixel shift set to 0");
     }
-  case 'a':
-    { // shift left one argosy unit
-      if (!isArgo1Freeze) argo1.shift(argo1.getUnitSize(), true);
-      if (!isArgo2Freeze) argo2.shift(argo2.getUnitSize(), true);
-      break;
+    break;
+  }
+  case 'l': { // shift argosies left one animation step
+    if (!isArgo1Freeze) argo1.shiftLeft();    // shift pattern left by argo1.argoStep pixels
+    if (!isArgo2Freeze) argo2.shiftLeft();    // shift pattern left by argo2.argoStep pixels
+    break;
+  }
+  case 'L': { // shift argosies left one animation step
+    if (!isArgo1Freeze) argo1.shift(argoStep, true);    // shift pattern left by this.argoStep pixels
+    if (!isArgo2Freeze) argo2.shift(argoStep, true);    // shift pattern left by this.argoStep pixels
+    break;
+  }
+  case 'r': { // shift argosies right one animation step
+    if (!isArgo1Freeze) argo1.shiftRight();    // shift pattern right by argo1.argoStep pixels
+    if (!isArgo2Freeze) argo2.shiftRight();    // shift pattern right by argo2.argoStep pixels
+    break;
+  }
+  case 'R': { // shift argosies right one animation step
+    if (!isArgo1Freeze) argo1.shift(-argoStep, true);    // shift pattern right by this.argoStep pixels
+    if (!isArgo2Freeze) argo2.shift(-argoStep, true);    // shift pattern right by this.argoStep pixels
+    break;
+  }
+  case 'p': { // shift argosies left one pixel
+    if (!isArgo1Freeze) argo1.shift(1, true);
+    if (!isArgo2Freeze) argo2.shift(1, true);
+    break;
+  }
+  case 'P': { // shift argosies right one pixel
+    if (!isArgo1Freeze) argo1.shift(-1, true);
+    if (!isArgo2Freeze) argo2.shift(-1, true);
+    break;
+  }
+  case 'f': { // freeze changes to argosy 1
+    isArgo1Freeze = !isArgo1Freeze;
+    argo1Freeze.setSelected(isArgo1Freeze);
+    println("isArgo1Freeze is "+ isArgo1Freeze);
+    break;
+  }
+  case 'F': { // freeze changes to argosy 2
+    isArgo2Freeze = !isArgo2Freeze;
+    argo2Freeze.setSelected(isArgo2Freeze);
+    println("isArgo2Freeze is "+ isArgo2Freeze);
+    break;
+  }
+  case 'i': case 'I': { // show stats about argosies
+    showArgosyStats();
+    break;
+  }
+  case 'S': { // save current display to an PNG file
+    saveToAudio(true);
+    println("Saved audio signals to stereo audio file.");
+    break;
+  }
+  case 's': { // save current display to an PNG file
+    saveImage();
+    break;
+  }
+  case 'u': case 'U': { // reinitialize any argosies that aren't frozen
+    if (!isArgo1Freeze) {
+      initArgo1(0);
+      println("--->> reinitialized argosy 1");
     }
-  case 'A':
-    { // shift right one argosy unit
-      if (!isArgo1Freeze) argo1.shift(-argo1.getUnitSize(), true);
-      if (!isArgo2Freeze) argo2.shift(-argo2.getUnitSize(), true);
-      break;
+    if (!isArgo2Freeze) {
+      initArgo2(0);
+      println("--->> reinitialized argosy 2");
     }
-  case 'b':
-    { // shift left one argosy length
-      if (!isArgo1Freeze) argo1.shift(argo1PixelCount, true);
-      if (!isArgo2Freeze) argo2.shift(argo2PixelCount, true);
-      break;
-    }
-  case 'B':
-    { // shift right one argosy length
-      if (!isArgo1Freeze) argo1.shift(-argo1PixelCount, true);
-      if (!isArgo2Freeze) argo2.shift(-argo2PixelCount, true);
-      break;
-    }
-  case 'c':
-    { // shift left one argosy length + argosy gap
-      if (!isArgo1Freeze) argo1.shift(argo1PixelCount + argo1.getArgosyGap(), true);
-      if (!isArgo2Freeze) argo2.shift(argo2PixelCount + argo2.getArgosyGap(), true);
-      break;
-    }
-  case 'C':
-    { // shift right one argosy length + argosy gap
-      if (!isArgo1Freeze) argo1.shift(-argo1PixelCount - argo1.getArgosyGap(), true);
-      if (!isArgo2Freeze) argo2.shift(-argo2PixelCount - argo2.getArgosyGap(), true);
-      break;
-    }
-  case 'd':
-    { // advance one animation step
-      if (!isArgo1Freeze) argo1.shift(argo1Step, true);
-      if (!isArgo2Freeze) argo2.shift(argo2Step, true);
-      count++;
-      break;
-    }
-  case 'D':
-    { // go back one animation step
-      if (!isArgo1Freeze) argo1.shift(-argo1Step, true);
-      if (!isArgo2Freeze) argo2.shift(-argo2Step, true);
-      count = 0;
-      break;
-    }
-  case 'g':
-  case 'G':
-    { // set the pixelShift of argosies to zero (reset return point)
-      if (!isArgo1Freeze) {
-        argo1.zeroArgosyPixelShift();
-        println("--->> argosy 1 pixel shift set to 0");
+    break;
+  }
+  case 'v': case 'V': { // toggle video recording
+    isRecordingVideo = !isRecordingVideo;
+    if (!isRecordingVideo) {
+      println("-- video recording is off");
+      if (videx != null) {
+        videx.endMovie();
       }
-      if (!isArgo2Freeze) {
-        argo2.zeroArgosyPixelShift();
-        println("--->> argosy 2 pixel shift set to 0");
-      }
-      break;
     }
-  case 'l':
-    { // shift argosies left one animation step
-      if (!isArgo1Freeze) argo1.shiftLeft();    // shift pattern left by argo1.argoStep pixels
-      if (!isArgo2Freeze) argo2.shiftLeft();    // shift pattern left by argo2.argoStep pixels
-      break;
-    }
-  case 'L':
-    { // shift argosies left one animation step
-      if (!isArgo1Freeze) argo1.shift(argoStep, true);    // shift pattern left by this.argoStep pixels
-      if (!isArgo2Freeze) argo2.shift(argoStep, true);    // shift pattern left by this.argoStep pixels
-      break;
-    }
-  case 'r':
-    { // shift argosies right one animation step
-      if (!isArgo1Freeze) argo1.shiftRight();    // shift pattern right by argo1.argoStep pixels
-      if (!isArgo2Freeze) argo2.shiftRight();    // shift pattern right by argo2.argoStep pixels
-      break;
-    }
-  case 'R':
-    { // shift argosies right one animation step
-      if (!isArgo1Freeze) argo1.shift(-argoStep, true);    // shift pattern right by this.argoStep pixels
-      if (!isArgo2Freeze) argo2.shift(-argoStep, true);    // shift pattern right by this.argoStep pixels
-      break;
-    }
-  case 'p':
-    { // shift argosies left one pixel
-      if (!isArgo1Freeze) argo1.shift(1, true);
-      if (!isArgo2Freeze) argo2.shift(1, true);
-      break;
-    }
-  case 'P':
-    { // shift argosies right one pixel
-      if (!isArgo1Freeze) argo1.shift(-1, true);
-      if (!isArgo2Freeze) argo2.shift(-1, true);
-      break;
-    }
-  case 'f':
-    { // freeze changes to argosy 1
-      isArgo1Freeze = !isArgo1Freeze;
-      argo1Freeze.setSelected(isArgo1Freeze);
-      println("isArgo1Freeze is "+ isArgo1Freeze);
-      break;
-    }
-  case 'F':
-    { // freeze changes to argosy 2
-      isArgo2Freeze = !isArgo2Freeze;
-      argo2Freeze.setSelected(isArgo2Freeze);
-      println("isArgo2Freeze is "+ isArgo2Freeze);
-      break;
-    }
-  case 'i':
-  case 'I':
-    { // show stats about argosies
-      showArgosyStats();
-      break;
-    }
-  case 'S':
-    { // save current display to an PNG file
-      saveToAudio(true);
-      println("Saved audio signals to stereo audio file.");
-      break;
-    }
-  case 's':
-    { // save current display to an PNG file
-      saveImage();
-      break;
-    }
-  case 'u':
-  case 'U':
-    { // reinitialize any argosies that aren't frozen
-      if (!isArgo1Freeze) {
-        initArgo1(0);
-        println("--->> reinitialized argosy 1");
-      }
-      if (!isArgo2Freeze) {
-        initArgo2(0);
-        println("--->> reinitialized argosy 2");
-      }
-      break;
-    }
-  case 'v':
-  case 'V':
-    { // toggle video recording
-      isRecordingVideo = !isRecordingVideo;
-      if (!isRecordingVideo) {
-        println("-- video recording is off");
-        if (videx != null) {
-          videx.endMovie();
-        }
-      } else {
-        println("-- video recording is on, press spacebar to toggle animation");
-        initAnimation();
-      }
-      break;
-    }
-  case 'w':
-    {    // reset animation tracking
+    else {
+      println("-- video recording is on, press spacebar to toggle animation");
       initAnimation();
-      println("-- reset animation variables");
-      break;
     }
-  case 'W':
-    {    // reset animation tracking
-      initAnimation();
-      println("-- reset animation variables");
-      break;
-    }
-  case 'z':
-    { // reset argosy 1 to initial position
-      argo1.shift(-argo1.getArgosyPixelShift(), true);
-      break;
-    }
-  case 'Z':
-    { // reset argosy 2 to inttial position
-      argo2.shift(-argo2.getArgosyPixelShift(), true);
-      break;
-    }
-  case 'h':
-  case 'H':
-    { // show help message in console
-      showHelp();
-      break;
-    }
-  default:
-    {
-      break;
-    }
+    break;
+  }
+  case 'w': {    // reset animation tracking
+    initAnimation();
+    println("-- reset animation variables");
+    break;
+  }
+  case 'W': {    // reset animation tracking
+    initAnimation();
+    println("-- reset animation variables");
+    break;
+  }
+  case 'z': { // reset argosy 1 to initial position
+    argo1.shift(-argo1.getArgosyPixelShift(), true);
+    break;
+  }
+  case 'Z': { // reset argosy 2 to inttial position
+    argo2.shift(-argo2.getArgosyPixelShift(), true);
+    break;
+  }
+  case 'h': case 'H': { // show help message in console
+    showHelp();
+    break;
+  }
+  default: {
+    break;
+  }
   }
   // many commands change the argosy array, so we'll just set the stale flag for all of them
   isBufferStale = true;
@@ -746,8 +711,6 @@ public void parseKey(char key, int keyCode) {
  * Posts key command help to the console.
  */
 public void showHelp() {
-  println(" * Press the UP arrow to increase audio output gain by 3.0 dB.");
-  println(" * Press the DOWN arrow to decrease audio output gain by 3.0 dB.");
   println(" * Press ' ' to toggle animation.");
   println(" * Press 'e' to trigger elliptical trail of audio events.");
   println(" * Press 'a' to shift left one argosy unit.");
@@ -800,8 +763,93 @@ public void showArgosyStats() {
   int gap2 = argo2.getArgosyGap();
   int length1 = maxreps1 * argo1PixelCount;
   int length2 = maxreps2 * argo2PixelCount;
-  println("--->> Argosy 1: maxReps "+ maxreps1 +", pixel count "+ argo1PixelCount +", gap "+ gap1
-    +", total pixels "+ length1 +", animation step "+ argo1.getArgosyStep() +", pixelShift "+ argo1.getArgosyPixelShift());
-  println("--->> Argosy 2: maxReps "+ maxreps2 +", pixel count "+ argo2PixelCount +", gap "+ gap2
-    +", total pixels "+ length2 +", animation step "+ argo2.getArgosyStep() +", pixelShift "+ argo2.getArgosyPixelShift());
+  println("--->> Argosy 1: maxReps "+ maxreps1 +", pixel count "+ argo1PixelCount +", gap "+ gap1 
+      +", total pixels "+ length1 +", animation step "+ argo1.getArgosyStep() +", pixelShift "+ argo1.getArgosyPixelShift());
+  println("--->> Argosy 2: maxReps "+ maxreps2 +", pixel count "+ argo2PixelCount +", gap "+ gap2 
+      +", total pixels "+ length2 +", animation step "+ argo2.getArgosyStep() +", pixelShift "+ argo2.getArgosyPixelShift());
+}
+
+/**
+ * Calls Argosy to get a floating point representation of an argosy array.
+ * Values in the returned array are scaled by argosy alpha / 255.0f, 
+ * so that opacity corresponds to audio gain. The arrays from Argosy are 
+ * loaded into audio buffers so that we can hear the patterns for argo1 and argo2.
+ */
+public void renderSignals() {
+  float[] sig1 = argo1.getArgosySignal(this.argo1Alpha/255.0f);
+  float[] sig2 = argo2.getArgosySignal(this.argo2Alpha/255.0f);
+  System.arraycopy(sig1, 0, argo1Signal, 0, sig1.length);
+  System.arraycopy(sig2, 0, argo2Signal, 0, sig2.length);
+  argo1Buffer.setBufferSize(argo1Signal.length);
+  argo2Buffer.setBufferSize(argo2Signal.length);
+  argo1Buffer.setChannel(0, argo1Signal);            
+  argo2Buffer.setChannel(0, argo2Signal);            
+  argo1Synth.setBuffer(argo1Buffer);
+  argo2Synth.setBuffer(argo2Buffer);
+  // println("--->> generated new audio signals");
+}
+
+
+/**
+ * Run the animation for audio events. 
+ */
+public void runTimeArray() {
+  int currentTime = millis();
+  timeLocsArray.forEach(tl -> {
+    tl.setStale(tl.eventTime() < currentTime);
+    if (!tl.isStale()) {
+      drawCircle(tl.getX(), tl.getY());
+    }
+  });
+  timeLocsArray.removeIf(TimedLocation::isStale);
+}
+
+public void runAnimationArray() {
+  if (animationLocsArray == null || animationLocsArray.size() <= 0) return;
+  int currentTime = millis();
+  animationLocsArray.forEach(tl -> {
+    if (tl.eventTime() < currentTime) {
+      sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
+      sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
+      float panning = map(sampleX, 0, width, -0.8f, 0.8f);
+      argo1SamplePos = getSamplePos(argo1, sampleX, sampleY, argo1Step);
+      argo2SamplePos = getSamplePos(argo2, sampleX, sampleY, argo2Step);
+      if (argo1Signal == null || argo2Signal == null || isBufferStale) {
+        renderSignals();
+        isBufferStale = false;
+      }
+      if (this.isShowArgo1) 
+        playSample(argo1Synth, argo1SamplePos, calcSampleLen(), 0.6f, adsr1, panning);
+      if (this.isShowArgo2) 
+        playSample(argo2Synth, argo2SamplePos, calcSampleLen(), 0.6f, adsr2, panning);
+      tl.setStale(true);
+    }
+  });
+  animationLocsArray.removeIf(TimedLocation::isStale);
+}
+
+/**
+ * Draws a circle at the location of an audio trigger (mouseDown event).
+ * @param x    x coordinate of circle
+ * @param y    y coordinate of circle
+ */
+public void drawCircle(int x, int y) {
+  //float size = isRaining? random(10, 30) : 60;
+  fill(color(199, 220, 233, 160));
+  noStroke();
+  circle(x, y, 40);
+}
+
+public ArrayList<PVector> animationPoints(float w, float h, int count) {
+  if (aniPoints == null) aniPoints = new ArrayList<>();
+  if (animationLocsArray == null) animationLocsArray = new ArrayList<>();
+  int start = millis() + 50;
+  int interval = 90;
+  for (int i = 0; i < count; i++) {
+    float x = w/2 * cos(TWO_PI * i/count) + width/2;
+    float y = h/2 * sin(TWO_PI * i/count) + height/2;
+    aniPoints.add(new PVector(x, y));
+    animationLocsArray.add(new TimedLocation(round(x), round(y), start + i * interval));
+  }
+  return aniPoints;
 }

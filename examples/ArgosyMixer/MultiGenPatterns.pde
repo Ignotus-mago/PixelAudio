@@ -526,62 +526,62 @@ public AffineTransformType randomTransform() {
 public PixelAudioMapper selectMapper(int selector, PixelMapGen gen) {
   switch (selector) {
     case(0):
-    gen = hilbertLoop3x2(width/3, height/2);
-    break;
+      gen = hilbertLoop3x2(width/3, height/2);
+      break;
     case(1):
-    gen = hilbertLoop6x4(width/6);
-    break;
+      gen = hilbertLoop6x4(width/6);
+      break;
     case(2):
-    gen = hilbertZigzagLoop6x4(width/6, height/4);
-    break;
+      gen = hilbertZigzagLoop6x4(width/6, height/4);
+      break;
     case(3):
-    gen = hilbertStackOrtho(3, 8, 4, imageWidth/12, imageHeight/8);
-    break;
+      gen = hilbertStackOrtho(3, 8, 4, imageWidth/12, imageHeight/8);
+      break;
     case(4):
-    gen = hilbertStackBou(3, 8, 4, imageWidth/12, imageHeight/8);
-    break;
+      gen = hilbertStackBou(3, 8, 4, imageWidth/12, imageHeight/8);
+      break;
     case(5):
-    gen = hilbertRowOrtho(6, 4, height/4, width/6);
-    break;
+      gen = hilbertRowOrtho(6, 4, height/4, width/6);
+      break;
     case(6):
-    gen = hilbertColumnOrtho(6, 4, height/4, width/6);
-    break;
+      gen = hilbertColumnOrtho(6, 4, height/4, width/6);
+      break;
     case(7):
-    gen = zigzagLoop6x4(width/6, height/4);
-    break;
+      gen = zigzagLoop6x4(width/6, height/4);
+      break;
     case(8):
-    gen = zigzagRowOrtho(6, 4, width/6, height/4);
-    break;
+      gen = zigzagRowOrtho(6, 4, width/6, height/4);
+      break;
     case(9):
-    gen = zigzagRowAltOrtho(6, 4, width/6, height/4);
-    break;
+      gen = zigzagRowAltOrtho(6, 4, width/6, height/4);
+      break;
     case(10):
-    gen = zigzagColumnOrtho(6, 4, width/6, height/4);
-    break;
+      gen = zigzagColumnOrtho(6, 4, width/6, height/4);
+      break;
     case(11):
-    gen = zigzagColumnAltOrtho(6, 4, width/6, height/4);
-    break;
+      gen = zigzagColumnAltOrtho(6, 4, width/6, height/4);
+      break;
     case(12):
-    gen = zigzagRowRandomFlip(6, 4, width/6, height/4);
-    break;
+      gen = zigzagRowRandomFlip(6, 4, width/6, height/4);
+      break;
     case(13):
-    gen = zigzagRowRandomFlip(12, 8, width/12, height/8);
-    break;
+      gen = zigzagRowRandomFlip(12, 8, width/12, height/8);
+      break;
     case(14):
-    gen = boustrophRowRandom(6, 4, width/6, height/4);
-    break;
+      gen = boustrophRowRandom(6, 4, width/6, height/4);
+      break;
     case(15):
-    gen = hilbertRowRandomFlip(6, 4, width/6, height/4);
-    break;
+      gen = hilbertRowRandomFlip(6, 4, width/6, height/4);
+      break;
     case(16):
-    gen = hilbertRowRandomFlip(12, 8, width/12, height/8);
-    break;
+      gen = hilbertRowRandomFlip(12, 8, width/12, height/8);
+      break;
     case(17):
-    gen = hilbertRowRandomFlip(24, 16, width/24, height/16);
-    break;
-  default:
-    gen = hilbertLoop3x2(width/3, height/2);
-    break;
+      gen = hilbertRowRandomFlip(24, 16, width/24, height/16);
+      break;
+    default:
+      gen = hilbertLoop3x2(width/3, height/2);
+      break;
   }
   return new PixelAudioMapper(gen);
 }

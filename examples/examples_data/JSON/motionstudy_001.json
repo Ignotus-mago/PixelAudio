@@ -1,0 +1,131 @@
+{
+  "waves": [
+    {
+      "phase": 0.8131527900695801,
+      "color": {
+        "r": 89,
+        "b": 178,
+        "g": 123
+      },
+      "amp": 0.75,
+      "phaseInc": 0.02727077156305313,
+      "freq": 0.33854109048843384,
+      "index": 0,
+      "cycles": 5,
+      "dc": 0
+    },
+    {
+      "phase": 0.15714296698570251,
+      "color": {
+        "r": 174,
+        "b": 246,
+        "g": 184
+      },
+      "amp": 0.875,
+      "phaseInc": 0.01636246219277382,
+      "freq": 0.54790198802948,
+      "index": 1,
+      "cycles": 3,
+      "dc": 0
+    },
+    {
+      "phase": 0.47986099123954773,
+      "color": {
+        "r": 141,
+        "b": 58,
+        "g": 109
+      },
+      "amp": 0.75,
+      "phaseInc": 0.07090400159358978,
+      "freq": 0.8864431977272034,
+      "index": 2,
+      "cycles": 13,
+      "dc": 0
+    },
+    {
+      "phase": 0.8722215890884399,
+      "color": {
+        "r": 169,
+        "b": 242,
+        "g": 231
+      },
+      "amp": 0.625,
+      "phaseInc": 0.04363323375582695,
+      "freq": 1.4343451261520386,
+      "index": 3,
+      "cycles": 8,
+      "dc": 0
+    },
+    {
+      "phase": 0.019330501556396484,
+      "color": {
+        "r": 233,
+        "b": 76,
+        "g": 89
+      },
+      "amp": 0.625,
+      "phaseInc": 0.010908308438956738,
+      "freq": 3843.9990234375,
+      "index": 4,
+      "cycles": 2,
+      "dc": 0
+    },
+    {
+      "phase": 0.27152764797210693,
+      "color": {
+        "r": 199,
+        "b": 178,
+        "g": 246
+      },
+      "amp": 0.875,
+      "phaseInc": 0.005454154219478369,
+      "freq": 3843.9990234375,
+      "index": 5,
+      "cycles": 1,
+      "dc": 0
+    },
+    {
+      "phase": 0.9618051052093506,
+      "color": {
+        "r": 224,
+        "b": 93,
+        "g": 206
+      },
+      "amp": 0.5,
+      "phaseInc": 0.05999569594860077,
+      "freq": 3844.666748046875,
+      "index": 6,
+      "cycles": 11,
+      "dc": 0
+    },
+    {
+      "phase": 0.3659723699092865,
+      "color": {
+        "r": 243,
+        "b": 255,
+        "g": 217
+      },
+      "amp": 0.5,
+      "phaseInc": -0.03817908093333244,
+      "freq": 3844.666748046875,
+      "index": 7,
+      "cycles": -7,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.26875001192092896,
+  "comments": "---",
+  "filename": "ms_11520Hz_001.mp4",
+  "stop": 1152,
+  "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
+  "scaleHisto": false,
+  "histoHigh": 254,
+  "histoLow": 1,
+  "steps": 1152,
+  "gamma": 1.600000023841858
+}

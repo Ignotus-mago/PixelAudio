@@ -1,4 +1,6 @@
 /**
+ * An early example of audio/image sequencing with the WaveSynth color organ, 
+ * used for a performance at Experimental Sound Studio, Chicago. 
  *
  * INSTRUCTIONS FOR PERFORMANCE
  *
@@ -134,17 +136,17 @@ public void setup() {
   pixelaudio = new PixelAudio(this);
   minim = new Minim(this);
   multigen = loadLoopGen(genWidth, genHeight);      // See the MultiGenDemo example for details on how MultiGen works
-  mapper = new PixelAudioMapper(multigen);  // initialize a PixelAudioMapper
-  float drone = sampleRate/1024.0f;      // a frequency that generates visual symmetries
-  wdList = buildWaveDataList(drone, 8, 10);  // generate a WaveData list for the WaveSynth
-  wavesynth = new WaveSynth(mapper, wdList);  // initialize a WaveSynth object
-  initWaveSynth(wavesynth);          // fill in some parameters of the WaveSynth
-  synthImage = wavesynth.mapImage;      // point synthImage at the WaveSynth's PImage field
-  mapSize = mapper.getSize();          // size of the image, and of various other entities
-  initAudio();                // set up audio output and an audio buffer
+  mapper = new PixelAudioMapper(multigen);          // initialize a PixelAudioMapper
+  float drone = sampleRate/1024.0f;                 // a frequency that generates visual symmetries
+  wdList = buildWaveDataList(drone, 8, 10);         // generate a WaveData list for the WaveSynth
+  wavesynth = new WaveSynth(mapper, wdList);        // initialize a WaveSynth object
+  initWaveSynth(wavesynth);                         // fill in some parameters of the WaveSynth
+  synthImage = wavesynth.mapImage;                  // point synthImage at the WaveSynth's PImage field
+  mapSize = mapper.getSize();                       // size of the image, and of various other entities
+  initAudio();                                      // set up audio output and an audio buffer
   timeLocsArray = new ArrayList<TimedLocation>();   // initialize mouse event tracking array
-  initDecimalFormats();            // initializes some utility functions for formatting numbers
-  initWaveSynthList();            // sets up a sequencer using dbwfMusic, dbwfTimes, and dbwfAmps arrays
+  initDecimalFormats();                             // initializes some utility functions for formatting numbers
+  initWaveSynthList();                              // sets up a sequencer using dbwfMusic, dbwfTimes, and dbwfAmps arrays
   showHelp();
 }
 
@@ -203,7 +205,6 @@ public void initDecimalFormats() {
   dfSymbols.setDecimalSeparator(',');
   commaTwoPlaces = new DecimalFormat("0.00", dfSymbols);
 }
-
 
 /**
  * The main loop for drawing to the screen.
@@ -302,7 +303,6 @@ public void keyPressed() {
     break;
   }
 }
-
 
 /**
  * Advance the WaveSynth Sequencer to its next state.

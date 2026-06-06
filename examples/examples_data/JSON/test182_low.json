@@ -1,0 +1,131 @@
+{
+  "waves": [
+    {
+      "phase": 0.042000047862529755,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.012271846644580364,
+      "freq": 0.375,
+      "index": 0,
+      "cycles": 0.75,
+      "dc": 0
+    },
+    {
+      "phase": 0.16700005531311035,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": -0.00818123109638691,
+      "freq": 0.625,
+      "index": 1,
+      "cycles": -0.5,
+      "dc": 0
+    },
+    {
+      "phase": 0.29200005531311035,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": -0.012271846644580364,
+      "freq": 1023.5,
+      "index": 2,
+      "cycles": -0.75,
+      "dc": 0
+    },
+    {
+      "phase": 0.16699989140033722,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": 0.00818123109638691,
+      "freq": 1023.5,
+      "index": 3,
+      "cycles": 0.5,
+      "dc": 0
+    },
+    {
+      "phase": 0.2919999063014984,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": 0.02045307867228985,
+      "freq": 1023.625,
+      "index": 4,
+      "cycles": 1.25,
+      "dc": 0
+    },
+    {
+      "phase": 0.2919999957084656,
+      "color": {
+        "r": 254,
+        "b": 0,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.004090615548193455,
+      "freq": 1023.625,
+      "index": 5,
+      "cycles": 0.25,
+      "dc": 0
+    },
+    {
+      "phase": 0.5420001745223999,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 254
+      },
+      "amp": 0.75,
+      "phaseInc": -0.02045307867228985,
+      "freq": 1023.75,
+      "index": 6,
+      "cycles": -1.25,
+      "dc": 0
+    },
+    {
+      "phase": 0.2919999957084656,
+      "color": {
+        "r": 0,
+        "b": 254,
+        "g": 0
+      },
+      "amp": 0.75,
+      "phaseInc": 0.004090615548193455,
+      "freq": 1023.75,
+      "index": 7,
+      "cycles": 0.25,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.3125,
+  "comments": "8-operator chromatic checkerboard: ractional cycles, bright colors, 8189 barrio. ",
+  "filename": "test182_low_pixelaudio.mp4",
+  "stop": 3072,
+  "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
+  "scaleHisto": false,
+  "histoHigh": 254,
+  "histoLow": 1,
+  "steps": 384,
+  "gamma": 1.2000000476837158
+}
