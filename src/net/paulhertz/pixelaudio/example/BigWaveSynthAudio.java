@@ -16,6 +16,8 @@ import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
+// TODO revise for PixelAudio library release.
+
 /**
  * BigWaveSynthAudio shows how you can load the color output of WaveSynth into the pixel
  * array of a MultiGen and play the WaveSynth's audio output with a PASamplerInstrument.
