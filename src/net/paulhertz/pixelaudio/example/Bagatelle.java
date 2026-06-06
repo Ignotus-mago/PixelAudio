@@ -70,8 +70,12 @@ import net.paulhertz.pixelaudio.sampler.*;
  */
 
 /**
- * Experimental real time performance application based on PixelAudio, with an editing GUI, Presets, and 
- * saving and loading JSON-format files for brushstroke and granular configuration data. 
+ * Experimental real time performance application based on PixelAudio, with an editing GUI, Presets, and
+ * saving and loading JSON-format files for brushstroke and granular configuration data. Used in performance
+ * at the Outside the Box New Music Festival at Southern Illinois University, Carbondale, March 2026.
+ * We played Christopher Walczak's composition "Abstract Jailbreak", one of a series of "Bagatelles" we
+ * are collaborating on, and my composition "DEADBODYWORKFLOW". The presets in this version of the Bagatelle 
+ * sketch are set up for "Abstract Jailbreak". 
  * 
  * <DIV>
  * <h2>QUICK START</h2>
@@ -82,6 +86,18 @@ import net.paulhertz.pixelaudio.sampler.*;
  * pixels created by the PixelMapGen <code>multigen</code> and managed by the PixelAudioMapper <code>mapper</code>.
  * The Signal Path starts in the upper left corner and ends in the lower right corner.</li> 
  * 
+ * Bagatelle is set up for a performance of "Abstract Jailbreak," a musical work by Christopher Walczak. 
+ * Abstract Jailbreak makes use of the Performance Presets built in to the application. The presets 
+ * can be triggered with the number keys. At this point you could press '1' to load the first preset.
+ * For more information, see the "PRESET LIST" in the variables section of the Bagatelle tab, and the  
+ * various methods in the Performance tab. There are five presets for Abstract Jailbreak. They control
+ * audio synthesis parameters and brush drawing style. More than one can be loaded at one time. To clear 
+ * presets from the preset stack, press '0'.
+ *
+ * Bagatelle is an experiment. I have tried to document reasonably well, but some features are bound to
+ * appear opaque or mysterious. I think most of the features will reveal themselves with experimentation.
+ * You may even find that you can write your own presets and use them for your performances. 
+ *
  * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing, 
  * a brushstroke appears when you release the mouse. TutorialOne_03_Drawing gave you limited control over
  * the attributes of the brushstroke and its associated audio parameters. In GesturePlayground, you can
