@@ -10,6 +10,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
@@ -35,6 +36,11 @@ import com.hamoid.*;
 
 // GUI library for Processing
 import g4p_controls.*;
+
+// TODO error on recording a second video: FIXED
+// TODO error on editing a GUI field while animating: FIXED
+// TODO goofy output to console when editing text fields: PENDING
+// TODO different results for each press of 'i', 'e', some field entries -- prefer a consistent result
 
 
 /**
@@ -253,8 +259,9 @@ public class WaveSynthEditor extends PApplet {
 	 * expressed as a fraction in the range (0..1).
 	 */
 	float colorShift = 1.0f/24;
-	/** Sets how much to scale frequencies with scaleFreqs() */
-	float freqFac = (float) (Math.sqrt(2.0));
+	/** Sets how much to scale frequencies with scaleFreqs() 
+	 *  tritone (half octave): (Math.sqrt(2.0)); semitone: (Math.pow(2.0, 1.0/12)); */
+	float freqFac = (float) (Math.sqrt(2.0)); 
 	/** Sets how much to scale amplitudes with scaleAmps() */
 	float ampFac = 0.9375f; // 15/16
 	/** Sets the increment to apply to wavesynth gain (brightness) */
@@ -386,7 +393,7 @@ public class WaveSynthEditor extends PApplet {
 		mapImage = wavesynth.mapImage;
 		// 6. Initialize audio
 		initAudio();
-		// 7. Set up displays
+		// 7. Set up displays and window scaling
 		listDisplays();
 		setScaling();
 		if (isOversize) {
@@ -507,6 +514,7 @@ public class WaveSynthEditor extends PApplet {
 	}	
 	
 	public void draw() {
+		applyPendingWaveEdits();
 		if (isAnimating) {
 			stepAnimation();      // only updates step / recording state
 			imageDirty = true;
@@ -517,7 +525,7 @@ public class WaveSynthEditor extends PApplet {
 		}
 		image(mapImage, 0, 0, width, height);
 		runTimeArray();
-		if (isRecordingVideo) {
+		if (isRecordingVideo && videx != null) {
 			videx.saveFrame();
 			println("-- video recording frame " + step + " of " + animStop);
 		}
@@ -538,6 +546,7 @@ public class WaveSynthEditor extends PApplet {
 			if (isRecordingVideo) {
 				isRecordingVideo = false;
 				videx.endMovie();
+				videx = null;    // discard the videx instance
 			}
 		} 
 		else {
@@ -930,7 +939,10 @@ public class WaveSynthEditor extends PApplet {
     		toggleRecording();
     		break;
     	case 'V': // record a complete video loop from frame 0 to stop frame
-    		// Go to frame 0, turn recording on, turn animation on.
+    	    if (videx != null) {
+    	        videx.endMovie();   // optional only if you might interrupt a live recording
+    	        videx = null;
+    	    }
     		// This will record a complete video loop, from frame 0 to the
     		// stop frame value in the GUI control panel.
     		step = 0;
@@ -1827,6 +1839,27 @@ public class WaveSynthEditor extends PApplet {
 
 	
 	/* ------------------------------------------------------------- */
+	/* ----->>>               GUI SUPPORT                   <<<----- */
+	/* ------------------------------------------------------------- */
+	
+	/**
+	 * Storage for deferred edits to draw() loop.
+	 */
+	final ConcurrentLinkedQueue<Runnable> pendingWaveEdits = new ConcurrentLinkedQueue<>();
+
+	/**
+	 * Run deferred GUI edits.
+	 */
+	void applyPendingWaveEdits() {
+	    Runnable r;
+	    while ((r = pendingWaveEdits.poll()) != null) {
+	        synchronized (wavesynth) {
+	            r.run();
+	        }
+	    }
+	}
+
+	/* ------------------------------------------------------------- */
 	/* ----->>>              BEGIN G4P GUI                  <<<----- */
 	/* ------------------------------------------------------------- */
 
@@ -2388,140 +2421,193 @@ public class WaveSynthEditor extends PApplet {
 	*/
 
 	public void comments_hit(GTextArea source, GEvent event) {
-	  // println("commentsField - GTextField >> GEvent." + event + " @ " + millis() + " value: " + commentsField.getText());
-	  wavesynth.setComments(commentsField.getText());
+		// println("commentsField - GTextField >> GEvent." + event + " @ " + millis() + " value: " + commentsField.getText());
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			final String comment = commentsField.getText();
+			pendingWaveEdits.add(() -> {
+				wavesynth.setComments(comment);
+			});
+		}
 	}
 
 	public void blendField_hit(GTextField source, GEvent event) { 
-	  // println("blendField - GTextField >> GEvent." + event + " @ " + millis() + " value: " + blendField.getValueF());
-	  wavesynth.setGain(blendField.getValueF());
-	  //if (!isAnimating) blendChannels(step)(step);
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			final float g = blendField.getValueF();
+			pendingWaveEdits.add(() -> {
+				wavesynth.setGain(g);
+				imageDirty = true;
+			});
+		}
 	} 
 	
 	public void gammaField_hit(GTextField source, GEvent event) { 
-	  // println("gammaField - GTextField >> GEvent." + event + " @ " + millis());
-	  wavesynth.setGamma(gammaField.getValueF());
-	  //if (!isAnimating) blendChannels(step)(step);
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			final float gamma = gammaField.getValueF();
+			pendingWaveEdits.add(() -> {
+				wavesynth.setGamma(gamma);
+				imageDirty = true;
+			});			
+		}
 	} 
 	
 	public void stepsSpinner_hit(GSpinner source, GEvent event) {
-	  // println("stepsSpinner - GSpinner >> GEvent." + event + " @ " + millis());
-	  // @TODO recalculate global wd settings when animSteps changes
-	  animSteps = stepsSpinner.getValue();
-	  wavesynth.setAnimSteps(animSteps);
-	  for (WaveData wd : wavesynth.waveDataList) {
-	    wd.phaseInc = (wd.phaseCycles * TWO_PI)/wavesynth.animSteps;
-	  }
-	  //if (!isAnimating) blendChannels(step)(step);
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			final int newSteps = stepsSpinner.getValue();
+			pendingWaveEdits.add(() -> {
+				animSteps = Math.max(1,  newSteps);
+				wavesynth.setAnimSteps(animSteps);
+				for (WaveData wd : wavesynth.waveDataList) {
+					wd.setAnimationSteps(newSteps);
+					wd.invalidateFrameState();
+				}
+				imageDirty = true;
+			});
+		}
 	}
 	
-	public void stopSpinner_hit(GSpinner source, GEvent event) {
-	  // println("stepsSpinner - GSpinner >> GEvent." + event + " @ " + millis());
-	  animStop = stopSpinner.getValue();
-	  //if (!isAnimating) blendChannels(step)(step);
+	public void stopSpinner_hit(GSpinner source, GEvent event) {		
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			final int newStop = stopSpinner.getValue();
+			pendingWaveEdits.add(() -> {
+				animStop = Math.max(1, newStop);
+				wavesynth.setStop(newStop);
+			});
+			// no change to appearance or audio
+		}
 	}
 	
 	public void histoCheck_hit(GCheckbox source, GEvent event) { 
-	  // println("histoCheck - GCheckbox >> GEvent." + event + " @ " + millis());
-	  wavesynth.setScaleHisto(histoCheck.isSelected());
-	  //if (!isAnimating) blendChannels(step)(step);
+		if (event == GEvent.CHANGED) {
+			final boolean sel = histoCheck.isSelected();
+			pendingWaveEdits.add(() -> {
+				wavesynth.setScaleHisto(sel);
+				imageDirty = true;
+			});
+		}
 	} 
-	
+
 	public void histoHigh_hit(GTextField source, GEvent event) { 
-	  // println("histoHigh - GTextField >> GEvent." + event + " @ " + millis());
-	  wavesynth.setHistoHigh(histoHighField.getValueI());
-	  //if (!isAnimating) blendChannels(step)(step);
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			final int high = histoHighField.getValueI();
+			pendingWaveEdits.add(() -> {
+				wavesynth.setHistoHigh(high);
+				imageDirty = true;
+			});
+		}
 	} 
-	
+
 	public void histoLow_hit(GTextField source, GEvent event) { 
-	  // println("histoLow - GTextField >> GEvent." + event + " @ " + millis());
-	  wavesynth.setHistoLow(histoLowField.getValueI());
-	  //if (!isAnimating) blendChannels(step)(step);
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			final int low = histoLowField.getValueI();
+			pendingWaveEdits.add(() -> {
+				wavesynth.setHistoLow(low);
+				imageDirty = true;
+			});
+		}
 	} 
 
 	public void videoNameField_hit(GTextField source, GEvent event) { 
-	  // println("videoNameField - GTextField >> GEvent." + event + " @ " + millis());
-	  wavesynth.setVideoFilename(videoNameField.getText());
-	  // update global videoFilename
-	  videoFilename = wavesynth.getVideoFilename();
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			wavesynth.setVideoFilename(videoNameField.getText());
+			// update global videoFilename
+			videoFilename = wavesynth.getVideoFilename();
+		}
+		// no changes to waavesynth
 	} 
-	
+
 	public void fpsMenu_hit(GDropList source, GEvent event) { 
-	  // println("fpsMenu - GDropList >> GEvent." + event + " @ " + millis());
-	  wavesynth.setVideoFrameRate(Integer.valueOf(fpsMenu.getSelectedText()));
-	  println("----->>> videoFPS = "+ wavesynth.videoFrameRate);  
+		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+			wavesynth.setVideoFrameRate(Integer.valueOf(fpsMenu.getSelectedText()));
+			println("----->>> videoFPS = "+ wavesynth.videoFrameRate);  
+		}
 	} 
-	
+
 	// this stays global
 	public void recordCheck_hit(GCheckbox source, GEvent event) { 
-	  // println("recordCheck - GCheckbox >> GEvent." + event + " @ " + millis());
-	  isRecordingVideo = recordCheck.isSelected();
-	  if (isRecordingVideo) {
-	    if (isOversize) {
-	      println("----->>> Oversize image, setting to full size to record correctly.");
-	      isFitToScreen = false;
-	      resizeWindow();
-	    }
-	  }
-	  refreshGlobalPanel();
-	  println("----->>> isRecordingVideo = "+ isRecordingVideo);
+		isRecordingVideo = recordCheck.isSelected();
+		if (isRecordingVideo) {
+			if (isOversize) {
+				println("----->>> Oversize image, setting to full size to record correctly.");
+				isFitToScreen = false;
+				resizeWindow();
+			}
+		}
+		refreshGlobalPanel();
+		println("----->>> isRecordingVideo = "+ isRecordingVideo);
 	} 
 
 	// prob want a refresh call in WaveSynth
 	public void refreshBtn_hit(GButton source, GEvent event) {
-	  // println("refreshBtn - GButton >> GEvent." + event + " @ " + millis());
-	  if (!isDesignMode) {
-	    
-	  }
-	  markWaveSynthVisualDirty();
-	  markWaveSynthAudioDirty();
+		if (!isDesignMode) {
+			// ?
+		}
+		markWaveSynthVisualDirty();
+		markWaveSynthAudioDirty();
 	}
 
 	// stays global
 	public void capSpinner_hit(GSpinner source, GEvent event) {
-	  // println("capSpinner - GSpinner >> GEvent." + event + " @ " + millis());
-	  snapCount = capSpinner.getValue();
+		snapCount = capSpinner.getValue();
 	}
 
 	// stays global
 	public void capCheck_hit(GCheckbox source, GEvent event) {
-	  // println("capSpinner - GSpinner >> GEvent." + event + " @ " + millis());
-	  isCaptureFrames = capCheck.isSelected();
-	  println("----->>> isCaptureFrames = "+ isCaptureFrames);
+		isCaptureFrames = capCheck.isSelected();
+		println("----->>> isCaptureFrames = "+ isCaptureFrames);
 	}
 
 	// handled globally with calls on wavesynth or list of WaveAnimators, when relevant
 	public void runVideoBtn_hit(GButton source, GEvent event) {
-	  toggleAnimation(); //<>//
+		toggleAnimation(); //<>//
 	}
 
 	public void openBtn_hit(GButton source, GEvent event) { 
-	  // println("openBtn - GButton >> GEvent." + event + " @ " + millis());
-	  if (isAnimating) toggleAnimation();
-	  loadWaveData();
-	  // isAnimating = oldIsAnimating;
+		if (isAnimating) toggleAnimation();
+		loadWaveData();
+		// isAnimating = oldIsAnimating;
 	} 
 
-	public void saveBtn_hit(GButton source, GEvent event) { 
-	  // println("saveBtn - GButton >> GEvent." + event + " @ " + millis());
-	  if (isAnimating) toggleAnimation();
-	  if ((currentDataFile == null) || (currentDataFile.getAbsolutePath().equals(""))) {
-	    saveWaveData();
-	  }
-	  else {
-	    fileSelectedWrite(currentDataFile);
-	  }
+	public void saveBtn_hit(GButton source, GEvent event) {
+		if (isAnimating) toggleAnimation();
+		if ((currentDataFile == null) || (currentDataFile.getAbsolutePath().equals(""))) {
+			saveWaveData();
+		}
+		else {
+			fileSelectedWrite(currentDataFile);
+		}
 	} 
-	
+
 	public void saveAsBtn_hit(GButton source, GEvent event) { 
-	  // println("saveAsBtn - GButton >> GEvent." + event + " @ " + millis());
-	  if (isAnimating) toggleAnimation();
-	  saveWaveData();
+		if (isAnimating) toggleAnimation();
+		saveWaveData();
 	} 
 	
 	/********************************************************************/
 	/*                Wave Data Control Panel Handlers                  */
 	/********************************************************************/
+		
+	/**
+	 * Single commit method for all WaveData fields.
+	 */
+	void commitCurrentWaveData() {
+	    float freq   = freqField.getValueF();
+	    float amp    = ampField.getValueF();
+	    float phase  = phaseField.getValueF();
+	    float dc     = dcField.getValueF();
+	    float cycles = cyclesField.getValueF();
+		// currentWD is selected from wavesynth.waveDataList, 
+	    // where wavesynth is the (current) WaveSynth instance
+	    pendingWaveEdits.add(() -> {
+	        currentWD.setFreq(freq);
+	        currentWD.setAmp(amp);
+	        currentWD.setPhase(phase);
+	        currentWD.setDc(dc);
+	        currentWD.setCycles(cycles);
+	        currentWD.invalidateFrameState();
+	        imageDirty = true;
+	        audioDirty = true;
+	    });
+	}
 
 	// not active
 	public void waveDataPanel_hit(GPanel source, GEvent event) { 
@@ -2529,67 +2615,55 @@ public class WaveSynthEditor extends PApplet {
 	} 
 
 	public void freqField_hit(GTextField source, GEvent event) { 
-	  // println("freqField - GTextField >> GEvent." + event + " @ " + millis());
-	  float newFreq = freqField.getValueF();
-	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-	  currentWD.setFreq(newFreq);
-	  currentWD.invalidateFrameState();
+	    if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+	        commitCurrentWaveData();
 	} 
 	
 	public void ampField_hit(GTextField source, GEvent event) { 
-	  // println("ampField - GTextField >> GEvent." + event + " @ " + millis());
-	  float newAmp = ampField.getValueF();
-	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-	  currentWD.setAmp( newAmp);
-	  currentWD.invalidateFrameState();
+	    if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+	        commitCurrentWaveData();
 	} 
 	
 	public void phaseField_hit(GTextField source, GEvent event) { 
-	  // println("phaseField - GTextField >> GEvent." + event + " @ " + millis());
-	  float newPhase = phaseField.getValueF();
-	  // we only need the decimal fraction, which is a portion of TWO_PI
-	  // next time we load the GUI the newPhase value will appear
-	  newPhase -= floor(newPhase);
-	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-	  // TODO verify compatibility with older JSON format
-	  currentWD.setPhase(newPhase);
-	  currentWD.invalidateFrameState();
-	  if (!isAnimating) {
-		  mapImage = renderFrame(step);
-	  }
+	    if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+	        commitCurrentWaveData();
 	}
 	
 	public void cycles_hit(GTextField source, GEvent event) { 
-	  // println("cyclesField - GTextField >> GEvent." + event + " @ " + millis());
-	  float newCycles = cyclesField.getValueF();
-	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-	  currentWD.setCycles(newCycles); 
-	  currentWD.invalidateFrameState();
+	    if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+	        commitCurrentWaveData();
 	}
 	
 	public void dc_hit(GTextField source, GEvent event) {
-	  // println("dcField - GTextField >> GEvent." + event + " @ " + millis());
-	  float newDc = dcField.getValueF();
-	  // currentWD is selected from wavesynth.waveDataList, where wavesynth is the (current) WaveSynth instance
-	  currentWD.setDc(newDc);
-	  currentWD.invalidateFrameState();
+	    if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS)
+	        commitCurrentWaveData();
 	}
 	
-	// G4P code for colour chooser
+	/**
+	 * G4P code for color chooser. 
+	 * @param button
+	 * @param event
+	 */
 	public void handleColorChooser(GButton button, GEvent event) {
-	  // println("btnColor - GButton >> GEvent." + event + " @ " + millis());
-	  sel_col = G4P.selectColor(currentWD.waveColor);
-	  colorTitle.setText("Color: "+ (sel_col >> 16 & 0xFF) +", "+ (sel_col >> 8 & 0xFF) +", "+ (sel_col & 0xFF));
-	  colorPG.beginDraw();
-	  colorPG.background(sel_col);
-	  colorPG.endDraw();
-	  currentWD = wavesynth.waveDataList.get(waveDataIndex);
-	  if (isVerbose) println("==> selected color: "+ PixelAudioMapper.colorString(sel_col));
-	  // be sure to set color value in wavesynth.waveColors array, otherwise the display won't update
-	  currentWD.setWaveColor(sel_col);
-	  wavesynth.waveColors[waveDataIndex] = sel_col;
-	  markWaveSynthVisualDirty();
-	  markWaveSynthAudioDirty();
+		// println("btnColor - GButton >> GEvent." + event + " @ " + millis());
+		sel_col = G4P.selectColor(currentWD.waveColor);
+		colorTitle.setText("Color: "+ (sel_col >> 16 & 0xFF) +", "+ (sel_col >> 8 & 0xFF) +", "+ (sel_col & 0xFF));
+		colorPG.beginDraw();
+		colorPG.background(sel_col);
+		colorPG.endDraw();
+		currentWD = wavesynth.waveDataList.get(waveDataIndex);
+		if (isVerbose) println("==> selected color: "+ PixelAudioMapper.colorString(sel_col));
+		// be sure to set color value in wavesynth.waveColors array, otherwise the display won't update
+		// avoid dependencies in the lambda by capturing values
+		final int idx = waveDataIndex;
+		final int col = sel_col;
+		pendingWaveEdits.add(() -> {
+			WaveData wd = wavesynth.waveDataList.get(idx);
+			wd.setWaveColor(col);
+			wavesynth.waveColors[idx] = col;
+			imageDirty = true;
+			// audioDirty not needed for color edits
+		});
 	}
 	
 	public void prev_hit(GButton source, GEvent event) { 

@@ -19,6 +19,10 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 /**
  * Example sketch shows how to create an audio synth sequencer with the WaveSynth. 
+ * An early example of audio/image sequencing with the WaveSynth color organ, 
+ * used for a performance at Experimental Sound Studio, Chicago. 
+ * 
+ * TODO: Revise to comply with more recent UI features, for example, spacebar to play audio, TAB to animate.
  * 
  * <h2>INSTRUCTIONS FOR PERFORMANCE<?h2>
  * <pre>

@@ -22,7 +22,6 @@ import processing.core.PImage;
 import processing.core.PConstants;
 import java.util.ArrayList;
 
-
 /**
  * Implements a combination of color organ and additive audio synth.
  * Animates pixels using phase shifting of audio generators in <code>waveDataList</code>. 
