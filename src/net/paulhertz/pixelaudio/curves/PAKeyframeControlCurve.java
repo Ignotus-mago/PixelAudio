@@ -5,9 +5,8 @@ import java.util.Arrays;
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 
 /**
- * PAKeyframeControlCurve
  *
- * Piecewise-linear scalar control curve defined by keyframes:
+ * Models piecewise-linear scalar control curve defined by keyframes.
  *
  *    u ∈ [0,1] -> value
  *

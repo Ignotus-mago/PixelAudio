@@ -1,21 +1,56 @@
 /**
-<p>Package <code>net.paulhertz.pixelaudio.curves</code> implements light weight classes for Bezier curve modeling.</p>
-<p>
- Adapted from IgnoCodeLib Processing library for use with PixelAudio library.
- IgnoCodeLib is available in the Processing contributed libraries and at
- https://paulhertz.net/ignocodelib/ and https://github.com/Ignotus-mago/IgnoCodeLib3
-</p>
-
-<ul>
-<li>{@link net.paulhertz.pixelaudio.curves.PAVertex2DINF PAVertex2DINF.} provides an interface for line and curve vertices.</li>
-<li>{@link net.paulhertz.pixelaudio.curves.PALineVertex PALineVertex} stores a line vertex Interface for line and curve vertices</li>
-<li>{@link net.paulhertz.pixelaudio.curves.PABezVertex PABezVertex} provides storage for a cubic Bezier curves's control points and anchor point.</li>
-<li>{@link net.paulhertz.pixelaudio.curves.PABezShape PABezShape} stores open or closed paths composed of lines and Bezier curves, and implements attributes and geometric transforms for them.</li>
-<li>{@link net.paulhertz.pixelaudio.curves.PACurveMaker PACurveMaker} is a utility and storage class for interactive drawing and curve modeling.</li>
-<li>{@link net.paulhertz.pixelaudio.curves.PACurveUtility PACurveUtility} provides static methods that support curve modeling and drawing.</li>
-</ul>
-
-
-
-*/
+ * Gesture, path, and Bézier curve modeling classes for PixelAudio.
+ *
+ * <p>This package supports timed gesture capture, point reduction, Bézier path
+ * construction, brush shapes, hit testing, curve drawing, and gesture-derived
+ * event paths for audio and visual applications.</p>
+ *
+ * <p><b>Core gesture and brush classes</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PACurveMaker PACurveMaker} records
+ *   timed gestures and derives reduced points, Bézier paths, brush shapes,
+ *   polygons, and event points.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PAGesture PAGesture} defines the
+ *   basic interface for gesture point and timing data.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.AudioBrush AudioBrush} combines a
+ *   gesture curve with audio synthesis parameters.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.GranularBrush GranularBrush} and
+ *   {@link net.paulhertz.pixelaudio.curves.SamplerBrush SamplerBrush} specialize
+ *   AudioBrush for granular and sampler playback.</li>
+ * </ul>
+ *
+ * <p><b>Path and curve geometry</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PABezShape PABezShape} stores and
+ *   draws composite Bézier paths, including transforms and hit-test polygons.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PABezVertex PABezVertex} and
+ *   {@link net.paulhertz.pixelaudio.curves.PALineVertex PALineVertex} represent
+ *   curved and straight path segments.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PAVertex2DINF PAVertex2DINF}
+ *   defines shared behavior for 2D path vertices.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PACurveUtility PACurveUtility}
+ *   provides static geometry, reduction, and drawing utilities.</li>
+ * </ul>
+ *
+ * <p><b>Gesture mapping, transforms, and parameter curves</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.GestureMapping GestureMapping}
+ *   maps gesture locations to signal or event data.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.GestureTransformState GestureTransformState}
+ *   stores geometric transform state for gesture and curve modeling.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PABoundsPolicy PABoundsPolicy}
+ *   applies boundary rules to gesture points and schedules.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PAGestureParametric PAGestureParametric},
+ *   {@link net.paulhertz.pixelaudio.curves.PAIndexParametric PAIndexParametric},
+ *   and {@link net.paulhertz.pixelaudio.curves.PAPathParametric PAPathParametric}
+ *   provide parametric sampling over gestures, indices, and paths.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PAControlCurve PAControlCurve} and
+ *   {@link net.paulhertz.pixelaudio.curves.PAKeyframeControlCurve PAKeyframeControlCurve}
+ *   model control values over normalized time.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PAGestureWriter PAGestureWriter}
+ *   supports gesture output or serialization.</li>
+ * </ul>
+ *
+ * <p>Curve-modeling adapted from the IgnoCodeLib Processing library for use with PixelAudio.</p>
+ */
 package net.paulhertz.pixelaudio.curves;

@@ -46,6 +46,9 @@ import processing.core.PVector;
  */
 public final class PABoundsPolicy {
 
+    /**
+     * Provides descriptors for PABoundsPolicy: CLIP, WRAP, REFLECT, SKIP_TIME, KEEP_TIME.
+     */
     public enum PABoundaryMode {
         /** Clamp coordinates to bounds. */
         CLIP,

@@ -21,8 +21,6 @@ package net.paulhertz.pixelaudio.curves;
 /**
  * PAGesture provides a definitional interface for "gestures":
  * 
- * A gesture is constructed from 
- * 
  *   1) a list of points and 
  *   2) a list of time offsets where
  *   3) both lists have the same cardinality and 

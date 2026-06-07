@@ -22,8 +22,8 @@ import java.util.Objects;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 
 /**
- * Abstract class for combining gesture data from PACurveMaker with settings for 
- * modifying gesture data and setting audio generation parameters with GestureGranularConfig.Builder.
+ * Abstract class for combining gesture data from PACurveMaker with audio synthesis parameters 
+ * from GestureGranularConfig.Builder. 
  * <p> 
  * In the PixelAudio library examples, a "brush" uses gesture to control sound, and can draw the 
  * gesture to the display as an interactive UI element. In other words, brushes advance the core

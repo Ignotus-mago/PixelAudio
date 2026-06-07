@@ -4,7 +4,14 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
 /**
  * Stores values used for SamplerBrush event staging, used in tutorial examples
- * such as {@link TutorialOne_03_Drawing}.
+ * such as {@link TutorialOne_03_Drawing}. SamplerBrush objects implement AudioBrush
+ * and address the Sampler synthesis engine. A SamplerBrushEvent is a discrete 
+ * audio synthesis process, complete with ADSR envelope. 
+ * <p>
+ * There is no corresponding "GranularBrushEvent". Grains, which allow similar 
+ * parametric control with the grain window equivalent to the ADSR envelope, 
+ * are embedded in the audio synthesis process and hence are not discrete events. 
+ * </p>
  */
 public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
     // spatial (optional but useful for mapping / visualization)

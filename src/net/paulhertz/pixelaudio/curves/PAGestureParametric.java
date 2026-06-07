@@ -26,34 +26,43 @@ import processing.core.PVector;
 // TODO evaluate for deletion: used very little, but possibly good for future use.
 
 /**
- * PAGestureParametric
  *
- * Treats a gesture defined by (time, x, y) samples as a parametric curve:
+ * Treats a gesture defined by (time, x, y) samples as a parametric curve.
+ * <code>
  *    u ∈ [0,1] → (t(u), x(u), y(u))
- *
+ * </code>
+ * <p>
  * Under the hood:
- *  - timesMs: int[] of time offsets (ms), ascending, timesMs[0] == 0
- *  - points:  PVector list (x,y) of same length
- *
+ * <ul>
+ *    <li>timesMs: int[] of time offsets (ms), ascending, timesMs[0] == 0</li>
+ *    <li>points:  PVector list (x,y) of same length</li>
+ * </ul>
+ * </p><p>
  * You can:
- *  - sample with a linear parameter: f(u) = u
- *  - pass a warp function f(u) to speed up/slow down traversal
- *  
- *  Exponential warp (speeding up over time)
- *  <code>
+ * <ul>
+ *    <i>sample with a linear parameter: f(u) = u</i>
+ *    <li>pass a warp function f(u) to speed up/slow down traversal</li>
+ * </ul> 
+ * </p><p>
+ * Exponential warp (speeding up over time)<br>
+ * <pre>
  *    DoubleUnaryOperator expWarp = u -> (float_ Math.pow(u, 2.0);   // u^2
  *    GestureParametric.Sample s = gp.sample(0.5f, expWarp);
- *  </code>
- *  Log-like warp (fast at start, slow at end)
- *  <code>
+ * </pre>
+ * </p><p>
+ * Log-like warp (fast at start, slow at end)<br>
+ * <pre>
  *    DoubleUnaryOperator sqrtWarp = u -> (float_ Math.sqrt(u);   // 
  *    GestureParametric.Sample s = gp.sample(0.5f, sqrtWarp);
- *  </code>
+ * </pre>
  *  Something like f(u) = (e^{k *  u} - 1) / (e^{k} - 1) for more dramatic warps.
  *  
  */
 public final class PAGestureParametric {
 
+    /**
+     * Data storage class for PAGestureParametric.
+     */
     public static final class Sample {
         public final float tMs; // interpolated time in ms
         public final float x;
