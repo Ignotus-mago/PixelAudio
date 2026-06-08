@@ -32,7 +32,8 @@ import java.util.ArrayList;
  * 
  */
 public class BoustropheGen extends PixelMapGen {
-	public final static String description = "BoustropheGen starts at (0,0) and reads left-to-right on even numbered pixel scanlines and right-to-left on odd numbered scanlines.";
+	public final static String description = "BoustropheGen starts at (0,0) and reads left-to-right on even numbered" 
+                                            +"pixel scanlines and right-to-left on odd numbered scanlines.";
 
 
 	public BoustropheGen(int width, int height) {

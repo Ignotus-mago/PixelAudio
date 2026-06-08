@@ -19,6 +19,7 @@
 package net.paulhertz.pixelaudio.example;
 
 import processing.core.*;
+
 //G4P library for GUI
 import g4p_controls.*;
 
@@ -32,12 +33,14 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 //video export library
 import com.hamoid.*;
+
 //Mama's ever-lovin' blue-eyed PixelAudio library
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 import net.paulhertz.pixelaudio.schedule.TimedLocation;
+
 //audio library
 import ddf.minim.*;
 

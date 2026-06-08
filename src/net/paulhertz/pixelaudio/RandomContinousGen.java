@@ -27,6 +27,11 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * A non-functional experiment, left in as a placeholder. RandomContinousGen attempted to solve
+ * a computationally complex problem, a random continuous path that visits every point in a grid. 
+ * It went off in some interesting directions, but never really worked.
+ */
 @Deprecated 
 public class RandomContinousGen extends PixelMapGen {
 	// an experiment, not ready for prime time
