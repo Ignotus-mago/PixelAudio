@@ -48,7 +48,6 @@ void runPerformanceCue(char key) {
       isLoadToBoth = false;
       isAnimating = false;
       setAudioGain(-6.0f);
-      daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Body/";
       daFilename = "workflow_48Khz.wav";
       loadAudioFile(new File(daPath + daFilename));
       daFilename = "workFlowPanel.png";
@@ -76,7 +75,7 @@ void runPerformanceCue(char key) {
       resetConfigToDefaults();
       break;
     }
-  } else {
+  } else {    // Bagatelle "Abstract Jailbreak"
     applyColorMapOnLoad = true;
     isLoadToBoth = true;
     switch (key) {

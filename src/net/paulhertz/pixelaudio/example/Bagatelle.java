@@ -805,7 +805,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	// performance state
 	
-	boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
+	boolean isRunWordGame = true;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
 	boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
 	boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
 	boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
@@ -833,10 +833,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
     PABoundsPolicy boundsPolicy;
 	
-	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
-	String daFilename = "audioBlend.wav";    // "audioBlend.wav";
-	ArrayList<String> daFilelist = new ArrayList<>();
 	
 	// *****>>> NETWORKING <<<***** //
 	NetworkDelegate nd;
@@ -847,6 +843,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	boolean isNetSendFileInfo = false;
 	boolean isNetSendGestures = false;
 	
+	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../examples_data/"; 
+	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
+	String daFilename = "audioBlend.wav";    // "audioBlend.wav";
+	ArrayList<String> daFilelist = new ArrayList<>();
 
 	
 	//------------- APPLICATION CODE -------------//
@@ -864,6 +864,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	public void setup() {
+		// daPath = sketchPath("") + "../examples_data/";    // PROCESSING ONLY! otherwise use system-specific path
 		// set a standard animation framerate -- in most example sketches we use 44100
 		// but in performance sketches like DeadBodyWorkFlow we use 48000
 		sampleRate = 48000;    // could be a little redundant, but I'm too lazy to scroll up to the top
@@ -897,7 +898,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    // *****>>> NETWORKING <<<***** //
 		isUseNetworkDelegate = true;
 		initNetwork();
-		// customize environment
+		// customize environment, including daPath
 		initCustomSettings();
 		applyColorMap();                // apply spectrum to mapImage and baseImage
 		showHelp();                     // print key commands to console
@@ -1030,16 +1031,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	void initCustomSettings() {
 		if (isRunWordGame) {
 			isLoadToBoth = false;
-			daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Body/";   
 			daFilename = "workflow_48Khz.wav";
+			daPath = daPath + "Body/";
 			loadAudioFile(new File(daPath + daFilename));
-			daFilename = "workFlowPanel.png";    			
+			daFilename = "workFlowPanel.png";
+			preloadFiles(daPath, daFilename);
+		} else {
+			daPath = daPath + "Bag/";
+			daFilename = "bag_1_gest_1_tail.wav";
+			preloadFiles(daPath, daFilename);
 		}
-		else {
-			daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Bag/";   
-			daFilename = "bag_1_gest_1_tail.wav";    
-		}
-		preloadFiles(daPath, daFilename);
 	}
 	
 	void initNetwork() {
@@ -1801,7 +1802,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				isLoadToBoth = false;
 				isAnimating = false;
 				setAudioGain(-6.0f);
-				daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Body/";   
 				daFilename = "workflow_48Khz.wav";
 				loadAudioFile(new File(daPath + daFilename));
 				daFilename = "workFlowPanel.png";    			
@@ -1829,7 +1829,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				resetConfigToDefaults(); 
 				break;
 			}
-		} else {
+		} else {    // Bagatelle "Abstract Jailbreak"
 			applyColorMapOnLoad = true;
 			isLoadToBoth = true;
 			switch (key) {

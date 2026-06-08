@@ -558,7 +558,7 @@ boolean shiftIsDown = false;         // flag for shift key down
 
 // performance state
 
-boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
+boolean isRunWordGame = true;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
 boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
 boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
 boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it
@@ -586,11 +586,6 @@ boolean isBrushSelectionModal = false;     // if false, select all brushes, othe
 PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
 PABoundsPolicy boundsPolicy;
 
-// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/";
-String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
-String daFilename = "audioBlend.wav";    // "audioBlend.wav";
-ArrayList<String> daFilelist = new ArrayList<>();
-
 // *****>>> NETWORKING <<<***** //
 NetworkDelegate nd;
 boolean isUseNetworkDelegate = false;
@@ -599,6 +594,11 @@ boolean isNetSendOutsideBrushPoints = true;
 boolean isNetSendBrushTriggers = false;
 boolean isNetSendFileInfo = false;
 boolean isNetSendGestures = false;
+
+// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../examples_data/";
+String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
+String daFilename = "audioBlend.wav";    // "audioBlend.wav";
+ArrayList<String> daFilelist = new ArrayList<>();
 
 
 
@@ -609,6 +609,7 @@ public void settings() {
 }
 
 public void setup() {
+  daPath = sketchPath("") + "../examples_data/";    // PROCESSING ONLY, in Eclipse use system-specific path
   // set a standard animation framerate -- in most example sketches we use 44100
   // but in performance sketches like DeadBodyWorkFlow we use 48000
   sampleRate = 48000;    // could be a little redundant, but I'm too lazy to scroll up to the top
@@ -774,15 +775,16 @@ public void initGUI() {
 void initCustomSettings() {
   if (isRunWordGame) {
     isLoadToBoth = false;
-    daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Body/";
     daFilename = "workflow_48Khz.wav";
+    daPath = daPath + "Body/";
     loadAudioFile(new File(daPath + daFilename));
     daFilename = "workFlowPanel.png";
+    preloadFiles(daPath, daFilename);
   } else {
-    daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/Bag/";
+    daPath = daPath + "Bag/";
     daFilename = "bag_1_gest_1_tail.wav";
+    preloadFiles(daPath, daFilename);
   }
-  preloadFiles(daPath, daFilename);
 }
 
 void initNetwork() {
