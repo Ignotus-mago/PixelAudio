@@ -43,7 +43,7 @@
  *   <li>{@link net.paulhertz.pixelaudio.BuildFromPathGen BuildFromPathGen}
  *   builds paths from stored coordinate data.</li>
  *   <li>{@link net.paulhertz.pixelaudio.RandomContinousGen RandomContinousGen}
- *   is an experimental random-path generator.</li>
+ *   is an experimental random-path generator that never worked. Deprecated.</li>
  * </ul>
  *
  * <p><b>Image transforms, animation, and transcoding</b></p>

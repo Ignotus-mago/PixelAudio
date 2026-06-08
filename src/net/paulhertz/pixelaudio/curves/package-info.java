@@ -16,7 +16,7 @@
  *   gesture curve with audio synthesis parameters.</li>
  *   <li>{@link net.paulhertz.pixelaudio.curves.GranularBrush GranularBrush} and
  *   {@link net.paulhertz.pixelaudio.curves.SamplerBrush SamplerBrush} specialize
- *   AudioBrush for granular and sampler playback.</li>
+ *   AudioBrush for gesture playback with granular and sampler audio synthesis.</li>
  * </ul>
  *
  * <p><b>Path and curve geometry</b></p>
@@ -34,21 +34,23 @@
  *
  * <p><b>Gesture mapping, transforms, and parameter curves</b></p>
  * <ul>
- *   <li>{@link net.paulhertz.pixelaudio.curves.GestureMapping GestureMapping}
- *   maps gesture locations to signal or event data.</li>
- *   <li>{@link net.paulhertz.pixelaudio.curves.GestureTransformState GestureTransformState}
+  *   <li>{@link net.paulhertz.pixelaudio.curves.GestureTransformState GestureTransformState}
  *   stores geometric transform state for gesture and curve modeling.</li>
  *   <li>{@link net.paulhertz.pixelaudio.curves.PABoundsPolicy PABoundsPolicy}
  *   applies boundary rules to gesture points and schedules.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.curves.PAControlCurve PAControlCurve} and
+ *   {@link net.paulhertz.pixelaudio.curves.PAKeyframeControlCurve PAKeyframeControlCurve}
+ *   model control values over normalized time.</li>
+ * </ul>
+ * 
+ * <p><b>Experimental</b></p>
+ * <ul>
  *   <li>{@link net.paulhertz.pixelaudio.curves.PAGestureParametric PAGestureParametric},
  *   {@link net.paulhertz.pixelaudio.curves.PAIndexParametric PAIndexParametric},
  *   and {@link net.paulhertz.pixelaudio.curves.PAPathParametric PAPathParametric}
  *   provide parametric sampling over gestures, indices, and paths.</li>
- *   <li>{@link net.paulhertz.pixelaudio.curves.PAControlCurve PAControlCurve} and
- *   {@link net.paulhertz.pixelaudio.curves.PAKeyframeControlCurve PAKeyframeControlCurve}
- *   model control values over normalized time.</li>
  *   <li>{@link net.paulhertz.pixelaudio.curves.PAGestureWriter PAGestureWriter}
- *   supports gesture output or serialization.</li>
+ *   supports output or serialization of curves implemented by <code>BezShape</code>.</li>
  * </ul>
  *
  * <p>Curve-modeling adapted from the IgnoCodeLib Processing library for use with PixelAudio.</p>

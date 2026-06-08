@@ -4,7 +4,7 @@
  * in the PixelAudio library <code>example</code> package and as Processing sketches in the library
  * release. Both formats share data in the <code>/PixelAudio/examples/examples_data</code> directory.
  * If PixelAudio is new to you, I recommend starting with the <b>Basic PixelAudio Features</b>,
- * followed by the <b>Advanced Examples: Tutorial Series (TutorialOne)</b>. After that, feel free
+ * followed by the <b>Intermediate to Advanced: Tutorial Series</b>. After that, feel free
  * to check out the other examples and the <b>Performance and Production Examples</b>. 
  *
  * <p><b>Basic PixelAudio Features</b></p>
@@ -31,32 +31,7 @@
  *
  * </ul>
  *
- * <p><b>Audio and Image I/O</b></p>
- *
- * <ul>
- *
- * <li>{@link net.paulhertz.pixelaudio.example.LoadImageToAudio LoadImageToAudio} loads an image file and converts it
- * to audio using a PixelAudioMapper, demonstrating image-to-signal conversion with playback: an early but
- * still useful example.</li>
- *
- * <li>{@link net.paulhertz.pixelaudio.example.LoadAudioToImage LoadAudioToImage} loads an audio file and converts it
- * to a visual representation using a PixelAudioMapper: an early but still useful example.</li>
- *
- * </ul>
- *
- * <p><b>Intermediate Examples: BigWaveSynth Series</b></p>
- *
- * <ul>
- *
- * <li>{@link net.paulhertz.pixelaudio.example.BigWaveSynth BigWaveSynth} demonstrates a more comprehensive wave synthesis
- * tool with multiple waveforms and interactive parameter control.</li>
- *
- * <li>{@link net.paulhertz.pixelaudio.example.BigWaveSynthAudio BigWaveSynthAudio} extends BigWaveSynth with audio output
- * capabilities, enabling real-time sonification of visual patterns. Early example.</li>
- *
- * </ul>
- *
- * <p><b>Advanced Examples: Tutorial Series (TutorialOne)</b></p>
+ * <p><b>Intermediate to Advanced: Tutorial Series</b></p>
  *
  * <ul>
  *
@@ -82,28 +57,55 @@
  *
  * </ul>
  *
+ * <p><b>Audio and Image I/O</b></p>
+ *
+ * <ul>
+ *
+ * <li>{@link net.paulhertz.pixelaudio.example.LoadImageToAudio LoadImageToAudio} loads an image file and converts it
+ * to audio using a PixelAudioMapper, demonstrating image-to-signal conversion with playback: an early but
+ * still useful example.</li>
+ *
+ * <li>{@link net.paulhertz.pixelaudio.example.LoadAudioToImage LoadAudioToImage} loads an audio file and converts it
+ * to a visual representation using a PixelAudioMapper: an early but still useful example.</li>
+ *
+ * </ul>
+ *
+ * <p><b>Introduction to WaveSynth Series</b></p>
+ *
+ * <ul>
+ *
+ * <li>{@link net.paulhertz.pixelaudio.example.BigWaveSynth BigWaveSynth} demonstrates basic features of a color organ 
+ * that uses additive sine wave synthesis.</li>
+ *
+ * <li>{@link net.paulhertz.pixelaudio.example.BigWaveSynthAudio BigWaveSynthAudio} extends BigWaveSynth with audio output
+ * capabilities, enabling real-time sonification of visual patterns.</li>
+ *
+ * <li>{@link net.paulhertz.pixelaudio.example.JSONWaveSynth JSONWaveSynth} demonstrates JSON-based serialization and
+ * loading of waveform parameters for configuration management.</li>
+ *
+ * </ul>
+ *
  * <p><b>Performance and Production Examples</b></p>
  *
  * <ul>
  *
  * <li>{@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle} is a comprehensive interactive audio-visual performance
  * tool supporting brush management, session saving/loading, gesture recording, and real-time granular synthesis with
- * extensive preset library support.</li>
+ * extensive preset library support and a graphical user interface.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.DeadBodyWorkFlow DeadBodyWorkFlow} is a specialized tool for gesture-driven
- * sonification with focus on expressiveness and control, featuring gesture recording, editing, and playback capabilities. 
- * This example will be dropped in a future edition, since it is a near duplicate of Bagatelle.</li>
+ * <li>{@link net.paulhertz.pixelaudio.example.DeadBodyWorkFlow DeadBodyWorkFlow} is a near duplicate of Bagatelle. 
+ * This example will be dropped in a future edition. Available in Eclipse version only.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.WaveSynthEditor WaveSynthEditor} provides editing for WaveSynth color organ
- * parameters with a graphic user interface. It can construct complex spectral and visual compositions that can be output to video.
+ * <li>{@link net.paulhertz.pixelaudio.example.WaveSynthEditor WaveSynthEditor} provides a GUI for editing WaveSynth 
+ * color organ parameters. It can construct complex spectral and visual compositions that can be output to video. 
  * WaveSynth parameters can be saved to or retrieved from a JSON file.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.WaveSynthSequencer WaveSynthSequencer} demonstrates sequencing with the WaveSynth  
- * color organ, with frequency, rhythmic timing, and image generation.</li>
+ * <li>{@link net.paulhertz.pixelaudio.example.WaveSynthSequencer WaveSynthSequencer} demonstrates sequencing with the 
+ * WaveSynth color organ, with frequency, rhythmic timing, and image generation.</li>
  * 
  * <li>{@link net.paulhertz.pixelaudio.example.ArgosyMixer ArgosyMixer} is a specialized mixing and synthesis tool
  * for rhythmic pattern making in images and audio. It also provides a GUI with 18 different MultiGen instances 
- * to try out, a menu of patterns, animation controls, and video export. 
+ * to try out, a menu of patterns, animation controls, and image, audio, and video export.
  * </li>
  *
  * </ul>
@@ -112,20 +114,11 @@
  *
  * <ul>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.JSONWaveSynth JSONWaveSynth} demonstrates JSON-based serialization and
- * loading of waveform parameters for configuration management.</li>
- *
  * <li>{@link net.paulhertz.pixelaudio.example.TransformPImage TransformPImage} shows image transformation and manipulation
  * techniques compatible with PixelAudio processing.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.GesturePlayground_back GesturePlayground_back} is a backup/previous version
- * of the gesture playground tool.</li>
- *
  * <li>{@link net.paulhertz.pixelaudio.example.TutorialOne_06_WB_Retrofit TutorialOne_06_WB_Retrofit} demonstrates retrofitting
- * existing code to use the WindowBuffer pattern for improved audio handling.</li>
- *
- * <li>{@link net.paulhertz.pixelaudio.example.TutorialOne_06_WindowBuffer_back TutorialOne_06_WindowBuffer_back} is a backup
- * version of the WindowBuffer tutorial.</li>
+ * existing code to use the WindowBuffer pattern for improved audio handling. Available only in Eclipse version.</li>
  *
  * <li>{@link net.paulhertz.pixelaudio.example.PANetworkClientINF PANetworkClientINF} provides a network interface for
  * remote communication with PixelAudio processes.</li>
