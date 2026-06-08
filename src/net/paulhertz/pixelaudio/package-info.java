@@ -1,64 +1,84 @@
 /**
-Package <code>net.paulhertz.pixelaudio</code> blends sounds and images by mapping between 
-arrays of audio samples and arrays of pixel values. 1D Audio arrays are mapped onto 
-2D image arrays using space-filling curves and patterns. PixelAudio provides a template 
-to design your own mappings, and methods to translate values between audio and pixel data. 
-Examples provide hooks for animation, audio/image synthesis, and hooks for UDP communication 
-with Cycling74's Max application and other audio and video programming environments. 
-<p>
-In many respects, PixelAudio behaves like an audio visualization widget, with one 
-important difference: images can become sound as easily as sound becomes images. 
-It can be treated as a basic image synthesis application, using audio signals to 
-generate images, or as a somewhat noisy audio synthesis application, generating 
-sound from images. 
-</p>
-
-<ul>
-
-<li>{@link net.paulhertz.pixelaudio.PixelAudio PixelAudio} provides the Processing library interface for the PixelAudio library.</li>
-
-<li>{@link net.paulhertz.pixelaudio.PixelMapGen PixelMapGen} is an abstract class for handling coordinates and LUT generation for PixelAudioMapper.</li>
-
-<li>{@link net.paulhertz.pixelaudio.DiagonalZigzagGen DiagonalZigzagGen} is a PixelMapGen child class for generating diagonal zigzag paths over an image.</li>
-
-<li>{@link net.paulhertz.pixelaudio.HilbertGen HilbertGen} is a PixelMapGen child class for generating Hilbert curves over an image.</li>
-
-<li>{@link net.paulhertz.pixelaudio.MooreGen MooreGen} is a PixelMapGen child class for generating Moore curves over an image.</li>
-
-<li>{@link net.paulhertz.pixelaudio.BoustropheGen BoustropheGen} is a PixelMapGen child class for generating boustrophedon paths over an image.</li>
-
-<li>{@link net.paulhertz.pixelaudio.BuildFromPathGen BuildFromPathGen} is a PixelMapGen child class for generating from path coordinates stored in a JSON or similar data file.</li>
-
-<li>{@link net.paulhertz.pixelaudio.MultiGen MultiGen} is a PixelMapGen child class for generating a single path over multiple PixelMapGens arranged in a grid.</li>
-
-<li>{@link net.paulhertz.pixelaudio.PixelAudioMapper PixelAudioMapper} maps between 1D "signal" arrays of audio samples formatted as floating point values 
-in the range [-1, 1] and 2D "image" arrays formatted as RGBA integer pixel data. It is initialized with a PixelMapGen.</li>
-
-<li>{@link net.paulhertz.pixelaudio.AffineTransformType AffineTransformType} is an enum for labeling basic affine transforms for reflection and 90-degree rotation.</li>
-
-<li>{@link net.paulhertz.pixelaudio.BitmapTransform BitmapTransform} provides static methods for rotating and reflecting 2D integer arrays using index remapping</li>
-
-<li>{@link net.paulhertz.pixelaudio.WaveSynth WaveSynth} implements a combination of color organ and additive audio wave generation for animation and audio synthesis.</li>
-
-<li>{@link net.paulhertz.pixelaudio.WaveData WaveData} provides storage and utility methods for WaveSynth "operators", which are audio signal generators.</li>
-
-<li>{@link net.paulhertz.pixelaudio.WaveSynthBuilder WaveSynthBuilder} provides utilities for generating WaveSynth "instruments" and working with WaveSynth data.</li>
-
-<li>{@link net.paulhertz.pixelaudio.Argosy Argosy} provides tools for shifting pixel patterns along the signal path of an image.</li>
-
-<li>{@link net.paulhertz.pixelaudio.Lindenmayer Lindenmayer} implements a basic L-system for generating patterns for Argosy objects.</li>
-
-<li>{@link net.paulhertz.pixelaudio.ScaledSimplex ScaledSimplex} provides a wrapper for generating simple noise using Open Simplex.</li>
-
-<li>{@link net.paulhertz.pixelaudio.OpenSimplex2 OpenSimplex2} is an open source implementation of simplex noise.</li>
-
-<li>{@link net.paulhertz.pixelaudio.RandomContinousGen RandomContinousGen} is a PixelMapGen child class and a work-in-progress. It will provide random paths over an image.</li>
-
-<li>{@link net.paulhertz.pixelaudio.AudioColorTranscoder AudioColorTranscoder} is an experimental class for extending PixelAudioMapper.ChannelNames functionality.</li>
-
-
-</ul>
-
-
-*/
+ * Core classes for PixelAudio, a Processing library that maps between sound
+ * and image data.
+ *
+ * <p>PixelAudio blends sounds and images by mapping one-dimensional signal
+ * arrays, typically audio samples, onto two-dimensional image arrays using
+ * space-filling curves and related traversal patterns. The same mapping can be
+ * used in both directions: sound can be visualized as image data, and image
+ * data can be interpreted as sound.</p>
+ *
+ * <p>The top-level package contains the mapping framework, built-in path
+ * generators, bitmap transform utilities, image/audio transcoding tools, and
+ * WaveSynth additive synthesis classes. Gesture, sampler, granular, scheduling,
+ * I/O, and example code are documented in their own subpackages.</p>
+ * 
+ * <p>You can read a scholarly introduction to PixelAudio, complete with a brief 
+ * review of its historical context in intermedia art, here: 
+ * <a href="https://paulhertz.net/docs/intermedia/PaulHertz_PixelAudio_EVA_paper.pdf" target="_blank">
+ * PixelAudio: A Toolkit for Intermedia Composition}</a>.</p>
+ *
+ * <p><b>Library interface and mapping framework</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.PixelAudio PixelAudio} provides the
+ *   Processing library interface.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.PixelAudioMapper PixelAudioMapper}
+ *   maps between 1D signal arrays and 2D image pixel arrays.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.PixelMapGen PixelMapGen} is the
+ *   abstract base class for signal-path generators.</li>
+ * </ul>
+ *
+ * <p><b>Signal-path generators</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.HilbertGen HilbertGen} generates
+ *   Hilbert curve paths.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.MooreGen MooreGen} generates Moore
+ *   curve paths.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.BoustropheGen BoustropheGen} generates
+ *   boustrophedon paths.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.DiagonalZigzagGen DiagonalZigzagGen}
+ *   generates diagonal zigzag paths.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.MultiGen MultiGen} combines multiple
+ *   PixelMapGens into a single path.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.BuildFromPathGen BuildFromPathGen}
+ *   builds paths from stored coordinate data.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.RandomContinousGen RandomContinousGen}
+ *   is an experimental random-path generator.</li>
+ * </ul>
+ *
+ * <p><b>Image transforms, animation, and transcoding</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.AffineTransformType AffineTransformType}
+ *   labels reflection and rotation transforms.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.BitmapTransform BitmapTransform}
+ *   provides bitmap rotation and reflection utilities.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.Argosy Argosy} shifts pixel patterns
+ *   along an image's signal path.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.Lindenmayer Lindenmayer} provides
+ *   simple L-system support for Argosy patterns.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.AudioColorTranscoder AudioColorTranscoder}
+ *   provides experimental audio/color transcoding support.</li>
+ * </ul>
+ *
+ * <p><b>WaveSynth and signal utilities</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.WaveSynth WaveSynth} combines additive
+ *   audio synthesis with color-pattern generation.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.WaveData WaveData} stores WaveSynth
+ *   operator data.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.WaveSynthBuilder WaveSynthBuilder}
+ *   provides utilities for building WaveSynth instruments and data sets.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.WindowedBuffer WindowedBuffer} provides
+ *   a moving window over larger audio buffers.</li>
+ * </ul>
+ *
+ * <p><b>Noise utilities</b></p>
+ * <ul>
+ *   <li>{@link net.paulhertz.pixelaudio.ScaledSimplex ScaledSimplex} wraps
+ *   OpenSimplex noise with scaling helpers.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.OpenSimplex2 OpenSimplex2} implements
+ *   OpenSimplex noise.</li>
+ * </ul>
+ *
+ */
 package net.paulhertz.pixelaudio;
