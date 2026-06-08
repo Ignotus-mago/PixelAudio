@@ -22,10 +22,20 @@ package net.paulhertz.pixelaudio.granular;
 
 import java.util.Objects;
 
+
 import ddf.minim.MultiChannelBuffer;
 import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
+
+
+/**
+ * @deprecated Not used by the current granular synthesis engine. Retained only
+ * as an experimental {@link PASource} adapter for Minim {@code MultiChannelBuffer}
+ * data. Prefer {@link PABurstGranularSource} and mono {@code float[]} buffers for
+ * gesture-driven granular playback.
+ */
+@Deprecated
 public final class PABufferBackedSource implements PASource {
 
     private final String name;
