@@ -1,5 +1,5 @@
 /**
- * Package <code>net.paulhertz.pixelaudio.io</code> provides JSON-based persistence for PixelAudio data structures.
+ * JSON-based persistence for PixelAudio data structures supported by file i/o classes.
  *
  * <p><b>Overview</b></p>
  * <p>This package implements serialization and deserialization of core PixelAudio objects to JSON format,

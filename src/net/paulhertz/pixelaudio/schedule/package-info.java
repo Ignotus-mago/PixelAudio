@@ -1,6 +1,5 @@
 /**
- * Package <code>net.paulhertz.pixelaudio.schedule</code> provides sample-accurate event scheduling,
- * gesture-based time management, and audio utility functions for the PixelAudio library.
+ * Sample-accurate event scheduling, gesture-based time management, and audio utility functions.
  *
  * <p><b>Core Scheduling</b></p>
  * <p>The AudioScheduler is a generic event scheduler supporting both point events (one-shot at a sample time)
