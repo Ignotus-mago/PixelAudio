@@ -239,10 +239,6 @@ public class WaveData {
      * Call once per frame (per WaveData) before stepping pos with nextValue().
      */
     public void prepareFrame(int frame, float mapInc) {
-        // Optional micro-optimization: if same frame, skip recompute
-        if (framePrepared && frame == preparedFrame) return;
-
-        // Initial phase at pos = 0 (your existing formula)
         float phi0 = this.phaseTwoPi - frame * this.phaseInc;
         this.s = (float) Math.sin(phi0);
         this.c = (float) Math.cos(phi0);
