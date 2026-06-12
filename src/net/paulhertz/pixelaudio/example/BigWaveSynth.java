@@ -11,7 +11,7 @@ import net.paulhertz.pixelaudio.*;
 import com.hamoid.*;
 
 /**
- * BigWaveSynth shows how you can load a WaveSynth into the pixel array of a
+ * BigWaveSynth shows how to load a WaveSynth into the pixel array of a
  * MultiGen. MultiGen is child class of PixelMapGen that allows you to use
  * multiple PixelMapGens to cover a single image with a single signal
  * path through them. This example also allows you to load JSON files in 

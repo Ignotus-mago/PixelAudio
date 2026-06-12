@@ -8,7 +8,7 @@ import net.paulhertz.pixelaudio.*;
 //import net.paulhertz.pixelaudio.AffineTransformType.*;
 
 /**
- * <h2>MultiGenDemo: How to Combine Gens into a MultiGen</h2>
+ * How to combine multiple PixelMapGens into a MultiGen with a single signal path.
  * <p>
  * MultiGen is child class of PixelMapGen that allows you to combine multiple PixelMapGens 
  * into a single PixelMapGen, with a single signal path through all the gens. There are four  

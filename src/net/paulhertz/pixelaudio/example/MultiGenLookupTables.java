@@ -16,8 +16,8 @@ import net.paulhertz.pixelaudio.AffineTransformType;
 
 
 /**
- * The LookupTables example shows how a central element of PixelAudio, the
- * lookup table, connects a 1D audio signal with a 2D bitmap, putting audio
+ * Extends the LookupTables example to show how LUTs function in a MultiGen. 
+ * A lookup table connects a 1D audio signal with a 2D bitmap, putting audio
  * samples and RGB pixels in one-to-one correspondence within a single
  * PixelMapGen instance such as a Hilbert, Moore, or DiagonalZigzag.
  * <p>

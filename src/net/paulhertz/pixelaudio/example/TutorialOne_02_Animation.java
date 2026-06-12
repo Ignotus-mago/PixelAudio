@@ -32,7 +32,8 @@ import com.hamoid.*;
 /**
  * 
  * <p>
- * This example sketch builds on TutorialOne_01_FileIO, which provided commands
+ * Pixel-shift animation, plus panning and pitch controls for the Sampler synth.
+ * Builds on TutorialOne_01_FileIO, which provided commands
  * to open and display audio and image files, transcode image pixel data to
  * audio samples, transcode audio samples to image pixel data, and save audio
  * and image files. TutorialOne_01_FileIO also introduced a digital audio

@@ -46,7 +46,7 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 /**
  * 
- * <b>GesturePlayground</b> uses a GUI to provide a tour of curve drawing with an interface to the
+ * Uses a GUI to provide a tour of curve drawing with an interface to the
  * two audio synthesis engines available in PixelAudio: the Sampler synth and the Granular synth.
  * 
  * <h2>QUICK START</h2>

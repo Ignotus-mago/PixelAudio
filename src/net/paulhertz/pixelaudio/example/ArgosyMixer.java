@@ -46,7 +46,7 @@ import ddf.minim.*;
 
 /**
  * 
- * ArgosyMixer demonstrates use of the Argosy class to create and animate patterns 
+ * ArgosyMixer demonstrates how the Argosy class can create and animate patterns 
  * and save them to video. This is still a work in progress, with the new PASamplerInstrument 
  * class and audio events not yet handled in the most efficient way. There will be updates.
  * <P>

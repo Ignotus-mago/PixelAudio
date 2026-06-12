@@ -1,3 +1,9 @@
+package net.paulhertz.pixelaudio.example;
+
+import java.util.ArrayList;
+import processing.core.*;
+import net.paulhertz.pixelaudio.*;
+
 /**
  * SimpleWaveSynth demonstrates the basics of setting up a WaveSynth as an animated visual display. 
  * <pre>
@@ -15,12 +21,6 @@
  * Press 'h' to show the help message in the console.
  * </pre>
  */
-package net.paulhertz.pixelaudio.example;
-
-import java.util.ArrayList;
-import processing.core.*;
-import net.paulhertz.pixelaudio.*;
-
 public class SimpleWaveSynth extends PApplet {
 	PixelAudio pixelaudio;
 	HilbertGen hGen;

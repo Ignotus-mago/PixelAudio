@@ -4,6 +4,9 @@ import processing.core.PApplet;
 import processing.core.PImage;
 import net.paulhertz.pixelaudio.*;
 
+/**
+ * Basics of setting up a PixelAudio sketch.
+ */
 public class Starter extends PApplet {
 	PixelAudio pixelaudio;        // the library that we need to load in setup()
 	HilbertGen hGen;              // a PixelMapGen child class for making Hilbert curves

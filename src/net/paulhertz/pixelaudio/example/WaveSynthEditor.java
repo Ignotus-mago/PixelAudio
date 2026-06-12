@@ -39,7 +39,7 @@ import g4p_controls.*;
 
 // TODO error on recording a second video: FIXED
 // TODO error on editing a GUI field while animating: FIXED
-// TODO goofy output to console when editing text fields: PENDING
+// TODO goofy output to console when editing text fields: PENDING, solution is to replace Spinner with TextField
 // TODO different results for each press of 'i', 'e', some field entries -- prefer a consistent result
 
 
@@ -55,13 +55,14 @@ import g4p_controls.*;
  * </p><p>
  * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
- * some of what you can do with the HilbertGen for making patterns with the WaveSynth. There
- * are lots of other possibilities. Patterns can be loaded from and saved to JSON files. 
+ * some of what you can do with the HilbertGen, BoustropheGen and DiagonalZigzzgGen for 
+ * making patterns with the WaveSynth. There are lots of other possibilities. Patterns 
+ * can be loaded from and saved to JSON files. 
  * </p><p>
  * For audio signals, a WaveSynth behaves like an audio synthesizer that adds together 
  * sine waves at different frequencies. The BigWaveSynthAudio and WaveSynthSequencer 
  * example sketches also produce audio with a WaveSynth. This example provides a graphical
- * user interface for editing the colors and other properties of a WaveSynth. 
+ * user interface for editing frequencies, colors and other properties of a WaveSynth. 
  * </p><p>
  * Click on the WaveSynth image or press spacebar to hear the audio version of the image. Note
  * that the appearance of the image is determined by the current sampling frequency, set in the
@@ -71,17 +72,18 @@ import g4p_controls.*;
  * vary, as its frequency is governed by the sampling rate. If you want to save the audio to a
  * file, you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
  * </p><p>
- * A WaveSynth is organized around attributes, such as gain (i.e. loudness or brightness) 
- * and gamma (a sort of contrast setting), and data objects. The data objects include a 
+ * A WaveSynth depends on global attributes, such as gain (i.e. loudness or brightness) and
+ * gamma (a sort of contrast setting), and on data objects. The data objects include 
  * a bitmap, mapImage, that is a Processing PImage instance for the image representation
  * of the WaveSynth, a PixelAudioMapper that allows the WaveSynth to mediate between audio 
- * data and image data using arrays for the audio signal and the image data ordered along the 
- * PixelAudioMapper signal path, and an array of WaveData objects that define the individual
- * sine wave components of the WaveSynth. 
+ * data and image data, and an array of WaveData objects that define the individual
+ * sine wave components of the WaveSynth. The PixelAudioMapper arranges colors controlled 
+ * by the WaveSynth audio functions along the PixelAudioMapper signal path. The WaveData
+ * objects control individual "operators" (sine waves) that combine to make the image. 
  * </p><p>
- * NOTE: Changes to data fields in the Control Panel will not be applied immediately to the 
- * WaveSynth image and audio. Click the Refresh button to force an update. Stepping to the
- * next or previous operator will also refresh audio and image. If the display window is 
+ * NOTE: Changes to data fields in the Control Panel may not be applied immediately to the 
+ * WaveSynth image and audio. Click the Refresh button or hit return to force an update. Stepping 
+ * to the next or previous operator will also refresh audio and image. If the display window is 
  * active, stepping to another frame 'y', 'u', or 'e' key commands) will also force an update. 
  * </p><p>
  * When a WaveSynth is used to produce color patterns, each WaveData object in the waveDataList
@@ -361,7 +363,7 @@ public class WaveSynthEditor extends PApplet {
 	
 	/**
 	 * Prepare for launch by setting all variables required for the draw() loop.
-	 * Initialize the PixelAudio library, then create a PixelMapGen and a PixelAudioMapper
+	 * Initialize the PixelAudio library, then create some PixelMapGens and a PixelAudioMapper
 	 * Next set up a WaveSynth and point our global mapImage to the WaveSynth's variable
 	 * mapImage. Check for extra displays, decide where to show the application window, and
 	 * set the window scaling variables. Finally, build the GUI (using G4P library).
@@ -375,7 +377,7 @@ public class WaveSynthEditor extends PApplet {
 		hGen = createHilbertGen(genWidth);
 		mGen = hilbertLoop3x2(genWidth, genHeight);
 		gen = isDesignMode ? hGen : mGen;
-		bGen = new BoustropheGen(width, height);
+		bGen = new BoustropheGen(height, width, PixelMapGen.r90);    // swap width and height, rotate 90
 		zGen = new DiagonalZigzagGen(width, height);
 		// 3. Initialize a PixelAudioMapper to handle mapping between audio and image
 		mapper = new PixelAudioMapper(gen);
@@ -563,7 +565,7 @@ public class WaveSynthEditor extends PApplet {
 	}
 	
 	public PImage renderFrame(int frame) {
-		wavesynth.prepareAnimation();
+		// wavesynth.prepareAnimation();
 		return wavesynth.renderFrame(frame);
 	}
 	

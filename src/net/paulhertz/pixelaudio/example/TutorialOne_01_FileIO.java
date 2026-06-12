@@ -32,7 +32,7 @@ import ddf.minim.*;
 
 
 /**
- * The first tutorial opens audio or image files and loads either file type to both the image
+ * Opens audio or image files and loads either file type to both the image
  * display and the audio buffer. The images or audio can be "played" with a mouse click or 
  * spacebar press to play the audio mapped to the mouse location.
  * <p>

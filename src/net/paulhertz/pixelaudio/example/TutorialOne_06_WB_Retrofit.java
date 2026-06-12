@@ -22,7 +22,7 @@ import processing.core.PVector;
 // DO NOT DELETE //
 
 /**
- * TutorialOne_06_WB_Retrofit
+ * Eclipse-only example of how to retrofit WaveBuffer feature to Drawing tutorial. 
  *
  * A continuation of TutorialOne_03_Drawing that keeps the drawing, brush,
  * sampler, granular, bounds, and envelope code from TutorialOne_03_Drawing,

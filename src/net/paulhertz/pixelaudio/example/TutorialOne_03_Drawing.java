@@ -52,6 +52,8 @@ import com.hamoid.*;
 // TODO optimize granular brush 'q' command (NO, not necessary for a demo)
 
 /**
+ * Introduces drawing, curve modeling and brushstroke creation, with interactive
+ * triggering of audio events using the Sampler and Granular synthesis engines. 
  * 
  * <h2>NEW FEATURES</h2>
  * <p>
@@ -516,9 +518,12 @@ public class TutorialOne_03_Drawing extends PApplet {
     // ====== Minimal gesture + audio synthesis configuration ====== //
     // GesturePlayground example provides a complete configuration model with the GestureGranularConfig class
     
-    public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    // select model for brush shape in PACurveMaker
-    public enum BrushOutput { SAMPLER, GRANULAR }                        // select audio synthesis model
-    public enum HopMode { GESTURE, FIXED }                               // select audio gesture sequence timing model
+    /** Select PACurveMaker gesture points model. */
+    public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    
+    /** Select audio synthesis model */
+    public enum BrushOutput { SAMPLER, GRANULAR } 
+    /** Select audio gesture sequence timing model. */
+    public enum HopMode { GESTURE, FIXED }
 
     /**
      * Defines the curve drawing model for a brush using PACurveMaker. 

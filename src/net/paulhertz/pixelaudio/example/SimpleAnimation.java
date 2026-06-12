@@ -5,7 +5,7 @@ import processing.core.PImage;
 import net.paulhertz.pixelaudio.*;
 
 /**
- * This is the Starter example with animation added. In the LookupTables example we showed how to 
+ * Starter example with animation added. In the LookupTables example we showed how to 
  * rotate an array along the signal path and then write it to the display. When we work with 
  * large arrays, shifting numbers for every animation step is not an efficient procedure. Instead,
  * we just shift an index into an array and then copy the pixels to the display using the shifted

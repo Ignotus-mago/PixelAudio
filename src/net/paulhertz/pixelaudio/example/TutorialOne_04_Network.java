@@ -37,7 +37,8 @@ import com.hamoid.*;
 
 
 /**
- * <h2>NETWORKING WITH UDP</h2>
+ * Adds networking with UDP to the previous Drawing tutorial. 
+ * 
  * <p>
  * TutorialOne_04_Network is a copy of TutorialOne_03_Drawing with networking features added. 
  * Refer to the notes for TutorialOne_03_Drawing for information about drawing and audio synthesis
@@ -409,9 +410,12 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     // ====== Minimal gesture + audio synthesis configuration ====== //
     // GesturePlayground example provides a complete configuration model with the GestureGranularConfig class
     
-    public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    // select model for brush shape in PACurveMaker
-    public enum BrushOutput { SAMPLER, GRANULAR }                        // select audio synthesis model
-    public enum HopMode { GESTURE, FIXED }                               // select audio gesture sequence timing model
+    /** Select PACurveMaker gesture points model. */
+    public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    
+    /** Select audio synthesis model */
+    public enum BrushOutput { SAMPLER, GRANULAR } 
+    /** Select audio gesture sequence timing model. */
+    public enum HopMode { GESTURE, FIXED }
 
     /**
      * Defines the curve drawing model for a brush using PACurveMaker. 

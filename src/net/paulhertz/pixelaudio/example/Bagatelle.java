@@ -52,7 +52,6 @@ import g4p_controls.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
-import net.paulhertz.pixelaudio.example.GesturePlayground_back.Mode;
 import net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing.AudioBrushLite;
 import net.paulhertz.pixelaudio.example.TutorialOne_04_Network.NetworkDelegate;
 import net.paulhertz.pixelaudio.schedule.*;
@@ -70,8 +69,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  */
 
 /**
- * Experimental real time performance application based on PixelAudio, with an editing GUI, Presets, and
- * saving and loading JSON-format files for brushstroke and granular configuration data. Used in performance
+ * Experimental real time performance application, with an editing GUI, presets, and
+ * JSON-format files for persistent brushstroke and audio configuration data. Used in performance
  * at the Outside the Box New Music Festival at Southern Illinois University, Carbondale, March 2026.
  * We played Christopher Walczak's composition "Abstract Jailbreak", one of a series of "Bagatelles" we
  * are collaborating on, and my composition "DEADBODYWORKFLOW". The presets in this version of the Bagatelle 
@@ -532,6 +531,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	int baselineDurationMs = 0;
 	GestureScheduleBuilder scheduleBuilder;
 
+	/** Modes available for drawing and editing curves and configuration. */
 	enum DrawingMode { DRAW_EDIT_SAMPLER, DRAW_EDIT_GRANULAR, PLAY_ONLY }
 	DrawingMode drawingMode = DrawingMode.DRAW_EDIT_GRANULAR;
 
@@ -545,9 +545,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/* ------------------------------------------------------------------ */
 
 	/**
-	 * Future Development:
 	 * Barebones interface for "something that happens at a certain point", 
-	 * and then in AudioScheduler the time-when-something-happens gets connected to
+	 * for use with AudioScheduler. The time-when-something-happens gets connected to
 	 * the-room-where-it-happens and the entire cast of Hamilton steps in, if you let them. 
 	 */
 	interface Happening { int x(); int y(); }
@@ -593,6 +592,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/*                                LOOPING                             */
 	/* ------------------------------------------------------------------ */
 	
+	/**
+	 * Supports looping of brush animation and associated audio events. 
+	 */
 	static class InstrumentLoop {
 		final AudioBrush brush;     // optional owner, useful later for hover/cancel
 		final Runnable playAction;
@@ -785,6 +787,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	ArrayList<PerformancePreset> presetStack = new ArrayList<>();
 	
+	/**
+	 * Gesture and audio configuration data returned by a PerformancePreset.
+	 */
 	static class CueResult {
 	    final PACurveMaker curve;
 	    final GestureGranularConfig.Builder cfg;
@@ -6091,119 +6096,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 
-	
-	
-	
-
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-
-		// ----- BEGIN OLD LISTENER-STYLE CODE ----- //	
-		
-		// TODO revise
-		/**
-		 * Sets up sample-accurate AudioListener called from the Minim audio processing loop.
-		 * We use the samples() methods in the AudioListener interface to call our processAudioBlock()
-		 * method. The audio samples don't concern us, just the regular interval over which they are processed:
-		 * essentially, we have a timer that wakes up at a regular interval. 
-		 * 
-		 */
-		public void initListener() {
-			// define the AudioListener class instance inline
-			audioOut.addListener(new AudioListener() {
-
-				/**
-				 * we use the samples() methods  in the AudioListener interface to call processAudioBlock()
-				 * the audio samples don't concern us, just the regular interval over which they are processed
-				 */
-				@Override
-				public void samples(float[] samp) {
-					// mono callback (blockSize == samp.length)
-					processAudioBlock(samp.length);
-				}
-
-				@Override
-				public void samples(float[] left, float[] right) {
-					// stereo callback (blockSize == left.length)
-					processAudioBlock(left.length);
-				}
-
-				private void processAudioBlock(int blockSize) {
-					long blockStart = audioBlockStartSample.getAndAdd(blockSize);
-					long nextBlockStart = blockStart + blockSize;
-					audioNextBlockStartSample.set(nextBlockStart);
-
-					audioSched.processBlock(
-							blockStart,
-							blockSize,
-							(Happening h, int offsetInBlock) -> {
-								if (h instanceof SamplerPointHappening sph) {
-									playSample(sph.samplePos, sph.len, sph.gain, sph.env, sph.pitchRatio, sph.pan);
-								}
-								// We add an event for the draw() loop
-								// dotInbox.add(new ActiveDot(h.x(), h.y(), System.currentTimeMillis() + dotLifeMs));
-							},
-							null // span handler later
-							);
-				}
-			});
-			audioSched.setLatePolicy(AudioScheduler.LatePolicy.DROP);
-		}
-
-		// TODO revise or drop
-		static final class ActiveDot {
-			final int x, y;
-			final long expireMs;
-
-			ActiveDot(int x, int y, long expireMs) {
-				this.x = x;
-				this.y = y;
-				this.expireMs = expireMs;
-			}
-		}
-
-
-		// TODO revise or drop
-		// Happening at a point with PASamplerInstrument use
-		static final class SamplerPointHappening implements Happening {
-			final int x, y;
-			final int samplePos, len;
-			final float gain, pan;
-			final float pitchRatio;     // pitch scaling as rate multiplier
-			final ADSRParams env;
-			final float noteMs;
-
-			SamplerPointHappening(int x, int y,
-					int samplePos, int len,
-					float gain, float pan,
-					float pitch,
-					ADSRParams env, int noteMs) {
-				this.x = x; this.y = y;
-				this.samplePos = samplePos;
-				this.len = len;
-				this.gain = gain;
-				this.pan = pan;
-				this.pitchRatio = pitch;
-				this.env = env;
-				this.noteMs = noteMs;
-			}
-
-			@Override public int x() { return x; }
-			@Override public int y() { return y; }
-		}
-
-			
-		// ----- END OLD LISTENER-STYLE CODE ----- //
-		
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-	//-----------------------------------------------------------------------------
-
-
+	// removed old Listener-style code for sample accurate cues
 
 }

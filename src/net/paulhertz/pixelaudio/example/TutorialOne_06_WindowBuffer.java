@@ -35,12 +35,8 @@ import com.hamoid.*;
 
 /**
  * 
- * <h2>TutorialOne_06_WindowBuffer</h2>
- * 
- * A continuation of TutorialOne_03_Drawing that keeps the drawing, brush,
- * sampler, granular, bounds, and envelope code from TutorialOne_03_Drawing,
- * but changes the audio source model to load large audio files into a 
- * windowed buffer:
+ * Changes the audio source model of TutorialOne_03_Drawing to support large files
+ * with windowed buffering. Keeps the drawing, brush, sampler, granular, bounds, and envelope code.
  * <ul>
  *   <li>anthemSignal / anthemBuffer hold the entire loaded audio file,</li>
  *   <li>windowBuff is a moving window over anthemSignal,</li>
@@ -391,9 +387,12 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
     // ====== Minimal gesture + audio synthesis configuration ====== //
     // GesturePlayground example provides a complete configuration model with the GestureGranularConfig class
     
-    public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    // select model for brush shape in PACurveMaker
-    public enum BrushOutput { SAMPLER, GRANULAR }                        // select audio synthesis model
-    public enum HopMode { GESTURE, FIXED }                               // select audio gesture sequence timing model
+    /** Select PACurveMaker gesture points model. */
+    public enum PathMode { ALL_POINTS, REDUCED_POINTS, CURVE_POINTS }    
+    /** Select audio synthesis model */
+    public enum BrushOutput { SAMPLER, GRANULAR } 
+    /** Select audio gesture sequence timing model. */
+    public enum HopMode { GESTURE, FIXED }
 
     /**
      * Defines the curve drawing model for a brush using PACurveMaker. 

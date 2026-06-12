@@ -1,9 +1,8 @@
 /**
- * Package <code>net.paulhertz.pixelaudio.example</code> provides example Processing sketches and
- * demonstrations of PixelAudio library functionality. The sketches are available as .java files
- * in the PixelAudio library <code>example</code> package and as Processing sketches in the library
- * release. Both formats share data in the <code>/PixelAudio/examples/examples_data</code> directory.
- * If PixelAudio is new to you, I recommend starting with the <b>Basic PixelAudio Features</b>,
+ * Example Processing sketches and demonstrations of PixelAudio library functionality. The sketches 
+ * are available as .java files in the PixelAudio library <code>example</code> package and as Processing 
+ * sketches in the library release. Both formats share data in the <code>/PixelAudio/examples/examples_data</code> 
+ * directory. If PixelAudio is new to you, I recommend starting with the <b>Basic PixelAudio Features</b>,
  * followed by the <b>Intermediate to Advanced: Tutorial Series</b>. After that, feel free
  * to check out the other examples and the <b>Performance and Production Examples</b>. 
  *
@@ -38,8 +37,8 @@
  * <li>{@link net.paulhertz.pixelaudio.example.TutorialOne_01_FileIO TutorialOne_01_FileIO} covers file I/O operations
  * including loading and saving audio and image files with PixelAudio.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.TutorialOne_02_Animation TutorialOne_02_Animation} demonstrates basic
- * pixel-shifting animation techniques within a standard framework for shifted pixel and audio indexing. Introduces
+ * <li>{@link net.paulhertz.pixelaudio.example.TutorialOne_02_Animation TutorialOne_02_Animation} demonstrates
+ * pixel-shifting animation within a standard framework for pixel and audio indexing. Introduces
  * the Sampler audio synthesis instrument.</li>
  *
  * <li>{@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing} enables interactive gesture
@@ -92,9 +91,6 @@
  * <li>{@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle} is a comprehensive interactive audio-visual performance
  * tool supporting brush management, session saving/loading, gesture recording, and real-time granular synthesis with
  * extensive preset library support and a graphical user interface.</li>
- *
- * <li>{@link net.paulhertz.pixelaudio.example.DeadBodyWorkFlow DeadBodyWorkFlow} is a near duplicate of Bagatelle. 
- * This example will be dropped in a future edition. Available in Eclipse version only.</li>
  *
  * <li>{@link net.paulhertz.pixelaudio.example.WaveSynthEditor WaveSynthEditor} provides a GUI for editing WaveSynth 
  * color organ parameters. It can construct complex spectral and visual compositions that can be output to video. 
