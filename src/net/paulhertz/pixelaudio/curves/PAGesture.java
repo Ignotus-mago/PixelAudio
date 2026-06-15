@@ -20,19 +20,19 @@ package net.paulhertz.pixelaudio.curves;
 
 /**
  * PAGesture provides a definitional interface for "gestures":
+ * <ol>
+ *   <li>a list of points and </li> 
+ *   <li>a list of time offsets where</li>
+ *   <li>both lists have the same cardinality and</li> 
+ *   <li>time offsets are monotonically non-decreasing. In addition,</li> 
+ *   <li>the time list is expected (but not required) to start with a first element 0.</li>  
+ * </ol>  
+ * <p>Absolute time of gesture creation can be returned from getStartTimeMs(), 
+ * possibly as millis from application start.</p>
  * 
- *   1) a list of points and 
- *   2) a list of time offsets where
- *   3) both lists have the same cardinality and 
- *   4) time offsets are monotonically non-dereasing. In addition, 
- *   5) the time list is expected (but not required) to start with a first element 0.  
- *   
- * Absolute time of gesture creation can be returned from in getStartTimeMs(), 
- * possibly as millis from application start.
- * 
- * Gestures are often captured from GUI interaction, is is the case with PACurveMaker. 
+ * <p>Gestures are often captured from GUI interaction, as is the case with PACurveMaker. 
  * PAGesture opens the way to use many different sources for generating gestures. 
- * "Gesture" is a core concept in the PixelAudio library, implemented by PACurveMaker, in particular.
+ * "Gesture" is a core concept in the PixelAudio library, implemented by PACurveMaker, in particular.</p>
  * 
  * @see net.paulhertz.pixelaudio.schedule.GestureSchedule
  * 

@@ -83,8 +83,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * The display window has an audio file preloaded. The grayscale values in the image are transcoded audio
  * samples. An overlaid rainbow spectrum traces the Signal Path, the mapping of the audio signal to the image
  * pixels created by the PixelMapGen <code>multigen</code> and managed by the PixelAudioMapper <code>mapper</code>.
- * The Signal Path starts in the upper left corner and ends in the lower right corner.</li> 
- * 
+ * The Signal Path starts in the upper left corner and ends in the lower right corner. 
+ * <br>
  * Bagatelle is set up for a performance of "Abstract Jailbreak," a musical work by Christopher Walczak. 
  * Abstract Jailbreak makes use of the Performance Presets built in to the application. The presets 
  * can be triggered with the number keys. At this point you could press '1' to load the first preset.
@@ -92,19 +92,29 @@ import net.paulhertz.pixelaudio.sampler.*;
  * various methods in the Performance tab. There are five presets for Abstract Jailbreak. They control
  * audio synthesis parameters and brush drawing style. More than one can be loaded at one time. To clear 
  * presets from the preset stack, press '0'.
- *
- * Bagatelle is an experiment. I have tried to document reasonably well, but some features are bound to
+ * <br>
+ * Bagatelle is an experiment. I have tried to document it reasonably well, but some features are bound to
  * appear opaque or mysterious. I think most of the features will reveal themselves with experimentation.
- * You may even find that you can write your own presets and use them for your performances. 
+ * You may even find that you can write your own presets and use them for your performances.
+ * </li>
  *
  * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing, 
  * a brushstroke appears when you release the mouse. TutorialOne_03_Drawing gave you limited control over
- * the attributes of the brushstroke and its associated audio parameters. In GesturePlayground, you can
+ * the attributes of a brushstroke and its associated audio parameters. In GesturePlayground, you can
  * control nearly all the available parameters with the control palette. Building on GesturePlayground,
- * DeadBodyWorkFlow provides a framework for live performance. It is named after one of the first works
- * I performed using the PixelAudio library, at Experimental Sound Studio, Chicago, 2023. You can probably 
- * use it "right out of the box" by just supplying your own audio and image files.</li> 
+ * Bagatelle provides a framework for live performance.</li>
  * 
+ * <li>You can probably use Bagatelle "right out of the box" by just supplying your own audio and image files
+ * and open your files with the 'o' key command. If you want to use your own files with Bagatelle's 
+ * PerformancePreset feature, I suggest you look closely at the existing presets (for Abstract Jailbreak)
+ * and at the <code>runPerformanceCue(...)</code> method in the Performance Methods section of this app.
+ * There are three things you need to modify to use your own performance presets:<br>
+ *   <ol>
+ *   <li>Create your own PerformancePreset list by editing the existing one.</li> 
+ *   <li>Set the variable 'daPath" to point to the directory where you store your performance files</li>
+ *   <li>Edit the entries in <code>runPerformanceCue(...)</code> to access your own files</li>
+ *   </ol>
+ *   
  * <li>At the top of the control palette, you'll find Path Source radio buttons and sliders for setting 
  * the geometry of the brush curve. When the curve is set to Reduced Points or Curve Points, the epsilon 
  * slider will allow you to visualize changes in the curve. For the curve points representation of the 
@@ -138,7 +148,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   <ol>
  *   <li>The 'q' command key will calculate the optimal number of grains in a gesture (usually in 
  *   GESTURE Path Mode) and update the control palette. This can provide smooth granular synthesis 
- *   even as it preserves the timing characteristic of the gesture.</li> 
+ *   even as it preserves the timing characteristic of the gesture. </li> 
+ *   <li>The 'u' command will apply grain optimization to every new granular brush.</li>
+ *   <li>the 'd' command will toggle playing a new brush immediately upon mouse release.</li>
+ *   <li>The 'D' command will toggle playing audio while you draw.</li>
  *   <li>The 'c' command key will print configuration data to the console.</li>
  *   <li>The 'x' command key deletes the brush you are hovering over, if it is editable.</li>
  *   <li>The 'z' command key swaps the instrument type of the brush you are hovering over and changes 
@@ -147,10 +160,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  * </ol>
  * <p>
  * <h2>About Bagatelle</h2>
-  * <b>Bagatelle</b> and its companion performance work<b>DeadBodyWorkFlow</b> use a GUI to provide a tour of
- * the usage and properties of the <code>AudioBrush</code> subclasses <code>GranularBrush</code> and
- * <code>SamplerBrush</code>, the <code>GestureSchedule</code> class, and the Sampler and Granular audio
- * synthesis instruments <code>PASamplerInstrumentPool</code> and <code>PAGranularInstrumentDirector</code>.
+ * <b>Bagatelle</b> uses a GUI to view and manage the properties of the <code>AudioBrush</code> subclasses 
+ * <code>GranularBrush</code> and <code>SamplerBrush</code>, the <code>GestureSchedule</code> class, 
+ * and the Sampler and Granular audio synthesis instruments <code>PASamplerInstrumentPool</code> and 
+ * <code>PAGranularInstrumentDirector</code>. 
  * An AudioBrush combines a <code>PACurveMaker</code> and a <code>GestureGranularConfig.Builder</code>.
  * PACurveMaker models <i>gestures</i>, one of the core concepts of PixelAudio. In its simplest encoded
  * form, the <code>PAGesture</code> interface, a gesture consists of an array of points and an array of
@@ -647,7 +660,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * all brush creation. Presets are best used just for brush modifications. If you
 	 * want to change application settings, use runPerformanceCue() with your own custom 
 	 * code. You can address the host application with the <code>app</app> parameter, 
-	 * but keep in mind that is is called on every brush. 
+	 * but keep in mind that it is called on every brush. 
 	 */
 	enum PerformancePreset {
 	    DURATION_5SEC_SWELL('1') {
@@ -810,7 +823,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	// performance state
 	
-	boolean isRunWordGame = true;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
+	boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
 	boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
 	boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
 	boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
@@ -827,8 +840,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     boolean isAddDynamics = false;       // add dynamics curve to gestures
     // dynamics for sampler and granular gestures
     PAControlCurve dynamics = new PAKeyframeControlCurve (
-			new float[] {0.0f, 0.5f, 1.0f},      // times
-			new float[] {0.1f, 1.0f, 0.1f} );    // values
+			new float[] {0.0f, 0.5f, 1.0f},    // times
+			new float[] {0.1f, 1.0f, 0.1f} );  // values
  
     boolean isBrushTransformTest = false;      // testing animation feature (key 'y')
 	boolean isBrushTransformFrozen = false;    // freeze animation (key 'Y')

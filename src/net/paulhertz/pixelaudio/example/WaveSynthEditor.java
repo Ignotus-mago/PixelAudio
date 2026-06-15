@@ -40,7 +40,7 @@ import g4p_controls.*;
 // TODO error on recording a second video: FIXED
 // TODO error on editing a GUI field while animating: FIXED
 // TODO goofy output to console when editing text fields: PENDING, solution is to replace Spinner with TextField
-// TODO different results for each press of 'i', 'e', some field entries -- prefer a consistent result
+// TODO different results for each press of 'i', 'e', some field entries -- FIXED, in WaveData.prepareFrame(...)
 
 
 /**
@@ -214,7 +214,8 @@ public class WaveSynthEditor extends PApplet {
 	PixelAudio pixelaudio;      // our shiny new library
 	HilbertGen hGen;            // a HilbertGen
 	DiagonalZigzagGen zGen;     // a PixelMapGen to draw zigzag curves
-	BoustropheGen bGen;         // a PixelMapGen with boustrophedon ordering
+	BoustropheGen bGenHz;       // a PixelMapGen with boustrophedon ordering, horizontal
+	BoustropheGen bGenVt;       // a PixelMapGen with boustrophedon ordering, vertical
 	MultiGen mGen;              // a PixelMapGen that blends multiple gens
 	PixelMapGen gen;            // any PixelMapGen
 	PixelAudioMapper mapper;    // object for reading, writing, and transcoding audio and image data
@@ -377,7 +378,7 @@ public class WaveSynthEditor extends PApplet {
 		hGen = createHilbertGen(genWidth);
 		mGen = hilbertLoop3x2(genWidth, genHeight);
 		gen = isDesignMode ? hGen : mGen;
-		bGen = new BoustropheGen(height, width, PixelMapGen.r90);    // swap width and height, rotate 90
+		bGenHz = new BoustropheGen(height, width, PixelMapGen.r90);    // swap width and height, rotate 90
 		zGen = new DiagonalZigzagGen(width, height);
 		// 3. Initialize a PixelAudioMapper to handle mapping between audio and image
 		mapper = new PixelAudioMapper(gen);
@@ -1060,10 +1061,10 @@ public class WaveSynthEditor extends PApplet {
 			swapGen(gen);
 		}
 		else if (gen == hGen || gen == mGen) {
-			gen = bGen;
+			gen = bGenHz;
 			swapGen(gen);
 		}
-		else if (gen == bGen) {
+		else if (gen == bGenHz) {
 			gen = zGen;
 			swapGen(gen);
 		}

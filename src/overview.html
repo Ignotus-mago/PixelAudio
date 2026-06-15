@@ -24,7 +24,12 @@ performance.</p>
 <p>See the <a href="https://github.com/Ignotus-mago/PixelAudio">GitHub repository</a> for more 
 information and instructions on installation.</p>
 
-<h2>How PixelAudio Works</h2>
+<h1>How PixelAudio Works</h1>
+
+<p>The two core concepts in PixelAudio are <b>lookup table (LUT) mapping</b> and <b>gesture capture</b>. LUT mapping is the core
+functionality that joins audio and image data, while gesture capture is the core functionality for user interaction.</p>
+
+<h2>Lookup Table (LUT) Mapping</h2>
 
 <p>In PixelAudio classes, 1D signals and 2D bitmaps are related to each other through lookup tables (LUTs)
 that map locations in the signal and bitmap arrays onto one another. You could think of the signal tracing a
@@ -38,8 +43,7 @@ particular pixel. This makes it easy to click on the bitmap and play an audio sa
 to the location you clicked, or to transcode an audio signal into RGB pixel values and display them in a
 bitmap.</p>
 
-<h2>LUT Diagram</h2>
-<img src="https://paulhertz.net/images/pixelaudio/LUT-diagram_3.png" alt="LUT Diagram" width="939" height="512"/>
+<img src="net/paulhertz/pixelaudio/doc-files/LUTdiagram.png" alt="LUT Diagram" width="939" height="512"/>
 
 <p>The <code>PixelAudioMapper</code> class and the <code>PixelMapGen</code> class and its subclasses provide
 the core functionality of the library and are abundantly commented. <code>PixelMapGen</code> provides a
@@ -55,7 +59,14 @@ operations, array shifting, LUT mapping, and transcoding. While it should be rel
 own <code>PixelMapGen</code> child class (you only need a list of coordinates for the signal map), 
 there are many built-in child classes that can get you up and running.</p>
 
+<h2>Gesture Capture</h2>
 
+<p>If LUT mapping is the core functionality that joins audio and image data, gesture capture is the core 
+functionality for user interaction. A Gesture combines location and timing information. The <code>curves</code>
+package provides a framework for gesture geometry. The <code>schedule</code> package handles timing. For a 
+formal definition of a gesture, see the Javadoc for the 
+<a href="net/paulhertz/pixelaudio/curves/PAGesture.html"><code>PAGesture</code></a> class.
+</p>
 
 <!--
 There are several demo vidoes

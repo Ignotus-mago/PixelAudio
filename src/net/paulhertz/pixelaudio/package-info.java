@@ -79,6 +79,7 @@
  *   <li>{@link net.paulhertz.pixelaudio.OpenSimplex2 OpenSimplex2} implements
  *   OpenSimplex noise.</li>
  * </ul>
+ * 
  *
  */
 package net.paulhertz.pixelaudio;
