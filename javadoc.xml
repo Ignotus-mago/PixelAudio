@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="javadoc">
+    <target name="javadoc">
+        <javadoc access="private" additionalparam=" -docfilessubdirs" author="true" classpath="libs/G4P.jar:libs/jna-platform.jar:libs/jsminim.jar:libs/tritonus_aos.jar:libs/core.jar:libs/jna.jar:libs/tritonus_share.jar:libs/oscP5.jar:bin:libs/minim.jar:libs/jl1.0.1.jar:libs/mp3spi1.9.5.jar:libs/VideoExport.jar" destdir="distribution/PixelAudio-1/reference" doctitle="PixelAudio Library for Processing" nodeprecated="false" nodeprecatedlist="false" noindex="false" nonavbar="false" notree="false" overview="/Users/paulhz/Code/Workspace/PixelAudio/src/overview.html" packagenames="net.paulhertz.pixelaudio.granular,net.paulhertz.pixelaudio.example,net.paulhertz.pixelaudio.sampler,net.paulhertz.pixelaudio.schedule,net.paulhertz.pixelaudio.curves,net.paulhertz.pixelaudio,net.paulhertz.pixelaudio.io" source="17" sourcepath="src:doc-files" splitindex="true" use="true" version="true"/>
+    </target>
+</project>
