@@ -39,5 +39,6 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="libs/jna.jar"/>
 	<classpathentry kind="lib" path="libs/jna-platform.jar"/>
+	<classpathentry kind="lib" path="libs/ant-contrib-1.0b3.jar"/>
 	<classpathentry kind="output" path="resources/code"/>
 </classpath>
