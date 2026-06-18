@@ -28,7 +28,8 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
  * In the PixelAudio library examples, a "brush" uses gesture to control sound, and can draw the 
  * gesture to the display as an interactive UI element. In other words, brushes advance the core
  * design theme of PixelAudio: combining image and audio through structural correspondences. 
- * See the GesturePlayground applet in the example code for a GUI-driven tour of features. 
+ * See the {@link net.paulhertz.pixelaudio.example.TutorialOne_05_GesturePlayground GesturePlayground} 
+ * sketch in the example code for a GUI-driven tour of features. 
  * </p><p>
  * Two included subclasses, SamplerBrush and GranularBrush, model brushes for the PASamplerInstrument 
  * and PAGranularInstrument classes. Subclasses may add fields or behavior, but should preserve:

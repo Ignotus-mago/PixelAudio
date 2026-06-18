@@ -178,6 +178,13 @@ public class MultiGen extends PixelMapGen {
 		return coordinates;
 	}
 
+	/**
+	 * Translates coordinate pairs in {@code coordList} by {@code (tx, ty)}.
+	 * @param coordList   list of coordinate pairs
+	 * @param tx          translation on x-axis
+	 * @param ty          translation on y-axis
+	 * @return translated coordinates
+	 */
 	public ArrayList<int[]> translateCoords(ArrayList<int[]> coordList, int tx, int ty ) {
 		ArrayList<int[]> newList = new ArrayList<int[]>(coordList.size());
 		for (int[] xy : coordList) {

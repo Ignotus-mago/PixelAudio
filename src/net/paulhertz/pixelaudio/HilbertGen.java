@@ -35,6 +35,13 @@ public class HilbertGen extends PixelMapGen {
 			   + "\nWidth and height must be equal powers of 2. You can also call HilbertGen(int depth) and width and height will equal Math.pow(2, depth). ";
 	
 	
+	/**
+	 * Constructor for HilbertGen, modified by an AffineTransformType.
+	 * 
+	 * @param width     width of HilbertGen, must be a power of 2
+	 * @param height    height of HilbertGen, must equal {@code width}
+	 * @param type      an (@code AffineTransformType}
+	 */
 	public HilbertGen(int width, int height, AffineTransformType type) {
 		super(width, height, type);								// necessary first call
 		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// calculate depth before we generate the Hilbert curve
@@ -43,6 +50,12 @@ public class HilbertGen extends PixelMapGen {
 		this.generate();										// last of all, once all parameters are set, go ahead and generate coordinates and LUTs.
 	}
 
+	/**
+	 * Constructor for HilbertGen.
+	 * 
+	 * @param width     width of HilbertGen, must be a power of 2
+	 * @param height    height of HilbertGen, must equal {@code width}
+	 */
 	public HilbertGen(int width, int height) {
 		super(width, height);									// necessary first call
 		this.depth = PixelMapGen.findPowerOfTwo(this.w);		// calculate depth before we generate the Hilbert curve
@@ -52,13 +65,15 @@ public class HilbertGen extends PixelMapGen {
 	}
 
 	/**
-	 * @param depth    depth of recursion of HIlbert curve, where 2^depth produces the width and height of the HilbertGen
+	 * Constructor for HilbertGen using depth of recursion.
+	 * @param depth    depth of recursion of Hilbert curve, where 2^depth produces the width and height of the HilbertGen
 	 */
 	public HilbertGen(int depth) {
 		this( (int) Math.round(Math.pow(2, depth)), (int) Math.round(Math.pow(2, depth)) );
 	}
 	
 	/**
+	 * Constructor for HilbertGen using depth of recursion, transformed by an AffineTransformType.
 	 * @param depth    depth of recursion of HIlbert curve, where 2^depth produces the width and height of the HilbertGen
 	 * @param type     AfineTransformType to apply to the HilbertGen coordinates
 	 */
@@ -78,7 +93,7 @@ public class HilbertGen extends PixelMapGen {
 	}
 	
 	/**
-	 * static version of <code>validate()</code> that we use to throw meaningful errors (or so we hope)
+	 * Static version of <code>validate()</code> that we use to throw meaningful errors (or so we hope).
 	 * @param width     width of the HilbertGen
 	 * @param height    height of the HilbertGen
 	 * @return          true if width and height are legitimate values for a Hilbert curve: equal powers of 2
@@ -107,6 +122,7 @@ public class HilbertGen extends PixelMapGen {
 	
 	
 	/**
+	 * Generates the list of coordinates for the signal path.
 	 * @return    array of coordinates for the HilbertGen
 	 */
 	private ArrayList<int[]> generateCoordinates() {
@@ -114,7 +130,7 @@ public class HilbertGen extends PixelMapGen {
 	}
 
 	/**
-	 * Handles the generation of coordinates for a HilbertGen.
+	 * Handles the generation of signal path coordinates for a HilbertGen.
 	 * @param n    size of the array of Hilbert curve coordinates, necessarily a power of 4
 	 * @return     an ArrayList of integer pairs {x,y} representing the coordinates of a Hilbert curve
 	 */
@@ -222,6 +238,7 @@ public class HilbertGen extends PixelMapGen {
 	
 	// placeholder
 	/**
+	 * Creates a Multigen with rows and columns of HilbertGens and a looping signal path.
 	 * @param columns	number of columns of gens wide
 	 * @param rows		number of rows of gens high
 	 * @param genEdge	number of pixels for the edge of each Hilbert curve, must be a power of 2
@@ -378,14 +395,13 @@ public class HilbertGen extends PixelMapGen {
 	}
 
 	/**
-	 * This method creates a vertical stacks of rows of HilbertGens. Each row
+	 * Creates a Multigen with vertical stacks of rows of HilbertGens. Each row
 	 * begins genH pixels down from the previous row, back at the beginning
 	 * of the previous row (i.e., in "row major" order, like a bitmap). This 
-	 * method pairs nicely with an image with 3 columns of with 8 rows of words,
+	 * method pairs nicely with an image with 3 columns with 8 rows of words,
 	 * using the image as a control surface for sampling an audio file with 
 	 * words recorded at the appropriate locations to match the screen order. 
-	 * I used it for a performance work, DeadBodyWorkFlow, which is included
-	 * in the 
+	 * I used it for a performance work, DeadBodyWorkFlow.
 	 * The signal path jumps from the end of the last gen in each row to the 
 	 * beginning of the first gen int he next row. The path in each row is
 	 * continuous, which provides some interesting optical effects. 
@@ -415,8 +431,8 @@ public class HilbertGen extends PixelMapGen {
 	}
 
 	/**
-	 * This method creates a vertical stacks of rows of HilbertGens. Each row
-	 * begins genH pixels down from the previous row. Alternating rows add units
+	 * Creates vertical stacks of rows of HilbertGens. Each row begins
+	 * genH pixels down from the previous row. Alternating rows add units
 	 * in opposite directions. This means path continuity is possible in each 
 	 * stack by changing the orientation of the gens; however, it isn't fully 
 	 * implemented in this example. Hint: choosing the right orientation for 
@@ -457,7 +473,7 @@ public class HilbertGen extends PixelMapGen {
 	// public static hilbertVerticalStackPathBou(int stacks, int rows, int units, int genW, int genH);
 	
 	/**
-	 * This method creates rows of HilbertGens, starting each row from the left
+	 * Creates rows of HilbertGens, starting each row from the left
 	 * and adding gens. The odd rows are flipped vertically and the even rows are
 	 * unchanged. The unchanged HilbertGen starts at upper left corner and ends at 
 	 * upper right corner, so this provides some possibilities of symmetry between rows.

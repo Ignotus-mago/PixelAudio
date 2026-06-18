@@ -28,7 +28,15 @@ public class WindowedBuffer {
     private int hopSize;      		// step between windows
     private int index = 0;          // current start position in buffer
 
-    public WindowedBuffer(float[] buffer, int windowSize, int hopSize) {
+    /** 
+     * Create a windowed buffer with the given source, window size, and hop size. 
+     * 
+	 * @param buffer        the source audio data
+	 * @param windowSize    the number of samples in each window
+	 * @param hopSize       the number of samples to advance for each window (must be > 0)
+	 * @throws IllegalArgumentException if buffer is empty, or if windowSize or hopSize are not positive
+	 */
+	public WindowedBuffer(float[] buffer, int windowSize, int hopSize) {
         if (buffer.length == 0) {
             throw new IllegalArgumentException("Buffer must not be empty");
         }
@@ -47,6 +55,9 @@ public class WindowedBuffer {
     /**
      * Returns the next window, advancing the read index by hopSize.
      * Wraps around the buffer as needed.
+	 * 
+	 * @return a window of audio samples from the buffer, starting at the current 
+	 *         index and wrapping around if necessary
      */
     public float[] nextWindow() {
         int bufferLen = buffer.length;
@@ -66,6 +77,9 @@ public class WindowedBuffer {
 	/**
      * Returns the window at a supplied index. Wraps around the buffer as needed.
 	 * Updates current index and advances it by hopSize.
+	 * 
+	 * @param idx    the starting index for the window (can be any integer, will be normalized to buffer length)
+	 * @return a window of audio samples from the buffer, starting at the normalized index and wrapping around if necessary
      */
     public float[] gettWindowAtIndex(int idx) {
     	int len = buffer.length;
@@ -79,32 +93,52 @@ public class WindowedBuffer {
         index = 0;
     }
 
-    /** Current buffer index */
+    /** Return current buffer index */
     public int getIndex() {
         return index;
     }
-    /** set current index */
+    
+    /** Set current index. Wraps around the buffer as needed.
+	 * @param index the new index to set (can be any integer, will be normalized to buffer length)
+	 */
     public void setIndex(int index) {
 		this.index = index % buffer.length;
 	}
 
-	/** Expose the underlying array size */
+	/** 
+	 * Expose the underlying array size.
+	 * @return the length of the backing buffer
+	 */
     public int getBufferSize() {
         return this.buffer.length;
     }
 
-	/** Expose the reusable window array size */
+	/** 
+	 * Expose the reusable window array size. 
+	 * @return the size of the window array, the number of samples in each window
+	 */
     public int getWindowSize() {
         return windowSize;
     }
 
-    /** Expose hop size */
+    /** 
+     * Expose hop size, the number of samples to advance for each window.
+	 * @return the number of samples to advance for each window, which determines 
+	 *         how much the index moves forward after each call to nextWindow()	
+	 */
     public int getHopSize() {
         return hopSize;
     }
 
-    /** Set the hop size */
-	public void setHopSize(int hopSize) {
+    /** 
+     * Set the hop size, the number of samples to advance for each window. 
+	 * @param    hopSize the new hop size to set (must be > 0)
+	 * @throws IllegalArgumentException if hopSize is not positive
+	*/
+	public void setHopSize(int hopSize) {	
+		if (hopSize <= 0) {
+			throw new IllegalArgumentException("Hop size must be positive");
+		}
 		this.hopSize = hopSize;
 	}
 

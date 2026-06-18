@@ -148,57 +148,65 @@ import net.paulhertz.pixelaudio.sampler.*;
  * </p>
  * <h2>Code Details</h2>
  * <p>The calling chain for a GranularBrush:<br>
- * <code>mouseClicked()</code> calls <code>scheduleGranularBrushClick(gb, x, y);</code>.<br>
+ * <ul>
+ * <li><code>mouseClicked()</code> calls <code>scheduleGranularBrushClick(gb, x, y);</code>.</li>
  * 
- * In <code>scheduleGranularBrushClick(...)</code> we get a reference to the audio buffer
+ * <li>In <code>scheduleGranularBrushClick(...)</code> we get a reference to the audio buffer
  * <code>buf</code> and then use the PACurveMaker object <code>gb.curve()</code> and
- * <code>gb.snapshot()</code> to build a <code>GestureSchedule</code>, <code>sched</code>. <br>
- * <code>sched</code> gets timing and location information for the gesture from
+ * <code>gb.snapshot()</code> to build a <code>GestureSchedule</code>, <code>sched</code>.</li>
+ * 
+ * <li><code>sched</code> gets timing and location information for the gesture from
  * <code>gb.curve()</code> and modifies it with the settings from the control palette which are
- * stored <code>gb.snapshot()</code>. <br>
+ * stored <code>gb.snapshot()</code>.</li>
  *
- * We port the granular synthesis parameters from the brush to a
+ * <li>We port the granular synthesis parameters from the brush to a
  * <code>GestureGranularParams</code> object, and then call <code>playGranularGesture(buf,
- * sched, gParams)</code> to play the granular synth. We also call
- * <code>storeGranularCurveTL(...)</code>, which sets up UI animation events to track the
- * grains.<br>
+ * sched, gParams)</code> to play the granular synth.</li>
+ * 
+ * <li>We also call <code>storeGranularCurveTL(...)</code>, which sets up UI animation events to 
+ * track the grains.</li>
  *
- * Parameter <code>buf</code> is the audio signal that is the source of our grains, parameter
- * <code>sched</code> provides the points and times for grains and parameter <code>params</code>
- * provides the core parameters for granular synthesis.<br>
+ * <li>Parameter <code>buf</code> is the audio signal that is the source of our grains, parameter
+ * <code>sched</code> provides the points and times for grains and parameter, <code>params</code>
+ * provides the core parameters for granular synthesis.</li>
  *
- * <code>playGranularGesture()</code> builds arrays for buffer position and pan for each
+ * <li><code>playGranularGesture()</code> builds arrays for buffer position and pan for each
  * individual grain and then calls <code>gDir.playGestureNow(buf, sched, params, startIndices,
  * panPerGrain)</code> to play the PAGranularInstrumentDirector granular synth. The 'p' command
  * key can toggle per-grain pitch jitter, which calls <code>playGestureNow()</code>in a slightly
- * different way. See <code>playGranularGesture()</code> for details.<br>
+ * different way. See <code>playGranularGesture()</code> for details.</li>
  *
- * <code>PAGranularInstrumentDirector</code> its own calling chain that goes all the way down to
+ * <li><code>PAGranularInstrumentDirector</code> has its own calling chain that goes all the way down to
  * the individual sample level using the Minim library's UGen interface. If you just want to
  * play music, you'll probably never have to deal with the hierarchy of classes directly, but
- * comments <code>PAGranularInstrumentDirector</code> may be useful. <br>
+ * comments in {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector} may be useful. </li>
+ * </ul>
  * </p>
  * 
  * <p>Part of the calling chain for a SamplerBrush:<br>
- * <code>mouseClicked()</code> calls <code>scheduleSamplerBrushClick(sb, x, y)</code>.<br>
+ * <ul>
+ * <li><code>mouseClicked()</code> calls <code>scheduleSamplerBrushClick(sb, x, y)</code>.</li>
  *
- * In <code>scheduleSamplerBrushClick()</code> we get array of points on the curve with
+ * <li>In <code>scheduleSamplerBrushClick()</code> we get array of points on the curve with
  * <code>getPathPoints(sb)</code> and then use <code>sb.snapshot()</code> and
- * <code>scheduleBuilder.build()</code> to build a <code>GestureSchedule</code> <br>
+ * <code>scheduleBuilder.build()</code> to build a <code>GestureSchedule</code> </li>
  *
- * Finally, we pass the schedule and a small time offset to <code>storeSamplerCurveTL()</code>,
+ * <li>Finally, we pass the schedule and a small time offset to <code>storeSamplerCurveTL()</code>,
  * an array of <code>TimedLocation</code> objects that is checked at every pass through the
  * <code>draw()</code> loop and posts both Sampler instrument triggers and animation events.
  * Unlike the Granular instrument, which requires very accurate timing, the Sampler synth
  * requires less precision, so we can handle it through the UI frames. Sample-accurate timing is
- * a topic for another as-yet-unreleased example sketch. <br>
+ * a topic for another as-yet-unreleased example sketch. </li>
  *
- * The <code>runSamplerBrushEvents()</code> method executes the UI brushstroke animation and the
+ * <li>The <code>runSamplerBrushEvents()</code> method executes the UI brushstroke animation and the
  * Sampler audio events. Sampler events all pass through <code>pool.playSample(samplePos,
- * samplelen, amplitude, env, pitch, pan)</code>.
- * </p>
+ * samplelen, amplitude, env, pitch, pan)</code>.</li>
+ * </ul>
+ * </p> 
  * <p>
  * <pre>
+ * KEY COMMANDS
+ * 
  * Press ' ' to spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event.
  * Press 'c' or 'C' to print the current configuration status to the console.
  * Press 't' to switch between Granular and Sampler editing and playing.
@@ -220,7 +228,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * 
  * See also: Bagatelle.java for a performance-oriented application with a GUI, presets, and networking. 
  * 
- * </DIV>
+ * 
  * 
  * 
  */
@@ -480,7 +488,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * Future Development:
 	 * Barebones interface for "something that happens at a certain point", 
 	 * and then in AudioScheduler the time-when-something-happens gets connected to
-	 * the-room-where-it-happens and the entire cast of Hamilton steps in, if you let them. 
+	 * the-room-where-it-happens and the entire cast of Hamilton steps in. 
 	 */
 	interface Happening { int x(); int y(); }
 		

@@ -29,7 +29,7 @@ package net.paulhertz.pixelaudio;
  * comments strongly suggest starting gen coordinates at (0,0) in the upper left
  * corner, but this may vary with the signal path you want to create. The Moore
  * curve, for example, begins at the top center of the bitmap. The 
- * {@link BitmapTransform.java BitmapTransform class} applies the transformations 
+ * {@link BitmapTransform BitmapTransform} class applies the transformations 
  * defined in this enum to bitmaps using lookup tables. 
  * </p><p>
  * Naming follows computer graphics conventions where 0 degrees points right and

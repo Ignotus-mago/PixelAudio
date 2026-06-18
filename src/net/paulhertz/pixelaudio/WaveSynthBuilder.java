@@ -33,13 +33,22 @@ import net.paulhertz.pixelaudio.WaveData.WaveState;
  * 
  */
 public class WaveSynthBuilder {
+	/** The factor by which to multiply a frequency to obtain a semitone increment. */
 	public static final double semitoneFac = Math.pow(2, 1 / 12.0);
+	/** The default number of frames in a WaveSynth animation. */
 	public static int animSteps = 720;
 
 	/**
 	 * Generates an ArrayList of WaveData objects to be used by a WaveSynth to
 	 * generate RGB pixel values and (on request) audio signal values.
-	 *
+	 * 
+	 * @param fundamental		the fundamental frequency of the tone to be generated
+	 * @param howManyPartials	the number of partials to include in the tone,
+	 * 							1 is just the fundamental, 2 is the fundamental and the second harmonic, etc.
+	 * @param pianoKey			the piano key number (1-88) that corresponds to the fundamental frequency,
+	 * 							used to shift the colors of the WaveData objects in the returned list
+	 * @param animSteps			the number of frames in the animation.
+	 * 
 	 * @return an ArrayList of WaveData objects
 	 */
 	public static ArrayList<WaveData> synthTrumpet(float fundamental, int howManyPartials, float pianoKey, int animSteps) {
@@ -142,6 +151,14 @@ public class WaveSynthBuilder {
 	/**
 	 * Generates an ArrayList of WaveData objects to be used by a WaveSynth to
 	 * generate RGB pixel values and (on request) audio signal values.
+	 * 
+	 * @param funda1      the fundamental frequency of the first tone to be generated
+	 * @param funda2      the fundamental frequency of the second tone to be generated
+	 * @param pianoKey1   the piano key number (1-88) that corresponds to the fundamental frequency of the first tone,
+	 *                    used to shift the colors of the WaveData objects in the returned list that correspond to the first tone	
+	 * @param pianoKey2	  the piano key number (1-88) that corresponds to the fundamental frequency of the second tone,
+	 *                    used to shift the colors of the WaveData objects in the returned list that correspond to the second tone
+	 * @param animSteps   the number of frames in the animation
 	 *
 	 * @return an ArrayList of WaveData objects
 	 */
@@ -212,7 +229,13 @@ public class WaveSynthBuilder {
 		return list;
 	}
 
-
+	/**
+	 * Generates an array of frequencies that correspond to the chromatic scale, 
+	 * starting with the supplied fundamental frequency.
+	 * 
+	 * @param funda
+	 * @return
+	 */
 	public static float[] chromaticScale(float funda) {
 		float[] chromaScale = new float[12];
 		for (int i = 0; i < chromaScale.length; i++) {
@@ -222,10 +245,24 @@ public class WaveSynthBuilder {
 		return chromaScale;
 	}
 
+	/**
+	 * Returns the frequency of a piano key number, where A4 (the A above middle C) 
+	 * is key number 49 and has a frequency of 440 Hz.
+	 * 
+	 * @param keyNumber
+	 * @return
+	 */
 	public static float pianoKeyFrequency(float keyNumber) {
 		return (float) (440 * Math.pow(2, (keyNumber - 49) / 12.0));
 	}
 
+	/**
+	 * Returns the piano key number that corresponds to a given frequency, where A4 (the A above middle C) 
+	 * is key number 49 and has a frequency of 440 Hz.
+	 * 
+	 * @param freq
+	 * @return
+	 */
 	public static float frequencyPianoKey(float freq) {
 		return 49 + 12 * (float) (Math.log(freq / 440) / Math.log(2));
 	}
@@ -374,12 +411,22 @@ public class WaveSynthBuilder {
 		}
 	}
 	
+	/**
+	 * Mutes a WaveData operator (view in the control panel).
+	 * @param wavesynth		a WaveSynth
+	 * @param elem			the index number of a WaveData object stored in a WaveSynth's waveDataList field
+	 */
 	public static void muteWaveData(WaveSynth wavesynth, int elem) {
 		if (wavesynth.waveDataList.size() < elem + 1) return;
 		WaveData wd = wavesynth.waveDataList.get(elem);
 		wd.waveState = WaveState.MUTE;
 	}
 	
+	/**
+	 * Unmutes a WaveData operator (view in the control panel).
+	 * @param wavesynth		a WaveSynth
+	 * @param elem			the index number of a WaveData object stored in a WaveSynth's waveDataList field
+	 */
 	public static void unmuteWaveData(WaveSynth wavesynth, int elem) {
 		if (wavesynth.waveDataList.size() < elem + 1) return;
 		WaveData wd = wavesynth.waveDataList.get(elem);
@@ -505,11 +552,18 @@ public class WaveSynthBuilder {
 		return true;
 	}
 	
+	// overloaded version of getJSONFromFile() that defaults to isStrict = false
 	public static boolean getJSONFromFile(File selection, JSONObject json, WaveSynth synth) {
 		return getJSONFromFile(selection, json, synth, false);
 	}
 
-	
+	/**
+	 * Checks for a header in the supplied JSON object that indicates that it contains WaveSynth data.
+	 * @param json	a JSONObject, typically read in from a file
+	 * @param key		the key to look for in the JSON object, typically "PXAU"
+	 * @param val		the value to compare against, typically "WSYN"
+	 * @return	true if the JSON object contains the specified key and value in its header, otherwise false
+	 */
 	public static boolean checkJSONHeader(JSONObject json, String key, String val) {
 		JSONObject header = (json.isNull("header") ? null : json.getJSONObject("header"));
 		String pxau;
@@ -579,6 +633,7 @@ public class WaveSynthBuilder {
 
 	/**
 	 * Returns supplied WaveSynth settings and WaveData list as a formated String.
+	 * @param synth		a WaveSynth
 	 */
 	public static String waveSynthAsString(WaveSynth synth) {
 		java.nio.file.Path path = java.nio.file.Paths.get(synth.getVideoFilename());
@@ -605,6 +660,12 @@ public class WaveSynthBuilder {
 		return sb.toString();
 	}
 	
+	/**
+	 * Saves a WaveSynth's settings and WaveData list to a JSON file.
+	 * @param app			a PApplet, used to call saveJSONObject()
+	 * @param selection		a File object that represents the file to which the JSON data will be saved
+	 * @param synth			the WaveSynth whose settings and WaveData list will be saved to the JSON file
+	 */
 	public static void saveWaveSynthJSON(PApplet app, File selection, WaveSynth synth) {
 		if (selection == null) {
 			System.out.println("Window was closed or the user hit cancel.");
@@ -674,6 +735,10 @@ public class WaveSynthBuilder {
 		app.saveJSONObject(stateData, currentFileName);
 	}
 	
+	/**
+	 * Creates a JSON object containing header information for a WaveSynth JSON file.
+	 * @return	a JSONObject containing the header information
+	 */
 	public static JSONObject getWaveSynthJSONHeader() {
 		// flag this JSON file as WaveSynthEditor data using a "PXAU" key with value "WSYN"
 		// add some other pertinent information
@@ -691,3 +756,4 @@ public class WaveSynthBuilder {
 		
 
 }
+

@@ -141,24 +141,53 @@ public class BoustropheGen extends PixelMapGen {
 	---------------------------------------------------------------------------------------- */
 	
 	/**
-	 * Creates a MultiGen with rows * cols BoustropheGens. 
-	 * Note that you should set values for such that:
-	 * (rows * genW) == width and (cols * genH) == height.
+	 * Creates a MultiGen with rows * cols randomly oriented BoustropheGens. 
+	 * The resulting Multigen will have dimensions
+	 * width == (rows * genW) and height == (cols * genH).
 	 * 
 	 * @param cols    number of vertical columns, same as number of gens wide
 	 * @param rows    number of horizontal rows, same as number of gens high
 	 * @param genW    width of an individual PixelMapGen
 	 * @param genH    height of an indvidual PixelMapGen
-	 * @return        a MultiGen created from rows * cols PixelMapGens
+	 * @return        a MultiGen created from rows * cols randomly oriented BoustropheGens
 	 */ 
 	public static MultiGen boustrophRowRandom(int cols, int rows, int genW, int genH) {
 	    // list of PixelMapGens that create an image using mapper
 	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
 	    // list of x,y coordinates for placing gens from genList
 	    ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	    // if genW == genH, we can use all transforms 
+	    boolean isSquare = (genW == genH);
 	    for (int y = 0; y < rows; y++) {
 	        for (int x = 0; x < cols; x++) {
-	            genList.add(new BoustropheGen(genW, genH, PixelMapGen.randomTransform(PixelAudio.rando())));
+	            if (isSquare) genList.add(new BoustropheGen(genW, genH, PixelMapGen.randomTransform(PixelAudio.rando())));
+	            else genList.add(new BoustropheGen(genW, genH, PixelMapGen.randomUniformTransform(PixelAudio.rando())));
+	            offsetList.add(new int[] {x * genW, y * genH});
+	        }
+	    }
+	    return new MultiGen(cols * genW, rows * genH, offsetList, genList);
+	}
+
+	/**
+	 * Creates a MultiGen with rows * cols BoustropheGens oriented as specified by {@code transform}.
+	 * The resulting Multigen will have dimensions
+	 * width == (rows * genW) and height == (cols * genH).
+	 * 
+	 * @param cols         number of vertical columns, same as number of gens wide
+	 * @param rows         number of horizontal rows, same as number of gens high
+	 * @param genW         width of an individual PixelMapGen
+	 * @param genH         height of an indvidual PixelMapGen
+	 * @param transform    an AffineTransformType applied to all BoustropheGens
+	 * @return a MultiGen created from rows * cols identically oriented BoustropheGens
+	 */ 
+	public static MultiGen boustrophRowOriented(int cols, int rows, int genW, int genH, AffineTransformType transform) {
+	    // list of PixelMapGens that create an image using mapper
+	    ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>(); 
+	    // list of x,y coordinates for placing gens from genList
+	    ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	    for (int y = 0; y < rows; y++) {
+	        for (int x = 0; x < cols; x++) {
+	            genList.add(new BoustropheGen(genW, genH, transform));
 	            offsetList.add(new int[] {x * genW, y * genH});
 	        }
 	    }

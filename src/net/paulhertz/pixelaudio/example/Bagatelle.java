@@ -74,7 +74,11 @@ import net.paulhertz.pixelaudio.sampler.*;
  * at the Outside the Box New Music Festival at Southern Illinois University, Carbondale, March 2026.
  * We played Christopher Walczak's composition "Abstract Jailbreak", one of a series of "Bagatelles" we
  * are collaborating on, and my composition "DEADBODYWORKFLOW". The presets in this version of the Bagatelle 
- * sketch are set up for "Abstract Jailbreak". 
+ * sketch are set up for "Abstract Jailbreak". If you change {@code isRunWordGame} to {@code true},
+ * this sketch will run the responses for DEADBODYWORKFLOW in {@link runPerformanceCue runPerformanceCue},
+ * without the correct PerformancePreset settings. The correct presets are commented out at the end of
+ * this file, and can be swapped with Abstract Jailbreak's presets to set up Bagatelle for a 
+ * performance of DEADBODYWORKFLOW. 
  * 
  * <DIV>
  * <h2>QUICK START</h2>
@@ -82,7 +86,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <li>Launch the sketch. A display window and a palette of Graphical User Interface (GUI) controls appears.
  * The display window has an audio file preloaded. The grayscale values in the image are transcoded audio
  * samples. An overlaid rainbow spectrum traces the Signal Path, the mapping of the audio signal to the image
- * pixels created by the PixelMapGen <code>multigen</code> and managed by the PixelAudioMapper <code>mapper</code>.
+ * pixels created by the PixelMapGen {@code multigen} and managed by the PixelAudioMapper {@code mapper}.
  * The Signal Path starts in the upper left corner and ends in the lower right corner. 
  * <br>
  * Bagatelle is set up for a performance of "Abstract Jailbreak," a musical work by Christopher Walczak. 
@@ -107,12 +111,12 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <li>You can probably use Bagatelle "right out of the box" by just supplying your own audio and image files
  * and open your files with the 'o' key command. If you want to use your own files with Bagatelle's 
  * PerformancePreset feature, I suggest you look closely at the existing presets (for Abstract Jailbreak)
- * and at the <code>runPerformanceCue(...)</code> method in the Performance Methods section of this app.
+ * and at the {@code runPerformanceCue(...)} method in the Performance Methods section of this app.
  * There are three things you need to modify to use your own performance presets:<br>
  *   <ol>
  *   <li>Create your own PerformancePreset list by editing the existing one.</li> 
  *   <li>Set the variable 'daPath" to point to the directory where you store your performance files</li>
- *   <li>Edit the entries in <code>runPerformanceCue(...)</code> to access your own files</li>
+ *   <li>Edit the entries in {@code runPerformanceCue(...)} to access your own files</li>
  *   </ol>
  *   
  * <li>At the top of the control palette, you'll find Path Source radio buttons and sliders for setting 
@@ -160,32 +164,33 @@ import net.paulhertz.pixelaudio.sampler.*;
  * </ol>
  * <p>
  * <h2>About Bagatelle</h2>
- * <b>Bagatelle</b> uses a GUI to view and manage the properties of the <code>AudioBrush</code> subclasses 
- * <code>GranularBrush</code> and <code>SamplerBrush</code>, the <code>GestureSchedule</code> class, 
- * and the Sampler and Granular audio synthesis instruments <code>PASamplerInstrumentPool</code> and 
- * <code>PAGranularInstrumentDirector</code>. 
- * An AudioBrush combines a <code>PACurveMaker</code> and a <code>GestureGranularConfig.Builder</code>.
+ * <b>Bagatelle</b> uses a GUI to view and manage the properties of the {@code AudioBrush} subclasses 
+ * {@code GranularBrush} and {@code SamplerBrush}, the {@code GestureSchedule} class, 
+ * and the Sampler and Granular audio synthesis instruments {@code PASamplerInstrumentPool} and 
+ * {@code PAGranularInstrumentDirector}. 
+ * <p>An AudioBrush combines a {@code PACurveMaker} and a {@code GestureGranularConfig.Builder}.
  * PACurveMaker models <i>gestures</i>, one of the core concepts of PixelAudio. In its simplest encoded
- * form, the <code>PAGesture</code> interface, a gesture consists of an array of points and an array of
+ * form, the {@code PAGesture} interface, a gesture consists of an array of points and an array of
  * times. The times array and the points array must be the same size, because the times array records the
  * times when something as-yet-unspecified will happen at the corresponding point in the points array. In my
  * demos for PixelAudio, what happens at a point is typically an audio event and an animation event. The
  * sound happens at the point because points in PixelAudio map onto locations in the sound buffer. Mapping
  * of bitmap locations onto audio buffer indices is another core concept of PixelAudio. Gestures over the 2D
- * space of an image become paths through audio buffers. The audio buffer is traversed either by a granular
+ * space of an image become paths through audio buffers. 
+ * </p><p>The audio buffer is traversed either by a granular
  * synthesis engine or by a sampling synthesizer. For the granular synth, a gesture corresponds to a
  * non-linear traversal of an audio buffer, potentially as a continuous sequence of overlapping grains with
  * a single envelope. The sampling synthesizer treats each point as a discrete event with its own envelope.
  * Depending on how gestures and schedules are structured, the two synthesizers can sound very similar, but
- * there are possibilities in each that the other cannot realize. As you might expect, GranularBrush
- * implements granular synth events and SamplerBrush implements sampler synth events. Both rely on
- * PACUrveMaker which, in addition to capturing the raw gesture of drawing a line, provides methods to
- * reduce points / times and create Bezier paths. PACurveMaker data can also be modified by changing
+ * there are possibilities in each that the other cannot realize. As you might expect, {@code GranularBrush}
+ * implements granular synth events and {@code SamplerBrush} implements sampler synth events. Both rely on
+ * {@code PACUrveMaker} which, in addition to capturing the raw gesture of drawing a line, provides methods to
+ * reduce points / times and create Bezier paths. {@code PACurveMaker} data can also be modified by changing
  * duration, interpolating samples, or non-linear time warping. DeadBodyWorkFlow uses 
- * <code>GestureScheduleBuilder</code> to interpolate and warp time and point lists. 
+ * {@code GestureScheduleBuilder} to interpolate and warp time and point lists. 
  * </p><p>
  * The parameters for gesture modeling, granular and sampling synthesis, time and sample interpolation, and
- * audio events are modeled in the GUI, which uses <code>GestureGranularConfig.Builder gConfig</code> to
+ * audio events are modeled in the GUI, which uses {@code GestureGranularConfig.Builder gConfig} to
  * track its current state. A GestureGranularConfig instance is associated with each AudioBrush. When you
  * click on an AudioBrush and activate it, its configuration data is loaded to the GUI and you can edit it.
  * It will be saved to the brush when you select another brush or change the edit mode. When a brush is
@@ -194,46 +199,46 @@ import net.paulhertz.pixelaudio.sampler.*;
  *     <pre>GestureSchedule schedule = scheduleBuilder.build(gb.curve(), cfg.build(), audioOut.sampleRate());</pre>
  * </p>
  * <p>The calling chain for a GranularBrush:<br>
- * <code>mouseClicked()</code> calls <code>scheduleGranularBrushClick(gb, x, y);</code>.<br>
+ * {@code mouseClicked()} calls {@code scheduleGranularBrushClick(gb, x, y);}.<br>
  * 
- * In <code>scheduleGranularBrushClick(...)</code> we get a reference to the audio buffer <code>buf</code>
- * and then use the PACurveMaker object <code>gb.curve()</code> and <code>gb.snapshot()</code> to build a
- * <code>GestureSchedule</code>, <code>sched</code>. <br>
+ * In {@code scheduleGranularBrushClick(...)} we get a reference to the audio buffer {@code buf}
+ * and then use the PACurveMaker object {@code gb.curve()} and {@code gb.snapshot()} to build a
+ * {@code GestureSchedule}, {@code sched}. <br>
  * 
- * <code>sched</code> gets timing and location information for the gesture from <code>gb.curve()</code> and
- * modifies it with the settings from the control palette which are stored <code>gb.snapshot()</code>. <br>
+ * {@code sched} gets timing and location information for the gesture from {@code gb.curve()} and
+ * modifies it with the settings from the control palette which are stored {@code gb.snapshot()}. <br>
  * 
- * We port the granular synthesis parameters from the brush to a <code>GestureGranularParams</code> object, and then call 
- * <code>playGranularGesture(buf, sched, gParams)</code> to play the granular synth. We also call 
- * <code>storeGranularCurveTL(...)</code>, which sets up UI animation events to track the grains.<br>
+ * We port the granular synthesis parameters from the brush to a {@code GestureGranularParams} object, and then call 
+ * {@code playGranularGesture(buf, sched, gParams)} to play the granular synth. We also call 
+ * {@code storeGranularCurveTL(...)}, which sets up UI animation events to track the grains.<br>
  * 
- * Parameter <code>buf</code> is the audio signal that is the source of our grains, parameter <code>sched</code> provides
- * the points and times for grains and parameter <code>params</code> provides the core parameters for granular synthesis.<br>
+ * Parameter {@code buf} is the audio signal that is the source of our grains, parameter {@code sched} provides
+ * the points and times for grains and parameter {@code params} provides the core parameters for granular synthesis.<br>
  * 
- * <code>playGranularGesture()</code> builds arrays for buffer position and pan for each individual grain and then calls 
- * <code>gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain)</code> to play the PAGranularInstrumentDirector
- * granular synth. The 'p' command key can toggle per-grain pitch jitter, which calls <code>playGestureNow()</code>in a slightly 
- * different way. See <code>playGranularGesture()</code> for details.<br>
+ * {@code playGranularGesture()} builds arrays for buffer position and pan for each individual grain and then calls 
+ * {@code gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain)} to play the PAGranularInstrumentDirector
+ * granular synth. The 'p' command key can toggle per-grain pitch jitter, which calls {@code playGestureNow()}in a slightly 
+ * different way. See {@code playGranularGesture()} for details.<br>
  * 
- * <code>PAGranularInstrumentDirector</code> its own calling chain that goes all the way down to the individual sample level 
+ * {@code PAGranularInstrumentDirector} its own calling chain that goes all the way down to the individual sample level 
  * using the Minim library's UGen interface. If you just want to play music, you'll probably never have to deal with the 
- * hierarchy of classes directly, but comments <code>PAGranularInstrumentDirector</code> may be useful. <br>
+ * hierarchy of classes directly, but comments {@code PAGranularInstrumentDirector} may be useful. <br>
  * </p>
  * 
  * <p>Part of the calling chain for a SamplerBrush:<br>
- * <code>mouseClicked()</code> calls <code>scheduleSamplerBrushClick(sb, x, y)</code>.<br>
+ * {@code mouseClicked()} calls {@code scheduleSamplerBrushClick(sb, x, y)}.<br>
  * 
- * In <code>scheduleSamplerBrushClick()</code> we get array of points on the curve with <code>getPathPoints(sb)</code> and then
- * use <code>sb.snapshot()</code> and <code>scheduleBuilder.build()</code> to build a <code>GestureSchedule</code> <br>
+ * In {@code scheduleSamplerBrushClick()} we get array of points on the curve with {@code getPathPoints(sb)} and then
+ * use {@code sb.snapshot()} and {@code scheduleBuilder.build()} to build a {@code GestureSchedule} <br>
  * 
- * Finally, we pass the schedule, snapshot and start time to <code>storeSamplerBrushEvents()</code>, an array of 
- * <code>SamplerBrushEvent</code> objects that is checked at every pass through the <code>draw()</code> loop and posts
+ * Finally, we pass the schedule, snapshot and start time to {@code storeSamplerBrushEvents()}, an array of 
+ * {@code SamplerBrushEvent} objects that is checked at every pass through the {@code draw()} loop and posts
  * both Sampler instrument triggers and animation events. Unlike the Granular instrument, which requires very accurate
  * timing, the Sampler synth requires less precision, so we can handle it through the UI frames. Sample-accurate 
  * timing is a topic for another as-yet-unreleased example sketch. <br>
  * 
- * The <code>runSamplerBrushEvents()</code> method executes the UI brushstroke animation and the Sampler audio events. 
- * Sampler events all pass through <code>pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan)</code>.
+ * The {@code runSamplerBrushEvents()} method executes the UI brushstroke animation and the Sampler audio events. 
+ * Sampler events all pass through {@code pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan)}.
  * 
  * <p>
  * <pre>
@@ -663,20 +668,20 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * but keep in mind that it is called on every brush. 
 	 */
 	enum PerformancePreset {
-	    DURATION_5SEC_SWELL('1') {
-	        @Override
-	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
-	        	int newDurationMs = 5000;
-	            cfg.targetDurationMs = newDurationMs;
-	            cfg.rdpEpsilon = 2;
-	            cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
-	            cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
-	            cfg.burstGrains = 8;
-	            cfg.grainLengthSamples = 2560;
-	            cfg.hopLengthSamples = 640;
-	            return new CueResult(curve, cfg);
-	        }
-	    },
+		DURATION_5SEC_SWELL('1') {
+			@Override
+			CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+				int newDurationMs = 5000;
+				cfg.targetDurationMs = newDurationMs;
+				cfg.rdpEpsilon = 2;
+				cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+				cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
+				cfg.burstGrains = 8;
+				cfg.grainLengthSamples = 2560;
+				cfg.hopLengthSamples = 640;
+				return new CueResult(curve, cfg);
+			}
+		},
 	    LONG_ECHO('2') {
 	        @Override
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
@@ -1810,7 +1815,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				isLoadToBoth = true;
 				applyColorMapOnLoad = true;
 				setAudioGain(-24.0f);
-				loadAudioFile(new File(daPath + "D-flat2_bassClar_window..wav"));
+				loadAudioFile(new File(daPath + "D-flat2_bassClar_window.wav"));
 				break;
 			case '2': // VOICE_AND_MELODY
 				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
@@ -1992,7 +1997,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * Sets Sampler instrument {@code pool} gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustInstrumentGain(float g) {
@@ -2006,7 +2011,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     }
 
 	/**
-	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * Sets Sampler instrument {@code pool} gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustSamplerGain(float g) {
@@ -6109,6 +6114,114 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 
-	// removed old Listener-style code for sample accurate cues
+	/*
+	 * DEADBODYWORKFLOW presets, commented out. 
+	 * To run DEADBODYWORKFLOW presets and performance cues, swap the code
+	 * below for the Abstract Jailbreak presets used above and set isRunWordGame = true.
+	 */
+	
+	
+//	/* ------------------------------------------------------------------ */
+//	/*                   DEADBODYWORKFLOW PRESET LIST                     */
+//	/* ------------------------------------------------------------------ */
+//	
+//	/* Presets for DeadBodyWorkFlow 
+//     *    1. Drone on open, 'a' to animate, '.' for raindrops begin .. end 
+//     *    2. When raindrops end, load DBWF audio + image, voice + bass clarinet enter
+//     *    3. -- PixelAudio improv
+//     *    4. -- PixelAudio improv
+//     *    5. REPRISE, load file "dbwf_02_session.json", 'm' for magic, play
+//     *    6. CLOSE, group improv once through the 16-bar section, all but b.c. dropping out in last 4 measures,
+//     *       voice sotto voce, with FX, "dead body work flow busy word game play".
+//     *    TODO brush color variations1
+//	 */ 
+//	/**
+//	 * Presets are applied to each new brush at the moment drawing is completed by 
+//	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
+//	 * all brush creation. Presets are best used just for brush modifications. If you
+//	 * want to change application settings, use runPerformanceCue() with your own custom 
+//	 * code. You can address the host application with the <code>app</app> parameter, 
+//	 * but keep in mind that is is called on every brush. 
+//	 */
+//	enum PerformancePreset {
+//	    DRONE_RAINDROPS('1') {
+//	        @Override
+//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+//	            return new CueResult(curve, cfg);
+//	        }
+//	    },
+//	    VOICE_AND_MELODY('2') {
+//	        @Override
+//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+//	            return new CueResult(curve, cfg);
+//	        }
+//	    },
+//	    GLITCH_CORTO('3') {
+//	        @Override
+//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+//	        	cfg.rdpEpsilon = 12.0f;
+//	        	cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+//	        	cfg.hopLengthSamples = 256;
+//	        	cfg.grainLengthSamples = 1024;
+//	        	cfg.burstGrains = 4;
+//	            return new CueResult(curve, cfg);
+//	        }
+//	    },
+//	    GLITCH_LARGO('4') {
+//	        @Override
+//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+//	        	curve.setBezierBias(0.5f);
+//	        	curve.setDrawWeighted(true);
+//	        	cfg.rdpEpsilon = 2.0f;
+//	        	cfg.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
+//	        	cfg.hopLengthSamples = 128;
+//	        	cfg.grainLengthSamples = 512;
+//	        	cfg.burstGrains = 16;
+//	        	cfg.pitchSemitones = -12.0f;
+//	            app.doPlayOnNewBrush = true;
+//	            app.doPlayWhileDrawing = true;
+//	        	app.usePitchedGrains = true;
+//	        	app.pitchJitter = 0.5f;
+//	            return new CueResult(curve, cfg);
+//	        }	    
+//	    },
+//	    REPRISE('5') {
+//	        @Override
+//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+//	            return new CueResult(curve, cfg);
+//	        }	    
+//	    },
+//	    CLOSE('6') {
+//	        @Override
+//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
+//	            return new CueResult(curve, cfg);
+//	        }	    
+//	    };
+//
+//	    final char key;
+//
+//	    PerformancePreset(char key) {
+//	        this.key = key;
+//	    }
+//
+//	    static PerformancePreset fromKey(char k) {
+//	        for (PerformancePreset c : values()) {
+//	            if (c.key == k) return c;
+//	        }
+//	        return null;
+//	    }
+//	    
+//	    /**
+//	     * Abstract method for concrete apply() methods implemented by each enum constant. In the preset
+//	     * logic, each constant is in effect its own function, which can be invoked by reference. 
+//	     * 
+//	     * @param cfg      configuration parameters for GestureGranularConfig, used to modify audio synthesis
+//	     * @param curve    a PACurveMaker gesture, which can be modifed by the concrete apply() method
+//	     * @param app      a reference to the host application, use with caution
+//	     * @return         a reference to the concrete apply() method for an enum constant 
+//	     */
+//	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app);
+//	}
+	 
 
 }

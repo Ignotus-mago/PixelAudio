@@ -19,7 +19,7 @@
 package net.paulhertz.pixelaudio.curves;
 
 /**
- * PAGesture provides a definitional interface for "gestures":
+ * PAGesture provides a interface for "gesture" defined by:
  * <ol>
  *   <li>a list of points and </li> 
  *   <li>a list of time offsets where</li>

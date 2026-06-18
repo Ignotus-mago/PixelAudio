@@ -33,28 +33,26 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 /**
- * @author Paul Hertz
  * 
  * PixelAudio library for Processing.
  * 
- * Typical usage in Processing is to declare a global:
  * 
- *   PixelAudio pixelaudio;
- * 
- * and then initialize it in the setup method:
- * 
- *    public void setup() {
- *      // ... 
- *      pixelaudio = new PixelAudio(this);
- *      // ... more setup code
- *    }
+ * <p>
+ * Typical usage in Processing is to declare a global:<br>
+ * <pre>  PixelAudio pixelaudio;</pre>
+ * and then initialize it in the setup method:<br>
+ * <pre>
+ *  public void setup() {
+ *    // ... setup code
+ *    pixelaudio = new PixelAudio(this);
+ *    // ... more setup code
+ *  }</pre>
  *  
  * The host PApplet can be obtained from PixelAudio by other classes. A number of useful static 
  * variables and methods are also included. 
  *
  * 
  */
-
 public class PixelAudio {
 	/** myParent is a reference to the parent sketch, we make it static so it's available to other classes */
 	public static PApplet myParent;
@@ -62,14 +60,6 @@ public class PixelAudio {
 	private static Random rando;
 	/** SHould be set by Ant script (?), but that is not happening */
 	public final static String VERSION = "##library.prettyVersion##";
-
-	// audio sampling rates
-	public static final int SR_96k = 96000;
-	public static final int SR_48k = 48000;
-	public static final int SR_44dot1k = 44100;
-	public static final int SR_256x256 = 65536;
-	public static final int SR_512x512 = 262144;
-	public static final int SR_1024x1024 = 1048576;
 
 
 	/**
@@ -152,7 +142,7 @@ public class PixelAudio {
 	 * @param a		first bound, typically a minimum value
 	 * @param b		second bound, typically a maximum value
 	 * @param f		scaling value, from 0..1 to interpolate between a and b, but can go over or under
-	 * @return		a value between a and b, scaled by f (if 0 <= f >= 1).
+	 * @return		a value between a and b, scaled by f {@code (if 0 <= f >= 1)}.
 	 */
 	static public final float lerp(float a, float b, float f) {
 	    return a + f * (b - a);

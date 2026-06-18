@@ -22,10 +22,10 @@ import processing.core.PConstants;
 import java.util.ArrayList;
 
 /**
- * Data storage for WaveSynth operator data.
- * NEW (as of 
+ * Provides data storage for WaveSynth operators and performs optimized updating of output. 
  */
 public class WaveData {
+	/** enumeration of wave states: muted, solo, etc. */
 	public enum WaveState {
 		ACTIVE, SOLO, MUTE, SUSPENDED
 	}; // muting and solo states
@@ -34,7 +34,7 @@ public class WaveData {
 	public float freq;
 	/** amplitude */
 	public float amp;
-	/** fraction of TWO_PI in the range 0..1, */
+	/** fraction of TWO_PI in the range 0..1 */
 	public float phase;
 	/** TWO_PI * phase, used internally to calculate wave value */
 	public float phaseTwoPi;
@@ -44,7 +44,7 @@ public class WaveData {
 	 *  Should be set when animation begins, otherwise is set to 0, unchanging.
 	 */
 	public float phaseInc = 0;
-	/** DC offset/bias to add to generated amplitude values, a new setting, default 0 */
+	/** DC offset/bias to add to generated amplitude values, default 0 */
 	public float dc = 0.0f;
 	/** color associated with the wave */
 	public int waveColor;
@@ -52,7 +52,7 @@ public class WaveData {
 	public boolean isMuted = false;
 	/** tracking variable for mute, solo, etc. */
 	public WaveState waveState;
-	/** TODO animSteps is an external value from a WaveSynth and application context -- is there a better way to handle it? */
+	/** number of animation steps, animSteps is typically an external value from a WaveSynth or application context */
 	public int animSteps = WaveData.defaultAnimSteps;
 	/** convenience variable, 30 seconds of animation at 24 frames per second, also context dependent */
 	public static int defaultAnimSteps = 720; 	//  24 * 30 = 720
@@ -65,21 +65,33 @@ public class WaveData {
     // --------------------------------------------------------------------
     // Per-frame oscillator state for fast recurrence
     // --------------------------------------------------------------------
-    private float s;   // sin(currentPhase)
-    private float c;   // cos(currentPhase)
-    private float cs;  // cos(deltaPhasePerPos)
-    private float sn;  // sin(deltaPhasePerPos)
-
+	
+	/** sin(currentPhase) */
+    private float s;
+    /** cos(currentPhase) */
+    private float c;
+    /** cos(deltaPhasePerPos) */
+    private float cs;
+    /** sin(deltaPhasePerPos) */
+    private float sn;
+    
+	/** frame number for oscillator state, currently not used */
     private int preparedFrame = Integer.MIN_VALUE;
+    /** track whether a frame is prepared */
     private boolean framePrepared = false;
 
-    // optional: for occasional renormalization to fight drift
+    /** optional: for occasional renormalization to fight drift */
     private int stepsSinceRenorm = 0;
+	/** how many steps between renormalizations, to keep the oscillator stable */
     private static final int RENORM_PERIOD = 1024;
 
 	
-
-	public WaveData(float f, float a, float p, float dc, float cycles, int c, int animSteps, boolean phaseScalesTwoPi) {
+    // TODO remove references to phaseScalesTwoPi and this method. phaseScalesTwoPi was used in early JSON WaveSynth data. 
+    // Once we're sure it is gone from that context, the method can be dropped. 
+    /**
+     * Legacy code, to be dropped in later releases. 
+     */
+	private WaveData(float f, float a, float p, float dc, float cycles, int c, int animSteps, boolean phaseScalesTwoPi) {
 		this.freq = f;
 		this.amp = a;
 		this.phase = p;
@@ -125,10 +137,22 @@ public class WaveData {
 		this(f, a, p, dc, cycles, c, WaveData.defaultAnimSteps, WaveData.phaseScalesTwoPI);
 	}
 
+	/**
+	 * A default WaveData instance, initialized at 440Hz, 0.5 amplitude, etc. 
+	 */
 	public WaveData() {
 		this(440.0f, 0.5f, 0.5f, 0.0f, 1.0f, PixelAudioMapper.composeColor(127, 127, 127), WaveData.defaultAnimSteps, WaveData.phaseScalesTwoPI);
 	}
 
+	/**
+	 * Update multiple fields of WaveData at once, for efficiency and to ensure consistency of related fields.
+	 * @param f			frequency
+	 * @param a			amplitude
+	 * @param p			phase, decimal fraction of TWO_PI, typically in the range [0..1]
+	 * @param cycles	number of cycles over one animation period
+	 * @param c			color associated with this WaveData object
+	 * @param steps		number of frames for animation
+	 */
 	public void updateWaveData(float f, float a, float p, float cycles, int c, int steps) {
 		this.freq = f;
 		this.amp = a;
@@ -140,15 +164,31 @@ public class WaveData {
 		this.waveColor = c;
 	}
 
+	/**
+	 * Set new frequency value for WaveData.
+	 * @param f    new frequency value for WaveData
+	 */
 	public void setFreq(float f) {
 		this.freq = f;
 	}
 
+	/**
+	 * Set new amplitude value for WaveData.
+	 * @param a    new amplitude value for WaveData
+	 */
 	public void setAmp(float a) {
 		this.amp = a;
 	}
 
-	public void setPhase(float p, boolean phaseScalesTwoPi) {
+	/**
+	 * Set new phase value for WaveData, with option to specify whether the input phase is already scaled by TWO_PI.
+	 * This method is deprecated because we want to move towards a consistent format where phase is always a fraction
+	 * of TWO_PI, and we handle the scaling internally.
+	 * @param p
+	 * @param phaseScalesTwoPi
+	 */
+	 @Deprecated
+	 void setPhase(float p, boolean phaseScalesTwoPi) {
 		this.phase = p;
 		if (phaseScalesTwoPi) {
 			this.phaseTwoPi = p * PConstants.TWO_PI;
@@ -157,35 +197,72 @@ public class WaveData {
 		}
 	}
 
+	/**
+	 * Set new phase value for WaveData, assuming the input phase is a fraction of TWO_PI (the preferred format).
+	 * @param p   new phase value for WaveData
+	 */
 	public void setPhase(float p) {
 		setPhase(p, WaveData.phaseScalesTwoPI);
 	}
 
+	/**
+	 * Set new cycles and animSteps values for WaveData, and recalculate phaseInc accordingly.
+	 * This method is useful when you want to change the speed or duration of the wave animation, which
+	 * depends on both the number of cycles over the animation period and the number of animation steps (frames).
+	 * Changing either of these parameters affects the phase increment per frame, so we recalculate it
+	 * to ensure the wave animates correctly over the specified number of cycles and frames.
+	 * 
+	 * @param cycles    new cycles value for WaveData
+	 * @param steps     new animSteps value for WaveData
+	 */
 	public void setCycles(float cycles, int steps) {
 		this.phaseCycles = cycles;
 		this.animSteps = steps;
 		this.phaseInc = (cycles * PConstants.TWO_PI) / animSteps;
 	}
 	
+	/**
+	 * Set new cycles value for WaveData, and recalculate phaseInc accordingly, using the existing animSteps value.
+	 * @param cycles    new cycles value for WaveData
+	 */
 	public void setCycles(float cycles) {
 		this.phaseCycles = cycles;
 		this.phaseInc = (cycles * PConstants.TWO_PI) / this.animSteps;
 	}
 	
+	/**
+	 * Set new animSteps value for WaveData, and recalculate phaseInc accordingly, using the existing cycles value.
+	 * @param newSteps    new animSteps value for WaveData
+	 */
 	public void setAnimationSteps(int newSteps) {
 		this.animSteps = newSteps;
-		this.phaseInc = (this.phaseCycles * PConstants.TWO_PI) / animSteps;
-		
+		this.phaseInc = (this.phaseCycles * PConstants.TWO_PI) / animSteps;		
 	}
 
+	/**
+	 * Set new DC offset value for WaveData.
+	 * DC offset is added to the generated wave values, allowing you to shift the baseline 
+	 * of the wave up or down and by extension make the contribution of a WaveData color
+	 * brighter or darker, without changing the amplitude of the wave itself. 
+	 * 
+	 * @param newDc   new dc value for WaveData
+	 */
 	public void setDc(float newDc) {
 		this.dc = newDc;
 	}
 
+	/**
+	 * Set new color value for WaveData.
+	 * @param c    new color value for WaveData
+	 */
 	public void setWaveColor(int c) {
 		this.waveColor = c;
 	}
 
+	/**
+	 * Set new wave state for WaveData.
+	 * @param newWaveState    new WaveState for WaveData
+	 */
 	public void setWaveState(WaveState newWaveState) {
 		this.waveState = newWaveState;
 		if (this.waveState == WaveState.ACTIVE)
@@ -216,6 +293,8 @@ public class WaveData {
 		return (float) Math.sin(this.phaseTwoPi - frame * this.phaseInc + this.freq * freqShift * pos * mapInc);
 	}
 	/**
+	 * Calculate the amplitude value of the wave for a given frame and position along the signal path, 
+	 * using the sine function.
 	 * @param frame			current frame
 	 * @param pos			pixel/audio sample index on signal path
 	 * @param mapInc		the increment in phase over the image pixels, typically TWO_PI / image size
@@ -312,21 +391,31 @@ public class WaveData {
         this.framePrepared = false;
         this.preparedFrame = Integer.MIN_VALUE;
     }
-
-	
-   
     
-    
-    
-	
+	/**
+	 * Calculate the raw phase value for a given frame, without mapping it to a specific range.
+	 * This method returns the phase value before applying any modulo operation to wrap it within a specific range.
+	 * @param frame
+	 * @return
+	 */
 	public float rawPhaseAtFrame(int frame) {
 		return this.phaseTwoPi - frame * this.phaseInc;
 	}
 	
+	/**
+	 * Calculate the phase value for a given frame, mapped to the range [0, TWO_PI).
+	 * @param frame
+	 * @return
+	 */
 	public float phaseAtFrame(int frame) {
 		return ((rawPhaseAtFrame(frame) % PConstants.TWO_PI) + PConstants.TWO_PI) % PConstants.TWO_PI;
 	}
 	
+	/**
+	 * Calculate the scaled phase value for a given frame, mapped to the range [0, 1).
+	 * @param frame
+	 * @return
+	 */
 	public float scaledPhaseAtFrame(int frame) {
 		float range = 1.0f;
 		float value = this.phase - (frame * this.phaseCycles / this.animSteps);
@@ -352,7 +441,11 @@ public class WaveData {
 	  return ((value - a) % range + range) % range + a;
 	}
 
-	
+	/**
+	 * Creates a deep copy of a list of WaveData objects.
+	 * @param wdList the list to copy
+	 * @return a new list containing clones of the original WaveData objects
+	 */
 	public static ArrayList<WaveData> waveDataListCopy(ArrayList<WaveData> wdList) {
 		ArrayList<WaveData> wdListCopy = new ArrayList<WaveData>();
 		for (WaveData wd : wdList) {
@@ -361,11 +454,19 @@ public class WaveData {
 		return wdListCopy;
 	}
 
+	/**
+	 * Creates a deep copy of this WaveData object.
+	 * @return a new WaveData object with the same field values as this one
+	 */
 	public WaveData clone() {
 		return new WaveData(this.freq, this.amp, this.phase, this.dc, this.phaseCycles, this.waveColor, this.animSteps);
 	}
 
-	// output values shown in Operators control panel GUI
+	
+	/**
+	 * Returns a string representation of the WaveData object, with frequency, amplitude, 
+	 * phase, DC offset, cycles, and color: all values shown in Operators control panel GUI.
+	 */
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
 		sb.append("freq: " + this.freq + ", ");

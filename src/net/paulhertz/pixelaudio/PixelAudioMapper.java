@@ -36,17 +36,20 @@ import processing.core.PVector;
  * color channel encoding methods. 
  * </p><p>
  * PixelAudioMapper uses lookup tables (LUTs) created by a separate mapping generator class,
- * <code>PixelMapGen</code>, which is a required argument in its constructor. The values in the
- * LUTs are index numbers of pixels in a bitmap or of samples in a signal array. If you think
- * of the signal as a path that visits each pixel in the image, one lookup table,
- * <code>signalToImageLUT</code>, lists the index numbers of each pixel the path visits in the
+ * {@code PixelMapGen}, which is a required argument in its constructor. The values in the LUTs
+ * are index numbers of pixels in a bitmap or samples in a signal array. If you think of the
+ * signal following a "signal path" that visits each pixel in the image once only, one lookup
+ * table, {@code signalToImageLUT}, lists the index numbers of each pixel the path visits in the
  * image, in the order that it traverses them. There is a similar lookup table for the image,
- * <code>imageToSignalLUT</code>, that lets you look up the signal value corresponding to each
- * pixel in the image. For example, when you load audio samples to the signal array,
- * <code>signalToImageLUT</code> lets you find the corresponding pixels for each sample and
- * update them to visualize the signal as a 2D image. You can save the image to a file and later
- * load it to a bitmap for display. The pixel values can then be written to an audio buffer
- * using <code>imageToSignalLUT</code>. 
+ * {@code imageToSignalLUT}, that lets you look up the signal value corresponding to each pixel
+ * in the image. For example, when you load audio samples to the signal array, 
+ * {@code signalToImageLUT} lets you find the corresponding pixels for each sample and update them
+ * to visualize the signal as a 2D image. You can save the image to a file and later load it to a
+ * bitmap for display. The pixel values can then be written to an audio buffer using
+ * {@code imageToSignalLUT}. {@code imageToSignalLUT} depends on the standard "row major" left-to-right
+ * and top-to-bottom ordering conventionally used for bitmaps. {@code signalToImageLUT}
+ * represents the arbitrary "signal path", copied from {@code PixelMapGen.pixelMap},
+ * where it is generated from the unique coordinates of the path that traverses the pixel grid.
  * </p>
  * <div>
  * Some typical uses for this class include:
@@ -73,12 +76,11 @@ import processing.core.PVector;
  * class. I have been using the minim library for audio, (https://code.compartmental.net/minim/). 
  * Minim classes are an integral part of the Sampler and Granular audio synthesis engines in 
  * PixelAudio, but you can freely use other audio data formats, including Processing's audio 
- * library classes. In PixelAudioMapper, the array of floats and ints are not tied to any particular
+ * library classes. In PixelAudioMapper, the arrays of floats and ints are not tied to any particular
  * data format. Though I do treat them as audio signals and pixels, they could be anything. 
  * PImage and BufferedImage typically store color pixel data in an array of RGB
- * or RGBA integer formatted values -- exactly what we need. Audio classes use a variety of
- * formats, particularly when reading from files, and provide methods for setting and changing
- * the format of audio sample data. 
+ * or RGBA integer formatted values. Audio classes use a variety of formats, particularly when 
+ * reading from files, and provide methods for setting and changing the format of audio sample data. 
  * </p>
  * 
  * <h3>Image</h3>
@@ -100,61 +102,65 @@ import processing.core.PVector;
  * <h2>LOOKUP TABLES</h2>
  *
  * <p>
- * At their most general, lookup tables or LUTs set up a one-to-one correspondence between two arrays
- * of the same cardinality, independent of the format of their data values. Every element in one array
- * corresponds to exactly one element in the other array. Starting from array A, for an element at index
- * A[i] we find the index of the corresponding element in array B at aToBLUT[i]. An element j in array B
- * has the index of its counterpart in array A at bToALUT[j].
+ * At their most general, lookup tables or LUTs set up a one-to-one correspondence between two
+ * arrays of the same cardinality, independent of the format of their data values. Every element
+ * in one array corresponds to exactly one element in the other array. Starting from array A,
+ * for an element at index A[i] we find the index of the corresponding element in array B at
+ * aToBLUT[i]. An element j in array B has the index of its counterpart in array A at bToALUT[j].
  * </p><p>
  * In PixelAudioMapper, we employ two LUTs, signalToImageLUT and imageToSignalLUT, to map elements in signal
  * or image to the corresponding position in image or signal.</p>
  * <pre>
- *	signalToImageLUT: integer values over {0..(h * w - 1)} map a signal array index to a pixel array index
- *	imageToSignalLUT: integer values over (0..(h * w - 1)} map an image array index to a signal array index
+ *	 signalToImageLUT: integer values over {0..(h * w - 1)} map a signal array index to an image pixel array index
+ *	 imageToSignalLUT: integer values over (0..(h * w - 1)} map an image pixel array index to a signal array index
  * </pre><p>
- * In signalToImageLUT, we can get the pixel index in the image for any index in the signal.
- * In imageToSignalLUT, we can get index in the signal for any pixel index in the image.
+ * In {@code signalToImageLUT}, we can get the pixel index in the image for any index in the signal.
+ * In {@code imageToSignalLUT}, we can get index in the signal for any pixel index in the image.
  * </p>
  * <div>
  * Each array is the inverse of the other: for an array index i:
  * <pre>
- *	signalToImageLUT[imageToSignalLUT[i]] == i;
- *	imageToSignalLUT[signalToImageLUT[i]] == i;
+ *	 signalToImageLUT[imageToSignalLUT[i]] == i;
+ *	 imageToSignalLUT[signalToImageLUT[i]] == i;
  * </pre>
  * </div><p>
- * Image data is always in row major order for PImage, our image data class. Signal values can be mapped
- * to locations in the image in any arbitrary order, as long their coordinates traverse the entire image.
- * A typical reordering might be a zigzag from upper left to lower right of an image, or a space-filling
- * fractal, or even a randomly shuffled order. The coordinates of each pixel in the image are stored as
- * indices (i = x + w * y) in signalToImageLUT.
+ * Image data is always in row major order for standard image formats such as PImage. Signal
+ * values can be mapped to locations in the image in any arbitrary order, as long their
+ * coordinates traverse the entire image. A typical reordering might be a zigzag from upper left
+ * to lower right of an image, or a space-filling fractal, or even a randomly shuffled order.
+ * The coordinates of each pixel in the image are stored as indices (i = x + w * y) in
+ * signalToImageLUT.
  * </p><p>
  * Once we know the “pixel index” for each value in the signal and have initialized signalToImageLUT,
  * we can initialize imageToSignalLUT:</p>
- *	<pre>
- *	for (int i = 0; i < w * h - 1; i++) {
+ * <pre>
+ *	  {@code for (int i = 0; i < w * h - 1; i++)} {
  *		imageToSignalLUT[signalToImageLUT[i]] = i;
- *	}
- *  </pre>
+ *	  }
+ * </pre>
  * <p>
- * The LUTs are generated by a subclass of <code>PixelMapGen</code> that is passed as an
- * argument to the <code>PixelAudioMapper</code> constructor. Each <code>PixelMapGen</code>
+ * The LUTs are generated by a child class of {@code PixelMapGen} that is passed as an
+ * argument to the {@code PixelAudioMapper} constructor. Each {@code PixelMapGen}
  * subclass generates: 
- * 1. a set of coordinates for the path traced by the signal over the image, 
- * 2. <code>pixelMap</code> for mapping from signal to image (<code>signalToImageLUT</code> in
- *    <code>PixelAudioMapper</code>), and 
- * 3. <code>sampleMap</code> (<code>imageToSignalLUT</code> in <code>PixelAudioMapper</code>), 
- *    for mapping from image to signal.
- * <code>PixelAudioMapper</code> works with copies of the two LUTs, and can access
+ * <ol>
+ *    <li>coordinates for the path traced by the signal over the image (the "signal path"),</li> 
+ *    <li>{@code pixelMap} for mapping from signal to image ({@code signalToImageLUT} in
+ *    {@code PixelAudioMapper}), and </li> 
+ *    <li>{@code sampleMap} ({@code imageToSignalLUT} in {@code PixelAudioMapper}), 
+ *    for mapping from image to signal.</li>
+ * </ol>
+ * {@code PixelAudioMapper} works with copies of the two LUTs, and can access
  * or obtain a copy of the coordinates if needed. This strategy allows the generator classes
  * to be compact and reusable, while the host class, PixelAudioMapper, can handle exchanges
- * between audio and pixel data using its copies of the LUTs. Note the the pixel array and
- * the signal array length must equal the image size = width * height.  
- * </p><p>
- * To work with PixelAudioMapper, first create a PixMapGen instance with the width and height of
- * the image you are addressing. The PixMapGen instance will generate the LUTs for its
- * particular mapping for you. You can then pass it to the PixelAudioMapper constructor, which
- * will initialize its variables from copies of the PixMapGen LUTs. Some of the logic behind
- * this process is explained in my notes to the PixMapGen abstract class.
+ * between audio and pixel data using its copies of the LUTs. Note that the pixel array and
+ * the signal array length must equal the image size, width * height.
+ * <p>
+ * To work with {@code PixelAudioMapper}, first create a {@code PixelMapGen} instance with the
+ * width and height of the image you are addressing. The {@code PixelMapGen} instance will
+ * generate the LUTs for its particular mapping for you. You can then pass it to the {@code
+ * PixelAudioMapper} constructor, which will initialize its variables from copies of the {@code
+ * PixelMapGen} LUTs. Some of the logic behind this process is explained in my notes to the
+ * {@link PixelMapGen PixelMapGen} abstract class.
  * </p>
  *
  * <h2>MAPPING AND TRANSCODING</h2>
@@ -177,19 +183,22 @@ import processing.core.PVector;
  *	writeSigToImg	write signal values directly to the image: img[i] = transcode(sig[i]);
  * </pre>
  *
- * <h2>READING AND WRITING SUBARRAYS</h2> // TODO rewrite this section
+ * <h2>READING AND WRITING SUBARRAYS</h2> 
  * <p>
- * When we want to work with subarrays of data from the signal or the image, it can be ordered either
- * by the signal or image array order or by mapping with the corresponding LUT. In the case of images,
+ * When we want to work with subarrays of data from the signal or the image, it can be ordered in
+ * signal array order, in image array order, or by mapping with a specified LUT. In the case of images,
  * we also have standard methods of reading and writing rectangular selections. We can define some
  * methods to read and write data either in the order determined by the signal or by rectangular
  * areas in the image. We’ll call the signal order methods pluck (read) and plant (write), and the pixel order
- * methods peel (read) and stamp (write). 
+ * methods peel (read) and stamp (write).
  * </p><p>
  * Arguments to mapping and writing methods are written so that source precedes target. Using this convention,
  * most methods have a unique signature that also indicates how they function. Where there are ambiguities or
  * a need for clarification, I have renamed the function, as in pluckPixelsAsFloat, pluckSamplesAsInt,
  * peelPixelsAsFloat, and peelSamplesAsInt.
+ * </p><p>
+ * The subarray methods still have to undergo test coding. I will supply examples of their use 
+ * in a future release. That said, I expect that they will function pretty much as expected. 
  * </p>
  * 
  *  
@@ -201,60 +210,52 @@ import processing.core.PVector;
  *   shiftRight()   an array rotation array values move right, arr[0] = arr[n-1], arr[1] = arr[0] ... arr[n-1] = arr[n - 2], etc.
  * </pre><p>
  * Shifting has proved so useful for animation that I am including it in the class. The shift methods also demonstrate
- * how to update the signal and pixel arrays. The <code>WaveSynth</code> class provides other methods for animation.
+ * how to update the signal and pixel arrays. The {@link WaveSynth WaveSynth} class provides other methods for animation.
  * </p>
  *
  * <h2>OTHER OPERATIONS</h2>
  * <p>
- * The following are suggestions for methods that could be implemented using PixelArrayMapper.</p>
+ * The following are suggestions for processes that could be implemented using PixelArrayMapper.</p>
  * <ul>
- *	 <li>additive audio synthesis + color organ, implemented with the WaveSynth and WaveData classes</li>
- *	 <li>granular synthesis</li>
- *	 <li>pattern generation (Argosy and Lindenmeyer classes)</li>
+ *	 <li>additive audio synthesis + color organ, implemented with the 
+ *       {@link WaveSynth WaveSynth} and {@link WaveData WaveData} classes</li>
+ *	 <li>granular synthesis, see the {@linkplain net.paulhertz.pixelaudio.granular Granular} package javadoc</li>
+ *	 <li>pattern generation {@link Argosy Argosy} and {@link Lindenmayer Lindenmayer} classes)</li>
  * 	 <li>phase shifting, amplitude modulation, etc.  </li>
  *	 <li>FFT operations on both image and signal data </li>
  *	 <li>pixel sorting, typically on image data</li>
  *	 <li>blur, sharpen, etc.</li>
- *	 <li>blending images</li>
- *	 <li>mixing signals</li>
+ *	 <li>blending images and mixing signals, implemented in {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing}</li>
  * </ul>
  *
  * <h2>UPDATING AUDIO AND IMAGE</h2>
  * <p>
  * As a rule, operations on the signal should be followed by writing to the image, and operations
  * on the image should be followed by writing to the signal. This will keep the values synchronized,
- * even though they have different numerical formats.
+ * even though they have different numerical formats. There may situations where the image is <i>not</i>
+ * a transcoding of the audio, but a pictorial interface to the audio buffer (for example) or even 
+ * a regular image that can trigger but need not represent the audio file. In the example code 
+ * for the first release of PixelAudio, I have sometimes automated synchronization of buffers
+ * and sometimes left it up to the user, via key commands.
  * </p><p>
  * In most of the examples that accompany this library, audio data uses the Lightness channel of an
  * HSL representation of the image's  RGB data, but this is by no means the only way of doing things.
- * Using the Lightness channel  restricts audio data to 8 bits, apt for glitch esthetics, but noisy.
+ * Using the Lightness channel restricts audio data to 8 bits, apt for glitch aesthetics, but noisy.
  * It's also possible to  maintain high resolution data in the signal by processing image and audio
- * data separately, and  writing audio data to the image but not in the other direction.
+ * data separately, and writing audio data to the image but not in the other direction. The live
+ * performance example sketch {@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle} uses this
+ * strategy throughout: a visualization of the audio buffer assists in interactive triggering
+ * of audio events by drawing gestures, while the audio remains unchanged.
  * </p><p>
  * Finally, it bears mentioning that the image can be treated as simply an interface into an audio
  * buffer, where events such as mouse clicks or drawing and animation trigger audio events but do not
- * modify the audio buffer. Library examples will provide some suggestions for this strategy.
+ * modify the audio buffer. This is the strategy in code example Bagatelle, which has been used as 
+ * a live performance application. 
  * </p>
  *
  * 
- * <h3>Note: Representing ranges</h3>
- * <p>I am following the convention from mathematical notation of representing closed ranges with [] and open ranges with ().
- * I occasionally lapse into the alternate notations {0..(h * w - 1)} or [0, 255]. When values are integers, it should be 
- * understood that the range covers only integer values. Floating point values are continuous, to the limits of digital computation. 
- * </p>
- * 
  * @see PixelMapGen
  * @see WaveSynth
- * 
- * Refactored 15 June 2025
- * Refactored all pluck, plant, peel, stamp, pull and push methods: 
- * 1. wrote loops that call a switch over color channels, a design which JIT can optimize; 
- * 2. included error checking in all pluck, plant, peel, stamp, pull and push methods ; 
- * 3. added helper methods. 
- * Some of the pluck and plant methods throw an error if arrays do not conform to PixelAudioMapper dimensions. 
- * All of the peel and stamp methods must conform. 
- * Pull and push methods only require arrays be of the same size, 
- * and modify the destination array if it is null or the wrong size. 
  * 
  */
 public class PixelAudioMapper {
@@ -405,28 +406,28 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * @return    a copy of the coordinates of the signal path from the PixelMapGen <code>generator</code>.
+	 * @return    a copy of the coordinates of the signal path from the PixelMapGen {@code generator}.
 	 */
 	public ArrayList<int[]> getGeneratorCoordinatesCopy() {
 		return this.generator.getCoordinatesCopy();
 	}
 	
 	/**
-	 * @return    the descriptive string associated with the PixelMapGen <code>generator</code>
+	 * @return    the descriptive string associated with the PixelMapGen {@code generator}
 	 */
 	public String getGeneratorDescription() {
 		return this.generator.describe();
 	}
 
 	/**
-	 * @return    the PixelMapGen <code>generator</code> for this PixelAudioMapper
+	 * @return    the PixelMapGen {@code generator} for this PixelAudioMapper
 	 */
 	public PixelMapGen getGenerator() {
 		return this.generator;
 	}
 	
 	/**
-	 * Sets the PixelMapGen <code>generator</code> for this PixelAudioMapper.
+	 * Sets the PixelMapGen {@code generator} for this PixelAudioMapper.
 	 * @param newGen    a new PixelMapGen
 	 */
 	public void setGenerator(PixelMapGen newGen) {
@@ -435,7 +436,7 @@ public class PixelAudioMapper {
 	}
 	
 	/**
-	 * Calls PixelMapGen <code>generator</code> to create coordinates and LUTs.
+	 * Calls PixelMapGen {@code generator} to create coordinates and LUTs.
 	 */
 	public void regenerate() {
 		this.width = generator.getWidth();
@@ -696,11 +697,11 @@ public class PixelAudioMapper {
 	 */
 
 	/**
-	 * Creates an array of int which contains the values in <code>img</code> reordered by the lookup table <code>lut</code>.
+	 * Creates an array of int which contains the values in {@code img} reordered by the lookup table {@code lut}.
 	 * The two arrays, img and lut, must be the same size.
 	 * 
 	 * @param img    an array of int, typically of RGB values
-	 * @param lut    a look up table of the same size as <code>img</code>
+	 * @param lut    a look up table of the same size as {@code img}
 	 * @return       a new array of int with the values in img reordered by the lookup table
 	 * @throws IllegalArgumentException if img.length != lut.length
 	 */
@@ -714,7 +715,7 @@ public class PixelAudioMapper {
 	}
 
 	/**
-	 * Creates an array of float which contains the values in <code>sig</code> reordered by the lookup table <code>lut</code>.
+	 * Creates an array of float which contains the values in {@code sig} reordered by the lookup table {@code lut}.
 	 * The two arrays, sig and lut, must be the same size.
 	 * 
 	 * @param sig    an array of float, typically audio samples
@@ -831,7 +832,7 @@ public class PixelAudioMapper {
 
 	/**
 	 * Writes transcoded pixel values directly to the signal, without using a LUT to redirect.
-	 * Values are calculated with the standard luminosity equation, <code>gray = 0.3 * red + 0.59 * green + 0.11 * blue</code>.
+	 * Values are calculated with the standard luminosity equation, {@code gray = 0.3 * red + 0.59 * green + 0.11 * blue}.
 	 *
 	 * @param img		source array of RGB pixel values
 	 * @param sig		target array of audio samples in the range [-1.0, 1.0]
@@ -1044,9 +1045,9 @@ public class PixelAudioMapper {
 	
 
 	/**
-     * Starting at <code>signalPos</code>, reads <code>length</code> values from pixel array <code>img</code> in signal order
-     * using <code>signalToImageLUT</code> to redirect indexing and then returns them as an array of transcoded float values.
-     * Note that <code>signalPos = this.imageToSignalLUT[x + y * this.width]</code> or <code>this.lookupSample(x, y)</code>.
+     * Starting at {@code signalPos}, reads {@code length} values from pixel array {@code img} in signal order
+     * using {@code signalToImageLUT} to redirect indexing and then returns them as an array of transcoded float values.
+     * Note that {@code signalPos = this.imageToSignalLUT[x + y * this.width]} or {@code this.lookupSample(x, y)}.
      * 
 	 * Starting at image coordinates (x, y), reads values from pixel array img using imageToSignalLUT
 	 * to redirect indexing and returns them as an array of transcoded audio values in signal order.
@@ -1106,7 +1107,7 @@ public class PixelAudioMapper {
 
 	// NO LUT
 	/**
-     * Starting at <code>signalPos</code>, reads and transcodes <code>length</code> values from float array <code>sig</code> 
+     * Starting at {@code signalPos}, reads and transcodes {@code length} values from float array {@code sig} 
      * and returns them as an RGB array in signal order.
 	 * No lookup tables are used. 
 	 * Does not require array lengths to equal this.width * this.height. 
@@ -1137,9 +1138,9 @@ public class PixelAudioMapper {
 
 
 	/**
-	 * Starting at <code>signalPos</code>, writes <code>length</code> values from RGB array <code>sprout</code> 
-	 * into RGB array <code>img</code>, in signal order. Since we redirect indexing with a lookup table, 
-	 * <code>img.length</code> is necessarily equal to mapSize, i.e., this.width * this.height. If not,
+	 * Starting at {@code signalPos}, writes {@code length} values from RGB array {@code sprout} 
+	 * into RGB array {@code img}, in signal order. Since we redirect indexing with a lookup table, 
+	 * {@code img.length} is necessarily equal to mapSize, i.e., this.width * this.height. If not,
 	 * we'll throw an IllegalArgumentException.
 	 *
 	 * @param sprout		source array of RGB values to insert into target array img
@@ -1168,7 +1169,7 @@ public class PixelAudioMapper {
 	/**
 	 * Writes values from RGB source array sprout into img at positions mapped 
 	 * by the signal path, using the specified channel. Since we redirect indexing with a lookup table, 
-	 * <code>img.length</code> is necessarily equal to mapSize, i.e., this.width * this.height. If not,
+	 * {@code img.length} is necessarily equal to mapSize, i.e., this.width * this.height. If not,
 	 * we'll throw an IllegalArgumentException.
 	 * 
 	 * @param sprout      source array of RGB values to insert
@@ -1198,7 +1199,7 @@ public class PixelAudioMapper {
 	/**
 	 * Writes values from audio data array sprout into the specified channel of the img array
 	 * at positions mapped by the signal path, starting at signalPos for the given length.
-	 * Since we redirect indexing with a lookup table, <code>img.length</code> is necessarily
+	 * Since we redirect indexing with a lookup table, {@code img.length} is necessarily
 	 * equal to mapSize, i.e., this.width * this.height. If not, we'll throw an IllegalArgumentException.
   	 *
 	 * @param sprout	   source array audio samples ([-1.0, 1.0])
@@ -1254,8 +1255,8 @@ public class PixelAudioMapper {
 
 	// NO LUT
 	/**
-	 * Starting at <code>signalPos</code>, insert <code>length</code> transcoded RGB samples from source array <code>sprout</code> 
-	 * into target array of audio samples <code>sig</code>. 
+	 * Starting at {@code signalPos}, insert {@code length} transcoded RGB samples from source array {@code sprout} 
+	 * into target array of audio samples {@code sig}. 
 	 * No lookup tables are used. 
 	 * Does not require array lengths to equal this.width * this.height. 
 	 *

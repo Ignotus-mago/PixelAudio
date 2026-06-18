@@ -27,7 +27,7 @@ import java.util.HashMap;
  * put(), retrieve them with get(). I used this class for Hilbert curve generation
  * until I found analytical methods in Wikipedia to speed up curve generation.
  * 
- * There will be demos, but probably not for the early beta release. 
+ * There will be demos, but probably after the first public release. 
  * 
  */
 public class Lindenmayer extends Object {
