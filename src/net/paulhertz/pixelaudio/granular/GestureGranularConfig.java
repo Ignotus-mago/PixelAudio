@@ -215,6 +215,10 @@ public final class GestureGranularConfig {
     	}
     }
     
+    /**
+     * Returns a deep copy of this GestureGranularConfig.
+     * @return a deep copy of this GestureGranularConfig
+     */
     public Builder copy() {
     	Builder b = new Builder();
     	b.pathMode = this.pathMode;
@@ -237,6 +241,10 @@ public final class GestureGranularConfig {
     	return b;
     }
     
+    /**
+     * Sets the fields of this GestureGranularConfig from a supplied Builder.
+     * @param src    a GestureGranularConfig.Builder to copy
+     */
     public void copyFrom(GestureGranularConfig.Builder src) {
     	this.pathMode = src.pathMode;
     	this.rdpEpsilon = src.rdpEpsilon;
