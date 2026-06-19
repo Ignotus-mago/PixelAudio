@@ -70,7 +70,11 @@ public final class GestureEventParams {
      */
     public final int scheduleId;
 
-    private GestureEventParams(Builder b) {
+    /**
+	 * Private constructor; use Builder to create instances.
+	 * @param b    a GestureEventParams.Builder instance
+	 */
+	private GestureEventParams(Builder b) {
         this.n = b.n;
 
         this.startIndices = b.copyArrays ? Arrays.copyOf(b.startIndices, b.startIndices.length) : b.startIndices;
@@ -91,7 +95,8 @@ public final class GestureEventParams {
         this.scheduleId = b.scheduleId;
     }
 
-    public static Builder builder(int n) {
+    /** Create a builder for the given number of events. */
+	public static Builder builder(int n) {
         return new Builder(n);
     }
 
@@ -179,7 +184,11 @@ public final class GestureEventParams {
     }
     
 
-    @Override
+    /**
+	 * String representation of this object's settings and array lengths (not contents).
+	 * @return a string representation of this object
+	 */
+	@Override
     public String toString() {
         return "GestureEventParams{n=" + n
                 + ", startIndices=" + (startIndices != null ? startIndices.length : 0)
@@ -199,6 +208,9 @@ public final class GestureEventParams {
     // Builder
     // ------------------------------------------------------------------------
 
+    /**
+     * A builder for creating instances of GestureEventParams.
+     */
     public static final class Builder {
         private final int n;
 
@@ -284,5 +296,3 @@ public final class GestureEventParams {
         }
     }
 }
-
-
