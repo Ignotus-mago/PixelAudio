@@ -1,14 +1,15 @@
 /**
  * Granular synthesis classes for PixelAudio.
  *
- * <p>The modern granular synthesis engine follows the chain
+ * <p>PixelAudio's granular synthesis engine follows the chain
  * {@code PAGranularInstrumentDirector -> PAGranularInstrument ->
  * PAGranularSampler -> PAGranularVoice}, with {@code PASource}
  * implementations providing sample data and grain behavior. 
- * Example code makes exclusive use of {@code PABurstGranularSource}
+ * Example code makes exclusive use of 
+ * {@link net.paulhertz.pixelaudio.granular.PABurstGranularSource PABurstGranularSource}
  * as the most versatile {@code PASource}.</p>
  *
- * <p><b>Modern granular synthesis engine</b></p>
+ * <p><b>Granular synthesis engine</b></p>
  * <ul>
  *   <li>{@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector}
  *   coordinates gesture playback, scheduling, event parameters, and granular source creation.</li>
