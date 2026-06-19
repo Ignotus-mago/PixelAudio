@@ -7,8 +7,8 @@ import processing.core.PApplet;
 import processing.core.PVector;
 
 /**
- * Interface for applications extending PApplet that use NetworkDelegate to send and receive UDP messages.
- * @see NetworkDelegate
+ * Interface for applications extending PApplets that use NetworkDelegate to send and receive UDP messages.
+ * @see TutorialOne_04_Network TutorialOne_04_Network
  */
 public interface PANetworkClientINF {
 	

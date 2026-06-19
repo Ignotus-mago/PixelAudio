@@ -49,7 +49,7 @@ import ddf.minim.*;
  * ArgosyMixer demonstrates how the Argosy class can create and animate patterns 
  * and save them to video. This is still a work in progress, with the new PASamplerInstrument 
  * class and audio events not yet handled in the most efficient way. There will be updates.
- * <P>
+ * <p>
  * The Argosy class turns arrays of integers into color patterns. It steps through the Pattern
  * array to create blocks of pixels and assigns color to the blocks as it steps through the 
  * Colors arrays. The arrays don't have to be the same size--this creates variations in the 
@@ -433,7 +433,7 @@ public class ArgosyMixer extends PApplet {
 	}
 	
 	/**
-	 * Applies alpha channel value <code>alpha</code> to all the RGB colors in <code>colorArray</code> 
+	 * Applies alpha channel value {@code alpha} to all the RGB colors in {@code colorArray} 
 	 * and returns a new array with the modified colors.
 	 * 
 	 * @param colorArray    an array of RGB colors
@@ -450,7 +450,7 @@ public class ArgosyMixer extends PApplet {
 	}
 	
     /**
-     * Initializes Argosy instance <code>argo1</code> and then shifts its pixels by <code>shift</code> pixels.
+     * Initializes Argosy instance {@code argo1} and then shifts its pixels by {@code shift} pixels.
      * 
      * @param shift    number of pixels to rotate left argo1.argosyArray
      */
@@ -467,7 +467,7 @@ public class ArgosyMixer extends PApplet {
 	}
 	
     /**
-     * Initializes Argosy instance <code>argo2</code> and then shifts its pixels by <code>shift</code> pixels.
+     * Initializes Argosy instance {@code argo2} and then shifts its pixels by {@code shift} pixels.
      * 
      * @param shift    number of pixels to rotate left argo2.argosyArray
      */
@@ -498,7 +498,7 @@ public class ArgosyMixer extends PApplet {
 	 * @param argosyGap         number of pixels between repeated patterns
 	 * @param argosyGapColor    color to apply to the argosy gap
 	 * @param argoStep          the number of pixels to rotate when animating, mostly ignored in this app
-	 * @return
+	 * @return a new Argosy instance 
 	 */
 	public Argosy getArgosy(PixelAudioMapper mapper, int[] argosyPattern, int argosyUnitSize, int argosyReps, boolean isCentered, 
 			                int[] argosyColors, int argosyGap, int argosyGapColor, int argoStep) {
@@ -670,8 +670,8 @@ public class ArgosyMixer extends PApplet {
 	/**
 	 * Handles key press events passed on by the built-in keyPressed method. 
 	 * 
-	 * @param key
-	 * @param keyCode
+	 * @param key        the key the user pressed, as a char
+	 * @param keyCode    numeric keycode for the key the user pressed
 	 */
 	public void parseKey(char key, int keyCode) {
 		argo1PixelCount =  argo1.getArgosySize() * argo1.getUnitSize();

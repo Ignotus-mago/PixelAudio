@@ -136,7 +136,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * that will change the ADSR envelope of each sampler event point.</li> 
  * 
  * <li>The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus 
- * many controls for granular synthesis:</li>
+ * many controls for granular synthesis:
  *   <ol>
  *   <li>The Hop Mode radio buttons determine if the duration of the granular event is determined 
  *   by the gesture timing data in the brushstroke's PACurveMaker instance, or by the Grain
@@ -146,9 +146,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   <li>Grain Length and Hop Length sliders control the spacing of the grains. Hop Length is only 
  *   used for Fixed Hop Mode. Grain and Hop durations are in milliseconds.</li> 
  *   <li>The Warp radio buttons and slider control non-linear timing changes to the gesture.</li> 
- *   </ol>
+ *   </ol></li>
  * <li>There are many key commands too, including the 'o' command to load a new audio files. Some 
- * commands are particularly useful with granular synthesis:</li> 
+ * commands are particularly useful with granular synthesis:
  *   <ol>
  *   <li>The 'q' command key will calculate the optimal number of grains in a gesture (usually in 
  *   GESTURE Path Mode) and update the control palette. This can provide smooth granular synthesis 
@@ -160,9 +160,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   <li>The 'x' command key deletes the brush you are hovering over, if it is editable.</li>
  *   <li>The 'z' command key swaps the instrument type of the brush you are hovering over and changes 
  *   edit mode to match.</li>
- *   </ol>
+ *   </ol></li> 
  * </ol>
- * <p>
+ * 
  * <h2>About Bagatelle</h2>
  * <b>Bagatelle</b> uses a GUI to view and manage the properties of the {@code AudioBrush} subclasses 
  * {@code GranularBrush} and {@code SamplerBrush}, the {@code GestureSchedule} class, 
@@ -195,9 +195,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  * click on an AudioBrush and activate it, its configuration data is loaded to the GUI and you can edit it.
  * It will be saved to the brush when you select another brush or change the edit mode. When a brush is
  * activated with a click, the schedule is built from its PACurveMaker and GestureGranularConfig.Builder
- * instance variables:
+ * instance variables: </p>
  *     <pre>GestureSchedule schedule = scheduleBuilder.build(gb.curve(), cfg.build(), audioOut.sampleRate());</pre>
- * </p>
+ *
  * <p>The calling chain for a GranularBrush:<br>
  * {@code mouseClicked()} calls {@code scheduleGranularBrushClick(gb, x, y);}.<br>
  * 
@@ -240,7 +240,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * The {@code runSamplerBrushEvents()} method executes the UI brushstroke animation and the Sampler audio events. 
  * Sampler events all pass through {@code pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan)}.
  * 
- * <p>
+ * 
  * <pre>
  * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).
  * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).
@@ -293,7 +293,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * Press 'h' or 'H' to show help message.
  * </pre>
- * </p>
+ * 
  * 
  * <h3>MacOS AUDIO TO MAX SETUP</h3>
  * 
@@ -664,7 +664,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
 	 * all brush creation. Presets are best used just for brush modifications. If you
 	 * want to change application settings, use runPerformanceCue() with your own custom 
-	 * code. You can address the host application with the <code>app</app> parameter, 
+	 * code. You can address the host application with the {@code app} parameter, 
 	 * but keep in mind that it is called on every brush. 
 	 */
 	enum PerformancePreset {

@@ -62,7 +62,7 @@ import com.hamoid.*;
  * audio and image files, triggering audio events, and animating pixels to change
  * audio sample order, it adds the capability of drawing in the display window to trigger 
  * audio events. Lines drawn on the display are captured as arrays of points and times. 
- * The data is saved to a <code>PACurveMaker</code> object that can be used to create 
+ * The data is saved to a {@code PACurveMaker} object that can be used to create 
  * brushstrokes and event schedules. Brushstrokes can be activated to trigger audio events. 
  * In PixelAudio's conceptual framework, points combined with times constitute a <b>gesture</b>.  
  * See {@link net.paulhertz.pixelaudio.curves.PAGesture PAGesture} for a formal definition.
@@ -75,8 +75,8 @@ import com.hamoid.*;
  * </p><p>
  * PixelAudio provides two types of audio synthesis: Sampler intruments, introduced in
  * previous sketches, and Granular instruments. This sketch introduces PixelAudio's granular 
- * synthesis engine with the <code>PAGranularInstrumentDirector</code> class and provides
- * another class for Sampler instruments, <code>PASamplerInstrumentPool</code>. The Granular
+ * synthesis engine with the {@code PAGranularInstrumentDirector} class and provides
+ * another class for Sampler instruments, {@code PASamplerInstrumentPool}. The Granular
  * instruments and the Sampler instruments both depend on a hierarchy of classes that 
  * implement a signal-processing chain. It's unlikely that you will have to deal with the
  * low-level processing. PAGranularInstrumentDirector and PASamplerInstrumentPool provide
@@ -90,7 +90,7 @@ import com.hamoid.*;
  * <li>Launch TutorialOne_03_Drawing. The display window opens with a pre-loaded file, "Saucer_mixdown.wav",
  * where audio data is displayed as grayscale values. A spectrum of rainbow colors overlaid on the 
  * image follows the Signal Path, the mapping of the audio signal to the image pixels created
- * by the PixelMapGen <code>multigen</code> and managed by the PixelAudioMapper <code>mapper</code>. 
+ * by the PixelMapGen {@code multigen} and managed by the PixelAudioMapper {@code mapper}. 
  * This particular PixelMapGen plots time from top to bottom, left to right, in eight rows.</li> 
  * <li>Click on the image or press the spacebar with the cursor over the image to play 
  * a Sampler instrument sound.</li> 
@@ -108,7 +108,7 @@ import com.hamoid.*;
  * </li>
  * <li>The Sampler instrument usually sounds good with ALL_POINTS or REDUCED_POINTS. It may produce distortion with CURVE_POINTS.
  * <ul>
- *   <li>Change the 'epsilon' value that controls the number of reduced points with the '<' or '>' keys.</li>
+ *   <li>Change the 'epsilon' value that controls the number of reduced points with the {@code '<' or '>'} keys.</li>
  *   <li>Change the number of curve steps with the '[' or ']' keys.</li>
  * </ul>
  * </li>
@@ -149,7 +149,7 @@ import com.hamoid.*;
  *   <li>SHIFT-RIGHT ARROW and SHIFT-LEFT ARROW adjust the gain of a brush you are hovering over.</li> 
  *   <li>The '[' and ']' keys adjust the number of steps in the CURVE_STEPS representation of the curve.</li>
  *   <li>The 'f' and 'g' keys toggle between FIXED and GESTURE playback. FIXED playback ignores 
- *   gesture timing and overlaps each audio sample by the time offset <code>hopSamples</code>.</li>
+ *   gesture timing and overlaps each audio sample by the time offset {@code hopSamples}.</li>
  *   </ul>
  * </li>
  * <li>Some adjustments will make the granular samples sound more like the underlying buffer.
@@ -187,31 +187,31 @@ import com.hamoid.*;
  * PACurveMaker can also reduce the number of points captured, using the
  * Ramer-Douglas-Peucker (RDP) algorithm, to create the REDUCED_POINTS
  * representation of a gesture. RDP controls point reduction with a numerical
- * value, <code>epsilon</code>, which you can vary to control the number of
+ * value, {@code epsilon}, which you can vary to control the number of
  * reduced points in a gesture. PACurveMaker can turn the reduced points
  * representation of a drawn line into a Bezier curve, the CURVE_POINTS
  * representation of the gesture. The curve can be divided into line segments,
  * with the potential to generate an audio event at each vertex. The number of
- * divisions is controlled by the <code>PACurveMaker.setCurveSteps(int
- * curveSteps)</code> method. In the GesturePlayground sketch you can vary the
+ * divisions is controlled by the {@code PACurveMaker.setCurveSteps(int
+ * curveSteps)} method. In the GesturePlayground sketch you can vary the
  * curve divisions with the GUI.
  * </p><p>
  * The CURVE_POINTS curve is used to create a stylized brushstroke. The
- * brushstroke is an <code>PABezShape</code> object. PABezShape provides a
- * <code>pointInPoly()</code> method that you can use to detect the mouse
+ * brushstroke is an {@code PABezShape} object. PABezShape provides a
+ * {@code pointInPoly()} method that you can use to detect the mouse
  * hovering over or clicking within a brushstroke. TutorialOne_03_Drawing shows
  * how the brushstroke can be activated as an animated UI element and used to
  * trigger audio events. 
  * </p><p>
  * <b>Bounds Policy:</b> When you are drawing, points may be captured outside
- * the display window bounds. The <code>BoundsPolicy</code> class provides methods
+ * the display window bounds. The {@code BoundsPolicy} class provides methods
  * to bring these points in bounds before they are saved as a gesture to a
  * PACurveMaker object. When a gesture is represented as a Bezier curve, points 
- * may be moved outside the display window bounds. <code>BoundsPolicy</code> can
+ * may be moved outside the display window bounds. {@code BoundsPolicy} can
  * also bring these points back in bounds. Points must be in bounds to play
  * audio events, since only in-bounds points correspond to audio buffer samples. 
  * If you do a search on "boundsPolicy", you will see how it is initialized in 
- * <code>setup()</code> and used in <code>getPlaybackScheduleForBrush(...)</code>.
+ * {@code setup()} and used in {@code getPlaybackScheduleForBrush(...)}.
  * It's a fairly simple but critical aspect of using drawing to create audio 
  * instrument events in PixelAudio. For the sake of simplicity, I've implemented
  * it in a somewhat redundant form here. In performance, a caching scheme might
@@ -219,24 +219,24 @@ import com.hamoid.*;
  * </p>
  * <h2>Audio Processing</h2>
  * <p>
- * The <code>PAGranularInstrumentDirector</code> class manages the high level processes
+ * The {@code PAGranularInstrumentDirector} class manages the high level processes
  * for granular synthesis. Probably all the functionality you will commonly need 
- * is available in its methods. The various <code>playGestureNow(...)</code> methods 
+ * is available in its methods. The various {@code playGestureNow(...)} methods 
  * allow you to control the timing, panning, pitch, and gain of individual grains, 
  * if you want to. Parameters for grain shaping and are set with the 
  * GestureGranularParams class. The GestureEventParams class supports arrays of 
  * values to set timing, pan, gain, and pitch for individual grains. The timing and 
  * pan settings for individual grains can also be passed as arrays to overloaded
- * <code>playGestureNow(...)</code> methods. 
+ * {@code playGestureNow(...)} methods. 
  * </p><p>
  * Here's an outline of the granular synbthesis chain, which you can feel free to skip:
- * <code>PAGranularInstrumentDirector</code> sets up the <code>PABurstGranularSource</code> 
- * and passes it to the granular synth processing chain, first to <code>PAGranularInstrument</code> 
- * and then to <code>PAGranularSampler</code>, where the <code>PABurstGranularSource</code> is 
- * one of various parameters used to create an <code>AudioScheduler</code> scheduler. In
- * <code>PAGranularSampler.uGenerate()</code>, <code>scheduler.processBlock()</code> is called, 
- * the audio signal <code>leftMix</code> and <code>rightMix</code> variables are initialized 
- * to 0 and used to accumulate the currently active <code>PAGranularVoice</code> instances. 
+ * {@code PAGranularInstrumentDirector} sets up the {@code PABurstGranularSource} 
+ * and passes it to the granular synth processing chain, first to {@code PAGranularInstrument} 
+ * and then to {@code PAGranularSampler}, where the {@code PABurstGranularSource} is 
+ * one of various parameters used to create an {@code AudioScheduler} scheduler. In
+ * {@code PAGranularSampler.uGenerate()}, {@code scheduler.processBlock()} is called, 
+ * the audio signal {@code leftMix} and {@code rightMix} variables are initialized 
+ * to 0 and used to accumulate the currently active {@code PAGranularVoice} instances. 
  * After that, uGenerate applies power normalization and soft clipping to the signal and returns 
  * its value. All of this is set in motion through Minim's UGen interface, 
  * which PAGranularSampler extends.
@@ -300,7 +300,7 @@ import com.hamoid.*;
  * 
  * REVISIONS
  * 
- * Rendering rule: mapper.mapSigToImgShifted(audioSignal, mapImage.pixels, chan, totalShift);
+ * Rendering rule: mapper.mapSigToImgShifted(audioSignal, mapImage.pixels, chan, totalShift);<br>
  * Click rule: int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
  * 
  * 
@@ -1252,7 +1252,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	}
 
 	/**
-	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * Sets Sampler instrument {@code pool} gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustPoolGain(float g) {
@@ -2559,18 +2559,21 @@ public class TutorialOne_03_Drawing extends PApplet {
 			int cc = isSelected ? circleColor : dimCircleColor;
 			// selected the appropriate point set for drawing
 			switch (b.cfg().pathMode) {
-			case REDUCED_POINTS -> {
-				PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
-				PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
-			}
-			case CURVE_POINTS -> {
-				PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
-				PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
-			}
-			case ALL_POINTS -> {
-				PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
-				PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
-			}
+		      case REDUCED_POINTS: {
+		          PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
+		          PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
+		          break;
+		        }
+		        case CURVE_POINTS: {
+		          PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
+		          PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
+		          break;
+		        }
+		        case ALL_POINTS: {
+		          PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
+		          PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+		          break;
+		        }
 			}
 		}
 	}
@@ -2612,11 +2615,12 @@ public class TutorialOne_03_Drawing extends PApplet {
 	 */
 	ArrayList<PVector> getPathPoints(AudioBrushLite b) {
 		PACurveMaker cm = b.curve();
-		return switch (b.cfg().pathMode) {
-		case ALL_POINTS -> cm.getAllPoints();
-		case REDUCED_POINTS -> cm.getReducedPoints();
-		case CURVE_POINTS -> cm.getCurvePoints();
-		};
+		switch (b.cfg().pathMode) {
+		case ALL_POINTS: return cm.getAllPoints();
+		case REDUCED_POINTS: return cm.getReducedPoints();
+		case CURVE_POINTS: return cm.getCurvePoints();
+		default: return cm.getAllPoints();
+		}
 	}
 
 	/**
@@ -2627,20 +2631,24 @@ public class TutorialOne_03_Drawing extends PApplet {
 	public GestureSchedule getScheduleForBrush(AudioBrushLite b) {
 		GestureSchedule sched;
 		switch (b.cfg().pathMode) {
-		case REDUCED_POINTS -> {
-			sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
-		}
-		case CURVE_POINTS -> {
-			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
-		}
-		case ALL_POINTS -> {
-			sched = b.curve.getAllPointsSchedule();
-		}
-		default -> {
-			sched = b.curve.getAllPointsSchedule();
-		}
-		}
-		return sched;
+	    case REDUCED_POINTS: {
+	        sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
+	        break;
+	      }
+	      case CURVE_POINTS: {
+	        sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
+	        break;
+	      }
+	      case ALL_POINTS: {
+	        sched = b.curve.getAllPointsSchedule();
+	        break;
+	      }
+	      default: {
+	        sched = b.curve.getAllPointsSchedule();
+	        break;
+	      }
+	    }
+	    return sched;
 	}
 	
 	/**

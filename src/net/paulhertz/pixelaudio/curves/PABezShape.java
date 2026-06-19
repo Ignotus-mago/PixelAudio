@@ -92,7 +92,7 @@ public class PABezShape {
    * Creates a BezShape with initial point x,y, closed or open according to the value of isClosed.
    * Fill, stroke, and weight of shapes are set from their values in the Processing environment.
    * The Processing transformation matrix (set by calls to rotate, translate and scale) is saved
-   * to the instance variable <code>ctm</code>, but no transform is performed.  Note that drawing
+   * to the instance variable {@code ctm}, but no transform is performed.  Note that drawing
    * is affected by the current Processing transform.
    *  
    * @param x    x-coordinate of initial point

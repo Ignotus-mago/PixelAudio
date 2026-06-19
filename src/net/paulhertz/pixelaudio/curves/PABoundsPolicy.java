@@ -42,7 +42,7 @@ import processing.core.PVector;
  *   SKIP_TIME  drop out-of-bounds points and compress time across removed spans
  *   KEEP_TIME  drop out-of-bounds points and preserve surviving timestamps
  *   
- * @see example code: Bagatelle, TutorialOne_03_Drawing, TutorialOne_04_Network, TutorialOne_06_WindowBuffer
+ * @see net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing
  */
 public final class PABoundsPolicy {
 

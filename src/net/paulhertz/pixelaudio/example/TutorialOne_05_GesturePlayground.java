@@ -54,8 +54,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <li>Launch the sketch. A display window and a palette of Graphical User Interface (GUI) controls appears.
  * The display window has an audio file preloaded. The grayscale values in the image are transcoded audio
  * samples. An overlaid rainbow spectrum traces the Signal Path, which maps an audio signal to the image
- * pixels. The Signal Path is created by the PixelMapGen <code>multigen</code> and managed by the 
- * PixelAudioMapper <code>mapper</code>. The Signal Path starts in the upper left corner and ends 
+ * pixels. The Signal Path is created by the PixelMapGen {@code multigen} and managed by the 
+ * PixelAudioMapper {@code mapper}. The Signal Path starts in the upper left corner and ends 
  * in the lower right corner.</li> 
  * 
  * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing, 
@@ -80,7 +80,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * that will change the ADSR envelope of each sampler event point.</li> 
  * 
  * <li>The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus 
- * many controls for granular synthesis:</li>
+ * many controls for granular synthesis:
  *   <ol>
  *   <li>The Hop Mode radio buttons determine if the duration of the granular event is determined 
  *   by the gesture timing data in the brushstroke's PACurveMaker instance, or by the Grain
@@ -91,9 +91,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   used for Fixed Hop Mode. Grain and Hop durations are in milliseconds.</li> 
  *   <li>The Warp radio buttons and slider control non-linear timing changes to the gesture. 
  *   Experiment to find out how they work.</li> 
- *   </ol>
+ *   </ol></li>
  * <li>There are many key commands too, including the 'o' command to load a new audio files. Some 
- * commands are particularly useful with granular synthesis:</li> 
+ * commands are particularly useful with granular synthesis:
  *   <ol>
  *   <li>The 'q' command key will calculate the optimal number of grains in a gesture (usually in 
  *   GESTURE Path Mode) and update the control palette. This can provide smooth granular synthesis 
@@ -102,18 +102,18 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   <li>The 'x' command key deletes the brush you are hovering over, if it is editable.</li>
  *   <li>The 'w' command key swaps the instrument type of the brush you are hovering over and changes 
  *   edit mode to match.</li>
- *   </ol>
+ *   </ol></li>
  * </ol>
  * 
  * <h2>About GesturePlayground</h2>
  * <p>
  * <b>GesturePlayground</b> uses a GUI to provide a tour of the usage and properties of the
- * <code>AudioBrush</code> subclasses <code>GranularBrush</code> and <code>SamplerBrush</code>,
- * the <code>GestureSchedule</code> class, and the Sampler and Granular audio synthesis
- * instruments <code>PASamplerInstrumentPool</code> and <code>PAGranularInstrumentDirector</code>. 
- * An AudioBrush combines a <code>PACurveMaker</code> and a <code>GestureGranularConfig.Builder</code>. 
+ * {@code AudioBrush} subclasses {@code GranularBrush} and {@code SamplerBrush},
+ * the {@code GestureSchedule} class, and the Sampler and Granular audio synthesis
+ * instruments {@code PASamplerInstrumentPool} and {@code PAGranularInstrumentDirector}. 
+ * An AudioBrush combines a {@code PACurveMaker} and a {@code GestureGranularConfig.Builder}. 
  * PACurveMaker models <i>gestures</i>, one of the core concepts of PixelAudio. In its simplest
- * encoded form, the <code>PAGesture</code> interface, a gesture consists of an array of points
+ * encoded form, the {@code PAGesture} interface, a gesture consists of an array of points
  * and an array of times. The times array records the times when something as-yet-unspecified
  * will happen at the corresponding point in the points array. The times array and the points
  * array must be the same size. 
@@ -133,77 +133,76 @@ import net.paulhertz.pixelaudio.sampler.*;
  * addition to capturing the raw gesture of drawing a line, provides methods to reduce points
  * and times, create Bezier paths, and generate event schedules. PACurveMaker scheduling data
  * can be modified by changing duration, interpolating samples, or by non-linear time warping.
- * GesturePlayground uses <code>GestureScheduleBuilder</code> to interpolate and warp time and
+ * GesturePlayground uses {@code GestureScheduleBuilder} to interpolate and warp time and
  * point lists. 
  * </p>
  * <p>The parameters for gesture modeling, granular and sampling synthesis, time and sample
  * interpolation, and audio events are modeled in the GUI, which uses
- * <code>GestureGranularConfig.Builder gConfig</code> to track its current state. A
+ * {@code GestureGranularConfig.Builder gConfig} to track its current state. A
  * GestureGranularConfig instance is associated with each AudioBrush. When you click on an
  * AudioBrush and activate it, its configuration data is loaded to the GUI and you can edit it.
  * It will be saved to the brush when you select another brush or change the edit mode. When a
  * brush is activated with a click, the schedule is built from its PACurveMaker and
- * GestureGranularConfig.Builder instance variables: 
+ * GestureGranularConfig.Builder instance variables: </p>
  *     <pre>GestureSchedule schedule = scheduleBuilder.build(gb.curve(), cfg.build(), audioOut.sampleRate());</pre>
- * </p>
+ * 
  * <h2>Code Details</h2>
- * <p>The calling chain for a GranularBrush:<br>
+ * <p>The calling chain for a GranularBrush:</p>
  * <ul>
- * <li><code>mouseClicked()</code> calls <code>scheduleGranularBrushClick(gb, x, y);</code>.</li>
+ * <li>{@code mouseClicked()} calls {@code scheduleGranularBrushClick(gb, x, y);}.</li>
  * 
- * <li>In <code>scheduleGranularBrushClick(...)</code> we get a reference to the audio buffer
- * <code>buf</code> and then use the PACurveMaker object <code>gb.curve()</code> and
- * <code>gb.snapshot()</code> to build a <code>GestureSchedule</code>, <code>sched</code>.</li>
+ * <li>In {@code scheduleGranularBrushClick(...)} we get a reference to the audio buffer
+ * {@code buf} and then use the PACurveMaker object {@code gb.curve()} and
+ * {@code gb.snapshot()} to build a {@code GestureSchedule}, {@code sched}.</li>
  * 
- * <li><code>sched</code> gets timing and location information for the gesture from
- * <code>gb.curve()</code> and modifies it with the settings from the control palette which are
- * stored <code>gb.snapshot()</code>.</li>
+ * <li>{@code sched} gets timing and location information for the gesture from
+ * {@code gb.curve()} and modifies it with the settings from the control palette which are
+ * stored {@code gb.snapshot()}.</li>
  *
  * <li>We port the granular synthesis parameters from the brush to a
- * <code>GestureGranularParams</code> object, and then call <code>playGranularGesture(buf,
- * sched, gParams)</code> to play the granular synth.</li>
+ * {@code GestureGranularParams} object, and then call {@code playGranularGesture(buf,
+ * sched, gParams)} to play the granular synth.</li>
  * 
- * <li>We also call <code>storeGranularCurveTL(...)</code>, which sets up UI animation events to 
+ * <li>We also call {@code storeGranularCurveTL(...)}, which sets up UI animation events to 
  * track the grains.</li>
  *
- * <li>Parameter <code>buf</code> is the audio signal that is the source of our grains, parameter
- * <code>sched</code> provides the points and times for grains and parameter, <code>params</code>
+ * <li>Parameter {@code buf} is the audio signal that is the source of our grains, parameter
+ * {@code sched} provides the points and times for grains and parameter, {@code params}
  * provides the core parameters for granular synthesis.</li>
  *
- * <li><code>playGranularGesture()</code> builds arrays for buffer position and pan for each
- * individual grain and then calls <code>gDir.playGestureNow(buf, sched, params, startIndices,
- * panPerGrain)</code> to play the PAGranularInstrumentDirector granular synth. The 'p' command
- * key can toggle per-grain pitch jitter, which calls <code>playGestureNow()</code>in a slightly
- * different way. See <code>playGranularGesture()</code> for details.</li>
+ * <li>{@code playGranularGesture()} builds arrays for buffer position and pan for each
+ * individual grain and then calls {@code gDir.playGestureNow(buf, sched, params, startIndices,
+ * panPerGrain)} to play the PAGranularInstrumentDirector granular synth. The 'p' command
+ * key can toggle per-grain pitch jitter, which calls {@code playGestureNow()}in a slightly
+ * different way. See {@code playGranularGesture()} for details.</li>
  *
- * <li><code>PAGranularInstrumentDirector</code> has its own calling chain that goes all the way down to
+ * <li>{@code PAGranularInstrumentDirector} has its own calling chain that goes all the way down to
  * the individual sample level using the Minim library's UGen interface. If you just want to
  * play music, you'll probably never have to deal with the hierarchy of classes directly, but
  * comments in {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector} may be useful. </li>
  * </ul>
- * </p>
  * 
- * <p>Part of the calling chain for a SamplerBrush:<br>
- * <ul>
- * <li><code>mouseClicked()</code> calls <code>scheduleSamplerBrushClick(sb, x, y)</code>.</li>
+ * 
+ * <p>Part of the calling chain for a SamplerBrush:</p><ul>
+ * <li>{@code mouseClicked()} calls {@code scheduleSamplerBrushClick(sb, x, y)}.</li>
  *
- * <li>In <code>scheduleSamplerBrushClick()</code> we get array of points on the curve with
- * <code>getPathPoints(sb)</code> and then use <code>sb.snapshot()</code> and
- * <code>scheduleBuilder.build()</code> to build a <code>GestureSchedule</code> </li>
+ * <li>In {@code scheduleSamplerBrushClick()} we get array of points on the curve with
+ * {@code getPathPoints(sb)} and then use {@code sb.snapshot()} and
+ * {@code scheduleBuilder.build()} to build a {@code GestureSchedule} </li>
  *
- * <li>Finally, we pass the schedule and a small time offset to <code>storeSamplerCurveTL()</code>,
- * an array of <code>TimedLocation</code> objects that is checked at every pass through the
- * <code>draw()</code> loop and posts both Sampler instrument triggers and animation events.
+ * <li>Finally, we pass the schedule and a small time offset to {@code storeSamplerCurveTL()},
+ * an array of {@code TimedLocation} objects that is checked at every pass through the
+ * {@code draw()} loop and posts both Sampler instrument triggers and animation events.
  * Unlike the Granular instrument, which requires very accurate timing, the Sampler synth
  * requires less precision, so we can handle it through the UI frames. Sample-accurate timing is
  * a topic for another as-yet-unreleased example sketch. </li>
  *
- * <li>The <code>runSamplerBrushEvents()</code> method executes the UI brushstroke animation and the
- * Sampler audio events. Sampler events all pass through <code>pool.playSample(samplePos,
- * samplelen, amplitude, env, pitch, pan)</code>.</li>
+ * <li>The {@code runSamplerBrushEvents()} method executes the UI brushstroke animation and the
+ * Sampler audio events. Sampler events all pass through {@code pool.playSample(samplePos,
+ * samplelen, amplitude, env, pitch, pan)}.</li>
  * </ul>
- * </p> 
- * <p>
+ * 
+ * 
  * <pre>
  * KEY COMMANDS
  * 
@@ -224,7 +223,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'X' to delete the most recent brush shape.
  * Press 'h' or 'H' to print help.
  * </pre>
- * </p>
+ * 
  * 
  * See also: Bagatelle.java for a performance-oriented application with a GUI, presets, and networking. 
  * 
@@ -651,7 +650,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 
 	/**
-	 * Initializes <code>mapImage</code> with the colors array, copies it to <code>baseImage</code>. 
+	 * Initializes {@code mapImage} with the colors array, copies it to {@code baseImage}. 
 	 * MapImage handles the color data for mapper and also serves as our display image.
 	 * BaseImage is a reference image that typically changes only when you load a new image.
 	 */
@@ -676,8 +675,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 	
 	/**
-	 * Initializes default settings for granular synthesis, <code>defaultGranConfig</code>, 
-	 * and for sampler synthesis, <code>defaultSampConfig</code>.
+	 * Initializes default settings for granular synthesis, {@code defaultGranConfig}, 
+	 * and for sampler synthesis, {@code defaultSampConfig}.
 	 */
 	public void initConfig() {
 		defaultGranConfig.grainLengthSamples = granLength;

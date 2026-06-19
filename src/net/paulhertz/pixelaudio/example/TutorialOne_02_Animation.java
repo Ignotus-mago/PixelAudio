@@ -40,7 +40,7 @@ import com.hamoid.*;
  * instrument, PASamplerInstrument, and provided an interface which responds to
  * mouse clicks by playing the audio samples corresponding to the click location
  * in the display image. In this sketch, we add panning and pitch control to
- * PASamplerInstrument <code>playSample(...)</code> methods. The other audio
+ * PASamplerInstrument {@code playSample(...)} methods. The other audio
  * instrument, the Granular Synthesis instrument, will be introduced later on.
  * This sketch introduces the animation feature built-in to PixelAudioMapper,
  * pixel-shifting along the Signal Path, which shifts pixels in the display 
@@ -81,12 +81,12 @@ import com.hamoid.*;
  * same location in the window will trigger different audio events.
  * </p><p>
  * Pixel shifting animation works by moving the pixels in the display image
- * <code>mapImage</code> once every frame by the number of pixels specified by
- * the variable <code>shift</code>, and tracking the accummulated shifting with
- * another variable, <code>totalShift</code>. The audio buffer itself is never
- * shifted, nor is the canonic image <code>baseImage</code>. We just use
+ * {@code mapImage} once every frame by the number of pixels specified by
+ * the variable {@code shift}, and tracking the accummulated shifting with
+ * another variable, {@code totalShift}. The audio buffer itself is never
+ * shifted, nor is the canonic image {@code baseImage}. We just use
  * totalShift to determine where to locate pixels or audio samples. The shifting
- * is managed by the PixelAudioMapper object <code>mapper</code>, which provides
+ * is managed by the PixelAudioMapper object {@code mapper}, which provides
  * methods for accessing pixel and audio data with shifting taken into account.
  * Of course, if you only want to animate the image, you can just ignore the
  * value of totalShift when accessing the audioBuffer.
@@ -107,9 +107,9 @@ import com.hamoid.*;
  * We also provide commands for saving an animation to video ('V' key) and saving
  * the display image and audio buffer to files. To visualize the Signal Path, you
  * can use the 'k' or 'K' keys to overlay a spectrum of color on the display
- * image. The 'K' key will write the spectrum to <code>baseImage</code>, so that
+ * image. The 'K' key will write the spectrum to {@code baseImage}, so that
  * it will persist when running animation. The 'k' key will write color data to
- * <code>mapImage</code> only.
+ * {@code mapImage} only.
  * </p><p>
  * We continue to use the Sampler instrument for audio events, showing how it
  * can control the pitch and panning of an audio event. The playSample() methods
@@ -132,8 +132,8 @@ import com.hamoid.*;
  * -- drawing to trigger audio events<br>
  * -- the Granular Synthesis instruments<br>
  * -- UDP communication with Max and other media applications<br>
- * 
- * <p>The key commands:
+ * <br><br>
+ * The key commands:
  * <ul>
  * <li>Press UP ARROW to increment pixel shift.</li>
  * <li>Press DOWN ARROW to decrement pixel shift.</li>
@@ -158,7 +158,7 @@ import com.hamoid.*;
  * <li>Press 'w' to show data values in display.</li>
  * <li>Press 'h' or 'H' to show help message.</li>
  * </ul>
- * </p>
+ * 
  * 
  */
 public class TutorialOne_02_Animation extends PApplet {

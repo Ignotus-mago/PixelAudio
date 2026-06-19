@@ -470,12 +470,12 @@ public class LoadImageToAudio extends PApplet {
 
 	/**
 	 * Returns a Gaussian variable using a Java library call to
-	 * <code>Random.nextGaussian</code>.
+	 * {@code Random.nextGaussian}.
 	 * 
 	 * @param mean
 	 * @param variance
-	 * @return a Gaussian-distributed random number with mean <code>mean</code> and
-	 *         variance <code>variance</code>
+	 * @return a Gaussian-distributed random number with mean {@code mean} and
+	 *         variance {@code variance}
 	 */
 	public double gauss(double mean, double variance) {
 		return rando.nextGaussian() * Math.sqrt(variance) + mean;

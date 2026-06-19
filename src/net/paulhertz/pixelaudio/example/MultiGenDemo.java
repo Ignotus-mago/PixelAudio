@@ -15,8 +15,8 @@ import net.paulhertz.pixelaudio.*;
  * different constructors that you can use. The first two, MultiGen(int width, int height) 
  * and MultiGen(int width, int height, AffineTransformType type), create two DiagonalZigzagGens 
  * to fill whatever width and height you provide. Things get interesting with the two custom constructors, 
- * MultiGen(int width, int height, int rows, int columns, ArrayList<PixelMapGen> genList) 
- * and MultiGen(int width, int height, ArrayList<int[]> offsetList, ArrayList<PixelMapGen> genList).
+ * {@code MultiGen(int width, int height, int rows, int columns, ArrayList<PixelMapGen> genList)}
+ * and {@code MultiGen(int width, int height, ArrayList<int[]> offsetList, ArrayList<PixelMapGen> genList)}.
  * </p><p>
  * Both custom constructors require an ArrayList of PixelMapGens. The dimensions 
  * of the gens should be tailored for the width and height of the application window, 
@@ -37,7 +37,7 @@ import net.paulhertz.pixelaudio.*;
  * </p><p>
  * Animation helps to visualize the orientation of PixelMapGen objects.
  * Press 'a' to toggle animation that shifts pixels along the signal path.
- * </p><p> 
+ * </p>
  * <pre>
  * KEY COMMANDS
  * 

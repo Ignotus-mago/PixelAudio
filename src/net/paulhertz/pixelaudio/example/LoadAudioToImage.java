@@ -426,12 +426,12 @@ public class LoadAudioToImage extends PApplet {
 	
 	/**
 	 * Returns a Gaussian variable using a Java library call to
-	 * <code>Random.nextGaussian</code>.
+	 * {@code Random.nextGaussian}.
 	 * 
 	 * @param mean
 	 * @param variance
-	 * @return a Gaussian-distributed random number with mean <code>mean</code> and
-	 *         variance <code>variance</code>
+	 * @return a Gaussian-distributed random number with mean {@code mean} and
+	 *         variance {@code variance}
 	 */
 	public double gauss(double mean, double variance) {
 		return rando.nextGaussian() * Math.sqrt(variance) + mean;
@@ -442,7 +442,7 @@ public class LoadAudioToImage extends PApplet {
 	 * Durstenfeld's version of the Fisher-Yates algorithm, popularized by Donald
 	 * Knuth. see http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
 	 * 
-	 * @param intArray an array of <code>int</code>s, changed on exit
+	 * @param intArray an array of {@code int}s, changed on exit
 	 */
 	public void shuffle(int[] intArray) {
 		for (int lastPlace = intArray.length - 1; lastPlace > 0; lastPlace--) {

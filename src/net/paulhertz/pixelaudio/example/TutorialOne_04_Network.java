@@ -50,8 +50,8 @@ import com.hamoid.*;
  * We'll discuss the audio setup first, for MacOS (something similar can be done in the Windows OS). 
  * You can use the audio signal flow without using UDP. It's handy for situations where you want to
  * add a layer of audio processing and it will function with many audio applications besides Max. 
- * Next, we'll discuss UDP network messaging. Finally we'll look at the <code>PANetworkClientINF</code> interface
- * and its implementation in <code>NetworkDelegate</code>, an inner class of TutorialOne_04_Network. 
+ * Next, we'll discuss UDP network messaging. Finally we'll look at the {@code PANetworkClientINF} interface
+ * and its implementation in {@code NetworkDelegate}, an inner class of TutorialOne_04_Network. 
  * </p>
  * <h3>Audio Setup with Blackhole in MacOS</h3>
  * <p>
@@ -87,13 +87,13 @@ import com.hamoid.*;
  * </p>
  * <h3>PANetworkClientINF and NetworkDelegate</h3>
  * <P>Since UDP communications are independent of the PixelAudio library, they are implemented in the 
- * example code, not in the library. The <code>PANetworkClientINF</code> interface is included in the example software. 
+ * example code, not in the library. The {@code PANetworkClientINF} interface is included in the example software. 
  * It defines the methods that an implementing class must provide:  
  * </p>
  * <ul>
  * <li>public PixelAudioMapper getMapper();</li>
  * <li>public int playSample(int samplePos);</li>
- * <li>public void playPoints(ArrayList<PVector> pts);</li>
+ * <li>public void {@code playPoints(ArrayList<PVector> pts);}</li>
  * <li>public void parseKey(char key, int keyCode);</li>
  * <li>public void controlMsg(String control, float val);</li>
  * <li>public PApplet getPApplet();</li>
@@ -102,12 +102,12 @@ import com.hamoid.*;
  * PANetworkClientINF and provide these methods. In Processing, the PApplet host class doesn't provide
  * a way to implement an interface directly, but you can still provide all the required methods and
  * create a network delegate to handle UDP communications. In TutorialOne_04_Network we use the 
- * <code>NetworkDelegate</code> subclass. In Eclipse, NetworkDelegate's constructors require a 
+ * {@code NetworkDelegate} subclass. In Eclipse, NetworkDelegate's constructors require a 
  * PANetworkClientINF object as their first argument. In Processing, the constructors should require
  * an instance of your PApplet class, which is indicated with the name of your application.</p>
  * <ul>
- * <li>Eclipse:    <code>NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)</code></li>
- * <li>Processing: <code>NetworkDelegate(TutorialOne_04_Network app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)</code></li>
+ * <li>Eclipse:    {@code NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)}</li>
+ * <li>Processing: {@code NetworkDelegate(TutorialOne_04_Network app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)}</li>
  * </ul>
  * <h3>Messages and Methods</h3>
  * <p>To find the points at which networking code is implemented in methods in this sketch, 
@@ -115,7 +115,7 @@ import com.hamoid.*;
  * The NetworkDelegate class provides a number of messaging methods, each prefaced with "oscSend". 
  * For receiving remote messages, it calls oscP5's "plug" method (in initOscPlugs()) to link 
  * incoming messages to local methods. In addition, it provides some boolean toggles, such as
- * <code>isNetSendDrawingPoints</code>, to turn features on or off at various points in the 
+ * {@code isNetSendDrawingPoints}, to turn features on or off at various points in the 
  * TutorialOne_04_Network code--if you aren't going to use data, don't send it. 
  * In this sketch, we concentrate on:
  * </p>
@@ -1199,7 +1199,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 
 	/**
-	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * Sets Sampler instrument {@code pool} gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustPoolGain(float g) {
@@ -2506,17 +2506,25 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			int cc = isSelected ? circleColor : dimCircleColor;
 			// selected the appropriate point set for drawing
 			switch (b.cfg().pathMode) {
-			case REDUCED_POINTS -> {
+			case REDUCED_POINTS: {
 				PACurveUtility.lineDraw(this, cm.getReducedPoints(), lc, w);
 				PACurveUtility.pointsDraw(this, cm.getReducedPoints(), cc, d);
+				break;
 			}
-			case CURVE_POINTS -> {
+			case CURVE_POINTS: {
 				PACurveUtility.lineDraw(this, cm.getCurvePoints(), lc, w);
 				PACurveUtility.pointsDraw(this, cm.getCurvePoints(), cc, d);
+				break;
 			}
-			case ALL_POINTS -> {
+			case ALL_POINTS: {
 				PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
 				PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+				break;
+			}
+			default: {
+				PACurveUtility.lineDraw(this, cm.getAllPoints(), lc, w);
+				PACurveUtility.pointsDraw(this, cm.getAllPoints(), cc, d);
+				break;
 			}
 			}
 		}
@@ -2559,11 +2567,12 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 */
 	ArrayList<PVector> getPathPoints(AudioBrushLite b) {
 		PACurveMaker cm = b.curve();
-		return switch (b.cfg().pathMode) {
-		case ALL_POINTS -> cm.getAllPoints();
-		case REDUCED_POINTS -> cm.getReducedPoints();
-		case CURVE_POINTS -> cm.getCurvePoints();
-		};
+		switch (b.cfg().pathMode) {
+	    case ALL_POINTS: return cm.getAllPoints();
+	    case REDUCED_POINTS: return cm.getReducedPoints();
+	    case CURVE_POINTS: return cm.getCurvePoints();
+	    default:  return cm.getAllPoints();
+		}
 	}
 
 	/**
@@ -2574,17 +2583,21 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	public GestureSchedule getScheduleForBrush(AudioBrushLite b) {
 		GestureSchedule sched;
 		switch (b.cfg().pathMode) {
-		case REDUCED_POINTS -> {
-			sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
+		case REDUCED_POINTS: {
+			sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon); 
+			break;
 		}
-		case CURVE_POINTS -> {
-			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
+		case CURVE_POINTS: {
+			sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating); 
+			break;
 		}
-		case ALL_POINTS -> {
-			sched = b.curve.getAllPointsSchedule();
+		case ALL_POINTS: {
+			sched = b.curve.getAllPointsSchedule(); 
+			break;
 		}
-		default -> {
-			sched = b.curve.getAllPointsSchedule();
+		default: {
+			sched = b.curve.getAllPointsSchedule(); 
+			break;
 		}
 		}
 		return sched;

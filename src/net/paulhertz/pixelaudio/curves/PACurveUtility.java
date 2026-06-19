@@ -254,8 +254,9 @@ public class PACurveUtility {
 	 * value, such as PACurveUtility.LAMBDA.
 	 * It's most useful when a short control line segment follows a long segment. 
 	 * 
-	 * @param bezPoints
-	 * @param bias
+	 * @param bezPoints    	a Bezier path encapsulated in a PABezShape instance
+	 * @param bias		    adjusts distances between control points and anchor points
+	 * @return				a Bezier curve path constructed of PABezShape objects
 	 */
 	public static PABezShape calculateWeightedCurve(PABezShape bezPoints, float bias) {
 	  PABezShape weightedBezPoints = bezPoints.clone();
@@ -293,6 +294,16 @@ public class PACurveUtility {
 	  return weightedBezPoints;
 	}
 	
+	/**
+	 * Scales the position of the curve control points on a Bezier curve by a factor
+	 * determined by the length of the line between the two anchor points and a bias
+	 * value, such as PACurveUtility.LAMBDA.
+	 * It's most useful when a short control line segment follows a long segment. 
+	 * 
+	 * @param framePoints	An array of 2D PVector objects to transform into a Bezier curve
+	 * @param bias			adjusts distances between control points and anchor points
+	 * @return				A Bezier curve path constructed of PABezShape objects
+	 */
 	public static PABezShape calculateWeightedCurve(ArrayList<PVector> framePoints, float bias) {
 		PABezShape curve = PACurveUtility.calculateCurve(framePoints);
 		return PACurveUtility.calculateWeightedCurve(curve, bias);
@@ -310,7 +321,19 @@ public class PACurveUtility {
 		calculateWeightedCurve(bezPoints, PABezShape.LAMBDA);
 	}
 
-
+	/**
+	 * Scales the position of a curve control point (cx, cy) relative to an anchor point (ax, ay)
+	 * on a Bezier curve.
+	 * 
+	 * @param ax	anchor point x coordinate
+	 * @param ay	anchor point y coordinate
+	 * @param cx	control point x coordinate
+	 * @param cy	control point y coordinate
+	 * @param w	    weighting factor, such as PACurveUtility.LAMBDA, that adjusts the distance 
+	 *              between control point and anchor point
+	 * @param d		distance between anchor points
+	 * @return		a PVector representing the scaled control point position
+	 */
 	public static PVector weightedControlVec(float ax, float ay, float cx, float cy, float w, float d) {
 	  // divide the weighted distance between anchor points by the distance from anchor point to control point
 	  float t = w * d * 1/(PApplet.dist(ax, ay, cx, cy));
@@ -456,11 +479,11 @@ public class PACurveUtility {
 	
 	/**
 	 * Schedules times along a gestural curve, typically stored as a PACurveMaker instance. A calling sequence might be:
-	 * <code>
+	 * <pre>
 	 *   PABezShape curve = curveMaker.getCurve();
 	 *   float rdpTimes = intsToFloats(curveMaker.getReducedTimes());
 	 *   GestureSchedule curveSchedule = PACurveUtility.buildScheduleFromBezShape(curve, cfg.bezierCurveSteps, rdpTimes, true);
-	 * </code>
+	 * </pre>
 	 * 
 	 * @param shape
 	 * @param steps
@@ -586,6 +609,12 @@ public class PACurveUtility {
 	 *                                              *
 	 ************************************************/
 	
+	/** linear interpolation
+	 * @param a		start value
+	 * @param b		end value
+	 * @param u		parametric distance between a and b, between 0 and
+	 * @return a + u * (b - a)
+	 */
 	private static float lerp(float a, float b, float u) {
 		return a + u * (b - a);
 	}
@@ -661,6 +690,9 @@ public class PACurveUtility {
 		return new float[] {xMin, yMin, xMax, yMax};
 	} 
 	
+	/**
+	 * Calculates the center of the boundary rectangle of a list of points and returns it as a PVector.
+	 */
 	public static PVector getBoundsCenter(ArrayList<PVector> points) {
 		float[] b = bounds(points);
 		return new PVector((b[0] + b[2]) * 0.5f, (b[1] + b[3]) * 0.5f);	
@@ -716,10 +748,26 @@ public class PACurveUtility {
 		return translateCoord(pt.x, pt.y, xctr, yctr);
 	}
 		
+	/**
+	 * Flips a point horizontally across a vertical line at xctr, returns a new point.
+	 * 
+	 * @param x       x coordinate of point
+	 * @param y       y coordinate of point
+	 * @param xctr    x coordinate of center of flip
+	 * @return        a new flipped point
+	 */
 	public static PVector flipHorizontal(float x, float y, float xctr) {
 	    return new PVector(xctr - (x - xctr), y);
 	}
 
+	/**
+	 * Flips a point vertically across a horizontal line at yctr, returns a new point.
+	 * 
+	 * @param x       x coordinate of point
+	 * @param y       y coordinate of point
+	 * @param yctr    y coordinate of center of flip
+	 * @return        a new flipped point
+	 */
 	public static PVector flipVertical(float x, float y, float yctr) {
 	    return new PVector(x, yctr - (y - yctr));
 	}
@@ -890,7 +938,7 @@ public class PACurveUtility {
 	/**
 	 * Applies flip/scale, then rotation, then translation to a point.
 	 * Flip/scale and rotation are performed around (xctr, yctr).
-	 * Returns a new <code>ArrayList<PVector></code>.
+	 * Returns a new {@code ArrayList<PVector>}.
 	 * 
 	 * @param points
 	 * @param xctr

@@ -41,7 +41,7 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  * This class makes no strong assumptions about the range of values.
  * For dynamics, values will usually be in [0,1], but other ranges are allowed.
  * 
- * @see Bagatelle example code.
+ * @see net.paulhertz.pixelaudio.example.Bagatelle Bagatelle example code
  */
 public final class PAKeyframeControlCurve implements PAControlCurve {
 
@@ -111,14 +111,18 @@ public final class PAKeyframeControlCurve implements PAControlCurve {
     /**
      * Convenience for dynamics-style use where values are expected in [0,1].
      * The returned sample is clamped to [0,1].
+     * @param u    value to clamp to interval [0,1]
+     * @return value clamped to [0,1]
      */
     public float sampleUnit(float u) {
         return clamp01(sample(u));
     }
 
     /**
-     * Find the largest i such that times01[i] <= u,
-     * with the guarantee that i < count - 1 for in-range queries.
+     * Find the largest i such that {@code times01[i] <= u},
+     * with the guarantee that {@code i < count - 1} for in-range queries.
+     * @param u    find largest index in times01[] that is less than u
+     * @return largest index less than u over times01[]  
      */
     private int findSegment(float u) {
         // Linear scan is fine for modest keyframe counts.

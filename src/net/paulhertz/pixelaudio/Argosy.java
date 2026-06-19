@@ -230,7 +230,7 @@ public class Argosy {
 	}
 
 	/**
-	 * Fills <code>argosyArray</code> with colors from argosyColors following the argosy pattern
+	 * Fills {@code argosyArray} with colors from argosyColors following the argosy pattern
 	 * stored in argosyIntervals. Tbis method is generally called from initArgosy(), which fills
 	 * argosyArray with the bgColor pixels. 
 	 */

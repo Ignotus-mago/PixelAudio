@@ -31,7 +31,7 @@ import processing.core.*;
 
 /**
  * Reduced set of Adobe Illustrator 3.0 (ancient but still useful) path operators for 
- * recording curves. May be useful for future development. 
+ * recording curves. May be useful for future development. Experimental.
  */
 public class PAGestureWriter {
 	static final char gPathOps[] = { 'N', 'n', 'S', 's', 'F', 'f', 'B', 'b' };

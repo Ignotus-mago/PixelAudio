@@ -24,7 +24,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * 
  * TODO: Revise to comply with more recent UI features, for example, spacebar to play audio, TAB to animate.
  * 
- * <h2>INSTRUCTIONS FOR PERFORMANCE<?h2>
+ * <h2>INSTRUCTIONS FOR PERFORMANCE</h2>
  * <pre>
  * Launch and let the raindrops play. 
  * The tempo for performance is quarter note = 88 bpm, flexible for humans, inflexible for computer.
@@ -50,8 +50,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'o' to open a JSON WaveSynth configuration file.
  * Press 'O' to reload the most recent JSON WaveSynth configuration file.
  * Press 'j' or 'J' to save current WaveSynth configuration to a JSON file.
- * Press 's' to save the display to an image file named wavesynth_<wsIndex>.png.
- * Press 'S' to save WaveSynth audio to an audio file named wavesynth_<wsIndex>.wave.
+ * Press 's' to save the display to an image file named wavesynth_(wsIndex).png.
+ * Press 'S' to save WaveSynth audio to an audio file named wavesynth_(wsIndex).wave.
  * Press 'f' to display the current frameRate. 
  * Press 'w' to step the WaveSynth Sequencer without playing a musical note.
  * Press 'W' to step the WaveSynth Sequencer and play the corresponding a musical note.

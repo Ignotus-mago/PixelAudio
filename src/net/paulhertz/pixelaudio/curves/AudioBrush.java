@@ -43,12 +43,16 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
  * 
  */
 public abstract class AudioBrush {
+	/** The PACurveMaker instance for curve data and rendering for this brush */
 	private final PACurveMaker curve;
+	/** The configuration builder for audio synthesis for this brush */
 	private final GestureGranularConfig.Builder cfg;
+	/** Optional transform state for applying geometric transformations to the curve data */
     private GestureTransformState transformState;
 
 
 	/**
+	 * Constructs an AudioBrush with the given curve and configuration builder.
 	 * @param curve    a PACurveMaker instance
 	 * @param cfg      a GestureGranularConfig
 	 */
@@ -57,6 +61,10 @@ public abstract class AudioBrush {
 		this.cfg = Objects.requireNonNull(cfg, "cfg");
 	}
 	
+	/**
+	 * Returns the PACurveMaker instance associated with this brush. 
+	 * @return the PACurveMaker instance for this brush
+	 */
 	public PACurveMaker curve() { return curve; }
 	
 	/**
@@ -73,19 +81,36 @@ public abstract class AudioBrush {
 	    return cfg.build();
 	}
 	
-    public GestureTransformState transform() {
+    /** 
+	 * Returns the current transform state, or null if no transform is set. 
+	 * @return the current GestureTransformState, or null if none is set
+	 */
+	public GestureTransformState transform() {
         return transformState;
     }
 
+    /** 
+	 * Sets the transform state for this brush. 
+	 * @param state the GestureTransformState to set
+	 */
     public void setTransform(GestureTransformState state) {
         this.transformState = state;
     }
 
+    /** 
+	 * Checks if a transform is currently set. 
+	 * @return true if a transform is set, false otherwise
+	 */
     public boolean hasTransform() {
         return transformState != null;
     }
 
-    public GestureTransformState ensureTransform() {
+    
+	/**
+	 * Ensures that a transform state is available for this brush.
+	 * @return the GestureTransformState for this brush
+	 */
+	public GestureTransformState ensureTransform() {
         if (transformState == null) {
             transformState = curve.createTransformState();
         } else if (!transformState.hasRestPoints()) {
@@ -94,16 +119,27 @@ public abstract class AudioBrush {
         return transformState;
     }
 
-    public void captureRestPoints() {
+    
+	/**
+	 * Captures the untransformed rest points for the current transform state.
+	 */
+	public void captureRestPoints() {
         ensureTransform().captureRestPoints(curve.copyAllPoints());
     }
 
+    /**
+	 * Applies the current transform to the curve.
+	 */
     public void applyTransform() {
         if (transformState != null) {
             curve.applyTransform(transformState);
         }
     }
 
+    
+	/**
+	 * Restores the original transform for the curve.
+	 */
     public void restoreTransform() {
         if (transformState != null) {
             curve.restoreTransform(transformState);

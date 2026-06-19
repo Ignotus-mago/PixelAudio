@@ -50,7 +50,7 @@ import g4p_controls.*;
  * <p>
  * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns 
  * that can be saved to video or played as an additive synthesis audio source. It 
- * provides an introduction to the <code>WaveSynth</code> class and the <code>WaveData</code> objects 
+ * provides an introduction to the {@code WaveSynth} class and the {@code WaveData} objects 
  * that WaveSynths use to generate visual patterns and audio signals. 
  * </p><p>
  * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
@@ -107,7 +107,7 @@ import g4p_controls.*;
  * In addition to the GUI commands, there are some useful key commands.
  * </p><p>
  * ---------------------------------------------------------------------------------------------
- * ***>>  NOTE: Key commands only work when the image display window is the front window.  <<***
+ * ***]]  NOTE: Key commands only work when the image display window is the front window.  [[***
  * ---------------------------------------------------------------------------------------------
  * </p><p>
  * Key commands will NOT work when the control panel is the active window.
@@ -121,7 +121,7 @@ import g4p_controls.*;
  * read the notes for the various methods. 
  * </p>
  * <pre>
- * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
+ * ::: KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE :::
 
  * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
@@ -169,7 +169,7 @@ import g4p_controls.*;
  * Press '?' to print window dimensions, video frame rate, and audio settings to the console.
  * press 'h' or 'H' to show this help message in the console.
 
- * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
+ * ::: KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE :::
  * </pre>
  * 
  * 

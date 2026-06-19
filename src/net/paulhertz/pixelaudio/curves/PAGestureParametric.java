@@ -28,31 +28,27 @@ import processing.core.PVector;
 /**
  *
  * Treats a gesture defined by (time, x, y) samples as a parametric curve.
- * <code>
+ * <pre>
  *    u ∈ [0,1] → (t(u), x(u), y(u))
- * </code>
- * <p>
- * Under the hood:
+ * </pre>
+ * Under the hood:<br>
  * <ul>
  *    <li>timesMs: int[] of time offsets (ms), ascending, timesMs[0] == 0</li>
  *    <li>points:  PVector list (x,y) of same length</li>
  * </ul>
- * </p><p>
- * You can:
+ * You can:<br>
  * <ul>
- *    <i>sample with a linear parameter: f(u) = u</i>
+ *    <li>sample with a linear parameter: f(u) = u</li>
  *    <li>pass a warp function f(u) to speed up/slow down traversal</li>
  * </ul> 
- * </p><p>
  * Exponential warp (speeding up over time)<br>
  * <pre>
- *    DoubleUnaryOperator expWarp = u -> (float_ Math.pow(u, 2.0);   // u^2
+ *    {@code DoubleUnaryOperator expWarp = u -> (float_ Math.pow(u, 2.0);}   // u squared
  *    GestureParametric.Sample s = gp.sample(0.5f, expWarp);
  * </pre>
- * </p><p>
  * Log-like warp (fast at start, slow at end)<br>
  * <pre>
- *    DoubleUnaryOperator sqrtWarp = u -> (float_ Math.sqrt(u);   // 
+ *    {@code DoubleUnaryOperator sqrtWarp = u -> (float_ Math.sqrt(u);}     // square root of u
  *    GestureParametric.Sample s = gp.sample(0.5f, sqrtWarp);
  * </pre>
  *  Something like f(u) = (e^{k *  u} - 1) / (e^{k} - 1) for more dramatic warps.
@@ -163,7 +159,7 @@ public final class PAGestureParametric {
     // ------------------------------------------------------------------------
 
     /**
-     * Find the largest i such that timesMs[i] <= tTarget.
+     * Find the largest i such that {@code timesMs[i] <= tTarget}.
      * Returns count-1 if tTarget is beyond the last sample.
      */
     private int findSegment(float tTarget) {

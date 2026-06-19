@@ -118,8 +118,8 @@ public abstract class PixelMapGen {
 	public int[] sampleMap;
 	/** the 2D coordinates of the signal path as it traverses the bitmap of dimensions width * height */
 	public ArrayList<int[]> coords;
-	/** an <code>AffineTransformType</code> applied to the coordinate pairs in <code>coords</code> 
-	 * prior to generating <code>pixelMap</code> and <code>sampleMap</code> */
+	/** an {@code AffineTransformType} applied to the coordinate pairs in {@code coords} 
+	 * prior to generating {@code pixelMap} and {@code sampleMap} */
 	public AffineTransformType transformType = AffineTransformType.NADA;
 	/** a String that summarizes the features of a PixelMapGen class */
 	public final static String description = "Declare the description variable in your class and describe your PixelMapGen.";
@@ -152,12 +152,12 @@ public abstract class PixelMapGen {
 	 * for your class, but it can just call super(width, height) if everything it does can be handled
 	 * in your generate() method. Note that generate() should be called on the last line of your constructor,
 	 * after any additional initializations or calculations required for your class. See {@link DiagonalZigzagGen}
-	 * and {@link HilbertGen} for examples of how to organize and initialize your own <code>PixelMapGen</code> class.
+	 * and {@link HilbertGen} for examples of how to organize and initialize your own {@code PixelMapGen} class.
 	 *
 	 * @param width      width of the PixelMapGen in pixels
 	 * @param height     height of the PixelMapGen in pixels
 	 * @param type       an AffineTransformType to apply to the coordinates of the PixelMapGen prior to creating 
-	 *                   the index maps <code>pixelMap</code> and <code>sampleMap</code> 
+	 *                   the index maps {@code pixelMap} and {@code sampleMap} 
 	 */
 	public PixelMapGen(int width, int height, AffineTransformType type) {
 		// TODO throw an exception instead? That's not the usual way of handling errors in Processing, AFAIK.
@@ -176,7 +176,7 @@ public abstract class PixelMapGen {
 	 * for your class, but it can just call super(width, height) if everything it does can be handled
 	 * in your generate() method. Note that generate() should be called on the last line of your constructor,
 	 * after any additional initializations or calculations required for your class. See {@link DiagonalZigzagGen}
-	 * and {@link HilbertGen} for examples of how to organize and initialize your own <code>PixelMapGen</code> class.
+	 * and {@link HilbertGen} for examples of how to organize and initialize your own {@code PixelMapGen} class.
 	 *
 	 * @param width
 	 * @param height
@@ -207,15 +207,15 @@ public abstract class PixelMapGen {
 	public abstract boolean validate(int width, int height);
 
 	/**
-	 * <p>Initialization method that sets <code>this.coords</code>, and then  <code>this.pixelMap</code> and
-	 * <code>this.sampleMap</code>: <code>this.coords</code> is a list of coordinate pairs representing the signal path,
+	 * <p>Initialization method that sets {@code this.coords}, and then  {@code this.pixelMap} and
+	 * {@code this.sampleMap}: {@code this.coords} is a list of coordinate pairs representing the signal path,
 	 * the (x,y) pixel locations along a path that visits every pixel in a bitmap exactly once. Once you have created it,
-	 * you can call <code>setMapsFromCoords()</code> to set <code>this.pixelMap</code> and <code>this.sampleMap</code> automatically.</p> 
+	 * you can call {@code setMapsFromCoords()} to set {@code this.pixelMap} and {@code this.sampleMap} automatically.</p> 
 	 * 
-	 * <p><code>generate()</code> must be called from your class, so that you can initialize any local variables before generating 
+	 * <p>{@code generate()} must be called from your class, so that you can initialize any local variables before generating 
 	 * coordinates and LUTs. The best place to call it is typically on the last line of the constructor for your class, 
 	 * after calling super() on the first line and after initializing any local variables needed to generate your coordinates and LUTs.
-	 * You must initialize <code>this.coords</code>, <code>this.pixelMap</code>, and <code>this.sampleMap</code> within generate(). 
+	 * You must initialize {@code this.coords}, {@code this.pixelMap}, and {@code this.sampleMap} within generate(). 
 	 * 
 	 * See {@link DiagonalZigzagGen} or {@link HilbertGen} for sample code.
 	 * 
@@ -225,14 +225,14 @@ public abstract class PixelMapGen {
 	
 	
 	/**
-	 * Sets <code>this.coords</code>, <code>this.pixelMap</code> and <code>this.sampleMap</code> instance variables 
+	 * Sets {@code this.coords}, {@code this.pixelMap} and {@code this.sampleMap} instance variables 
 	 * from coordinates ArrayList argument. This method is provided as a convenience: all you have to do in a 
 	 * child class is set the coordinates of the signal path as it steps through a bitmap of dimensions this.w * this.h. 
 	 * 
 	 * @param coordinates	a list of coordinate pairs representing the signal path, the (x,y) pixel locations 
 	 *                      along a path that visits every pixel in a bitmap exactly once. This should be 
 	 *                      created within your generate() method in your child class that extends PixelMapGen.
-	 * @return the <code>pixelMap</code> value, which has already been set in this method and may be ignored
+	 * @return the {@code pixelMap} value, which has already been set in this method and may be ignored
 	 */
 	public int[] setMapsFromCoords(ArrayList<int[]> coordinates) {
 	    if (this.transformType != AffineTransformType.NADA) transformCoords(coordinates, this.transformType);
@@ -342,7 +342,7 @@ public abstract class PixelMapGen {
 
 	/**
 	 * Returns the coordinates of the signal path.
-	 * @return	<code>this.coords</code>, the array of coordinate pairs that mark a path 
+	 * @return	{@code this.coords}, the array of coordinate pairs that mark a path 
 	 *          (the "signal path") through every pixel in a bitmap. getCoordinatesCopy()
 	 *          is the preferred method for obtaining the coordinates.
 	 */
@@ -352,7 +352,7 @@ public abstract class PixelMapGen {
 
 	/**
 	 * Returns a copy of the coordinates of the signal path.
-	 * @return	a copy of <code>this.coords</code>
+	 * @return	a copy of {@code this.coords}
 	 */
 	public ArrayList<int[]> getCoordinatesCopy() {
 		ArrayList<int[]> coordsCopy = new ArrayList<>(size);

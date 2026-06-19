@@ -1,7 +1,7 @@
 /**
  * Example Processing sketches and demonstrations of PixelAudio library functionality. The sketches 
- * are available as .java files in the PixelAudio library <code>example</code> package and as Processing 
- * sketches in the library release. Both formats share data in the <code>/PixelAudio/examples/examples_data</code> 
+ * are available as .java files in the PixelAudio library {@code net.paulhertz.pixelaudio.example} package and as Processing 
+ * sketches in the library release. Both formats share data in the {@code /PixelAudio/examples/examples_data} 
  * directory. If PixelAudio is new to you, I recommend starting with the <b>Basic PixelAudio Features</b>,
  * followed by the <b>Intermediate to Advanced: Tutorial Series</b>. After that, feel free
  * to check out the other examples and the <b>Performance and Production Examples</b>. 
@@ -125,8 +125,8 @@
  *
  * <p>Some examples include Max/MSP support files for network integration:</p>
  * <ul>
- *   <li><code>UDP_Handler.maxpat</code> - Max/MSP patch for UDP message handling</li>
- *   <li><code>simpleAudioIO.maxpat</code> - Max/MSP patch for basic audio I/O</li>
+ *   <li>{@code UDP_Handler.maxpat} - Max/MSP patch for UDP message handling</li>
+ *   <li>{@code simpleAudioIO.maxpat} - Max/MSP patch for basic audio I/O</li>
  * </ul>
  *
  * <p><b>Development Notes</b></p>

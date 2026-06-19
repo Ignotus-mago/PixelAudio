@@ -28,12 +28,14 @@ import java.util.Arrays;
  * Parametric view of an indexed offset list, typically into a float[] buffer
  * (for example, an audio signal or lookup table).
  *
- * u ∈ [0,1] -> f(u)
+ * <pre>{@code u ∈ [0,1] -> f(u)}</pre>
  *
  * For now, u is interpreted over the index domain of the offset list:
- *   - u = 0   -> first offset
- *   - u = 1   -> last offset
- *   - intermediate u -> linear interpolation between neighboring offsets
+ *   <pre>
+ *   {@code  u = 0   -> first offset }
+ *   {@code  u = 1   -> last offset }
+ *   {@code  intermediate u -> linear interpolation between neighboring offsets }
+ *   </pre>
  *
  * This class now implements PAControlCurve so it can be used anywhere a
  * normalized scalar control curve is needed.

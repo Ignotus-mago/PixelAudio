@@ -113,14 +113,14 @@ import ddf.minim.*;
  * The first method uses the built-in ADSR supplied on initializing PASamplerInstrument.
  * The second method allows you to supply your own ADSR. Press the 'r' key to have this
  * sketch trigger sounds with a randomly selected envelope from adsrList. 
- * </p><p>
+ * <p>
  * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.sampler
  * play an audio event for the requested duration (samplelen) using the attack, decay,
  * and sustain portion of the envelope. When the duration ends, the release portion of the 
  * envelope controls how the audio fades away. Calls to the instruments playSample() methods
  * return the amount of time the envelope will actually take, which is greater than or equal
  * to the requested duration. 
- * </p><p>
+ * </p>
  * Still to come, as the tutorial advances:
  * <ul>
  * <li>animation and saving to video</li>
@@ -129,7 +129,7 @@ import ddf.minim.*;
  * <li>UDP communication with Max and other media applications</li>
  * <li>loading a file to memory and traversing it with a windowed buffer</li>
  * </ul>
- * </p><p>
+ * <p>
  * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
  * images and audio to different color channels. 
  * </p>

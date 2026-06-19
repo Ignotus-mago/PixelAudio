@@ -21,9 +21,9 @@ package net.paulhertz.pixelaudio;
 import java.util.ArrayList;
 
 /**
- * A PixelMapGen that loads data from an external <code>PixelMapGen.pixelMap</code>, such as might be saved in a JSON file.
+ * A PixelMapGen that loads data from an external {@code PixelMapGen.pixelMap}, such as might be saved in a JSON file.
  * When you instantiate a BuildFromPathGen, set the pixelMap field before you call generate().  
- * <code>PixelMapGen.pixelMap</code> corresponds to signalToImageLUT in a PixelAudioMapper, i.e., the Signal Path. 
+ * {@code PixelMapGen.pixelMap} corresponds to signalToImageLUT in a PixelAudioMapper, i.e., the Signal Path. 
  * See the example sketch BuildFromPathGenDemo, which shows how to save and load JSON-format data 
  * to instantiate a BuildFromPathGen object. 
  * 

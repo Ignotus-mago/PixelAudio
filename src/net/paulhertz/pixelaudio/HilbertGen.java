@@ -93,7 +93,7 @@ public class HilbertGen extends PixelMapGen {
 	}
 	
 	/**
-	 * Static version of <code>validate()</code> that we use to throw meaningful errors (or so we hope).
+	 * Static version of {@code validate()} that we use to throw meaningful errors (or so we hope).
 	 * @param width     width of the HilbertGen
 	 * @param height    height of the HilbertGen
 	 * @return          true if width and height are legitimate values for a Hilbert curve: equal powers of 2

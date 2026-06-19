@@ -50,7 +50,7 @@
  *   and {@link net.paulhertz.pixelaudio.curves.PAPathParametric PAPathParametric}
  *   provide parametric sampling over gestures, indices, and paths.</li>
  *   <li>{@link net.paulhertz.pixelaudio.curves.PAGestureWriter PAGestureWriter}
- *   supports output or serialization of curves implemented by <code>BezShape</code>.</li>
+ *   supports output or serialization of curves implemented by {@code BezShape}.</li>
  * </ul>
  *
  * <p>Curve-modeling adapted from the IgnoCodeLib Processing library for use with PixelAudio.</p>

@@ -60,14 +60,14 @@ import com.hamoid.*;
  * TutorialOne_03_Drawing}. A windowed audio buffer combines an audio buffer with a
  * method that positions a "window" within a larger source or "backing" buffer and
  * reads data from it to a separate data structure. TutorialOne_06_WindowBuffer uses
- * PixelAudio's <code>WindowedBuffer</code> class to store a backing buffer read
+ * PixelAudio's {@code WindowedBuffer} class to store a backing buffer read
  * from an audio file. It uses the backing buffer as the source array for the
- * smaller audio buffers <code>audioSignal</code> and <code>playBuffer</code>. We
+ * smaller audio buffers {@code audioSignal} and {@code playBuffer}. We
  * can use the window function to select which portion of the backing buffer we want
  * to see and interact with. Data in audioSignal is transcoded as pixel values in
- * <code>mapImage</code>, an image used in this sketch to provide a visual
+ * {@code mapImage}, an image used in this sketch to provide a visual
  * representation of the data in the audio buffer. A PixelAudioMapper instance,
- * <code>mapper</code>, handles the mapping of data between image and audio
+ * {@code mapper}, handles the mapping of data between image and audio
  * structures, and also maps mouse interactions on the display image to sample
  * indices in the audio buffer.
  * </p><p>
@@ -90,7 +90,7 @@ import com.hamoid.*;
  * determine the audio sample index.
  * </p>
  * <h2>QUICK START</h2>
- * <p>
+ * 
  * <ol>
  *    <li>Run the sketch. It will load the audio file specified in daPath and daFile, and write 
  *    it to the display image as colors overlaid on a visualization of the audio values along
@@ -167,7 +167,6 @@ import com.hamoid.*;
  * Press 'R' to rewind the WindowBuffer.
  * Press 'Y' to toggle raindrop point events while windowing.
  * </pre>
- * </div>
  * 
  * REVISIONS
  * 
@@ -1220,7 +1219,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	}
 
 	/**
-	 * Sets Sampler instrument <code>pool</code> gain in dB.
+	 * Sets Sampler instrument {@code pool} gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustPoolGain(float g) {
@@ -2659,11 +2658,14 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 */
 	ArrayList<PVector> getPathPoints(AudioBrushLite b) {
 	    PACurveMaker cm = b.curve();
-	    return switch (b.cfg().pathMode) {
-	    case ALL_POINTS -> cm.getAllPoints();
-	    case REDUCED_POINTS -> cm.getReducedPoints();
-	    case CURVE_POINTS -> cm.getCurvePoints();
-	    };
+	    switch (b.cfg().pathMode) {
+	    case REDUCED_POINTS:
+	      return cm.getReducedPoints();
+	    case CURVE_POINTS:
+	      return cm.getCurvePoints();
+	    case ALL_POINTS: default:
+	      return cm.getAllPoints();
+	    }
 	}
 
 	/**
@@ -2674,17 +2676,17 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	public GestureSchedule getScheduleForBrush(AudioBrushLite b) {
 	    GestureSchedule sched;
 	    switch (b.cfg().pathMode) {
-	    case REDUCED_POINTS -> {
+	    case REDUCED_POINTS: {
 	        sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
+	        break;
 	    }
-	    case CURVE_POINTS -> {
+	    case CURVE_POINTS: {
 	        sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
+	        break;
 	    }
-	    case ALL_POINTS -> {
+	    case ALL_POINTS: default: {
 	        sched = b.curve.getAllPointsSchedule();
-	    }
-	    default -> {
-	        sched = b.curve.getAllPointsSchedule();
+	        break;
 	    }
 	    }
 	    return sched;

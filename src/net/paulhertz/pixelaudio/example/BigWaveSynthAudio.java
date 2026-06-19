@@ -57,7 +57,7 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * its sine wave operator output into 44100 audio samples or pixels, on the screen and in its 
  * audio signal. For the WaveSyth that shows on startup, with frequencies of 768 and 192 Hz, 
  * the output frequency of a note will then be 768 Hz, right around G5 (G above middle C) on 
- * a piano keyboard.</p>
+ * a piano keyboard.
  * 
  * <p>At sampleRate = genWidth * genHeight, one cycle of a sine wave set in the WaveSynth would
  * fill an entire HilbertGen. A frequency of 768 will place 768 copies of a sine wave along
