@@ -29,13 +29,14 @@ import java.util.Objects;
  * matching the {@link net.paulhertz.pixelaudio.schedule.GestureSchedule#size()} used to
  * generate them.</p>
  *
- * <p>Design intent:
+ * <p>Design intent:</p>
  * <ul>
- *   <li>{@code startIndices} is the primary "mapping result" (typically from PixelAudioMapper).</li>
- *   <li>Optional arrays (pan/gain/pitchRatio) override defaults per event.</li>
+ *   <li>{@code startIndices} is the primary "mapping result" (typically from
+ *   {@link net.paulhertz.pixelaudio.PixelAudioMapper PixelAudioMapper}).</li>
+ *   <li>Optional arrays ({@code pan}, {@code gain}, and {@code pitchRatio}) override
+ *   {@link GestureGranularParams} defaults per event.</li>
  *   <li>Persist and reuse this object across re-triggers; refresh only the fields that depend on buffer/mapping.</li>
  * </ul>
- * </p>
  *
  * <p>Immutability note: By default, this class defensively copies arrays in {@link Builder#build()}.
  * If you want to avoid copying for performance, call {@link Builder#noCopy()} and treat the provided
@@ -43,19 +44,19 @@ import java.util.Objects;
  */
 public final class GestureEventParams {
 
-    /** Number of events (must match schedule.size()). */
+    /** Number of events; must match the associated gesture schedule size. */
     public final int n;
 
-    /** Required: per-event start indices into mono buffer; length == n. */
+    /** Required per-event start indices into a mono source buffer; length equals {@link #n}. */
     public final int[] startIndices;
 
-    /** Optional: per-event pan in [-1..1]; length == n, or null => use texture.pan. */
+    /** Optional per-event pan in [-1, 1]; length equals {@link #n}, or null to use {@link GestureGranularParams#pan}. */
     public final float[] pan;
 
-    /** Optional: per-event linear gain scalar; length == n, or null => use texture.gainLinear. */
+    /** Optional per-event linear gain scalar; length equals {@link #n}, or null to use {@link GestureGranularParams#gainLinear}. */
     public final float[] gain;
 
-    /** Optional: per-event pitch ratio (>0); length == n, or null => use texture.pitchRatio. */
+    /** Optional per-event pitch ratio greater than 0; length equals {@link #n}, or null to use {@link GestureGranularParams#pitchRatio}. */
     public final float[] pitchRatio;
 
     /**
@@ -95,12 +96,24 @@ public final class GestureEventParams {
         this.scheduleId = b.scheduleId;
     }
 
-    /** Create a builder for the given number of events. */
+    /**
+     * Creates a builder for the given number of gesture events.
+     *
+     * @param n the number of schedule events this parameter set will describe
+     * @return a new builder
+     * @throws IllegalArgumentException if {@code n < 1}
+     */
 	public static Builder builder(int n) {
         return new Builder(n);
     }
 
-    /** Create a params object with required indices only. */
+    /**
+     * Creates a parameter set with only the required start-index array.
+     *
+     * @param startIndices per-event start indices into the mono source buffer
+     * @return a new parameter set whose {@link #n} equals {@code startIndices.length}
+     * @throws NullPointerException if {@code startIndices} is null
+     */
     public static GestureEventParams ofStartIndices(int[] startIndices) {
         Objects.requireNonNull(startIndices, "startIndices");
         return builder(startIndices.length).startIndices(startIndices).build();
@@ -110,7 +123,14 @@ public final class GestureEventParams {
     // "With" helpers for incremental updates
     // ------------------------------------------------------------------------
 
-    /** Return a copy with updated startIndices (other fields preserved). */
+    /**
+     * Returns a copy with updated start indices and all other fields preserved.
+     *
+     * @param newStartIndices replacement per-event start indices; length must equal {@link #n}
+     * @return a new parameter set with the supplied start indices
+     * @throws NullPointerException if {@code newStartIndices} is null
+     * @throws IllegalArgumentException if {@code newStartIndices.length != n}
+     */
     public GestureEventParams withStartIndices(int[] newStartIndices) {
         Objects.requireNonNull(newStartIndices, "newStartIndices");
         return builder(this.n)
@@ -123,7 +143,15 @@ public final class GestureEventParams {
                 .build();
     }
 
-    /** Return a copy with updated pan array (other fields preserved). */
+    /**
+     * Returns a copy with an updated per-event pan array and all other fields preserved.
+     *
+     * <p>Pass null to clear the per-event override and use {@link GestureGranularParams#pan}.</p>
+     *
+     * @param newPan replacement per-event pan values; null is allowed, otherwise length must equal {@link #n}
+     * @return a new parameter set with the supplied pan array
+     * @throws IllegalArgumentException if {@code newPan} is non-null and {@code newPan.length != n}
+     */
     public GestureEventParams withPan(float[] newPan) {
         return builder(this.n)
                 .startIndices(this.startIndices)
@@ -135,7 +163,15 @@ public final class GestureEventParams {
                 .build();
     }
 
-    /** Return a copy with updated gain array (other fields preserved). */
+    /**
+     * Returns a copy with an updated per-event gain array and all other fields preserved.
+     *
+     * <p>Pass null to clear the per-event override and use {@link GestureGranularParams#gainLinear}.</p>
+     *
+     * @param newGain replacement per-event gain values; null is allowed, otherwise length must equal {@link #n}
+     * @return a new parameter set with the supplied gain array
+     * @throws IllegalArgumentException if {@code newGain} is non-null and {@code newGain.length != n}
+     */
     public GestureEventParams withGain(float[] newGain) {
         return builder(this.n)
                 .startIndices(this.startIndices)
@@ -147,7 +183,15 @@ public final class GestureEventParams {
                 .build();
     }
 
-    /** Return a copy with updated pitchRatio array (other fields preserved). */
+    /**
+     * Returns a copy with an updated per-event pitch-ratio array and all other fields preserved.
+     *
+     * <p>Pass null to clear the per-event override and use {@link GestureGranularParams#pitchRatio}.</p>
+     *
+     * @param newPitchRatio replacement per-event pitch ratios; null is allowed, otherwise length must equal {@link #n}
+     * @return a new parameter set with the supplied pitch-ratio array
+     * @throws IllegalArgumentException if {@code newPitchRatio} is non-null and {@code newPitchRatio.length != n}
+     */
     public GestureEventParams withPitchRatio(float[] newPitchRatio) {
         return builder(this.n)
                 .startIndices(this.startIndices)
@@ -163,20 +207,51 @@ public final class GestureEventParams {
     // Convenience accessors with defaults (optional)
     // ------------------------------------------------------------------------
 
-    /** Returns per-event pan if present; otherwise returns defaultPan. */
+    /**
+     * Returns the pan value for one event.
+     *
+     * <p>If no per-event pan array is present, this method returns {@code defaultPan}.
+     * Otherwise it returns {@code pan[i]} clamped to the range [-1, 1].</p>
+     *
+     * @param i event index
+     * @param defaultPan pan value to use when no per-event pan array is present
+     * @return the resolved pan value
+     * @throws ArrayIndexOutOfBoundsException if {@code i} is outside the pan array
+     */
     public float panAt(int i, float defaultPan) {
         if (pan == null) return defaultPan;
         return clampPan(pan[i]);
     }
 
-    /** Returns per-event gain if present; otherwise returns defaultGain. */
+    /**
+     * Returns the gain value for one event.
+     *
+     * <p>If no per-event gain array is present, this method returns {@code defaultGain}.
+     * Otherwise it returns {@code gain[i]}, with negative values clamped to 0.</p>
+     *
+     * @param i event index
+     * @param defaultGain gain value to use when no per-event gain array is present
+     * @return the resolved gain value
+     * @throws ArrayIndexOutOfBoundsException if {@code i} is outside the gain array
+     */
     public float gainAt(int i, float defaultGain) {
         if (gain == null) return defaultGain;
         float g = gain[i];
         return (g < 0f) ? 0f : g;
     }
 
-    /** Returns per-event pitch ratio if present; otherwise returns defaultPitch. */
+    /**
+     * Returns the pitch ratio for one event.
+     *
+     * <p>If no per-event pitch-ratio array is present, this method returns {@code defaultPitch}.
+     * Otherwise it returns {@code pitchRatio[i]}, falling back to {@code defaultPitch} for
+     * non-positive values.</p>
+     *
+     * @param i event index
+     * @param defaultPitch pitch ratio to use when no per-event pitch-ratio array is present
+     * @return the resolved pitch ratio
+     * @throws ArrayIndexOutOfBoundsException if {@code i} is outside the pitch-ratio array
+     */
     public float pitchAt(int i, float defaultPitch) {
         if (pitchRatio == null) return defaultPitch;
         float p = pitchRatio[i];
@@ -232,50 +307,91 @@ public final class GestureEventParams {
         }
 
         /**
-         * By default, build() defensively copies arrays. Call this to keep references as-is.
-         * Only do this if you treat the arrays as immutable after building.
+         * Disables defensive array copies when {@link #build()} creates the parameter set.
+         *
+         * <p>Call this only when the supplied arrays will be treated as immutable after building.</p>
+         *
+         * @return this builder
          */
         public Builder noCopy() {
             this.copyArrays = false;
             return this;
         }
 
-        /** Required. Length must equal n. */
+        /**
+         * Sets the required per-event start indices.
+         *
+         * @param v per-event start indices into the mono source buffer; length must equal the builder event count
+         * @return this builder
+         * @throws NullPointerException if {@code v} is null
+         */
         public Builder startIndices(int[] v) {
             this.startIndices = Objects.requireNonNull(v, "startIndices");
             return this;
         }
 
-        /** Optional. If non-null, length must equal n. */
+        /**
+         * Sets optional per-event pan values.
+         *
+         * @param v per-event pan values; null is allowed, otherwise length must equal the builder event count
+         * @return this builder
+         */
         public Builder pan(float[] v) {
             this.pan = v;
             return this;
         }
 
-        /** Optional. If non-null, length must equal n. */
+        /**
+         * Sets optional per-event gain values.
+         *
+         * @param v per-event linear gain values; null is allowed, otherwise length must equal the builder event count
+         * @return this builder
+         */
         public Builder gain(float[] v) {
             this.gain = v;
             return this;
         }
 
-        /** Optional. If non-null, length must equal n. */
+        /**
+         * Sets optional per-event pitch ratios.
+         *
+         * @param v per-event pitch ratios; null is allowed, otherwise length must equal the builder event count
+         * @return this builder
+         */
         public Builder pitchRatio(float[] v) {
             this.pitchRatio = v;
             return this;
         }
 
-        /** Optional caller-defined tag/version. */
+        /**
+         * Sets a caller-defined version tag for cache invalidation or debugging.
+         *
+         * @param v caller-defined version value
+         * @return this builder
+         */
         public Builder version(int v) {
             this.version = v;
             return this;
         }
 
-        /** Optional caller-defined id for associated schedule. */
+        /**
+         * Sets a caller-defined identifier for the associated gesture schedule.
+         *
+         * @param v caller-defined schedule identifier
+         * @return this builder
+         */
         public Builder scheduleId(int v) {
             this.scheduleId = v;
             return this;
         }
 
+        /**
+         * Validates the configured arrays and creates an immutable parameter set.
+         *
+         * @return a new gesture event parameter set
+         * @throws IllegalStateException if required start indices have not been supplied
+         * @throws IllegalArgumentException if any supplied array length differs from the builder event count
+         */
         public GestureEventParams build() {
             if (startIndices == null) {
                 throw new IllegalStateException("startIndices is required");
