@@ -25,24 +25,24 @@ import net.paulhertz.pixelaudio.sampler.ADSRParams;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 /**
- * PAGranularInstrument
+ * High-level granular instrument wrapper for {@link PASource} playback.
  *
- * High-level granular instrument wrapper.
+ * <p>{@code PAGranularInstrument} is the instrument-level control surface in the granular
+ * synthesis chain. It applies global pan, global gain, and default envelope settings, then
+ * delegates voice allocation and sample-accurate scheduling to {@link PAGranularSampler}.</p>
  *
- * Mirrors PASamplerInstrument but uses:
- *   PAGranularSampler → PAGranularVoice → PASource.
+ * <p>Most gesture-driven granular synthesis code should enter the chain through
+ * {@link PAGranularInstrumentDirector}, which creates the {@link PABurstGranularSource}
+ * instances and calls this class. Direct use of {@code PAGranularInstrument} is useful when
+ * callers already have a {@link PASource} and want immediate or scheduled playback.</p>
  *
- * Provides:
- *   - Global pan
- *   - Global gain scaling
- *   - Default ADSR envelope
- *   - Looping option for granular paths
- *   - Thread-safe play() methods
+ * <p>This class does not manage Minim {@code MultiChannelBuffer} data. A {@link PASource}
+ * encapsulates its own audio data or rendering behavior.</p>
  *
- * Does NOT manage MultiChannelBuffer. PASource encapsulates its data.
- * 
- * Now also exposes helpers to schedule playback at sample-accurate times
- * via the underlying PAGranularSampler.
+ * @see PAGranularInstrumentDirector
+ * @see PAGranularSampler
+ * @see PAGranularVoice
+ * @see PASource
  */
 public class PAGranularInstrument {
 
@@ -63,6 +63,13 @@ public class PAGranularInstrument {
     // ------------------------------------------------------------------------
     // Constructors
     // ------------------------------------------------------------------------
+    /**
+     * Creates a granular instrument.
+     *
+     * @param out Minim audio output used by the sampler
+     * @param defaultEnv default macro envelope for voices when a playback call supplies null
+     * @param maxVoices maximum number of simultaneous granular voices
+     */
     public PAGranularInstrument(AudioOutput out,
                                 ADSRParams defaultEnv,
                                 int maxVoices) {
@@ -73,6 +80,11 @@ public class PAGranularInstrument {
                 : new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f);
     }
 
+    /**
+     * Creates a granular instrument with a default envelope and 16 voices.
+     *
+     * @param out Minim audio output used by the sampler
+     */
     public PAGranularInstrument(AudioOutput out) {
         this(out, new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f), 16);
     }
@@ -82,17 +94,19 @@ public class PAGranularInstrument {
     // ------------------------------------------------------------------------
 
     /**
-     * Main granular play() method. The PASource in the current Granular synthesis engine is 
-     * expected to be a PABurstGranularSource passed in by PAGranularInstrumentDirector, the 
-     * standard entry point for granular synthesis in the PixelAudio library. Earlier PASource
-     * classes such as BasicIndexGranularSource, PathGranularSource, etc., are deprecated. 
+     * Plays a granular source immediately.
      *
-     * @param src       PASource (PABurstGranularSource)
-     * @param amp       amplitude
-     * @param pan       stereo pan (-1..+1)
-     * @param env       envelope (or null → default)
-     * @param looping   loop the grain path
-     * @return voiceId or -1
+     * <p>The current gesture-driven granular engine normally supplies a
+     * {@link PABurstGranularSource} created by {@link PAGranularInstrumentDirector}. Other
+     * {@link PASource} implementations can be played directly if they satisfy the source
+     * rendering contract.</p>
+     *
+     * @param src source to render
+     * @param amp linear amplitude multiplier before global gain is applied
+     * @param pan stereo pan offset in the range [-1, 1]
+     * @param env envelope to use, or null to use the instrument default
+     * @param looping true to loop the source path where supported
+     * @return voice id, or -1 if playback could not start
      */
     public synchronized long play(PASource src,
                                   float amp,
@@ -110,22 +124,22 @@ public class PAGranularInstrument {
         return sampler.play(src, useEnv, finalGain, finalPan, looping);
     }
 
-    /** Convenience: uses default envelope, no looping. */
+    /** Convenience overload that uses the default envelope and disables looping. */
     public synchronized long play(PASource src, float amp, float pan) {
         return play(src, amp, pan, defaultEnv, false);
     }
 
-    /** Convenience: default pan, default envelope. */
+    /** Convenience overload that uses center pan and the default envelope. */
     public synchronized long play(PASource src, float amp) {
         return play(src, amp, 0f, defaultEnv, false);
     }
 
-    /** Convenience: default env and global pan. */
+    /** Convenience overload that uses unity gain, global pan, and the default envelope. */
     public synchronized long play(PASource src) {
         return play(src, 1f, globalPan, defaultEnv, false);
     }
 
-    /** Convenience: looping version. */
+    /** Convenience overload that enables looping with the default envelope. */
     public synchronized long playLooping(PASource src, float amp, float pan) {
         return play(src, amp, pan, defaultEnv, true);
     }
@@ -135,14 +149,14 @@ public class PAGranularInstrument {
     // ------------------------------------------------------------------------
 
     /**
-     * Schedule playback of a PASource at an absolute sample time.
+     * Schedules playback of a source at an absolute sample time.
      *
-     * @param src         PASource
-     * @param amp         amplitude
-     * @param pan         stereo pan
-     * @param env         envelope (or null → default)
-     * @param looping     loop flag
-     * @param startSample absolute sample index at which to start
+     * @param src           source to render
+     * @param amp           linear amplitude multiplier before global gain is applied
+     * @param pan           stereo pan offset in the range [-1, 1]
+     * @param env           envelope to use, or null to use the instrument default
+     * @param looping       true to loop the source path where supported
+     * @param startSample   absolute sample index at which playback should start
      */
     public synchronized void startAtSampleTime(PASource src,
     		float amp,
@@ -160,17 +174,19 @@ public class PAGranularInstrument {
     }
     
     /**
-     * Schedule playback of a PASource at an absolute sample time.
-     * Called by PAGranularInstrumentDirector
+     * Schedules playback of a source at an absolute sample time with grain-window settings.
      *
-     * @param src            PASource
-     * @param amp            amplitude
-     * @param pan            stereo pan
-     * @param env            envelope (or null → default)
-     * @param looping        loop flag
-     * @param startSample    absolute sample index at which to start
-     * @param grainWindow    a WindowFunction
-     * @param grainLenSamples    number of samples in one grain
+     * <p>This overload is used by {@link PAGranularInstrumentDirector} so the resolved grain
+     * window and grain length can travel with a scheduled event into the sampler and voice.</p>
+     *
+     * @param src               source to render
+     * @param amp               linear amplitude multiplier before global gain is applied
+     * @param pan               stereo pan offset in the range [-1, 1]
+     * @param env               envelope to use, or null to use the instrument default
+     * @param looping           true to loop the source path where supported
+     * @param startSample       absolute sample index at which playback should start
+     * @param grainWindow       window function for shaping grain amplitude, or null for source default
+     * @param grainLenSamples   number of samples in one grain
      */
     public synchronized void startAtSampleTime(PASource src,
             float amp,
@@ -201,14 +217,14 @@ public class PAGranularInstrument {
     }    
 
     /**
-     * Schedule playback after a delay in samples relative to "now".
+     * Schedules playback after a delay in samples relative to the current sampler time.
      *
-     * @param src          PASource
-     * @param amp          amplitude
-     * @param pan          stereo pan
-     * @param env          envelope (or null → default)
-     * @param looping      loop flag
-     * @param delaySamples how many samples from "now"
+     * @param src            source to render
+     * @param amp            linear amplitude multiplier before global gain is applied
+     * @param pan            stereo pan offset in the range [-1, 1]
+     * @param env            envelope to use, or null to use the instrument default
+     * @param looping        true to loop the source path where supported
+     * @param delaySamples   delay from the current sample time
      */
     public synchronized void startAfterDelaySamples(PASource src,
     		float amp,
@@ -226,13 +242,13 @@ public class PAGranularInstrument {
     }
 
     /**
-     * Convenience: schedule using current instrument cursor as "now".
+     * Schedules playback at the current instrument cursor.
      *
-     * @param src         PASource
-     * @param amp         amplitude
-     * @param pan         pan
-     * @param env         envelope (or null → default)
-     * @param looping     loop flag
+     * @param src       source to render
+     * @param amp       linear amplitude multiplier before global gain is applied
+     * @param pan       stereo pan offset in the range [-1, 1]
+     * @param env       envelope to use, or null to use the instrument default
+     * @param looping   true to loop the source path where supported
      */
     public synchronized void startNow(PASource src,
     		float amp,
@@ -280,6 +296,9 @@ public class PAGranularInstrument {
     // Lifecycle
     // ------------------------------------------------------------------------
 
+    /**
+     * Closes this instrument and stops all voices.
+     */
     public synchronized void close() {
         if (isClosed) return;
         isClosed = true;
@@ -287,20 +306,44 @@ public class PAGranularInstrument {
         // sampler is a UGen patched to out — optionally leave patch on
     }
     
-    // fade or stop
+    // stop or release
     
+    /**
+     * Clears playback events that have been scheduled but have not started yet.
+     *
+     * <p>Voices that are already active continue playing. For a musical stop, call this first
+     * and then call {@link #releaseAll()}.</p>
+     */
     public void clearScheduled() {
         if (sampler != null) sampler.clearScheduled();
     }
 
+    /**
+     * Releases all active or already-releasing voices through their envelopes.
+     *
+     * <p>A release is generally less abrupt than a stop, because each active voice is allowed
+     * to pass through its envelope release stage. Scheduled events are not cleared by this
+     * method.</p>
+     */
     public void releaseAll() {
         if (sampler != null) sampler.releaseAll();
     }
 
+    /**
+     * Clears pending scheduled events and immediately stops all active voices.
+     *
+     * <p>A stop halts voice processing directly and is therefore more abrupt than a release.</p>
+     */
     public void cancelAndStopAll() {
         if (sampler != null) sampler.cancelAndStopAll();
     }
 
+    /**
+     * Clears pending scheduled events and releases all active voices through their envelopes.
+     *
+     * <p>This is the less abrupt counterpart to {@link #cancelAndStopAll()} and is generally
+     * better suited to musical fade-outs.</p>
+     */
     public void cancelAndReleaseAll() {
         if (sampler != null) sampler.cancelAndReleaseAll();
     }

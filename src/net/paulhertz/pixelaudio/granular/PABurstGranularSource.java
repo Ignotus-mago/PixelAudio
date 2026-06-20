@@ -22,12 +22,25 @@ import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
 /**
- * Core class in the PAGranularInstrumentDirector granular synthesis processing chain, provides
- * windowed granular synthesis with normalization.<br>
- * 
- * Calling chain: PAGranularInstrumentDirector -> PAGranularInstrument -> PAGranularSampler -> PAGranularVoice, <br>
- * with PABurstGranularSource handling the complexities of the granular synthesis sample by sample. 
- * 
+ * Windowed granular source that renders one scheduled burst of grains.
+ *
+ * <p>{@code PABurstGranularSource} is the sample-level renderer created by
+ * {@link PAGranularInstrumentDirector}. Each instance represents one gesture event. Within that
+ * event it may render one or more grains, spaced in time by {@code timeHopSamples} and advanced
+ * through the source buffer by {@code indexHopSamples}.</p>
+ *
+ * <p>The source reads from a mono {@code float[]} buffer, applies an optional grain window,
+ * performs linear interpolation for fractional pitch-ratio playback, and adds its samples to
+ * the output block. When overlapping grains contribute to the same block sample, the source
+ * performs in-place overlap-add normalization.</p>
+ *
+ * <p>This source reports {@link PitchPolicy#SOURCE_GRANULAR} because pitch is already handled
+ * internally by {@code pitchRatio}; the instrument should not apply a second playback-rate
+ * transposition on top of it.</p>
+ *
+ * @see PAGranularInstrumentDirector
+ * @see PASource
+ * @see WindowCache
  */
 public final class PABurstGranularSource implements PASource {
 
@@ -55,6 +68,18 @@ public final class PABurstGranularSource implements PASource {
     // Scratch buffers (reused) for safe in-source OLA normalization
     private float[] wsum = new float[0];
 
+    /**
+     * Creates a burst granular source.
+     *
+     * @param source                mono source buffer to read from
+     * @param baseIndex             start index in {@code source} for the first grain
+     * @param grainLengthSamples    grain length in samples; values below 1 are clamped to 1
+     * @param burstGrains           number of grains in this event; values below 1 are clamped to 1
+     * @param timeHopSamples        spacing, in output samples, between grains in the burst
+     * @param indexHopSamples       spacing, in source-buffer samples, between grain start positions
+     * @param pitchRatio            playback pitch ratio for each grain; non-positive values use 1.0
+     * @throws IllegalArgumentException if {@code source} is null
+     */
     public PABurstGranularSource(
             float[] source,
             int baseIndex,
@@ -77,21 +102,51 @@ public final class PABurstGranularSource implements PASource {
         this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
     }
 
-    /** Optional: set multiplicative gain applied after OLA normalization. */
+    /**
+     * Sets an optional source-local gain scalar.
+     *
+     * <p>The current director applies event gain outside this source, and the current render
+     * path does not apply this value. It is retained for callers that track source-local gain
+     * metadata or for future source-level gain support.</p>
+     *
+     * @param gain gain scalar; finite negative values are clamped to 0
+     */
     public synchronized void setGain(float gain) {
         if (Float.isFinite(gain)) this.gain = Math.max(0f, gain);
     }
 
+    /**
+     * Returns the optional source-local gain scalar.
+     *
+     * @return source-local gain
+     */
     public synchronized float getGain() {
         return gain;
     }
 
+    /**
+     * Sets the absolute output-sample time at which this burst begins.
+     *
+     * @param absoluteSample     absolute sample time for the first grain in the burst
+     */
     @Override
     public void seekTo(long absoluteSample) {
         this.noteStartSample = absoluteSample;
         this.noteStarted = true;
     }
 
+    /**
+     * Renders this burst into an audio block.
+     *
+     * <p>The method adds samples to {@code outL} and, when supplied, {@code outR}. It assumes
+     * that output arrays are at least {@code blockSize} samples long. If this source has not
+     * been started with {@link #seekTo(long)}, rendering is skipped.</p>
+     *
+     * @param blockStart    absolute sample index of the first sample in the output block
+     * @param blockSize     number of samples in the output block
+     * @param outL          left output buffer to mix into
+     * @param outR          right output buffer to mix into; may be null or the same array as {@code outL}
+     */
     @Override
     public void renderBlock(long blockStart, int blockSize, float[] outL, float[] outR) {
         if (!noteStarted) return;
@@ -159,16 +214,35 @@ public final class PABurstGranularSource implements PASource {
         }
     }
     
+    /**
+     * Returns the duration of the burst in samples.
+     *
+     * @return sample span from the start of the first grain to the end of the last grain
+     */
     @Override
     public long lengthSamples() {
         return (long) (burstGrains - 1) * (long) timeHopSamples + (long) grainLength;
     }
 
+    /**
+     * Reports that this source handles pitch internally.
+     *
+     * @return {@link PitchPolicy#SOURCE_GRANULAR}
+     */
     @Override
     public PitchPolicy pitchPolicy() {
         return PitchPolicy.SOURCE_GRANULAR;
     }
 
+    /**
+     * Sets the grain window and authoritative grain length for rendering.
+     *
+     * <p>When {@code wf} is null, the source uses a rectangular window. Otherwise the requested
+     * curve is obtained from {@link WindowCache} and reused during block rendering.</p>
+     *
+     * @param wf window function to apply, or null for rectangular grains
+     * @param grainLenSamples grain length in samples; values below 1 are clamped to 1
+     */
     @Override
     public synchronized void setGrainWindow(WindowFunction wf, int grainLenSamples) {
         this.grainWindow = wf;
@@ -188,11 +262,11 @@ public final class PABurstGranularSource implements PASource {
     }
     
     /**
-     * Reads interpolated value at pos in buf and returns it.
+     * Reads a linearly interpolated value from an audio buffer.
      * 
-     * @param buf    the audio buffer we use to generate grains
-     * @param pos    current position in the buffer
-     * @return linear interpolated value at pos in buf
+     * @param buf audio buffer used to generate grains
+     * @param pos fractional position in the buffer
+     * @return interpolated sample value at {@code pos}
      */
     private static float readLinear(float[] buf, float pos) {
         int i0 = (int) pos;

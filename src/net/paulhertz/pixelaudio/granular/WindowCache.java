@@ -24,22 +24,33 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * WindowCache
+ * Thread-safe cache for generated Minim window curves. PixelAudio uses 
+ * a Hann window by default. Minim provides additional WindowFunction classes 
+ * and a model for creating your own. 
  *
- * Simple cache for windowFunction.generateCurve(length) results.
- * Avoids recomputing window curves for the same (WindowFunction class, length) pairs.
+ * <p>{@code WindowCache} stores the arrays returned by
+ * {@link WindowFunction#generateCurve(int)} so repeated granular voices can reuse the same
+ * window data instead of regenerating it for every grain or playback event.</p>
  *
- * Implementation is thread-safe. For strict real-time safety, prewarm curves
- * during setup, not from the audio thread.
- * 
- * Used by the PixelAudio granular synthesis engine.
- * Calling chain: PAGranularInstrumentDirector -> PAGranularInstrument -> PAGranularSampler -> PAGranularVoice,  
- * where PABurstGranularSource handles the complexities of the granular synthesis sample by sample. 
+ * <p>Cache entries are keyed by the concrete {@link WindowFunction} class and the requested
+ * length. Two different instances of the same window-function class therefore share a cached
+ * curve when the requested length is the same.</p>
+ *
+ * <p>The cache is safe to access from multiple threads. For strict real-time audio behavior,
+ * call {@link #prewarm(WindowFunction, int)} during setup or scheduling so the audio thread
+ * can later call {@link #getWindowCurve(WindowFunction, int)} without triggering curve
+ * generation.</p>
+ *
+ * <p>The returned arrays are cached and shared. Callers should treat them as read-only.</p>
+ *
+ * @see PABurstGranularSource
+ * @see PAGranularInstrumentDirector
+ * @see <a href="https://code.compartmental.net/minim/javadoc/" target="_blank">Minim documentation</a>
  * 
  */
 public final class WindowCache {
 
-    // Singleton instance
+    /** Shared cache instance used by the granular synthesis engine. */
     public static final WindowCache INSTANCE = new WindowCache();
 
     private WindowCache() {
@@ -71,7 +82,16 @@ public final class WindowCache {
     private final Map<Key, float[]> windowCurves = new ConcurrentHashMap<>();
 
     /**
-     * Precompute and cache a window curve. Call this during setup, not from the audio thread.
+     * Precomputes and caches a window curve.
+     *
+     * <p>Use this method during setup or scheduling to avoid first-use curve generation on the
+     * audio thread. If the curve is already cached, this method returns the existing shared
+     * array.</p>
+     *
+     * @param wf window function used to generate the curve
+     * @param length number of samples in the generated curve
+     * @return the cached window curve; callers should treat the returned array as read-only
+     * @throws NullPointerException if {@code wf} is null
      */
     public float[] prewarm(WindowFunction wf, int length) {
         Key key = new Key(wf, length);
@@ -79,10 +99,16 @@ public final class WindowCache {
     }
 
     /**
-     * Get a cached window curve for the given WindowFunction and length.
-     * If not cached, this will lazily generate it.
+     * Returns a cached window curve for the given window function and length.
      *
-     * For strict real-time safety, prefer calling prewarm(...) ahead of time.
+     * <p>If no matching curve has been cached, this method generates one lazily and stores it.
+     * For strict real-time safety, prefer calling {@link #prewarm(WindowFunction, int)} ahead
+     * of time.</p>
+     *
+     * @param wf window function used to generate the curve
+     * @param length number of samples in the generated curve
+     * @return the cached window curve; callers should treat the returned array as read-only
+     * @throws NullPointerException if {@code wf} is null
      */
     public float[] getWindowCurve(WindowFunction wf, int length) {
         Key key = new Key(wf, length);

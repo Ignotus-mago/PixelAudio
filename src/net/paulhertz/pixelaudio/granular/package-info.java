@@ -3,11 +3,30 @@
  *
  * <p>PixelAudio's granular synthesis engine follows the chain
  * {@code PAGranularInstrumentDirector -> PAGranularInstrument ->
- * PAGranularSampler -> PAGranularVoice}, with {@code PASource}
- * implementations providing sample data and grain behavior. 
- * Example code makes exclusive use of 
- * {@link net.paulhertz.pixelaudio.granular.PABurstGranularSource PABurstGranularSource}
- * as the most versatile {@code PASource}.</p>
+ * PAGranularSampler -> PAGranularVoice -> PASource}. Example code makes
+ * exclusive use of {@link net.paulhertz.pixelaudio.granular.PABurstGranularSource
+ * PABurstGranularSource} as the primary granular {@code PASource}.</p>
+ *
+ * <p><b>Granular synthesis processing chain</b></p>
+ * <ol>
+ *   <li>{@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector}
+ *   receives a mono source buffer, gesture schedule, runtime synthesis parameters, and per-event
+ *   parameters. It prepares event timing, resolves defaults, creates one
+ *   {@link net.paulhertz.pixelaudio.granular.PABurstGranularSource PABurstGranularSource}
+ *   per gesture event, and schedules each source at an absolute sample time.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.granular.PAGranularInstrument PAGranularInstrument}
+ *   applies instrument-level gain, pan, and envelope defaults, then forwards immediate or
+ *   scheduled playback requests to the sampler.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.granular.PAGranularSampler PAGranularSampler}
+ *   owns the voice pool and sample-accurate scheduler. It starts voices immediately or when
+ *   scheduled sample times arrive.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.granular.PAGranularVoice PAGranularVoice}
+ *   applies the macro envelope, voice gain, pan, and lifecycle state while asking its
+ *   {@link net.paulhertz.pixelaudio.granular.PASource PASource} to render audio blocks.</li>
+ *   <li>{@link net.paulhertz.pixelaudio.granular.PABurstGranularSource PABurstGranularSource}
+ *   renders the actual burst grains sample by sample, including source-buffer lookup,
+ *   pitch-ratio playback, windowing, and overlap-add normalization.</li>
+ * </ol>
  *
  * <p><b>Granular synthesis engine</b></p>
  * <ul>

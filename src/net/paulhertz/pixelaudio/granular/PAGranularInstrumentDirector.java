@@ -28,14 +28,39 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 import processing.core.PVector;
 
 /**
- * The top-level entry point for Granular Synthesis in the PixelAudio library, PAGranularInstrumentDirector
- * acts as a facade to {@link PAGranularInstrument}, calling PAGranularInstrument.play(...)
- * with a {@link PABurstGranularSource} instance as a PASource and all necessary gesture and timing data. 
- * Calling chain: PAGranularInstrumentDirector -> PAGranularInstrument -> PAGranularSampler -> PAGranularVoice, with 
- * PABurstGranularSource handling the complexities of the granular synthesis sample by sample. 
- * See the scheduleEvents method, below, for details. 
- * 
- */ 
+ * Top-level director for gesture-driven granular synthesis in PixelAudio.
+ *
+ * <p>{@code PAGranularInstrumentDirector} is the high-level entry point most callers use
+ * after they have a mono source buffer, a {@link GestureSchedule}, runtime synthesis settings,
+ * and per-event buffer indices. The director prepares the schedule, creates one
+ * {@link PABurstGranularSource} for each scheduled event, and delegates playback to a
+ * {@link PAGranularInstrument}, which further delegates audio generation.</p>
+ *
+ * <p><b>Granular playback chain:</b></p>
+ * <ol>
+ *   <li>{@code PAGranularInstrumentDirector} receives a mono source buffer, gesture schedule,
+ *   runtime synthesis parameters, and per-event parameters. It prepares event timing, resolves
+ *   defaults, creates one {@link PABurstGranularSource} per gesture event, and schedules each
+ *   source at an absolute sample time.</li>
+ *   <li>{@link PAGranularInstrument} applies instrument-level gain, pan, and envelope defaults,
+ *   then forwards immediate or scheduled playback requests to the sampler.</li>
+ *   <li>{@link PAGranularSampler} owns the voice pool and sample-accurate scheduler. It starts
+ *   voices immediately or when scheduled sample times arrive.</li>
+ *   <li>{@link PAGranularVoice} applies the macro envelope, voice gain, pan, and lifecycle state
+ *   while asking its {@link PASource} to render audio blocks.</li>
+ *   <li>{@link PABurstGranularSource} renders the actual burst grains sample by sample, including
+ *   source-buffer lookup, pitch-ratio playback, windowing, and overlap-add normalization.</li>
+ * </ol>
+ *
+ * <p>This class owns the gesture-level decisions: when events occur, where each event reads
+ * from the source buffer, which per-event pan/gain/pitch overrides apply, and which grain
+ * window is used. {@link PABurstGranularSource} owns sample-level burst rendering for each
+ * event.</p>
+ *
+ * @see GestureGranularParams
+ * @see GestureEventParams
+ * @see PABurstGranularSource
+ */
 public final class PAGranularInstrumentDirector {
     private final PAGranularInstrument instrument;
     private final float sampleRate;
@@ -53,7 +78,6 @@ public final class PAGranularInstrumentDirector {
     
     // Performance fade state
 
-
     private static final WindowFunction DEFAULT_GRAIN_WINDOW = new HannWindow();
 
     private static WindowFunction resolveGrainWindow(GestureGranularParams params) {
@@ -62,11 +86,27 @@ public final class PAGranularInstrumentDirector {
         return (wf != null) ? wf : DEFAULT_GRAIN_WINDOW;
     }
 
+    /**
+     * Creates a director for the supplied granular instrument.
+     *
+     * @param instrument    instrument used to schedule and render granular voices
+     * @throws NullPointerException if {@code instrument} is null
+     */
     public PAGranularInstrumentDirector(PAGranularInstrument instrument) {
         this.instrument = Objects.requireNonNull(instrument, "instrument");
         this.sampleRate = instrument.getSampleRate();
     }
 
+    /**
+     * Plays a gesture immediately using per-event source-buffer indices.
+     *
+     * <p>The start time is the instrument's current sample cursor plus a short lead-in.</p>
+     *
+     * @param monoBuf         mono source buffer containing audio samples
+     * @param schedule        gesture schedule whose size must match {@code startIndices.length}
+     * @param params          runtime granular playback parameters
+     * @param startIndices    per-event start indices into {@code monoBuf}
+     */
     public void playGestureNow(float[] monoBuf, GestureSchedule schedule, 
 		GestureGranularParams params, int[] startIndices) {
         long now = instrument.getSampleCursor();
@@ -74,7 +114,15 @@ public final class PAGranularInstrumentDirector {
         playGestureAtSampleTime(monoBuf, schedule, params, startIndices, now);
     }
     
-    // include a per-grain pan array
+    /**
+     * Plays a gesture immediately using per-event source-buffer indices and pan overrides.
+     *
+     * @param monoBuf         mono source buffer containing audio samples
+     * @param schedule        gesture schedule whose size must match the per-event arrays
+     * @param params          runtime granular playback parameters
+     * @param startIndices    per-event start indices into {@code monoBuf}
+     * @param panValues       optional per-event pan values
+     */
     public void playGestureNow(float[] monoBuf, GestureSchedule schedule, 
 		GestureGranularParams params, int[] startIndices, float[] panValues) {
         long now = instrument.getSampleCursor();
@@ -82,6 +130,14 @@ public final class PAGranularInstrumentDirector {
         playGestureAtSampleTime(monoBuf, schedule, params, startIndices, panValues, now);
     }
 
+    /**
+     * Plays a gesture immediately using a complete per-event parameter object.
+     *
+     * @param monoBuf     mono source buffer containing audio samples
+     * @param schedule    gesture schedule whose size must match {@code evtParams.n}
+     * @param params      runtime granular playback parameters
+     * @param evtParams   per-event source indices and optional pan, gain, and pitch overrides
+     */
     public void playGestureNow(float[] monoBuf,
             GestureSchedule schedule,
             GestureGranularParams params,
@@ -91,6 +147,15 @@ public final class PAGranularInstrumentDirector {
         playGestureAtSampleTime(monoBuf, schedule, params, evtParams, now);
     }
 
+    /**
+     * Schedules a gesture at an absolute sample time using per-event source-buffer indices.
+     *
+     * @param monoBuf         mono source buffer containing audio samples
+     * @param schedule        gesture schedule whose size must match {@code startIndices.length}
+     * @param params          runtime granular playback parameters
+     * @param startIndices    per-event start indices into {@code monoBuf}
+     * @param startSampleTime absolute sample time for the first gesture event
+     */
     public void playGestureAtSampleTime(float[] monoBuf,
             GestureSchedule schedule,
             GestureGranularParams params,
@@ -109,6 +174,16 @@ public final class PAGranularInstrumentDirector {
         playGestureAtSampleTime(monoBuf, schedule, params, evtParams, startSampleTime);
     }
 
+    /**
+     * Schedules a gesture at an absolute sample time using source-buffer indices and pan overrides.
+     *
+     * @param monoBuf          mono source buffer containing audio samples
+     * @param schedule         gesture schedule whose size must match the per-event arrays
+     * @param params           runtime granular playback parameters
+     * @param startIndices     per-event start indices into {@code monoBuf}
+     * @param panValues        optional per-event pan values
+     * @param startSampleTime  absolute sample time for the first gesture event
+     */
     public void playGestureAtSampleTime(float[] monoBuf,
             GestureSchedule schedule,
             GestureGranularParams params,
@@ -129,6 +204,19 @@ public final class PAGranularInstrumentDirector {
         playGestureAtSampleTime(monoBuf, schedule, params, evtParams, startSampleTime);
     }
 
+    /**
+     * Schedules a gesture at an absolute sample time using complete per-event parameters.
+     *
+     * <p>This method prepares the schedule according to {@code params}, validates the per-event
+     * parameter count, caches event offsets in samples, and schedules one
+     * {@link PABurstGranularSource} for each event.</p>
+     *
+     * @param monoBuf             mono source buffer containing audio samples
+     * @param schedule            raw gesture schedule in milliseconds
+     * @param params              runtime granular playback parameters
+     * @param evtParams           per-event source indices and optional pan, gain, and pitch overrides
+     * @param startSampleTime     absolute sample time for the first gesture event
+     */
     public void playGestureAtSampleTime(float[] monoBuf,
             GestureSchedule schedule,
             GestureGranularParams params,
@@ -155,6 +243,18 @@ public final class PAGranularInstrumentDirector {
         scheduleEvents(monoBuf, sched, params, evtParams, grainWf, startSampleTime);
     }
     
+    /**
+     * Schedules a gesture whose timing has already been transformed.
+     *
+     * <p>Use this overload when schedule preparation has been performed elsewhere and
+     * {@code transformedSchedule.timesMs} already contains the desired event offsets.</p>
+     *
+     * @param monoBuf                mono source buffer containing audio samples
+     * @param transformedSchedule    prepared schedule in milliseconds
+     * @param params                 runtime granular playback parameters
+     * @param evtParams              per-event source indices and optional pan, gain, and pitch overrides
+     * @param startSampleTime        absolute sample time for the first gesture event
+     */
     public void playGestureAtSampleTimeTransformed(float[] monoBuf,
             GestureSchedule transformedSchedule,
             GestureGranularParams params,
@@ -173,12 +273,14 @@ public final class PAGranularInstrumentDirector {
     }
     
     /**
-     * @param monoBuf            a buffer of floating point values in audio signal range (-1.0 to 1.0)
-     * @param sched              
-     * @param params
-     * @param evtParams
-     * @param wf
-     * @param startSampleTime
+     * Creates and schedules one burst source for each gesture event.
+     *
+     * @param monoBuf            mono source buffer containing audio samples
+     * @param sched              prepared gesture schedule in milliseconds
+     * @param params             runtime granular playback parameters
+     * @param evtParams          per-event source indices and optional pan, gain, and pitch overrides
+     * @param wf                 grain window function resolved from {@code params}, or the default window
+     * @param startSampleTime    absolute sample time for the first gesture event
      */
     private void scheduleEvents(float[] monoBuf,
             GestureSchedule sched,
@@ -193,7 +295,7 @@ public final class PAGranularInstrumentDirector {
         final int grainLen = Math.max(1, params.grainLengthSamples);
         final int hop      = Math.max(1, params.hopLengthSamples);
 
-        // Model A semantics (unchanged)
+        // early model semantics (unchanged)
         final int burstGrains = Math.max(1, params.burstGrains);
         final int timeHop  = hop;
         final int indexHop = hop;
@@ -240,7 +342,7 @@ public final class PAGranularInstrumentDirector {
                     gain,
                     pan,
                     params.env,
-                    false,    // Model A: one-shot burst
+                    false,    // one-shot burst
                     when,
                     wf,
                     grainLen
@@ -282,9 +384,15 @@ public final class PAGranularInstrumentDirector {
     // --------------------------
 
     /**
-     * @param rawSchedule
-     * @param ggParams
-     * @return
+     * Applies the director's schedule-time transform pipeline.
+     *
+     * <p>The pipeline applies, in order, optional resampling, optional duration scaling, and
+     * optional timing warp. Callers normally reach this method through
+     * {@link #prepareSchedule(GestureSchedule, GestureGranularParams)}.</p>
+     *
+     * @param rawSchedule    original gesture schedule
+     * @param ggParams       runtime granular playback parameters
+     * @return transformed schedule, or the input schedule when no transform applies
      */
     private static GestureSchedule applyTimeTransform(GestureSchedule rawSchedule, GestureGranularParams ggParams) {
         if (rawSchedule == null || rawSchedule.size() == 0 || ggParams == null) return rawSchedule;
@@ -325,6 +433,17 @@ public final class PAGranularInstrumentDirector {
     }
 
     
+    /**
+     * Returns a schedule prepared for playback by this director.
+     *
+     * <p>If {@code params.timeTransform} is {@link GestureGranularParams.TimeTransform#RAW_GESTURE},
+     * the raw schedule is returned unchanged. Otherwise this method applies the director's
+     * transform pipeline and caches the result by raw schedule and parameter object identity.</p>
+     *
+     * @param rawSchedule    original gesture schedule
+     * @param params         runtime granular playback parameters
+     * @return prepared schedule, or {@code rawSchedule} when no transform is needed
+     */
     public GestureSchedule prepareSchedule(GestureSchedule rawSchedule, GestureGranularParams params) {
         if (rawSchedule == null || rawSchedule.isEmpty()) return rawSchedule;
         if (params == null || params.timeTransform == GestureGranularParams.TimeTransform.RAW_GESTURE) return rawSchedule;
@@ -346,10 +465,6 @@ public final class PAGranularInstrumentDirector {
         return (long) Math.max(0, Math.round(s));
     }
 
-    /**
-     * Placeholder resampler: you likely already have something better.
-     * Replace this with your existing GestureScheduleBuilder logic.
-     */
     private static GestureSchedule resampleToCount(GestureSchedule in, int targetCount) {
         // TODO: implement using your existing schedule resampling rules.
         // For now: naive linear index resample (keeps endpoints)
@@ -443,29 +558,56 @@ public final class PAGranularInstrumentDirector {
 	}
 	
 	// ------------------------------------------------------------------------
-    // Access to PAGranularInstrument
+	// Access to PAGranularInstrument
     // ------------------------------------------------------------------------
 
+    /**
+     * Returns the underlying granular instrument.
+     *
+     * @return granular instrument used by this director
+     */
 	public PAGranularInstrument getInstrument() {
 		return this.instrument;
 	}
  
     // ------------------------------------------------------------------------
-    // Performance fade methods
+    // Performance stop and release methods
     // ------------------------------------------------------------------------
 	
+    /**
+     * Clears pending scheduled granular events without stopping voices already playing.
+     *
+     * <p>For a musical stop, call this first and then call {@link #releaseAll()}.</p>
+     */
     public synchronized void clearScheduled() {
         if (instrument != null) instrument.clearScheduled();
     }
 
+    /**
+     * Releases all currently playing granular voices through their envelopes.
+     *
+     * <p>A release is generally less abrupt than a stop, because each active voice is allowed
+     * to pass through its envelope release stage.</p>
+     */
     public synchronized void releaseAll() {
         if (instrument != null) instrument.releaseAll();
     }
 
+    /**
+     * Cancels pending events and stops all granular voices immediately.
+     *
+     * <p>A stop halts voice processing directly and is therefore more abrupt than a release.</p>
+     */
     public synchronized void cancelAndStopAll() {
         if (instrument != null) instrument.cancelAndStopAll();
     }
 
+    /**
+     * Cancels pending events and releases all granular voices through their envelopes.
+     *
+     * <p>This is the less abrupt counterpart to {@link #cancelAndStopAll()} and is generally
+     * better suited to musical fade-outs.</p>
+     */
     public synchronized void cancelAndReleaseAll() {
         if (instrument != null) instrument.cancelAndReleaseAll();
     }

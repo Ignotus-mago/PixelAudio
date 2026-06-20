@@ -23,46 +23,74 @@ import ddf.minim.analysis.WindowFunction;
 import net.paulhertz.pixelaudio.sampler.PitchPolicy;
 
 /**
- * PASource
+ * PixelAudio audio source interface used by the granular playback engine.
  *
- * A PAFloatSource with an additional pitch policy hint.
- * 
- * Designed for used with granular synthesis engine, now implemented in the PixelAudio library with 
- * calling chain: PAGranularInstrumentDirector -> PAGranularInstrument -> PAGranularSampler -> PAGranularVoice,  
- * where PABurstGranularSource is PASource that handles the complexities of the granular synthesis sample by sample. 
- * 
- * Implemented by {@link PABurstGranularSource}.
+ * <p>{@code PASource} extends {@link PAFloatSource} with PixelAudio-specific hooks that voices
+ * and instruments may use when preparing playback: pitch-policy hints, optional seeking,
+ * optional grain-window configuration, and optional access to an underlying Minim
+ * {@link MultiChannelBuffer}.</p>
  *
+ * <p>The current granular synthesis chain is:</p>
+ * <p>{@link PAGranularInstrumentDirector} -&gt; {@link PAGranularInstrument} -&gt;
+ * {@link PAGranularSampler} -&gt; {@link PAGranularVoice} -&gt; {@code PASource}</p>
+ *
+ * <p>{@link PABurstGranularSource} is the primary implementation used by the granular
+ * instrument director. Other implementations may represent plain buffers, streams, or
+ * procedural sources as long as they satisfy the {@link PAFloatSource} rendering contract.</p>
+ *
+ * @see PAFloatSource
+ * @see PABurstGranularSource
+ * @see <a href="https://code.compartmental.net/minim/javadoc/" target="_blank">Minim documentation</a>
  */
 public interface PASource extends PAFloatSource {
 
     /**
-     * Pitch policy hint for the instrument:
-     * should the instrument apply its pitch (playback rate) on top of this source?
+     * Returns a hint describing how an instrument should combine its pitch control with this source.
+     *
+     * <p>The default, {@link PitchPolicy#INSTRUMENT_RATE}, means the instrument may apply its
+     * playback-rate pitch control on top of the source. Sources that already control pitch or
+     * time internally may override this method.</p>
+     *
+     * @return pitch policy for this source
      */
     default PitchPolicy pitchPolicy() {
         return PitchPolicy.INSTRUMENT_RATE;
     }
 
     /**
-     * Optional seek/rewind hook, mainly for transport or "note-on" start time.
-     * Default implementation does nothing.
+     * Optional seek or rewind hook.
      *
-     * @param absoluteSample absolute sample index to seek to.
+     * <p>Voices call this method when a source is activated so the source can establish its
+     * playback origin. The default implementation does nothing, which is appropriate for
+     * sources that do not maintain seekable state.</p>
+     *
+     * @param absoluteSample absolute sample index to seek to
      */
     default void seekTo(long absoluteSample) {
         // no-op by default
     }
     
+    /**
+     * Optionally sets a grain amplitude window for sources that render windowed grains.
+     *
+     * <p>The default implementation does nothing. Implementations that support external grain
+     * windows may cache or precompute a window curve for the supplied grain length.
+     * The Minim library supplies several windows and a model for creating your own.</p>
+     *
+     * @param wf window function to apply, or null to keep the source default
+     * @param grainLenSamples grain length in samples
+     * 
+     * @see <a href="https://code.compartmental.net/minim/javadoc/" target="_blank">Minim documentation</a>
+     */
     default void setGrainWindow(WindowFunction wf, int grainLenSamples) { /* no-op */ }
 
     /**
-     * Optional access to an underlying MultiChannelBuffer, if this source is
-     * fundamentally buffer-backed (e.g., plain sample playback or a rendered
-     * granular "tape").
+     * Returns the underlying Minim buffer when this source is backed by one.
      *
-     * Implementations that are not backed by a fixed buffer (true streams,
-     * procedural sources, etc.) should simply return null.
+     * <p>Implementations that are not backed by a fixed {@link MultiChannelBuffer}, such as
+     * true streams or procedural sources, should return null.</p>
+     *
+     * @return the backing buffer, or null if no fixed buffer is available
      */
     default MultiChannelBuffer getMultiChannelBuffer() {
         return null;

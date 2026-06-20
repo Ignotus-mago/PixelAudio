@@ -28,18 +28,30 @@ import net.paulhertz.pixelaudio.schedule.AudioScheduler;
 import java.util.*;
 
 /**
- * PAGranularSampler
+ * UGen-based multi-voice sampler for granular {@link PASource} playback.
  *
- * UGen-based multi-voice granular sampler.
+ * <p>{@code PAGranularSampler} is the voice-pool and sample-accurate scheduling layer in
+ * PixelAudio's granular synthesis chain. {@link PAGranularInstrument} passes immediate and
+ * scheduled playback requests to this class; the sampler allocates or reuses
+ * {@link PAGranularVoice} instances, starts scheduled voices at the requested sample time,
+ * and mixes active voices into Minim's audio callback.</p>
  *
- * Features:
- *  - Voice pooling (PAGranularVoice instances)
- *  - Per-voice ADSR, gain, and pan
- *  - Optional looping of the grain path
- *  - Thread-safe play() method
- *  - Per-sample mixing (like PASharedBufferSampler)
- *  
- * 
+ * <p>Core responsibilities:</p>
+ * <ul>
+ *   <li>manage a bounded pool of {@link PAGranularVoice} instances;</li>
+ *   <li>start sources immediately or through {@link AudioScheduler};</li>
+ *   <li>carry per-voice envelope, gain, pan, looping, and grain-window settings;</li>
+ *   <li>mix active voices sample by sample in {@link #uGenerate(float[])};</li>
+ *   <li>apply light mix normalization and soft clipping to reduce overload.</li>
+ * </ul>
+ *
+ * <p>When the voice pool is full, the sampler may steal the oldest active voice. With
+ * smooth stealing enabled, the old voice is released before reuse; otherwise it is stopped
+ * immediately.</p>
+ *
+ * @see PAGranularInstrumentDirector
+ * @see PAGranularInstrument
+ * @see PAGranularVoice
  */
 public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
@@ -120,7 +132,11 @@ public class PAGranularSampler extends UGen {
         this.patch(out);             // UGen connected to AudioOutput
     }
 
-    // Convenience
+    /**
+     * Creates a granular sampler with a default maximum of 32 voices.
+     *
+     * @param out Minim audio output this sampler patches to
+     */
     public PAGranularSampler(AudioOutput out) {
         this(out, 32);
     }
@@ -130,16 +146,20 @@ public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
  
     /**
-     * Allocate a PAGranularVoice instance. Called from play() and uGenerate() methods.
+     * Allocates or reuses a voice for a source.
+     *
+     * <p>If no inactive voice is available and the pool is below {@link #maxVoices}, a new
+     * voice is created. If the pool is full, the oldest active voice is stolen. Smooth stealing
+     * releases the old voice first; hard stealing stops it immediately.</p>
      *  
-     * @param src                A PASource
-     * @param env                ADSRParams envelope, could be null
-     * @param gain               gain as a decimal value scaling amplitude
-     * @param pan                pan in stereo space, but grains can set individually
-     * @param looping            looping flag, best be false
-     * @param grainWindow        a Minim WindowFunction
+     * @param src                source to render
+     * @param env                ADSRParams envelope, or null for the voice default
+     * @param gain               linear voice gain
+     * @param pan                stereo pan in the range [-1, 1]
+     * @param looping            true to loop the source path where supported
+     * @param grainWindow        window function for shaping grain amplitude, or null for source default
      * @param grainLenSamples    number of samples in one grain
-     * @return
+     * @return allocated voice, or null if no voice could be allocated
      */
     private PAGranularVoice getAvailableVoice(PASource src, ADSRParams env,
     		float gain, float pan, boolean looping,
@@ -188,14 +208,14 @@ public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
     
     /**
-     * Play a granular source as a voice.
+     * Plays a granular source immediately as a voice.
      *
-     * @param src    PASource (a PABurstGranularSource, in the current design using PAGranularInstrumentDirector)
-     * @param env    ADSR for the macro envelope
-     * @param gain   amplitude
-     * @param pan    -1..+1
-     * @param looping loop granular path
-     * @return voiceId or -1
+     * @param src       source to render
+     * @param env       ADSR for the macro envelope
+     * @param gain      linear voice gain
+     * @param pan       stereo pan in the range [-1, 1]
+     * @param looping   true to loop the source path where supported
+     * @return voice id, or -1 if playback could not start
      */
     public synchronized long play(PASource src,
     		ADSRParams env,
@@ -210,7 +230,7 @@ public class PAGranularSampler extends UGen {
     	return v.getVoiceId();
     }
 
-    // Overload (no looping)
+    /** Convenience overload that disables looping. */
     public synchronized long play(PASource src,
     		ADSRParams env,
     		float gain,
@@ -218,7 +238,7 @@ public class PAGranularSampler extends UGen {
     	return play(src, env, gain, pan, false);
     }
 
-    // Convenience: default envelope supplied by instrument
+    /** Convenience overload for callers that supply an already-resolved default envelope. */
     public synchronized long play(PASource src,
     		float gain,
     		float pan,
@@ -232,14 +252,14 @@ public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
 
     /**
-     * Schedule a new voice to start at an absolute sample time.
+     * Schedules a new voice to start at an absolute sample time.
      *
-     * @param src         PASource
-     * @param env         ADSR (already resolved: either custom or default)
-     * @param gain        final gain
-     * @param pan         final pan
-     * @param looping     loop flag
-     * @param startSample absolute sample index at which to start the voice
+     * @param src           source to render
+     * @param env           ADSR (already resolved: either custom or default)
+     * @param gain          final linear voice gain
+     * @param pan           final stereo pan
+     * @param looping       true to loop the source path where supported
+     * @param startSample   absolute sample index at which to start the voice
      */
     public synchronized void startAtSampleTime(PASource src,
             ADSRParams env,
@@ -253,15 +273,17 @@ public class PAGranularSampler extends UGen {
     }
         
     /**
-     * Called by PAGranularInstrument.startAtSampleTime(...), creates a ScheduledPlay instance
-     * with PASource src and other arguments, then passes it to AudioScheduler scheduler, 
-     * which will be handled through Minim's uGenerate call to this instance of PAGranularSampler.
+     * Schedules a new voice to start at an absolute sample time with grain-window settings.
+     *
+     * <p>Called by {@link PAGranularInstrument#startAtSampleTime(PASource, float, float, ADSRParams, boolean, long, WindowFunction, int)}.
+     * This method packages the source and rendering settings in a scheduled payload that is
+     * launched from Minim's {@link #uGenerate(float[])} callback.</p>
      * 
-     * @param src                PASource
+     * @param src                source to render
      * @param env                ADSR (already resolved: either custom or default)
-     * @param gain               final gain
-     * @param pan                final pan
-     * @param looping            loop flag
+     * @param gain               final linear voice gain
+     * @param pan                final stereo pan
+     * @param looping            true to loop the source path where supported
      * @param startSample        absolute sample index at which to start the voice
      * @param grainWindow        a window function for shaping grain amplitude
      * @param grainLenSamples    number of samples in one grain
@@ -280,14 +302,14 @@ public class PAGranularSampler extends UGen {
     }
     
     /**
-     * Schedule a new voice to start after a given delay in samples.
+     * Schedules a new voice to start after a delay in samples.
      *
-     * @param src          PASource
-     * @param env          ADSR
-     * @param gain         final gain
-     * @param pan          final pan
-     * @param looping      loop flag
-     * @param delaySamples how many samples from "now" to start
+     * @param src            source to render
+     * @param env            ADSR
+     * @param gain           final linear voice gain
+     * @param pan            final stereo pan
+     * @param looping        true to loop the source path where supported
+     * @param delaySamples   how many samples from "now" to start
      */
     public synchronized void startAfterDelaySamples(PASource src,
     		ADSRParams env,
@@ -300,7 +322,9 @@ public class PAGranularSampler extends UGen {
     }
 
     /**
-     * Expose the current absolute sample cursor (for higher-level scheduling).
+     * Returns the current absolute sample cursor for higher-level scheduling.
+     *
+     * @return current sample time maintained by this sampler
      */
     public synchronized long getCurrentSampleTime() {
     	return sampleCursor;
@@ -308,7 +332,11 @@ public class PAGranularSampler extends UGen {
     
 
     /**
-     * Provides per-sample frame processing with AudioScheduler, called through Minim.
+     * Generates one audio sample frame for Minim.
+     *
+     * <p>This method advances the scheduler, launches voices whose start time has arrived,
+     * renders active voices, applies mix normalization and soft clipping, and increments the
+     * sample cursor.</p>
      */
     @Override
     protected synchronized void uGenerate(float[] channels) {
@@ -371,6 +399,11 @@ public class PAGranularSampler extends UGen {
     // ------------------------------------------------------------------------
     // Controls
     // ------------------------------------------------------------------------
+    /**
+     * Immediately stops all voices without clearing pending scheduled starts.
+     *
+     * <p>A stop halts voice processing directly and is more abrupt than a release.</p>
+     */
     public void stopAll() {
         synchronized (this) {
             for (PAGranularVoice v : voices) v.stop();
@@ -387,7 +420,10 @@ public class PAGranularSampler extends UGen {
 
     /**
      * Release all currently active or releasing voices.
-     * Useful for a musical stop after clearing pending scheduled starts.
+     *
+     * <p>A release is generally less abrupt than a stop, because each active voice is allowed
+     * to pass through its envelope release stage. This is useful for a musical stop after
+     * clearing pending scheduled starts.</p>
      */
     public synchronized void releaseAll() {
         for (PAGranularVoice v : voices) {
@@ -399,6 +435,8 @@ public class PAGranularSampler extends UGen {
 
     /**
      * Clear pending scheduled starts and immediately stop all active voices.
+     *
+     * <p>A stop halts voice processing directly and is therefore more abrupt than a release.</p>
      */
     public synchronized void cancelAndStopAll() {
         scheduler.clear();
@@ -409,6 +447,8 @@ public class PAGranularSampler extends UGen {
 
     /**
      * Clear pending scheduled starts and release currently sounding voices.
+     *
+     * <p>This is the less abrupt counterpart to {@link #cancelAndStopAll()}.</p>
      */
     public synchronized void cancelAndReleaseAll() {
         scheduler.clear();
@@ -419,6 +459,11 @@ public class PAGranularSampler extends UGen {
         }
     }
 
+    /**
+     * Sets the maximum number of voices in the pool.
+     *
+     * @param maxVoices maximum voices; values below 1 are clamped to 1
+     */
     public void setMaxVoices(int maxVoices) {
         this.maxVoices = Math.max(1, maxVoices);
     }
@@ -427,10 +472,24 @@ public class PAGranularSampler extends UGen {
         return maxVoices;
     }
 
+    /**
+     * Enables or disables smooth voice stealing.
+     *
+     * <p>Voice stealing occurs when all voices are busy and a new source must start. With
+     * smooth stealing enabled, the oldest active voice is released before reuse; with it
+     * disabled, the oldest active voice is stopped immediately.</p>
+     *
+     * @param smoothSteal true to release stolen voices, false to stop them immediately
+     */
     public void setSmoothSteal(boolean smoothSteal) {
         this.smoothSteal = smoothSteal;
     }
 
+    /**
+     * Reports whether smooth voice stealing is enabled.
+     *
+     * @return true when stolen voices are released instead of stopped immediately
+     */
     public boolean isSmoothSteal() {
         return smoothSteal;
     }

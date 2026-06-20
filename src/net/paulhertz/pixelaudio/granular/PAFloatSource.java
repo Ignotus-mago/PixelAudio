@@ -19,31 +19,34 @@
 package net.paulhertz.pixelaudio.granular;
 
 /**
- * PAFloatSource
+ * Minimal, library-agnostic audio source abstraction for PixelAudio voices.
  *
- * Minimal, library-agnostic "audio source" abstraction for PixelAudio voices.
- * It deals only with float[] buffers and sample indices, no Minim types.
+ * <p>{@code PAFloatSource} deals only with floating-point audio buffers and sample indices.
+ * It deliberately avoids Minim and Processing types so sources can be rendered by PixelAudio's
+ * voice classes without depending on a particular audio backend.</p>
  *
- * Implementations are expected to:
- *  - be called on the audio thread,
- *  - be allocation-free inside renderBlock().
- *  
- *  @See PASource.
+ * <p>Implementations are expected to be safe for audio-thread use:</p>
+ * <ul>
+ *   <li>mix into output buffers rather than clearing them;</li>
+ *   <li>avoid allocation and blocking work in {@link #renderBlock(long, int, float[], float[])};</li>
+ *   <li>treat {@code blockStart} as an absolute sample position in the source's playback domain.</li>
+ * </ul>
+ *
+ * @see PASource
  */
 public interface PAFloatSource {
 
     /**
-     * Render audio into the given block buffers.
+     * Renders audio into the supplied block buffers.
      *
-     * Implementations should:
-     *  - Assume outL/outR length >= blockSize.
-     *  - Mix into outL/outR (add), not clear them.
-     *  - Avoid allocation on the audio thread.
+     * <p>Implementations should assume that {@code outL} and {@code outR} have at least
+     * {@code blockSize} elements. Samples should be added to the buffers, not assigned over
+     * existing contents, so multiple voices can accumulate into the same output block.</p>
      *
-     * @param blockStart the absolute sample index in the source’s own sample domain (e.g., buffer index space).
-     * @param blockSize  number of samples in this block.
-     * @param outL       left channel buffer to mix into.
-     * @param outR       right channel buffer to mix into (may be same as outL for mono).
+     * @param blockStart absolute sample index in the source's playback domain
+     * @param blockSize number of samples to render
+     * @param outL left channel buffer to mix into
+     * @param outR right channel buffer to mix into; may be the same array as {@code outL} for mono
      */
     void renderBlock(long blockStart,
                      int blockSize,
@@ -51,7 +54,9 @@ public interface PAFloatSource {
                      float[] outR);
 
     /**
-     * Duration in samples, or Long.MAX_VALUE if effectively infinite/streaming.
+     * Returns the source duration in samples.
+     *
+     * @return duration in samples, or {@link Long#MAX_VALUE} for an effectively infinite or streaming source
      */
     long lengthSamples();
 }

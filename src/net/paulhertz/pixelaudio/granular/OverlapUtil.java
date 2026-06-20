@@ -19,14 +19,16 @@
 package net.paulhertz.pixelaudio.granular;
 
 /**
- * OverlapUtil
+ * Utility methods for converting absolute sample spans to block-local overlap ranges.
  *
- * Small helper for computing overlap between a span [spanStart, spanEnd)
- * and a block [blockStart, blockStart+blockSize).
+ * <p>{@code OverlapUtil} works with half-open sample intervals. A span is represented as
+ * {@code [spanStart, spanEnd)}, and the current audio block is represented as
+ * {@code [blockStart, blockStart + blockSize)}. The returned {@link Slice} gives the portion
+ * of the block that overlaps the span, expressed as indices into the current block.</p>
  *
- * Useful for granular streaming and any span-based scheduling at audio rate.
- * Critical use in {@link PABurstGranularSource}, as part of PixelAudio's 
- * granular synthesis processing chain. 
+ * <p>The main use is granular rendering, where each grain occupies an absolute sample span
+ * but each audio callback renders only one block at a time. {@link PABurstGranularSource}
+ * uses this class to find the loop bounds for samples that belong to the active grain.</p>
  */
 public final class OverlapUtil {
 
@@ -34,16 +36,31 @@ public final class OverlapUtil {
         // utility class
     }
 
+    /**
+     * Block-local overlap range returned by {@link #computeBlockSlice(long, int, long, long)}.
+     *
+     * <p>When {@link #hasOverlap} is true, {@code startIndex} is inclusive and
+     * {@code endIndex} is exclusive, so the overlapping samples can be processed with
+     * {@code for (int i = startIndex; i < endIndex; i++)}. When {@code hasOverlap} is false,
+     * both indices are 0.</p>
+     */
     public static final class Slice {
-        /** First index in the block (0..blockSize) where the span overlaps. */
+        /** First block-local index where the span overlaps, inclusive. */
         public final int startIndex;
 
-        /** One past the last index in the block where the span overlaps. */
+        /** One past the last block-local index where the span overlaps. */
         public final int endIndex;
 
         /** True if there is any overlap at all. */
         public final boolean hasOverlap;
 
+        /**
+         * Creates a block-local overlap range.
+         *
+         * @param startIndex first overlapping index in the block, inclusive
+         * @param endIndex one past the last overlapping index in the block
+         * @param hasOverlap true if the range contains at least one sample
+         */
         public Slice(int startIndex, int endIndex, boolean hasOverlap) {
             this.startIndex = startIndex;
             this.endIndex = endIndex;
@@ -52,13 +69,21 @@ public final class OverlapUtil {
     }
 
     /**
-     * Compute overlap slice into the current block for a span [spanStart, spanEnd).
+     * Computes the portion of the current block overlapped by an absolute sample span.
      *
-     * @param blockStart absolute sample index of the first sample in the block.
-     * @param blockSize  number of samples in this block.
-     * @param spanStart  absolute start of the span (inclusive).
-     * @param spanEnd    absolute end of the span (exclusive).
-     * @return a Slice indicating [startIndex, endIndex) within the block, or hasOverlap=false if none.
+     * <p>The span and block are treated as half-open intervals. Touching endpoints do not
+     * count as overlap: for example, a span ending exactly at {@code blockStart}, or starting
+     * exactly at {@code blockStart + blockSize}, produces {@code hasOverlap == false}.</p>
+     *
+     * <p>For overlapping intervals, the returned indices are clamped to the range
+     * {@code [0, blockSize]} and are suitable as loop bounds into block-sized audio buffers.</p>
+     *
+     * @param blockStart    absolute sample index of the first sample in the block
+     * @param blockSize     number of samples in the block
+     * @param spanStart     absolute start of the span, inclusive
+     * @param spanEnd       absolute end of the span, exclusive
+     * @return a {@code Slice} indicating {@code [startIndex, endIndex)} within the block,
+     *         or {@code hasOverlap == false} if there is no overlap
      */
     public static Slice computeBlockSlice(long blockStart,
                                           int blockSize,

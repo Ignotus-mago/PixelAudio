@@ -25,20 +25,26 @@ import net.paulhertz.pixelaudio.sampler.SimpleADSR;
 
 
 /**
- * PAGranularVoice
+ * Single voice for rendering one granular {@link PASource}.
  *
- * A single granular "voice" driven by a PASource.
+ * <p>{@code PAGranularVoice} is the voice layer in PixelAudio's granular synthesis chain.
+ * A {@link PAGranularSampler} activates voices with a source, macro envelope, gain, pan,
+ * looping flag, and optional grain-window settings. The voice then pulls audio from its
+ * {@link PASource}, applies the macro envelope and voice-level pan/gain, and returns one
+ * sample frame at a time to the sampler.</p>
  *
- * Provides:
- *  - nextSample() API so it can be mixed like PASamplerVoice
- *  - voice-level ADSR envelope (macro envelope)
- *  - per-voice amplitude + pan
- *  - optional looping of entire grain path
+ * <p>The voice renders internally in blocks. When the sampler asks for the next stereo sample,
+ * the voice reads from cached block buffers; when those buffers are exhausted, it asks the
+ * source to render the next block. This keeps source rendering block-oriented while allowing
+ * the sampler to mix voices one frame at a time inside Minim's {@code UGen} callback.</p>
  *
- * Internally uses:
- *  - Block buffer (blockL / blockR)
- *  - Absolute sample counter (absSample)
- *  - Cursor into current block
+ * <p>The envelope used here is a macro envelope over the whole voice. Individual grains may
+ * still have their own source-level windows, supplied through {@link WindowFunction} and handled
+ * by the source.</p>
+ *
+ * @see PAGranularSampler
+ * @see PASource
+ * @see PABurstGranularSource
  */
 public class PAGranularVoice {
 
@@ -47,7 +53,8 @@ public class PAGranularVoice {
     // ------------------------------------------------------------------------
     private static long NEXT_VOICE_ID = 0;
 
-    private PASource source;       // Granular source (a PABurstGranularSource, in the current design using PAGranularInstrumentDirector)
+    /** Granular source: a {@link PABurstGranularSource}, in the current design using @link PAGranularInstrumentDirector} */
+    private PASource source;
     private final int blockSize;
 
     private long voiceId;
@@ -75,14 +82,20 @@ public class PAGranularVoice {
     private float panGainL = 1f;
     private float panGainR = 1f;
     
-    // granular window function
-    private WindowFunction grainWindow; // may be null; source/director defaults
+    /** granular window function, may be null, in which case defaults apply */
+    private WindowFunction grainWindow;
     private int grainLenSamples = 1024;
 
     private boolean endTriggered = false;
 
 
-    // Constructor
+    /**
+     * Creates an inactive granular voice.
+     *
+     * @param source               initial source for the voice; may be replaced during activation
+     * @param blockSize            internal render-block size
+     * @param playbackSampleRate   sample rate used by the voice envelope
+     */
     public PAGranularVoice(PASource source, int blockSize, float playbackSampleRate) {
         this.source = source;
         this.blockSize = blockSize;
@@ -100,6 +113,15 @@ public class PAGranularVoice {
     // Activation
     // ------------------------------------------------------------------------
     
+    /**
+     * Activates this voice with no external grain-window override.
+     *
+     * @param source      source to render
+     * @param envParams   macro envelope parameters, or null to use the voice default
+     * @param gain        voice gain
+     * @param pan         stereo pan in the range [-1, 1]
+     * @param looping     true to loop the source path when the source length is reached
+     */
     public void activate(PASource source,
     		ADSRParams envParams,
     		float gain,
@@ -108,6 +130,21 @@ public class PAGranularVoice {
     	activate(source, envParams, gain, pan, looping, null, 1024);
     }
 
+    /**
+     * Activates this voice with a source and playback settings.
+     *
+     * <p>Activation resets voice state, assigns a new voice id, initializes pan gains,
+     * rewinds the source with {@link PASource#seekTo(long)}, optionally pushes grain-window
+     * settings into the source, and starts a fresh macro envelope.</p>
+     *
+     * @param source            source to render
+     * @param envParams         macro envelope parameters, or null to use the voice default
+     * @param gain              voice gain
+     * @param pan               stereo pan in the range [-1, 1]
+     * @param looping           true to loop the source path when the source length is reached
+     * @param grainWindow       optional grain window to pass to the source
+     * @param grainLenSamples   grain length associated with {@code grainWindow}
+     */
     public void activate(PASource source,
     		ADSRParams envParams,
     		float gain,
@@ -164,6 +201,16 @@ public class PAGranularVoice {
     // fetch next sample (stereo, default method)
     // ------------------------------------------------------------------------
     
+    /**
+     * Writes the next stereo sample frame from this voice.
+     *
+     * <p>If the voice is inactive or finished, both output samples are set to 0. Otherwise
+     * this method refills the internal block when needed, reads the next cached source sample,
+     * advances the macro envelope, applies voice gain and equal-power pan, and writes left and
+     * right samples into {@code outLR}.</p>
+     *
+     * @param outLR two-element array receiving left and right sample values
+     */
     public void nextSampleStereo(float[] outLR) {
         if (!active || finished) {
             outLR[0] = 0f;
@@ -199,6 +246,14 @@ public class PAGranularVoice {
     // fetch next sample (mono, for future option)
     // ------------------------------------------------------------------------
     
+    /**
+     * Returns the next mono sample from this voice.
+     *
+     * <p>This method mirrors {@link #nextSampleStereo(float[])} but folds the panned stereo
+     * block sample to mono. It is retained for future mono-output use.</p>
+     *
+     * @return next mono sample, or 0 if the voice is inactive or finished
+     */
     public float nextSample() {
         if (!active || finished) return 0f;
 
@@ -226,6 +281,15 @@ public class PAGranularVoice {
     // ------------------------------------------------------------------------
     // Block refill
     // ------------------------------------------------------------------------
+    /**
+     * Refills the internal stereo block buffers from the source.
+     *
+     * <p>The voice asks its {@link PASource} to render the block beginning at
+     * {@code absSample}, then advances {@code absSample} by {@code blockSize}. If looping is
+     * enabled and the source span has ended, the voice rewinds the source and starts again.
+     * If looping is disabled and the source span has ended, the voice triggers envelope
+     * release or stops immediately when no envelope is available.</p>
+     */
     private void refillBlock() {
         // Zero out block
         for (int i = 0; i < blockSize; i++) {
@@ -276,6 +340,12 @@ public class PAGranularVoice {
     // ------------------------------------------------------------------------
     // Lifecycle control
     // ------------------------------------------------------------------------
+    /**
+     * Starts the macro envelope release stage for this voice.
+     *
+     * <p>Release is less abrupt than {@link #stop()} because the voice remains active until
+     * its envelope finishes.</p>
+     */
     public void release() {
         if (!released) {
             released = true;
@@ -283,6 +353,11 @@ public class PAGranularVoice {
         }
     }
 
+    /**
+     * Immediately marks this voice inactive and finished.
+     *
+     * <p>Unlike {@link #release()}, this bypasses the envelope release stage.</p>
+     */
     public void stop() {
         active = false;
         finished = true;
