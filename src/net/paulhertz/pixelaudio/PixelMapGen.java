@@ -24,17 +24,23 @@ import java.util.Random;
 
 /**
  *
- * <p>Abstract class for handling coordinates and LUT generation for PixelAudioMapper. PixelAudioMapper is designed to be independent 
- * of any specific mapping between its audio and pixel arrays. It uses PixelMapGen classes as plug-ins to obtain values for its LUTs.
- * Keeping the LUT generation class outside PixelAudioMapper removes dependencies on the particular mapping.</p>
- *
- * <p> The PixelAudioMapper class handles the combinatorial math for mapping between two arrays whose elements are in one-to-one correspondence
- * but in different orders. PixelMapGen generates the mapping between the two arrays. PixelAudioMapper, as its name suggests,
- * considers one array to be floating point audio samples and other to be RGBA integer pixel data, but of course the relationship is
- * completely arbitrary as far as the mapping goes. The mapping was given its own class precisely because it is generalizable, though
- * PixelMapGen does assume that the cardinality of its arrays can be factored by width and height.</p>
- * 
- * <p>The following short program shows the typical initialization of PixelAudio classes in Processing:</p>
+ * <p>
+ * Abstract class for handling coordinates and LUT generation for PixelAudioMapper.
+ * PixelAudioMapper is designed to be independent of any specific mapping between its
+ * audio and pixel arrays. It uses PixelMapGen classes as plug-ins to obtain values for
+ * its LUTs. Keeping the LUT generation class outside PixelAudioMapper removes
+ * dependencies on the particular mapping.
+ * </p><p> 
+ * The PixelAudioMapper class handles the combinatorial math for mapping between two
+ * arrays whose elements are in one-to-one correspondence but in different orders.
+ * PixelMapGen generates the mapping between the two arrays. PixelAudioMapper, as its
+ * name suggests, considers one array to be floating point audio samples and other to be
+ * RGBA integer pixel data, but of course the relationship is completely arbitrary as
+ * far as the mapping goes. The mapping was given its own class precisely because it is
+ * generalizable, though PixelMapGen does assume that the cardinality of its arrays can
+ * be factored by width and height.
+ * </p><p>
+ * The following short program shows the typical initialization of PixelAudio classes in Processing:</p>
  *   <pre>
  *   import net.paulhertz.pixelaudio.*;
  *   
@@ -98,7 +104,11 @@ import java.util.Random;
  *  
  *  {@code private ArrayList<int[]> generateYourSubclassNameCoordinates(int width, int height)} {...}
  * </pre><p>
- * See {@link DiagonalZigzagGen DiagonalZigzagGen} for an example of how each method functions in context.
+ * See {@link PixelAudioMapper PixelAudioMapper} for a detailed explanation of how LUTs are used in PixelAudio.<br>
+ * See {@link DiagonalZigzagGen DiagonalZigzagGen} for an example of how each method functions in context.<br>
+ * See the {@link net.paulhertz.pixelaudio.example.LookupTables LookupTables} and 
+ * {@link net.paulhertz.pixelaudio.example.MultiGenLookupTables MultiGenLookupTables} example sketches 
+ * (in Processing or Eclipse) for a visualization of Lookup Tables in PixelAudio. 
  * </p>
  * 
  * 

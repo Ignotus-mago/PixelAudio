@@ -47,9 +47,10 @@ import processing.core.PVector;
  * to visualize the signal as a 2D image. You can save the image to a file and later load it to a
  * bitmap for display. The pixel values can then be written to an audio buffer using
  * {@code imageToSignalLUT}. {@code imageToSignalLUT} depends on the standard "row major" left-to-right
- * and top-to-bottom ordering conventionally used for bitmaps. {@code signalToImageLUT}
- * represents the arbitrary "signal path", copied from {@code PixelMapGen.pixelMap},
- * where it is generated from the unique coordinates of the path that traverses the pixel grid.
+ * and top-to-bottom ordering conventionally used for bitmaps. You could think of row major order
+ * as the "image path", but it is a fixed path. {@code signalToImageLUT} represents
+ * the arbitrary "signal path", copied from {@code PixelMapGen.pixelMap}, where it is generated 
+ * from the unique coordinates of the path that traverses the pixel grid. 
  * </p>
  * <div>
  * Some typical uses for this class include:

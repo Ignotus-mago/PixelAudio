@@ -12,12 +12,16 @@ import net.paulhertz.pixelaudio.*;
  * 2D bitmap, using lookup tables (LUTs) to create a one-to-one correspondence
  * between audio samples and RGB pixels.
  * <p>
- * Imagine the audio signal as path that visits every pixel in a bitmap: the
- * signal's lookup table for pixels is a list of the array indices of the pixels
- * it visits, in the order it visits them. By convention, pixel array
- * coordinates start at (0,0) in the upper left corner of a bitmap, and proceed
- * in "row major" order, left to right, top to bottom. The bitmap has a
- * corresponding lookup table, where the array indices of the audio signal are
+ * Because they are in one-to-one correspondence, the audio signal and image
+ * pixel arrays have the same number of entries. Imagine the audio signal as path
+ * that visits every pixel in a bitmap: the signal's lookup table for pixels is
+ * a list of the array indices of the pixels it visits, in the order it visits
+ * them. In PixelAudio documentation we refer to this path as the "signal path"
+ * over the image. By convention, pixel array coordinates start at (0,0) in the
+ * upper left corner of a bitmap, and proceed in "row major" order, left to
+ * right, top to bottom. We could call this the "image path" over the image.
+ * Unlike the signal path, the image path pixel order is fixed. The image has
+ * a corresponding lookup table, where the array indices of the audio signal are
  * stored in the order of the pixel coordinates. The signal and bitmap lookup
  * tables are inverses of each other, so that the signal can be mapped to the
  * bitmap and the bitmap can be mapped to the signal. PixelAudio classes that
