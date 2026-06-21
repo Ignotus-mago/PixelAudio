@@ -38,13 +38,25 @@ package net.paulhertz.pixelaudio.curves;
  * 
  */
 public interface PAGesture {
-	/** Dense gesture points. */
+	/**
+	 * Dense gesture points.
+	 *
+	 * @return gesture points
+	 */
 	java.util.List<processing.core.PVector> getAllPoints();
 
-	/** Time offsets in ms, same length as getAllPoints(), first element typically 0. */
+	/**
+	 * Time offsets in ms, same length as getAllPoints(), first element typically 0.
+	 *
+	 * @return gesture time offsets in milliseconds
+	 */
 	float[] getTimeOffsetsMs();
 	
-	/** Absolute start time (e.g. millis() when gesture began) */
+	/**
+	 * Absolute start time (e.g. millis() when gesture began).
+	 *
+	 * @return absolute gesture start time in milliseconds
+	 */
 	long getStartTimeMs();
 
 	/** Convenience: a schedule over the dense gesture. */
@@ -52,6 +64,16 @@ public interface PAGesture {
 		return new net.paulhertz.pixelaudio.schedule.GestureSchedule(getAllPoints(), getTimeOffsetsMs());
 	}
 
+	/**
+	 * Returns the number of gesture points.
+	 *
+	 * @return gesture point count
+	 */
 	default int size() { return getAllPoints().size(); }
+	/**
+	 * Reports whether the gesture contains no points.
+	 *
+	 * @return true when the gesture has no points
+	 */
 	default boolean isEmpty() { return size() == 0; }
 }

@@ -25,25 +25,28 @@ import ddf.minim.MultiChannelBuffer;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 /**
- * PASamplerInstrument
- *
  * Represents a playable instrument that uses a PASampler instantiated as a PASharedBufferSampler
  * to trigger audio playback from a shared buffer that is (currently) a Minim MultiChannelBuffer. 
+ * <p>
  * TODO decide if MultiChannelBuffer or float[] is the appropriate structure for storing the buffer. 
  *     float[] is preferred for the general style of PixelAudio, but MultiChannelBuffer support 
  *     is a useful consideration for the future. 
+ * </p><p>
  * TODO sample accurate start for sampler events to unify timing API with PAGranularInstrument.
  * Currently sampler play() is block-time accurate only.
  * In the future, add sample-time scheduling (startAtSampleTime / startAfterDelaySamples)
  * using AudioScheduler so sampler and granular share a transport model.
+ * </p>
  *
- * Supports:
- *  - Global pitch scaling
- *  - Global stereo pan
- *  - Default ADSR envelope
- *  - Linear trim (gain) per instrument
- *  - Compensation for differing buffer vs. output sample rates
- *  - Cached buffer size for efficiency
+ * <p>Supports:</p>
+ * <ul>
+ *   <li>Global pitch scaling.</li>
+ *   <li>Global stereo pan.</li>
+ *   <li>Default ADSR envelope.</li>
+ *   <li>Linear trim (gain) per instrument.</li>
+ *   <li>Compensation for differing buffer vs. output sample rates.</li>
+ *   <li>Cached buffer size for efficiency.</li>
+ * </ul>
  *
  * Implements both PAPlayable and PASamplerPlayable for full compatibility.
  */
@@ -52,25 +55,38 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	// ------------------------------------------------------------------------
 	// Core fields
 	// ------------------------------------------------------------------------
+	/** Sampler backend used to trigger playback. */
 	private final PASampler sampler;
+	/** Source buffer for this instrument. */
 	private MultiChannelBuffer buffer;
+	/** Audio output this instrument is patched to. */
 	private final AudioOutput out;
-	private int bufferSize;    // TODO consider replacing this instance variable with a call to buffer.getBufferSize()
+	/** Cached source buffer size in samples. TODO consider replacing with buffer.getBufferSize(). */
+	private int bufferSize;
+	/** Maximum number of simultaneous voices for the sampler backend. */
 	private int maxVoices;
 
 	// Sample rate information
-	private float bufferSampleRate;  // sample rate of source from which buffer was loaded
-	private float outputSampleRate;  // sample rate of AudioOutput
-	private float sampleRateRatio;   // bufferRate / outputRate, used to correct playback speed
+	/** Sample rate of the source from which the buffer was loaded. */
+	private float bufferSampleRate;
+	/** Sample rate of the AudioOutput. */
+	private float outputSampleRate;
+	/** Buffer-rate to output-rate ratio, used to correct playback speed. */
+	private float sampleRateRatio;
 
+	/** Default ADSR envelope for playback. */
 	private ADSRParams defaultEnv;
 
 	// Global modifiers
-	private volatile float globalPitch = 1.0f;  // global pitch multiplier
-	private float globalPan = 0.0f;             // -1.0 = left, +1.0 = right, 0.0 = center
+	/** Global pitch multiplier. */
+	private volatile float globalPitch = 1.0f;
+	/** Global stereo pan offset, from -1.0 left to 1.0 right. */
+	private float globalPan = 0.0f;
 	
-	private volatile float gain = 1f;        // per-instrument linear trim
-	private volatile float parentGain = 1f;  // set by pool (group/master)
+	/** Per-instrument linear trim. */
+	private volatile float gain = 1f;
+	/** Parent pool gain, set by PASamplerInstrumentPool. */
+	private volatile float parentGain = 1f;
 
 
 	// ------------------------------------------------------------------------
@@ -105,6 +121,12 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * Full constructor with explicit buffer sample rate, custom sampler, and envelope.
+	 *
+	 * @param buffer             shared MultiChannelBuffer
+	 * @param out                target AudioOutput
+	 * @param sampler            sampler implementation to use
+	 * @param defaultEnv         default ADSR envelope
+	 * @param bufferSampleRate   sample rate of the source buffer in Hz
 	 */
 	public PASamplerInstrument(MultiChannelBuffer buffer, AudioOutput out, PASampler sampler, ADSRParams defaultEnv, float bufferSampleRate) {
 		this.out = out;
@@ -120,6 +142,9 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * Convenience constructor assuming buffer and output share the same rate.
+	 *
+	 * @param buffer   shared MultiChannelBuffer
+	 * @param out target AudioOutput
 	 */
 	public PASamplerInstrument(MultiChannelBuffer buffer, AudioOutput out) {
 		this(buffer, 
@@ -147,7 +172,6 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * The primary play method, called by all playSample() methods, from PASamplerPlayable interface.
-	 *
 	 */
 	@Override
 	public int play(int samplePos, int sampleLen, float amplitude,
@@ -207,11 +231,11 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	/**
 	 * All params except the envelope, so we use the default envelope. 
 	 * 
-	 * @param samplePos
-	 * @param sampleLen
-	 * @param amplitude
-	 * @param pitch
-	 * @param pan
+	 * @param samplePos    buffer index to start playback
+	 * @param sampleLen    requested duration in samples
+	 * @param amplitude    gain multiplier
+	 * @param pitch        pitch or playback-rate multiplier
+	 * @param pan          stereo pan
 	 * @return the actual length of the audio event, in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, 
@@ -221,6 +245,11 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * Convenience overload: uses default envelope, default pitch, and center pan.
+	 *
+	 * @param samplePos   buffer index to start playback
+	 * @param sampleLen   requested duration in samples
+	 * @param amplitude   gain multiplier
+	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
 		return play(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, globalPan);
@@ -228,6 +257,12 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * Convenience overload: uses default envelope, supplied pitch and center pan.
+	 *
+	 * @param samplePos   buffer index to start playback
+	 * @param sampleLen   requested duration in samples
+	 * @param amplitude   gain multiplier
+	 * @param pitch       pitch or playback-rate multiplier
+	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
 		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, globalPan);
@@ -235,6 +270,12 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * Plays a sample using a supplied envelope with default pitch and default pan.
+	 *
+	 * @param samplePos   buffer index to start playback
+	 * @param sampleLen   requested duration in samples
+	 * @param amplitude   gain multiplier
+	 * @param env         optional ADSR envelope
+	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
 		return play(samplePos, sampleLen, amplitude, env, globalPitch, globalPan);
@@ -242,6 +283,13 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * Plays a sample using a supplied envelope, pitch, and current global pan.
+	 *
+	 * @param samplePos   buffer index to start playback
+	 * @param sampleLen   requested duration in samples
+	 * @param amplitude   gain multiplier
+	 * @param env         optional ADSR envelope
+	 * @param pitch       pitch or playback-rate multiplier
+	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch) 	{
 		return play(samplePos, sampleLen, amplitude, env, pitch, globalPan);
@@ -250,6 +298,15 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	/**
 	 * Sets a new buffer for PASamplerInstrument and plays it with envelope, pitch, and pan.
 	 * For large buffers, there may be some latency. 
+	 *
+	 * @param buffer      source buffer for playback
+	 * @param samplePos   buffer index to start playback
+	 * @param sampleLen   requested duration in samples
+	 * @param amplitude   gain multiplier
+	 * @param env         optional ADSR envelope
+	 * @param pitch       pitch or playback-rate multiplier
+	 * @param pan         stereo pan
+	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
 			float amplitude, ADSRParams env, float pitch, float pan) {
@@ -259,6 +316,14 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/**
 	 * Sets a new buffer for PASamplerInstrument and plays it with envelope, pitch, and default pan.
+	 *
+	 * @param buffer      source buffer for playback
+	 * @param samplePos   buffer index to start playback
+	 * @param sampleLen   requested duration in samples
+	 * @param amplitude   gain multiplier
+	 * @param env         optional ADSR envelope
+	 * @param pitch       pitch or playback-rate multiplier
+	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
 			float amplitude, ADSRParams env, float pitch) {
@@ -270,16 +335,28 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	// Accessors and utilities
 	// ------------------------------------------------------------------------
 	
+	/**
+	 * Sets per-instrument output gain.
+	 *
+	 * @param linear   linear gain value
+	 */
 	public void setGain(float linear) {
 	    if (Float.isNaN(linear) || Float.isInfinite(linear)) return;
 	    gain = Math.max(0f, linear);
 	    syncMasterGain();
 	}
 
+	/** @return per-instrument output gain as a linear value */
 	public float getGain() { return gain; }
 
+	/**
+	 * Sets per-instrument output gain in decibels.
+	 *
+	 * @param db   gain in decibels
+	 */
 	public void setGainDb(float db) { setGain(AudioUtility.dbToLinear(db)); }
 
+	/** @return per-instrument output gain in decibels */
 	public float getGainDb() { return AudioUtility.linearToDb(gain); }
 
 	// package-private: only the pool should call this
@@ -302,7 +379,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * This lets a host application tune density normalization / soft clipping
 	 * without changing per-event gain or envelope settings.
 	 *
-	 * @param profile a PASharedBufferSampler mix profile
+	 * @param profile   a PASharedBufferSampler mix profile
 	 */
 	public void setMixProfile(PASharedBufferSampler.MixProfile profile) {
 	    if (sampler instanceof PASharedBufferSampler sam && profile != null) {
@@ -337,6 +414,11 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	    return next;
 	}
 
+	/**
+	 * Reports whether this instrument has an available voice.
+	 *
+	 * @return true if at least one voice is available
+	 */
 	public boolean hasAvailableVoice() {
 	    if (sampler == null) return false;
 	    for (PASamplerVoice v : ((PASharedBufferSampler) sampler).getVoices()) {
@@ -348,6 +430,11 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	}
 
 	// --- Helpers for pool orchestration (non-invasive; read-only) ---
+	/**
+	 * Reports whether any voice is active or releasing.
+	 *
+	 * @return true when one or more voices are active or releasing
+	 */
 	public boolean hasActiveOrReleasingVoices() {
 	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
 	    for (PASamplerVoice v : s.getVoices()) {
@@ -356,6 +443,11 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	    return false;
 	}
 
+	/**
+	 * Counts active or releasing voices.
+	 *
+	 * @return active or releasing voice count
+	 */
 	public int activeOrReleasingVoiceCount() {
 	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
 	    int c = 0;
@@ -373,10 +465,13 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	    }
 	}
 
+	/** @return sampler implementation used by this instrument */
 	public PASampler getSampler() { return sampler; }
 		
+	/** @return current source buffer */
 	public MultiChannelBuffer getBuffer() { return buffer; }
 	
+	/** @return current source buffer size in samples */
 	public int getBufferSize() { return bufferSize; }
 	
 	/**
@@ -403,7 +498,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * Note that bufferSize will change if the buffers are not the same size.
 	 * 
 	 * @param newBuffer    buffer to replace the current buffer
-	 * @param newSampleRate
+	 * @param newSampleRate sample rate of the replacement buffer in Hz
 	 */
 	public synchronized void setBuffer(MultiChannelBuffer newBuffer, float newSampleRate) {
 	    if (newBuffer != null) {
@@ -418,13 +513,17 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	}
 
 	/**
-	 * Replace the instrument's active buffer contents with a new signal array using
-	 * MultiChannelBuffer.setChannel(0, newBuffer), which creates a copy of the supplied array,
-	 * and set a new bufferSamplerRate. The sampler and its voices are also refreshed.
-	 * Note that bufferSize will change if the this.buffer and newBuffer are not the same size.
-	 * 
+	 * Replace the instrument's active buffer contents and set a new sample rate. 
+	 * Replace with a new signal array using MultiChannelBuffer setChannel(0, newBuffer), 
+	 * which creates a copy of the supplied array, and set a new bufferSamplerRate. 
+	 * The sampler and its voices are also refreshed. Note that bufferSize will change 
+	 * if the this.buffer and newBuffer are not the same size.
+	 * <p>
 	 * The instrument retains its own MultiChannelBuffer but updates its internal copy.
 	 * The sampler and its voices also receive a fresh copy.
+	 * </p>
+	 * @param newBuffer       replacement mono source buffer
+	 * @param newSampleRate   sample rate of the replacement buffer in Hz
 	 */
 	public synchronized void setBuffer(float[] newBuffer, float newSampleRate) {
 	    if (newBuffer == null || newBuffer.length == 0) return;
@@ -442,11 +541,15 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	}
 
 	
+	/** @return target AudioOutput */
 	public AudioOutput getAudioOutput() { return out; }
 
 	// --- Sample rate information ---
+	/** @return source buffer sample rate in Hz */
 	public float getBufferSampleRate() { return bufferSampleRate; }
+	/** @return output sample rate in Hz */
 	public float getOutputSampleRate() { return outputSampleRate; }
+	/** @return buffer-to-output sample-rate ratio */
 	public float getSampleRateRatio() { return sampleRateRatio; }
 	
 	/**
@@ -469,7 +572,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	 * Update the output sample rate, for example, if audio device changes. 
 	 * This is unlikely to happen, but we'll be cautious.
 	 * 
-	 * @param newRate
+	 * @param newRate   new output sample rate in Hz
 	 */
 	public synchronized void setOutputSampleRate(float newRate) {
 	    if (newRate > 0f) {
@@ -487,13 +590,31 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	    }
 	}
 
+	/** @return default ADSR envelope */
 	public ADSRParams getDefaultEnv() { return defaultEnv; }
+	/**
+	 * Sets the default ADSR envelope.
+	 *
+	 * @param env   default ADSR envelope
+	 */
 	public void setDefaultEnv(ADSRParams env) { this.defaultEnv = env; }
 	
+	/**
+	 * Sets global pitch multiplier.
+	 *
+	 * @param scale   pitch multiplier
+	 */
 	public void setPitchScale(float scale) { this.globalPitch = scale; }
+	/** @return global pitch multiplier */
 	public float getPitchScale() { return globalPitch; }
 
+	/**
+	 * Sets global pan.
+	 *
+	 * @param pan   stereo pan position
+	 */
 	public void setGlobalPan(float pan) { this.globalPan = clampPan(pan); }
+	/** @return global pan position */
 	public float getGlobalPan() { return globalPan; }
 
 	// ------------------------------------------------------------------------

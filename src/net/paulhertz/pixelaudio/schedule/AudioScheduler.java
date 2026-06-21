@@ -24,7 +24,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * AudioScheduler: A sample-accurate scheduler for things that should occur at specific times in an audio stream.
+ * A sample-accurate scheduler for things that should occur at specific times in an audio stream.
  *
  * <p><b>Two event shapes</b></p>
  * <ul>
@@ -51,7 +51,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * {@code processBlock(...)} reports an {@code offsetInBlock} for point events and span boundaries, so you can
  * align actions to an exact sample within the current audio block. If your instrument can only start on
  * block boundaries, you can still use this scheduler for deterministic block timing today, and later
- * upgrade your instrument to accept offsets without changing scheduling code.
+ * upgrade your instrument to accept offsets without changing scheduling code. This is currently the 
+ * case with the Sampler instrument as implemented in current example code. 
+ * TODO sample-accurate playback of Sampler instrument. 
  * </p>
  */
 public final class AudioScheduler<H> {
@@ -65,6 +67,12 @@ public final class AudioScheduler<H> {
         /** The user-defined Happening carried by this event. */
         public final H happening;
 
+        /**
+         * Creates a point event.
+         *
+         * @param sampleTime   absolute sample index (0-based)
+         * @param happening    user-defined payload delivered to handlers
+         */
         public PointEvent(long sampleTime, H happening) {
             this.sampleTime = sampleTime;
             this.happening = happening;
@@ -83,6 +91,13 @@ public final class AudioScheduler<H> {
         /** The user-defined Happening carried by this event. */
         public final H happening;
 
+        /**
+         * Creates a span event.
+         *
+         * @param startSample absolute start sample index (inclusive)
+         * @param endSample absolute end sample index (exclusive)
+         * @param happening user-defined payload delivered to handlers
+         */
         public SpanEvent(long startSample, long endSample, H happening) {
             if (endSample <= startSample) {
                 throw new IllegalArgumentException("SpanEvent endSample must be > startSample.");
@@ -95,6 +110,7 @@ public final class AudioScheduler<H> {
 
     /* ----------------------------- Handlers ------------------------------ */
 
+    /** Handler for point events delivered during block processing. */
     @FunctionalInterface
     public interface PointHandler<H> {
         /**
@@ -106,6 +122,7 @@ public final class AudioScheduler<H> {
         void onPoint(H happening, int offsetInBlock);
     }
 
+    /** Handler for span events delivered during block processing. */
     public interface SpanHandler<H> {
         /**
          * Called once when a span begins within the current block (possibly mid-block).
@@ -119,9 +136,9 @@ public final class AudioScheduler<H> {
          * Called for each audio block the span overlaps.
          * Useful for driving continuous/streamed behaviors while the span is active.
          *
-         * @param happening        the event's Happening
-         * @param blockStartSample absolute start sample of this block
-         * @param blockSize        number of samples in this block
+         * @param happening         the event's Happening
+         * @param blockStartSample  absolute start sample of this block
+         * @param blockSize         number of samples in this block
          */
         void onBlock(H happening, long blockStartSample, int blockSize);
 
@@ -150,11 +167,20 @@ public final class AudioScheduler<H> {
 
     private LatePolicy latePolicy = LatePolicy.DROP;
 
-    /** Set how late point events are handled. Default is {@link LatePolicy#DROP}. */
+    /**
+     * Set how late point events are handled. Default is {@link LatePolicy#DROP}.
+     *
+     * @param policy   late point-event handling policy
+     */
     public void setLatePolicy(LatePolicy policy) {
         this.latePolicy = Objects.requireNonNull(policy, "policy");
     }
 
+    /**
+     * Returns the current late point-event handling policy.
+     *
+     * @return late event policy
+     */
     public LatePolicy latePolicy() {
         return latePolicy;
     }
@@ -164,8 +190,8 @@ public final class AudioScheduler<H> {
     /**
      * Schedule a point event at an absolute sample time.
      *
-     * @param sampleTime absolute sample index (0-based)
-     * @param happening  the Happening to deliver
+     * @param sampleTime   absolute sample index (0-based)
+     * @param happening    the Happening to deliver
      */
     public void schedulePoint(long sampleTime, H happening) {
         inbox.add(new PointEvent<>(sampleTime, happening));

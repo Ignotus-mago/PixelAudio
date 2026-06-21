@@ -29,10 +29,19 @@ import processing.core.PVector;
  * and an optional start time (in milliseconds). 
  */
 public final class GestureSchedule implements PAGesture {
+    /** Gesture positions. */
     public final List<PVector> points; // gesture positions
+    /** Gesture time offsets in milliseconds, same length as {@link #points}. */
     public final float[] timesMs;      // gesture times in ms, same length as points
+    /** Optional absolute start time in milliseconds. */
     public long startTimeMs = 0;       // optional start time, milliseconds
 
+    /**
+     * Creates a gesture schedule from point and time arrays.
+     *
+     * @param points gesture positions
+     * @param timesMs time offsets in milliseconds, one per point
+     */
     public GestureSchedule(List<PVector> points, float[] timesMs) {
         if (points == null || timesMs == null) {
             throw new IllegalArgumentException("points and times must be non-null");
@@ -59,6 +68,11 @@ public final class GestureSchedule implements PAGesture {
 		// absent a start time, return 0
 		return this.startTimeMs;
 	}
+	/**
+	 * Sets the absolute schedule start time.
+	 *
+	 * @param startTimeMs start time in milliseconds
+	 */
 	public void setStartTimeMs(long startTimeMs) {
 		this.startTimeMs = startTimeMs;
 	}
@@ -67,6 +81,11 @@ public final class GestureSchedule implements PAGesture {
         return points.size();
     }
 
+    /**
+     * Returns the schedule duration.
+     *
+     * @return elapsed milliseconds between first and last time offset
+     */
     public float durationMs() {
         return timesMs.length == 0 ? 0 : timesMs[timesMs.length - 1] - timesMs[0];
     }
@@ -75,6 +94,12 @@ public final class GestureSchedule implements PAGesture {
         return points.isEmpty();
     }
     
+    /**
+     * Returns a copy of the time array shifted so the first value is zero.
+     *
+     * @param timesMs source time offsets
+     * @return normalized time offsets
+     */
     public static float[] normalizeTimesToStartAtZero(float[] timesMs) {
         float[] out = timesMs.clone();
         if (out.length == 0) return out;
@@ -83,6 +108,11 @@ public final class GestureSchedule implements PAGesture {
         return out;
     }
 
+    /**
+     * Mutates a time array so values never decrease.
+     *
+     * @param t time offsets to adjust in place
+     */
     public static void enforceNonDecreasing(float[] t) {
         for (int i = 1; i < t.length; i++) {
             if (t[i] < t[i-1]) t[i] = t[i-1];

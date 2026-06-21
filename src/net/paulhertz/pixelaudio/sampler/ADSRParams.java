@@ -44,7 +44,7 @@ public class ADSRParams {
      * @param maxAmp      maximum amplitude (0..1)
      * @param attack      attack time in seconds
      * @param decay       decay time in seconds
-     * @param sustain     sustain amplitude 90..1)
+     * @param sustain     sustain amplitude (0..1)
      * @param release     release time in seconds
      */
     public ADSRParams(float maxAmp, float attack, float decay, float sustain, float release) {
@@ -55,10 +55,15 @@ public class ADSRParams {
         this.release = release;
     }
 
+    /** @return maximum amplitude */
     public float getMaxAmp() { return maxAmp; }
+    /** @return attack time in seconds */
     public float getAttack() { return attack; }
+    /** @return decay time in seconds */
     public float getDecay()  { return decay; }
+    /** @return sustain level in the range 0..1 */
     public float getSustain(){ return sustain; }
+    /** @return release time in seconds */
     public float getRelease(){ return release; }
 
     /**
@@ -70,7 +75,7 @@ public class ADSRParams {
 
     /** 
      * Build a fresh Minim ADSR from these parameters. 
-     * @return a Minim ADSR constructed with the instance variable stored in ADSRParams
+     * @return a Minim ADSR constructed with the instance variables stored in ADSRParams
      */
     public ADSR toADSR() {
         return new ADSR(maxAmp, attack, decay, sustain, release);

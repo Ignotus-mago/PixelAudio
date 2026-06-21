@@ -22,9 +22,9 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
 /**
  * Stores values used for SamplerBrush event staging, used in tutorial examples
- * such as {@link TutorialOne_03_Drawing}. SamplerBrush objects implement AudioBrush
- * and address the Sampler synthesis engine. A SamplerBrushEvent is a discrete 
- * audio synthesis process, complete with ADSR envelope. 
+ * such as {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing}.
+ * SamplerBrush objects implement AudioBrush and address the Sampler synthesis engine. 
+ * A SamplerBrushEvent is a discrete audio synthesis process, complete with ADSR envelope. 
  * <p>
  * There is no corresponding "GranularBrushEvent". Grains, which allow similar 
  * parametric control with the grain window equivalent to the ADSR envelope, 
@@ -49,15 +49,33 @@ public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
     /** event duration */
     public final int durationMs;
 
+    /** Linear gain multiplier for playback. */
     public final float gain;
+    /** Pitch ratio for playback, where 1.0 leaves pitch unchanged. */
     public final float pitchRatio;
+    /** Stereo pan position, from -1.0 left to 1.0 right. */
     public final float pan;
 
+    /** ADSR envelope for the sampler event. */
     public final ADSRParams env;
     
     // state 
+    /** True when this event should be ignored by consumers. */
     public boolean isStale;
 
+    /**
+     * Creates a sampler brush event.
+     *
+     * @param x             x-coordinate associated with the event
+     * @param y             y-coordinate associated with the event
+     * @param eventTimeMs   event time in milliseconds
+     * @param samplePos     audio buffer index to start playback
+     * @param sampleLen     event duration in milliseconds
+     * @param gain          linear gain multiplier
+     * @param pitchRatio    pitch ratio, where 1.0 leaves pitch unchanged
+     * @param env           ADSR envelope for the event
+     * @param pan           stereo pan position
+     */
     public SamplerBrushEvent(int x, int y, int eventTimeMs, int samplePos, int sampleLen, 
                       float gain, float pitchRatio, ADSRParams env, float pan) {
         this.x = x;
@@ -72,26 +90,32 @@ public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
         this.isStale = false;
     } 
     
+	/** @return x-coordinate associated with the event */
 	public int getX() {
 		return this.x;
 	}
 
+	/** @return y-coordinate associated with the event */
 	public int getY() {
 		return this.y;
 	}
 
+	/** @return event time in milliseconds */
 	public int eventTimeMs() {
 		return eventTimeMs;
 	}
 
+	/** @return true when this event should be ignored by consumers */
 	public boolean isStale() {
 		return this.isStale;
 	}
 
+	/** @param stale true to mark this event stale */
 	public void setStale(boolean stale) {
 		this.isStale = stale;
 	}
 		
+	/** @return event duration in milliseconds */
 	public int getDurationMs() {
 		return durationMs;
 	}

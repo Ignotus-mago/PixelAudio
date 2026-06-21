@@ -25,50 +25,75 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
-import net.paulhertz.pixelaudio.granular.GestureGranularConfig.Builder;
-import net.paulhertz.pixelaudio.granular.GestureGranularConfig.HopMode;
-import net.paulhertz.pixelaudio.granular.GestureGranularConfig.PathMode;
-import net.paulhertz.pixelaudio.granular.GestureGranularConfig.TimeTransform;
-import net.paulhertz.pixelaudio.granular.GestureGranularConfig.WarpShape;
 import net.paulhertz.pixelaudio.sampler.ADSRParams;
 import processing.data.JSONObject;
 
 /**
  * JSON read/write support for GestureGranularConfig.Builder.
- *
- * Filename convention suggestion:
- *   gesture_001_softGranular_config.json
+ * <br>
+ * Filename convention suggestion: gesture_001_softGranular_config.json
  */
 public final class GestureGranularConfigIO {
 
     private GestureGranularConfigIO() {}
 
+    /** Format identifier written to brush configuration JSON headers. */
     public static final String FORMAT = "net.paulhertz.pixelaudio.brushconfig";
+    /** Brush configuration JSON format version. */
     public static final int VERSION = 1;
 
+    /** Instrument family associated with a brush configuration. */
     public enum InstrumentType {
+        /** Granular synthesis instrument. */
         GRANULAR,
+        /** Sampler instrument. */
         SAMPLER
     }
 
+    /** Optional metadata written with a brush configuration JSON file. */
     public static final class Meta {
+        /** Configuration identifier. */
         public String id;
+        /** Configuration display name. */
         public String name;
+        /** Configuration description. */
         public String description;
+        /** Free-form configuration notes. */
         public String notes;
+        /** Instrument type for this configuration. */
         public InstrumentType instrumentType = InstrumentType.GRANULAR;
+        /** Relative path to a linked gesture file. */
         public String linkedGesturePath;
     }
 
+    /** Result of reading a brush configuration JSON file. */
     public static final class Result {
+        /** Reconstructed configuration builder. */
         public final GestureGranularConfig.Builder builder;
+        /** Configuration identifier. */
         public final String id;
+        /** Configuration display name. */
         public final String name;
+        /** Configuration description. */
         public final String description;
+        /** Free-form configuration notes. */
         public final String notes;
+        /** Instrument type for this configuration. */
         public final InstrumentType instrumentType;
+        /** Relative path to a linked gesture file. */
         public final String linkedGesturePath;
 
+        /**
+         * Creates a configuration read result.
+         *
+         * @param builder         reconstructed configuration builder
+         * @param id              configuration identifier
+         * @param name            configuration display name
+         * @param description     configuration description
+         * @param notes           free-form configuration notes
+         * @param instrumentType      instrument type for this configuration
+         * @param linkedGesturePath   relative path to a linked gesture file
+         */
         public Result(GestureGranularConfig.Builder builder,
                       String id,
                       String name,
@@ -86,6 +111,13 @@ public final class GestureGranularConfigIO {
         }
     }
 
+    /**
+     * Serializes a gesture granular configuration builder to a JSON object.
+     *
+     * @param b      builder to serialize
+     * @param meta   optional metadata
+     * @return JSON root object
+     */
     public static JSONObject toJson(GestureGranularConfig.Builder b, Meta meta) {
         if (b == null) throw new IllegalArgumentException("builder cannot be null");
         if (meta == null) meta = new Meta();
@@ -140,17 +172,38 @@ public final class GestureGranularConfigIO {
         return root;
     }
 
+    /**
+     * Writes a brush configuration JSON file.
+     *
+     * @param file      destination file
+     * @param builder   builder to serialize
+     * @param meta      optional metadata
+     * @throws IOException if the file cannot be written
+     */
     public static void write(File file, GestureGranularConfig.Builder builder, Meta meta) throws IOException {
         if (file == null) throw new IllegalArgumentException("file cannot be null");
         Files.writeString(file.toPath(), toJson(builder, meta).toString(), StandardCharsets.UTF_8);
     }
 
+    /**
+     * Reads a brush configuration JSON file.
+     *
+     * @param file    source file
+     * @return parsed configuration result
+     * @throws IOException if the file cannot be read
+     */
     public static Result read(File file) throws IOException {
         if (file == null) throw new IllegalArgumentException("file cannot be null");
         String json = Files.readString(file.toPath(), StandardCharsets.UTF_8);
         return fromJson(JSONObject.parse(json));
     }
 
+    /**
+     * Reconstructs a configuration builder from a parsed JSON root object.
+     *
+     * @param root   parsed JSON root
+     * @return parsed configuration result
+     */
     public static Result fromJson(JSONObject root) {
         if (root == null) throw new IllegalArgumentException("root cannot be null");
 

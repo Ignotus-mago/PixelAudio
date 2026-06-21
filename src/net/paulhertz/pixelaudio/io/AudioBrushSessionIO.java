@@ -30,8 +30,6 @@ import net.paulhertz.pixelaudio.curves.PACurveMaker;
 //import net.paulhertz.pixelaudio.curves.PACurveMakerIO;
 import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 import net.paulhertz.pixelaudio.io.GestureGranularConfigIO.InstrumentType;
-import net.paulhertz.pixelaudio.io.PACurveMakerIO.Meta;
-import net.paulhertz.pixelaudio.io.PACurveMakerIO.Result;
 import processing.data.JSONArray;
 import processing.data.JSONObject;
 
@@ -41,60 +39,132 @@ import processing.data.JSONObject;
  * Suggested filename:
  *   bagatelle_rehearsalSet_session.json
  *   
- * Used in the example sketch {@link Bagatelle}.
+ * Used in the example sketch {@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle}.
  * 
  */
 public final class AudioBrushSessionIO {
 
     private AudioBrushSessionIO() {}
 
+    /** Format identifier written to session manifest headers. */
     public static final String FORMAT = "net.paulhertz.pixelaudio.session";
+    /** Session manifest format version. */
     public static final int VERSION = 1;
 
+    /** Adapter that exposes brush data needed for writing a session. */
     public interface BrushAdapter<B> {
+        /**
+         * @param brush brush instance to inspect
+         * @return gesture curve for the brush
+         */
         PACurveMaker curveOf(B brush);
+        /**
+         * @param brush brush instance to inspect
+         * @return granular configuration for the brush
+         */
         GestureGranularConfig.Builder configOf(B brush);
+        /**
+         * @param brush brush instance to inspect
+         * @return instrument type for the brush
+         */
         InstrumentType instrumentTypeOf(B brush);
+        /**
+         * @param brush brush instance to inspect
+         * @return stable brush identifier
+         */
         String idOf(B brush);
 
+        /**
+         * @param brush brush instance to inspect
+         * @return optional display name
+         */
         default String nameOf(B brush) { return null; }
+        /**
+         * @param brush brush instance to inspect
+         * @return optional description
+         */
         default String descriptionOf(B brush) { return null; }
+        /**
+         * @param brush brush instance to inspect
+         * @return optional notes
+         */
         default String notesOf(B brush) { return null; }
+        /**
+         * @param brush brush instance to inspect
+         * @return true to include gesture style fields
+         */
         default boolean includeStyle(B brush) { return false; }
     }
 
+    /** Factory that rebuilds brush objects while reading a session. */
     public interface BrushFactory<B> {
+        /**
+         * Creates a brush from linked gesture/config files and its manifest record.
+         *
+         * @param curve loaded gesture curve
+         * @param builder loaded granular configuration builder
+         * @param instrumentType instrument type declared in the manifest
+         * @param record manifest record for the brush
+         * @return created brush object
+         */
         B create(PACurveMaker curve,
                  GestureGranularConfig.Builder builder,
                  InstrumentType instrumentType,
                  BrushRecord record);
     }
 
+    /** Session-level metadata stored in an AudioBrush manifest. */
     public static final class SessionMeta {
+        /** Session identifier. */
         public String id;
+        /** Session display name. */
         public String name;
+        /** Session description. */
         public String description;
+        /** Free-form session notes. */
         public String notes;
+        /** Path to the source audio file. */
         public String audioFilePath;
+        /** Source audio filename. */
         public String audioFileName;
+        /** Application-specific source audio tag. */
         public String audioFileTag;
     }
 
+    /** Per-brush manifest record linking gesture and configuration files. */
     public static final class BrushRecord {
+        /** Brush identifier. */
         public String id;
+        /** Brush display name. */
         public String name;
+        /** Brush description. */
         public String description;
+        /** Free-form brush notes. */
         public String notes;
+        /** Instrument type for the brush. */
         public InstrumentType instrumentType;
+        /** Relative path to the gesture JSON file. */
         public String gesturePath;
+        /** Relative path to the configuration JSON file. */
         public String configPath;
     }
 
+    /** Loaded session data with rebuilt brush objects and source records. */
     public static final class SessionData<B> {
+        /** Session metadata. */
         public final SessionMeta meta;
+        /** Brush objects created by the supplied factory. */
         public final List<B> brushes;
+        /** Manifest records corresponding to the loaded brushes. */
         public final List<BrushRecord> records;
 
+        /**
+         * Creates a session data container.
+         *
+         * @param meta session metadata
+         * @param brushes loaded brush objects
+         * @param records source manifest records
+         */
         public SessionData(SessionMeta meta, List<B> brushes, List<BrushRecord> records) {
             this.meta = meta;
             this.brushes = brushes;
@@ -102,6 +172,18 @@ public final class AudioBrushSessionIO {
         }
     }
 
+    /**
+     * Writes a session manifest and its linked gesture/configuration files.
+     *
+     * @param <B> brush object type
+     * @param sessionFile destination session manifest file
+     * @param brushes brushes to serialize
+     * @param adapter adapter that exposes data from each brush
+     * @param meta optional session metadata
+     * @param gestureDirName folder name for linked gesture files
+     * @param configDirName folder name for linked configuration files
+     * @throws IOException if any file cannot be written
+     */
     public static <B> void writeSession(
             File sessionFile,
             List<B> brushes,
@@ -191,6 +273,15 @@ public final class AudioBrushSessionIO {
         Files.writeString(sessionFile.toPath(), root.toString(), StandardCharsets.UTF_8);
     }
     
+    /**
+     * Reads a session manifest and creates brush objects from linked resources.
+     *
+     * @param <B> brush object type
+     * @param sessionFile session manifest file
+     * @param factory factory used to create brush objects
+     * @return loaded session data
+     * @throws IOException if the manifest or linked files cannot be read
+     */
     public static <B> SessionData<B> readSession(File sessionFile, BrushFactory<B> factory) throws IOException {
         if (sessionFile == null) throw new IllegalArgumentException("sessionFile cannot be null");
         if (factory == null) throw new IllegalArgumentException("factory cannot be null");

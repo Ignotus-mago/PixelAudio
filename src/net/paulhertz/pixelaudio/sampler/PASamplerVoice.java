@@ -19,7 +19,7 @@
 package net.paulhertz.pixelaudio.sampler;
 
 /**
- * PASamplerVoice — a single playback "voice" reading from a shared mono buffer.
+ * PASamplerVoice - a single playback "voice" reading from a shared mono buffer.
  *
  * Each voice handles:
  *   - playback position and pitch
@@ -71,6 +71,12 @@ public class PASamplerVoice {
     // Constructor
     // ------------------------------------------------------------------------
     
+    /**
+     * Constructs an inactive sampler voice.
+     *
+     * @param buffer shared mono source buffer
+     * @param sampleRate playback sample rate in Hz
+     */
     public PASamplerVoice(float[] buffer, float sampleRate) {
         this.buffer = buffer;
         this.playbackSampleRate = sampleRate;
@@ -83,6 +89,17 @@ public class PASamplerVoice {
     // Activation
     // ------------------------------------------------------------------------
     
+    /**
+     * Activates the voice over a buffer region.
+     *
+     * @param start buffer index to start playback
+     * @param length playback length in samples
+     * @param gain linear gain multiplier
+     * @param envParams optional ADSR envelope parameters
+     * @param pitch pitch or playback-rate multiplier
+     * @param pan stereo pan position
+     * @param looping true to loop this voice
+     */
     public void activate(int start, int length, float gain,
                          ADSRParams envParams, float pitch, float pan, boolean looping) {
         this.active = false;
@@ -130,6 +147,11 @@ public class PASamplerVoice {
         }
     }
 
+    /**
+     * Generates the next mono sample for this voice.
+     *
+     * @return next sample value, or 0 when inactive/finished
+     */
     public float nextSample() {
         if (finished || buffer == null) return 0f;
 
@@ -165,6 +187,7 @@ public class PASamplerVoice {
     // Lifecycle control
     // ------------------------------------------------------------------------
     
+    /** Starts the release stage and disables looping. */
     public void release() {
         if (!released) {
             released = true;
@@ -173,12 +196,14 @@ public class PASamplerVoice {
         looping = false;
     }
 
+    /** Stops this voice immediately. */
     public void stop() {
         active = false;
         released = false;
         finished = true;
     }
 
+    /** Resets this voice to the beginning of its current buffer and marks it inactive. */
     public void resetPosition() {
         this.start = 0;
         this.end = (buffer != null ? buffer.length : 0);
@@ -193,11 +218,22 @@ public class PASamplerVoice {
     // Buffer management
     // ------------------------------------------------------------------------
     
+    /**
+     * Replaces the source buffer and resets the voice.
+     *
+     * @param buffer shared mono source buffer
+     */
     public synchronized void setBuffer(float[] buffer) {
         this.buffer = buffer;
         resetPosition();
     }
 
+    /**
+     * Replaces the source buffer and playback sample rate, then resets the voice.
+     *
+     * @param buffer shared mono source buffer
+     * @param playbackSampleRate playback sample rate in Hz
+     */
     public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
         this.buffer = buffer;
         this.playbackSampleRate = playbackSampleRate;
@@ -209,14 +245,21 @@ public class PASamplerVoice {
     // Accessors and state checks
     // ------------------------------------------------------------------------
     
+    /** @return true while the voice is in its active playback window */
     public boolean isActive()     { return active; }
+    /** @return true while the voice is releasing but not finished */
     public boolean isReleasing()  { return released && !finished; }
+    /** @return true when the voice has finished playback */
     public boolean isFinished()   { return finished; }
 
+    /** @return true when this voice is configured to loop */
     public boolean isLooping()    { return looping; }
+    /** @param looping true to loop this voice */
     public void setLooping(boolean looping) { this.looping = looping; }
 
+    /** @return stereo pan position */
     public float getPan()         { return pan; }
+    /** @return unique voice identifier */
     public long getVoiceId()      { return voiceId; }
 
     
@@ -247,12 +290,21 @@ public class PASamplerVoice {
         return index;
     }
 
+    /** @return true when activation searches for a nearby zero crossing */
     public boolean isFindZeroCrossing() { return isFindZeroCrossing; }
+    /** @param val true to search for a nearby zero crossing on activation */
     public void setFindZeroCrossing(boolean val) { this.isFindZeroCrossing = val; }
 
+    /** @return true when activation applies a short fade-in */
     public boolean isMicroFadeIn() { return isMicroFadeIn; }
+    /** @param val true to apply a short fade-in on activation */
     public void setMicroFadeIn(boolean val) { this.isMicroFadeIn = val; }
     
+    /**
+     * Sets the playback sample rate.
+     *
+     * @param newRate playback sample rate in Hz
+     */
     public void setPlaybackSampleRate(float newRate) {
     	this.playbackSampleRate = newRate;
     }

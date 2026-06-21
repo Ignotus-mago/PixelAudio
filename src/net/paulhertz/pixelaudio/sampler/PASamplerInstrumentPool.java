@@ -25,15 +25,16 @@ import net.paulhertz.pixelaudio.schedule.AudioUtility;
 import java.util.*;
 
 /**
- * PASamplerInstrumentPool
- *
  * Manages a group of PASamplerInstruments sharing the same source buffer
  * and audio output. Provides polyphony management, buffer swapping, and
  * per-instrument voice recycling. 
  * <p>
- * -- TODO Uses a Minim MultiChannelBuffer for its audio sample storage. This could change. 
- * </p><p>
+ * -- TODO Uses a Minim MultiChannelBuffer for its audio sample storage. This could change.
+ * </p>
+ *
+ * <p>
  * Features:
+ * </p>
  * <ul>
  *  <li>Sample-based instruments with ADSR envelopes</li>
  *  <li>Configurable pool size (number of instruments)</li>
@@ -43,31 +44,44 @@ import java.util.*;
  *  <li>Looping detection</li>
  *  <li>Thread-safe access</li>
  * </ul>
- * </p>
  */
 public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------
     // Core state
     // ------------------------------------------------------------------------
+	
+    /** Audio output shared by all instruments in this pool. */
     private final AudioOutput out;
+    /** Shared source buffer for pooled instruments. */
     private MultiChannelBuffer buffer;
 
+    /** Instruments managed by this pool. */
     private final List<PASamplerInstrument> pool = new ArrayList<>();
+    /** Requested number of instruments in the pool. */
     private int poolSize;
+    /** Maximum voices allocated per instrument. */
     private int maxVoices = 8;
     
     // Pool-wide defaults / modifiers
+    /** Default ADSR envelope passed to pooled instruments. */
     private ADSRParams defaultEnv;
-    private float globalPitch = 1.0f;    // pitch multiplier
-    private float globalPan = 0.0f;      // -1..+1 left to right panning
+    /** Pool-wide pitch multiplier. */
+    private float globalPitch = 1.0f;
+    /** Pool-wide stereo pan offset, from -1.0 left to 1.0 right. */
+    private float globalPan = 0.0f;
 
     // Output / buffer timing info (useful now; essential for TimedLocation later)
-    private int outputBufferSize;        // frames per audio callback
-	private float bufferSampleRate;      // sample rate of source from which buffer was loaded
-	private float outputSampleRate;      // sample rate of AudioOutput
+    /** Output buffer size in frames per audio callback. */
+    private int outputBufferSize;
+	/** Sample rate of the source from which the buffer was loaded. */
+	private float bufferSampleRate;
+	/** Sample rate of the AudioOutput. */
+	private float outputSampleRate;
 	
-	private volatile float poolGain = 1f; // linear >= 0
+	/** Pool-wide linear gain scalar. */
+	private volatile float poolGain = 1f;
 
+	/** Pool-wide sampler mix profile propagated to pooled instruments. */
 	private volatile PASharedBufferSampler.MixProfile mixProfile =
 	        PASharedBufferSampler.MixProfile.BALANCED;
 
@@ -98,8 +112,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     		int poolSize,
     		int perInstrumentVoices,
     		AudioOutput out,
-    		ADSRParams defaultEnv) 
-    {
+    		ADSRParams defaultEnv) {
     	this.out = out;
     	this.buffer = buffer;
     	this.poolSize = Math.max(1, poolSize);
@@ -126,8 +139,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     		AudioOutput out, 
     		int poolSize,
     		float bufferSampleRate,
-    		ADSRParams env) 
-    {
+    		ADSRParams env) {
         this.out = out;
         this.buffer = buffer;
         this.poolSize = Math.max(1, poolSize);
@@ -140,11 +152,14 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
 
     /**
      * Convenience constructor: default env, bufferSampleRate = out.sampleRate().
+     *
+     * @param buffer     shared MultiChannelBuffer
+     * @param out        target AudioOutput
+     * @param poolSize   number of instruments to preallocate
      */
     public PASamplerInstrumentPool(MultiChannelBuffer buffer,
                                    AudioOutput out,
-                                   int poolSize)
-    {
+                                   int poolSize) {
         this(buffer, out, poolSize, out.sampleRate(), new ADSRParams(0.8f, 0.01f, 0.2f, 0.8f, 0.3f));
     }
 
@@ -165,7 +180,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // ------------------------------------------------------------------------
 
     /**
-     * Find a free instrument; otherwise least-busy; otherwise smooth-steal one.
+     * Find a free instrument; if no free instrument find least-busy; otherwise smooth-steal one.
      */
     private synchronized PASamplerInstrument getAvailableInstrument() {
     	PASamplerInstrument free = null;
@@ -233,6 +248,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         return inst.play(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
+    /** @return true if any pooled instrument has a looping sampler */
     // not an @Override
     public synchronized boolean isLooping() {
         for (PASamplerInstrument inst : pool) {
@@ -241,6 +257,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         return false;
     }
 
+    /** Stops playback on all pooled instruments. */
     // @Override
     public synchronized void stopAll() {
         stop();
@@ -271,33 +288,69 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     //
     // ------------------------------------------------------------------------
 
+    /** {@inheritDoc} */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
                                        ADSRParams env, float pitch, float pan) {
         return play(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
+	/**
+	 * Plays a sample range with pitch and pan.
+	 *
+	 * @param samplePos buffer index to start playback
+	 * @param sampleLen requested duration in samples
+	 * @param amplitude gain multiplier
+	 * @param pitch pitch or playback-rate multiplier
+	 * @param pan stereo pan
+	 * @return actual event duration in samples
+	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, 
 			float pitch, float pan) {
 		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, pan);
 	}
 
+	/** {@inheritDoc} */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
         return play(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, globalPan);
     }
 
+    /** {@inheritDoc} */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
         return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, globalPan);
     }
 
+    /** {@inheritDoc} */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
         return play(samplePos, sampleLen, amplitude, env, globalPitch, globalPan);
     }
 
+    /**
+     * Plays a sample range with envelope and pitch.
+     *
+     * @param samplePos   buffer index to start playback
+     * @param sampleLen   requested duration in samples
+     * @param amplitude   gain multiplier
+     * @param env         optional ADSR envelope
+     * @param pitch       pitch or playback-rate multiplier
+     * @return actual event duration in samples
+     */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
                                        ADSRParams env, float pitch) {
         return play(samplePos, sampleLen, amplitude, env, pitch, globalPan);
     }
     
+    /**
+     * Plays a range from a temporary buffer.
+     *
+     * @param buffer      source buffer for playback
+     * @param samplePos   buffer index to start playback
+     * @param sampleLen   requested duration in samples
+     * @param amplitude   gain multiplier
+     * @param env         optional ADSR envelope
+     * @param pitch       pitch or playback-rate multiplier
+     * @param pan         stereo pan
+     * @return actual event duration in samples
+     */
     public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
     		float amplitude, ADSRParams env, float pitch, float pan) {
     	// Use this call to temporarily switch the instrument's buffer for the event.
@@ -309,6 +362,17 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     	return inst.play(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
+    /**
+     * Plays a range from a temporary buffer.
+     *
+     * @param buffer      source buffer for playback
+     * @param samplePos   buffer index to start playback
+     * @param sampleLen   requested duration in samples
+     * @param amplitude   gain multiplier
+     * @param env         optional ADSR envelope
+     * @param pitch       pitch or playback-rate multiplier
+     * @return actual event duration in samples
+     */
     public synchronized int playSample(MultiChannelBuffer buffer, int samplePos, int sampleLen,
     		float amplitude, ADSRParams env, float pitch) {
     	return playSample(buffer, samplePos, sampleLen, amplitude, env, pitch, globalPan);
@@ -345,8 +409,8 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     /**
      * Swap the pool's shared buffer and update its buffer sample rate.
      * 
-     * @param newBuffer
-     * @param newBufferSampleRate
+     * @param newBuffer   a new MultiChannelBuffer as audio source for this instrument
+     * @param newBufferSampleRate sample rate of the replacement buffer in Hz
      */
     public synchronized void setBuffer(MultiChannelBuffer newBuffer, float newBufferSampleRate) {
         if (newBuffer == null) return;
@@ -369,6 +433,9 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     
     /**
      * Propagate a new float[] buffer to all instruments in this pool.
+     *
+     * @param newBuffer   replacement mono source buffer
+     * @param newBufferSampleRate sample rate of the replacement buffer in Hz
      */
     public synchronized void setBuffer(float[] newBuffer, float newBufferSampleRate) {
     	if (newBuffer == null || newBuffer.length == 0) return;
@@ -385,7 +452,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     	propagateParentGain();
     }
 
-    /** Re-sync instruments to current AudioOutput sample rate (if device changes). */
+    /** Re-sync instruments to current AudioOutput sample rate (if output device changes). */
     public synchronized void updateRateFromOutput() {
         if (out == null) return;
         this.outputSampleRate = out.sampleRate();
@@ -399,16 +466,28 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // Attributes
     // ------------------------------------------------------------------------
     
+    /**
+     * Sets pool output gain.
+     *
+     * @param linear   linear gain value
+     */
     public void setGain(float linear) {
         if (Float.isNaN(linear) || Float.isInfinite(linear)) return;
         poolGain = Math.max(0f, linear);
         propagateParentGain();
     }
 
+    /** @return pool output gain as a linear value */
     public float getGain() { return poolGain; }
 
+    /**
+     * Sets pool output gain in decibels.
+     *
+     * @param db gain in decibels
+     */
     public void setGainDb(float db) { setGain(AudioUtility.dbToLinear(db)); }
 
+    /** @return pool output gain in decibels */
     public float getGainDb() { return AudioUtility.linearToDb(poolGain); }
 
     private void propagateParentGain() {
@@ -449,25 +528,55 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         return mixProfile;
     }
 
+    /**
+     * Sets global pitch multiplier applied to subsequent playback.
+     *
+     * @param pitch   pitch multiplier
+     */
     public synchronized void setGlobalPitch(float pitch) { this.globalPitch = pitch; }
+    /** @return global pitch multiplier */
     public synchronized float getGlobalPitch() { return globalPitch; }
 
+    /**
+     * Sets global pan used by overloads without explicit pan.
+     *
+     * @param pan   stereo pan position
+     */
     public synchronized void setGlobalPan(float pan) { this.globalPan = clampPan(pan); }
+    /** @return global pan position */
     public synchronized float getGlobalPan() { return globalPan; }
 
+    /**
+     * Sets the default ADSR envelope for pooled instruments.
+     *
+     * @param env   default ADSR envelope
+     */
     public synchronized void setDefaultEnv(ADSRParams env) {
         this.defaultEnv = (env != null) ? env : this.defaultEnv;
         for (PASamplerInstrument inst : pool) inst.setDefaultEnv(this.defaultEnv);
     }
+    /** @return default ADSR envelope */
     public synchronized ADSRParams getDefaultEnv() { return defaultEnv; }
     
+    /** @return maximum voices per instrument */
     public int getMaxVoices() { return maxVoices; }
+    /**
+     * Sets maximum voices per instrument and reapplies pool configuration.
+     *
+     * @param maxVoices   maximum voices per instrument
+     */
     public synchronized void setMaxVoices(int maxVoices) {
         this.maxVoices = Math.max(1, maxVoices);
         reinitInstruments();
     }
     
+    /** @return number of instruments in the pool */
     public synchronized int getPoolSize() { return pool.size(); }
+    /**
+     * Sets the number of instruments in the pool.
+     *
+     * @param newSize   desired pool size
+     */
     public synchronized void setPoolSize(int newSize) {
         if (newSize != this.poolSize) {
             this.poolSize = Math.max(1, newSize);
@@ -475,8 +584,11 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         }
     }
 
+    /** @return output sample rate in Hz */
     public synchronized float getOutputSampleRate() { return outputSampleRate; }
+    /** @return output buffer size in samples */
     public synchronized int getOutputBufferSize() { return outputBufferSize; }
+    /** @return source buffer sample rate in Hz */
     public synchronized float getBufferSampleRate() { return bufferSampleRate; }
     
     /** 
@@ -519,6 +631,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         }
     }
 
+    /** @return mutable list of pooled instruments */
     public List<PASamplerInstrument> getInstruments() {
         return pool;
     }
@@ -527,7 +640,17 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     // TimedLocation hooks (stubs)
     // ------------------------------------------------------------------------
 
- 	/** Hook: schedule by (future) wallclock ms — will be wired to TimedLocation later. */
+	/**
+	 * Hook: schedule by future wallclock milliseconds; will be wired to TimedLocation later.
+	 *
+	 * @param triggerTimeMillis   future trigger time in milliseconds
+	 * @param samplePos           buffer index to start playback
+	 * @param sampleLen           requested duration in samples
+	 * @param amplitude           gain multiplier
+	 * @param env                 optional ADSR envelope
+	 * @param pitch               pitch or playback-rate multiplier
+	 * @param pan                 stereo pan
+	 */
     public synchronized void schedulePlayAtMillis(long triggerTimeMillis,
                                                   int samplePos, int sampleLen,
                                                   float amplitude, ADSRParams env,
@@ -537,7 +660,17 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         playSample(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
-    /** Hook: schedule by audio-frame index (frame = one AudioOutput callback). */
+    /**
+     * Hook: schedule by audio-frame index (frame = one AudioOutput callback).
+     *
+     * @param frameIndex  future audio callback frame index
+     * @param samplePos   buffer index to start playback
+     * @param sampleLen   requested duration in samples
+     * @param amplitude   gain multiplier
+     * @param env         optional ADSR envelope
+     * @param pitch       pitch or playback-rate multiplier
+     * @param pan         stereo pan
+     */
     public synchronized void schedulePlayAtFrame(long frameIndex,
                                                  int samplePos, int sampleLen,
                                                  float amplitude, ADSRParams env,
@@ -573,7 +706,11 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
     	isClosed = true;
     }
 
-    /** Check whether the pool has been closed. */
+    /**
+     * Check whether the pool has been closed.
+     *
+     * @return true after the pool has been closed
+     */
     public synchronized boolean isClosed() { return isClosed; }
 
 }

@@ -18,12 +18,12 @@
 
 package net.paulhertz.pixelaudio.sampler;
 
+// TODO use in granular engine, too? 
 /**
  * Generic interface for anything that can be "played."
  * Provides a minimal playback API plus backward-compatible overloads
  * for sampler instruments and other PAPlayable classes.
  * Used for Sampler audio synthesis engine. 
- * TODO use in Granular engine too? 
  */
 public interface PAPlayable {
 
@@ -31,9 +31,9 @@ public interface PAPlayable {
      * Minimal play signature for generic playables.
      * Implementations may ignore parameters they don't need.
      *
-     * @param amplitude gain multiplier (0..1+)
-     * @param pitch     playback rate or pitch factor (implementation-defined)
-     * @param pan       stereo pan (-1 left .. +1 right)
+     * @param amplitude   gain multiplier (0..1+)
+     * @param pitch       playback rate or pitch factor (implementation-defined)
+     * @param pan         stereo pan (-1 left .. +1 right)
      * @return non-zero if a voice/event was triggered
      */
     int play(float amplitude, float pitch, float pan);
@@ -45,22 +45,45 @@ public interface PAPlayable {
     // Backward-compatible overloads
     // --------------------------------------------------------------------
 
-    /** Simple play call using default amplitude, pitch, and pan. */
+    /**
+     * Simple play call using default amplitude, pitch, and pan.
+     *
+     * @return non-zero if a voice/event was triggered
+     */
     default int play() {
         return play(1.0f, 1.0f, 0.0f);
     }
 
-    /** Play with amplitude only. */
+    /**
+     * Play with amplitude only.
+     *
+     * @param amplitude   gain multiplier
+     * @return non-zero if a voice/event was triggered
+     */
     default int play(float amplitude) {
         return play(amplitude, 1.0f, 0.0f);
     }
 
-    /** Play with amplitude and pitch. */
+    /**
+     * Play with amplitude and pitch.
+     *
+     * @param amplitude   gain multiplier
+     * @param pitch       playback rate or pitch factor
+     * @return non-zero if a voice/event was triggered
+     */
     default int play(float amplitude, float pitch) {
         return play(amplitude, pitch, 0.0f);
     }
 
-    /** Play with amplitude, pitch, and pan. */
+    /**
+     * Play with amplitude, pitch, and pan.
+     *
+     * @param amplitude   gain multiplier
+     * @param pitch       playback rate or pitch factor
+     * @param pan         stereo pan
+     * @param unused      legacy compatibility parameter
+     * @return non-zero if a voice/event was triggered
+     */
     default int play(float amplitude, float pitch, float pan, boolean unused) {
         // 'unused' parameter is included for legacy signatures
         return play(amplitude, pitch, pan);
@@ -69,6 +92,12 @@ public interface PAPlayable {
     /**
      * Optional interface for playables that support envelopes.
      * Implementations that don't use ADSR can ignore this overload.
+     *
+     * @param amplitude   gain multiplier
+     * @param env         optional ADSR envelope
+     * @param pitch       playback rate or pitch factor
+     * @param pan         stereo pan
+     * @return non-zero if a voice/event was triggered
      */
     default int play(float amplitude, ADSRParams env, float pitch, float pan) {
         return play(amplitude, pitch, pan);

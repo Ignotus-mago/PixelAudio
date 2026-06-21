@@ -29,11 +29,19 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 // TODO javadoc comments
 
 /**
- * Build schedules for classes that implement PAGesture or use PAGesture implementers, for example to
- * to build, interpolate, and warp time and point lists. 
+ * Build schedules for classes that implement PAGesture or use PAGesture implementers, 
+ * for example to build, interpolate, and warp time and point lists. 
  */
 public final class GestureScheduleBuilder {
 
+	  /**
+	   * Builds a gesture schedule from a curve and granular playback configuration.
+	   *
+	   * @param brush        source gesture curve
+	   * @param cfg          schedule-building configuration
+	   * @param sampleRate   audio sample rate in Hz
+	   * @return generated gesture schedule
+	   */
 	  public GestureSchedule build(PACurveMaker brush, GestureGranularConfig cfg, float sampleRate) {
 	    if (brush == null) throw new IllegalArgumentException("brush is null");
 	    if (cfg == null) throw new IllegalArgumentException("cfg is null");
@@ -112,7 +120,7 @@ public final class GestureScheduleBuilder {
 	  }
 
 	  // ------------------------------------------------------------
-	  // Resample schedule to count (interpolate points + timesMs)
+	  // Resample schedule to count (interpolate points and times)
 	  // ------------------------------------------------------------
 
 	  private static GestureSchedule resampleToCount(GestureSchedule in, int count) {
@@ -130,8 +138,8 @@ public final class GestureScheduleBuilder {
 
 	    for (int k = 0; k < count; k++) {
 	      float uk = (float) k / (count - 1);
-	      outPts.add(lerpPointByU(in.points, u, uk));
-	      outT[k] = lerpFloatByU(in.timesMs, u, uk);
+	      outPts.add(lerpPointByU(in.points, u, uk));    // interpolate points
+	      outT[k] = lerpFloatByU(in.timesMs, u, uk);     // interpolate times
 	    }
 
 	    GestureSchedule.enforceNonDecreasing(outT);

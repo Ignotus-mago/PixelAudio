@@ -4,7 +4,8 @@
  * <p><b>Overview</b></p>
  * <p>This package implements serialization and deserialization of core PixelAudio objects to JSON format,
  * enabling saving and loading of gestures, granular synthesis configurations, and complete audio brush sessions.
- * The format is designed for the Bagatelle example sketch and supports the AudioBrush session paradigm.</p>
+ * The format is designed for the Bagatelle example sketch and supports the AudioBrush session paradigm. 
+ * These JSON i/o classes are in early development and may change in future releases. </p>
  *
  * <ul>
  *

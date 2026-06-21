@@ -19,16 +19,17 @@
 package net.paulhertz.pixelaudio.sampler;
 
 /**
- * SimpleADSR — software envelope generator with optional exponential curves.
+ * SimpleADSR - software envelope generator with optional exponential curves.
  * <p>
  * Features:
+ * </p>
  * <ul>
- *  <li>Sample-rate–based time scaling</li>
+ *  <li>Sample-rate-based time scaling</li>
  *  <li>Per-stage exponential curvature</li>
  *  <li>Sustain-level clamping</li>
- *  <li>`noteOn()`, `noteOff()`, `tick()`, and `isFinished()`</li>
+ *  <li>{@code noteOn()}, {@code noteOff()}, {@code tick()}, and {@code isFinished()}</li>
  * </ul>
- * </p>
+ * TODO coding examples using shape curvature. 
  */
 public class SimpleADSR {
 
@@ -56,6 +57,14 @@ public class SimpleADSR {
     // Constructors
     // ------------------------------------------------------------------------
 
+    /**
+     * Constructs an envelope with default exponential curvature.
+     *
+     * @param attack attack time in seconds
+     * @param decay decay time in seconds
+     * @param sustain sustain level in the range 0..1
+     * @param release release time in seconds
+     */
     public SimpleADSR(float attack, float decay, float sustain, float release) {
         this.attackTime = Math.max(attack, 0f);
         this.decayTime = Math.max(decay, 0f);
@@ -63,7 +72,17 @@ public class SimpleADSR {
         this.releaseTime = Math.max(release, 0f);
     }
 
-    // Optionally allow curvature control
+    /**
+     * Constructs an envelope with explicit stage curvature.
+     *
+     * @param attack         attack time in seconds
+     * @param decay          decay time in seconds
+     * @param sustain        sustain level in the range 0..1
+     * @param release        release time in seconds
+     * @param attackCurve    curvature for the attack stage
+     * @param decayCurve     curvature for the decay stage
+     * @param releaseCurve   curvature for the release stage
+     */
     public SimpleADSR(float attack, float decay, float sustain, float release,
                       float attackCurve, float decayCurve, float releaseCurve) {
         this(attack, decay, sustain, release);
@@ -76,16 +95,23 @@ public class SimpleADSR {
     // Lifecycle control
     // ------------------------------------------------------------------------
 
+    /**
+     * Sets the sample rate used to convert envelope stage times to samples.
+     *
+     * @param sr   sample rate in Hz
+     */
     public void setSampleRate(float sr) {
         if (sr > 0) sampleRate = sr;
     }
 
+    /** Starts the envelope at the attack stage. */
     public void noteOn() {
         stage = Stage.ATTACK;
         samplesInStage = 0;
         stageSamples = Math.max(1, (int)(attackTime * sampleRate));
     }
 
+    /** Starts the release stage from the current envelope value. */
     public void noteOff() {
     	releaseStart = value;      // capture current amplitude
         stage = Stage.RELEASE;
@@ -93,6 +119,11 @@ public class SimpleADSR {
         stageSamples = Math.max(1, (int)(releaseTime * sampleRate));
     }
 
+    /**
+     * Reports whether the envelope is idle or has completed its release stage.
+     *
+     * @return true when no active envelope value remains
+     */
     public boolean isFinished() {
         return stage == Stage.FINISHED || stage == Stage.IDLE;
     }
@@ -101,6 +132,11 @@ public class SimpleADSR {
     // Tick: advance one sample
     // ------------------------------------------------------------------------
 
+    /**
+     * Advances the envelope by one sample.
+     *
+     * @return the current envelope value after advancing
+     */
     public float tick() {
         switch (stage) {
             case ATTACK:
@@ -163,14 +199,34 @@ public class SimpleADSR {
     // Accessors
     // ------------------------------------------------------------------------
 
+    /**
+     * Returns the current envelope value.
+     *
+     * @return current envelope value
+     */
     public float getValue() { return value; }
 
+    /**
+     * Sets curvature values for attack, decay, and release stages.
+     *
+     * @param attackC attack-stage curvature
+     * @param decayC decay-stage curvature
+     * @param releaseC release-stage curvature
+     */
     public void setCurves(float attackC, float decayC, float releaseC) {
         attackCurve = Math.max(0.1f, attackC);
         decayCurve = Math.max(0.1f, decayC);
         releaseCurve = Math.max(0.1f, releaseC);
     }
 
+    /**
+     * Sets envelope stage times and sustain level.
+     *
+     * @param a attack time in seconds
+     * @param d decay time in seconds
+     * @param s sustain level
+     * @param r release time in seconds
+     */
     public void setTimes(float a, float d, float s, float r) {
         attackTime = a;
         decayTime = d;

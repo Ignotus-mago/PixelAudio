@@ -30,6 +30,14 @@ public interface PASamplerPlayable extends PAPlayable {
      * Core playback method: start playback from a given buffer range
      * with start index, duration, amplitude, envelope, pitch, and pan control,
      * arguments in standard order for PixalAudio library.
+     *
+     * @param samplePos buffer index to start playback
+     * @param sampleLen requested duration in samples
+     * @param amplitude gain multiplier
+     * @param env optional ADSR envelope
+     * @param pitch pitch or playback-rate multiplier
+     * @param pan stereo pan
+     * @return actual event duration in samples
      */
     int play(int samplePos, int sampleLen, float amplitude,
              ADSRParams env, float pitch, float pan);
@@ -42,43 +50,98 @@ public interface PASamplerPlayable extends PAPlayable {
     // class in a more complete version. 
     // --------------------------------------------------------------------
 
-    /** Simplest: play whole buffer at default amplitude and pitch. */
+    /**
+     * Simplest: play whole buffer at default amplitude and pitch.
+     *
+     * @return actual event duration in samples
+     */
     default int playSample() {
         return play(0, -1, 1.0f, null, 1.0f, 0.0f);
     }
 
-    /** Play with amplitude only. */
+    /**
+     * Play with amplitude only.
+     *
+     * @param amplitude gain multiplier
+     * @return actual event duration in samples
+     */
     default int playSample(float amplitude) {
         return play(0, -1, amplitude, null, 1.0f, 0.0f);
     }
 
-    /** Play with amplitude and envelope. */
+    /**
+     * Play with amplitude and envelope.
+     *
+     * @param amplitude gain multiplier
+     * @param env optional ADSR envelope
+     * @return actual event duration in samples
+     */
     default int playSample(float amplitude, ADSRParams env) {
         return play(0, -1, amplitude, env, 1.0f, 0.0f);
     }
 
-    /** Play with amplitude, envelope, and pitch. */
+    /**
+     * Play with amplitude, envelope, and pitch.
+     *
+     * @param amplitude gain multiplier
+     * @param env optional ADSR envelope
+     * @param pitch pitch or playback-rate multiplier
+     * @return actual event duration in samples
+     */
     default int playSample(float amplitude, ADSRParams env, float pitch) {
         return play(0, -1, amplitude, env, pitch, 0.0f);
     }
 
-    /** Play with amplitude, envelope, pitch, and pan. */
+    /**
+     * Play with amplitude, envelope, pitch, and pan.
+     *
+     * @param amplitude gain multiplier
+     * @param env optional ADSR envelope
+     * @param pitch pitch or playback-rate multiplier
+     * @param pan stereo pan
+     * @return actual event duration in samples
+     */
     default int playSample(float amplitude, ADSRParams env, float pitch, float pan) {
         return play(0, -1, amplitude, env, pitch, pan);
     }
 
-    /** Play a subrange of the buffer with full parameters. */
+    /**
+     * Play a subrange of the buffer with full parameters.
+     *
+     * @param start buffer index to start playback
+     * @param length requested duration in samples
+     * @param amplitude gain multiplier
+     * @param env optional ADSR envelope
+     * @param pitch pitch or playback-rate multiplier
+     * @param pan stereo pan
+     * @return actual event duration in samples
+     */
     default int playSample(int start, int length, float amplitude,
                            ADSRParams env, float pitch, float pan) {
         return play(start, length, amplitude, env, pitch, pan);
     }
 
-    /** Play subrange with amplitude and pitch (no envelope). */
+    /**
+     * Play subrange with amplitude and pitch (no envelope).
+     *
+     * @param start buffer index to start playback
+     * @param length requested duration in samples
+     * @param amplitude gain multiplier
+     * @param pitch pitch or playback-rate multiplier
+     * @return actual event duration in samples
+     */
     default int playSample(int start, int length, float amplitude, float pitch) {
         return play(start, length, amplitude, null, pitch, 0.0f);
     }
 
-    /** Play subrange with amplitude only. */
+    /**
+     * Play subrange with amplitude only.
+     *
+     * @param start buffer index to start playback
+     * @param length requested duration in samples
+     * @param amplitude gain multiplier
+     * @return actual event duration in samples
+     */
     default int playSample(int start, int length, float amplitude) {
         return play(start, length, amplitude, null, 1.0f, 0.0f);
     }

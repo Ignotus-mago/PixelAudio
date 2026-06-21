@@ -22,9 +22,10 @@ package net.paulhertz.pixelaudio.sampler;
 
 /**
  * Holds information about a triggered playback event.
- * Returned by PASharedBufferSampler.play(), where it can be used for debugging. 
+ * Returned by {@code PASharedBufferSampler.play()}, where it can be used for debugging. 
  */
 public class PlaybackInfo {
+    /** Unique sampler voice identifier. */
     public final long voiceId;
 
     /** Duration in output samples (pitch-independent). */
@@ -51,6 +52,17 @@ public class PlaybackInfo {
     /** Absolute stop time in milliseconds (optional). */
     public final float stopMS;
 
+    /**
+     * Creates playback information for a triggered voice.
+     *
+     * @param voiceId             unique sampler voice identifier
+     * @param eventSamples        duration in output samples
+     * @param bufferReadSamples   number of source buffer samples traversed
+     * @param durationMS          duration in milliseconds
+     * @param looping             true when the voice loops indefinitely
+     * @param startSample         absolute start time in samples
+     * @param sampleRate          output sample rate in Hz
+     */
     public PlaybackInfo(
             long voiceId,
             int eventSamples,
@@ -75,6 +87,13 @@ public class PlaybackInfo {
      * Computes total playback duration (in output samples, pitch-independent).
      * Envelope stage times are assumed to be in seconds.
      *
+     * @param samplePos    buffer index to start playback
+     * @param sampleLen    requested duration in samples
+     * @param bufferLen    source buffer length in samples
+     * @param pitch        pitch or playback-rate multiplier
+     * @param env          optional ADSR envelope
+     * @param looping      true when playback loops indefinitely
+     * @param sampleRate   output sample rate in Hz
      * @return duration in output samples (int), or Integer.MAX_VALUE if looping.
      */
     public static int computeVoiceDuration(

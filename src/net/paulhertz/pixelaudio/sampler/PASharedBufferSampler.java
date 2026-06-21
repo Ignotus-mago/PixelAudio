@@ -45,27 +45,45 @@ import java.util.*;
  * 
  */
 public class PASharedBufferSampler extends UGen implements PASampler {
-    private float[] buffer;     // mono source (channel 0)
+    /** Mono source buffer, typically channel 0 from a MultiChannelBuffer. */
+    private float[] buffer;
+    /** Cached source buffer length in samples. */
     private int bufferLen;
+    /** Sample rate of the source buffer in Hz. */
     private float playbackSampleRate;
 
+    /** Audio output this sampler is patched to. */
     private final AudioOutput out;
+    /** Voice pool used for polyphonic sample playback. */
     private final List<PASamplerVoice> voices = new ArrayList<>();
+    /** Maximum number of simultaneous voices. */
     private int maxVoices = 32;
+    /** Default looping state for newly triggered voices. */
     private boolean globalLooping = false;
+    /** True to release stolen voices smoothly instead of stopping them immediately. */
     private boolean smoothSteal = true;
     
-    // smoothed normalization gain
+    /** Smoothed mix-normalization gain. */
     private float mixNorm = 1f; 
     
-    // --- Master gain applied to mixed output (affects currently playing voices) (NEW) ---
-    private volatile float masterGain = 1f; // linear >= 0
+    /** Master linear gain applied to mixed output. */
+    private volatile float masterGain = 1f;
     
+    /** Enables diagnostic voice-trigger logging when true. */
     protected boolean DEBUG = false;
  
+    /**
+     * Mix-density normalization profiles for polyphonic sampler output,
+     * used to control noise and distortion. Described in example code
+     * {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing},
+     * which allows you to listen to the effects of different MixProfiles.
+     */
     public enum MixProfile {
+        /** Minimal normalization and limiting. */
         TRANSPARENT(0.50f, 0.08f, 1.35f, 1.00f),
+        /** Moderate normalization for general playback. */
         BALANCED(0.60f, 0.10f, 1.60f, 0.60f),
+        /** Stronger normalization for dense voice clusters. */
         PROTECTIVE(0.70f, 0.14f, 1.25f, 0.35f);
 
         /** targetNorm = 1 / activeWeight^normExponent */
@@ -99,9 +117,9 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      * Construct a sampler over a shared MultiChannelBuffer.
      * Automatically patches to the provided AudioOutput.
      *
-     * @param multiBuffer shared source buffer (mono or stereo)
-     * @param sampleRate  sample rate of the buffer
-     * @param out         target AudioOutput for playback
+     * @param multiBuffer   shared source buffer (mono or stereo)
+     * @param sampleRate    sample rate of the buffer
+     * @param out           target AudioOutput for playback
      */
     public PASharedBufferSampler(MultiChannelBuffer multiBuffer, float sampleRate, AudioOutput out) {
         this.buffer = Arrays.copyOf(multiBuffer.getChannel(0), multiBuffer.getBufferSize());
@@ -111,6 +129,14 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         this.patch(out);
     }
     
+    /**
+     * Constructs a sampler over a shared buffer with explicit polyphony.
+     *
+     * @param multiBuffer          shared source buffer
+     * @param playbackSampleRate   sample rate of the source buffer in Hz
+     * @param out                  target AudioOutput for playback
+     * @param maxVoices            maximum simultaneous voices
+     */
     public PASharedBufferSampler(MultiChannelBuffer multiBuffer, float playbackSampleRate, AudioOutput out, int maxVoices) {
     	this.buffer = Arrays.copyOf(multiBuffer.getChannel(0), multiBuffer.getBufferSize());
        	this.bufferLen = buffer.length;
@@ -124,7 +150,12 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     }
     
 
-    // NEW: convenience – infer sampleRate from AudioOutput
+    /**
+     * Constructs a sampler and infers playback sample rate from the output.
+     *
+     * @param multiBuffer   shared source buffer
+     * @param out           target AudioOutput for playback
+     */
     public PASharedBufferSampler(MultiChannelBuffer multiBuffer, AudioOutput out) {
         this(multiBuffer, (out != null ? out.sampleRate() : 44100), out);
     }
@@ -251,7 +282,22 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             }
         }
 
-        // Density-based normalization
+        // --- Density-based normalization --- //
+        /* targetNorm = 1 / activeWeight^normExponent
+         * normExponent controls how aggressively gain drops as voice count rises:
+         * 0.5 (square root), common for uncorrelated signals
+         * 1.0 full division by voice count, much more conservative
+         * MixProfile uses: 
+         * TRANSPARENT: 0.5, BALANCED: 0.6, PROTECTIVE: 0.7.
+         * So for 4 active voices: 
+         * normExponent             targetNorm
+         * 0.5    ->    1/sqrt(4) = 0.50
+         * 0.6    ->    1/(4^0.6) = 0.435
+         * 0.7    ->    1/(4^0.7) = 0.379
+         * 1.0    ->    1/(4)     = 0.25
+         * alpha smooths how fast mixNorm changes. 
+         * mixNorm scales masterGain.
+         */
         float targetNorm = (activeWeight > 1f)
                 ? 1f / (float) Math.pow(activeWeight, profile.normExponent)
                 : 1f;
@@ -270,6 +316,21 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     }
     
     
+    /**
+     * Applies a softsign limiter to reduce overload without hard clipping.
+     *
+     * <p>The input is first scaled by {@code drive}, then mapped through
+     * {@code y / (1 + abs(y))}. Small values stay close to linear, while large
+     * positive or negative values asymptotically approach -1 or 1.</p>
+     * <p>A drive value of 1.0 is basically neutral. Typical active values 
+     * are in the range 1.2 to 1.6. 2.0 to 3.3 provides obvious compress, 
+     * above 4.0 probably distorts. MixProfile provides :TRANSPARENT: 1.35, 
+     * BALANCED: 1.60, PROTECTIVE: 1.25.</p>
+     *
+     * @param x       input sample
+     * @param drive   pre-limiter gain controlling how quickly the curve saturates
+     * @return softly limited sample
+     */
     static float softClipSoftsign(float x, float drive) {
         float y = drive * x;
         return y / (1f + Math.abs(y));
@@ -294,51 +355,87 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     // Controls / inspection
 
-    /** Default looping for newly triggered voices. */
+    /**
+     * Sets default looping for newly triggered voices.
+     *
+     * @param looping true to loop newly triggered voices
+     */
     public void setGlobalLooping(boolean looping) {
         this.globalLooping = looping;
     }
 
+    /** @return true when newly triggered voices loop by default */
     public boolean isGlobalLooping() { return globalLooping; }
 
-    /** Enable/disable smooth stealing (release envelope) on voice recycle. */
+    /**
+     * Enable/disable smooth stealing (release envelope) on voice recycle.
+     *
+     * @param smoothSteal true to release stolen voices smoothly
+     */
     public void setSmoothSteal(boolean smoothSteal) {
         this.smoothSteal = smoothSteal;
     }
 
+    /** @return true when stolen voices release smoothly */
     public boolean isSmoothSteal() { return smoothSteal; }
 
-    /** Change maximum polyphony at runtime. */
+    /**
+     * Change maximum polyphony at runtime.
+     *
+     * @param maxVoices maximum simultaneous voices
+     */
     public synchronized void setMaxVoices(int maxVoices) {
         this.maxVoices = Math.max(1, maxVoices);
     }
 
+    /** @return maximum simultaneous voices */
     public int getMaxVoices() { return maxVoices; }
 
-    /** Read-only list of voices for GUI or debugging. */
+    /**
+     * Read-only list of voices for GUI or debugging.
+     *
+     * @return unmodifiable voice list
+     */
     public List<PASamplerVoice> getVoices() {
         return Collections.unmodifiableList(voices);
     }
     
     // ----- Accessors ----- //
     
+    /**
+     * Sets master output gain.
+     *
+     * @param linear linear gain value
+     */
     public void setMasterGain(float linear) {
         if (Float.isNaN(linear) || Float.isInfinite(linear)) return;
         masterGain = Math.max(0f, linear);
     }
 
+    /** @return master output gain as a linear value */
     public float getMasterGain() {
         return masterGain;
     }
 
+    /**
+     * Sets master output gain in decibels.
+     *
+     * @param db gain in decibels
+     */
     public void setMasterGainDb(float db) {
         setMasterGain(AudioUtility.dbToLinear(db));
     }
 
+    /** @return master output gain in decibels */
     public float getMasterGainDb() {
         return AudioUtility.linearToDb(masterGain);
     }
     
+    /**
+     * Replaces the sampler source buffer.
+     *
+     * @param buffer mono source sample buffer
+     */
     public synchronized void setBuffer(float[] buffer) {
     	this.buffer = buffer;
     	for (PASamplerVoice v : this.voices) {
@@ -348,6 +445,12 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     	}
     }
  
+    /**
+     * Replaces the sampler source buffer and playback sample rate.
+     *
+     * @param buffer mono source sample buffer
+     * @param playbackSampleRate sample rate of the source buffer in Hz
+     */
     public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
     	this.buffer = buffer;
     	this.playbackSampleRate = playbackSampleRate;
@@ -358,24 +461,37 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     	}
     }
         
+    /**
+     * Counts voices that are neither active nor releasing.
+     *
+     * @return available voice count
+     */
     public int countAvailableVoices() {
         int n = 0;
         for (PASamplerVoice v : voices) if (!v.isActive() && !v.isReleasing()) n++;
         return n;
     }
 
+    /**
+     * Sets the mix normalization profile.
+     *
+     * @param profile mix profile to apply
+     */
     public void setMixProfile(MixProfile profile) {
         if (profile != null) this.mixProfile = profile;
     }
 
+    /** @return active mix normalization profile */
     public MixProfile getMixProfile() {
         return mixProfile;
     }
     
+    /** @return active mix profile name */
     public String getMixProfileName() {
         return mixProfile.name();
     }
     
+    /** Advances to the next mix normalization profile. */
     public void cycleMixProfile() {
         MixProfile[] vals = MixProfile.values();
         int i = (mixProfile.ordinal() + 1) % vals.length;
@@ -386,7 +502,11 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     // Sample rate management
     // ------------------------------------------------------------------------
 
-    /** Returns the current sample rate of this sampler. */
+    /**
+     * Returns the current sample rate of this sampler.
+     *
+     * @return playback sample rate in Hz
+     */
     public synchronized float getPlaybackSampleRate() {
     	return playbackSampleRate;
     }
@@ -394,6 +514,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     /**
      * Updates the playback sample rate used for reading from the buffer.
      * Does not affect Minim's UGen sample rate.
+     *
+     * @param newRate playback sample rate in Hz
      */
     public synchronized void setPlaybackSampleRate(float newRate) {
         if (newRate > 0f && newRate != playbackSampleRate) {
@@ -414,8 +536,10 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         }
     }
     
+    /** @return source buffer length in samples */
     public int getBufferLength() { return bufferLen; }
 
+    /** @return target audio output */
     public AudioOutput getAudioOutput() { return out; }
     
 }

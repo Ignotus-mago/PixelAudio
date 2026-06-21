@@ -31,39 +31,58 @@ import processing.data.JSONArray;
 import processing.data.JSONObject;
 
 /**
- * Read AudioBrush session data form JSON files. 
+ * Read AudioBrush session data from JSON files.
  * 
- * Used in the example sketch {@link Bagatelle}.
+ * Used in the example sketch {@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle}.
  * 
  */
 public final class AudioBrushSessionLoader {
 
 	private AudioBrushSessionLoader() {}
 
+	/** Supported AudioBrush JSON file categories. */
 	public enum JsonFileType {
+		/** PACurveMaker gesture JSON. */
 		GESTURE,
+		/** GestureGranularConfig JSON. */
 		CONFIG,
+		/** AudioBrush session manifest JSON. */
 		SESSION,
+		/** Unknown or unsupported JSON format. */
 		UNKNOWN
 	}
 
+	/** Data loaded for a single brush. */
 	public static class BrushData {
+		/** Gesture curve data, when available. */
 		public PACurveMaker curve;
+		/** Granular configuration builder, when available. */
 		public GestureGranularConfig.Builder config;
+		/** Instrument type declared by linked configuration data. */
 		public GestureGranularConfigIO.InstrumentType instrumentType;
 	}
 
+	/** Result of loading a gesture, configuration, or session file. */
 	public static class LoadResult {
+		/** Detected file type. */
 		public JsonFileType type = JsonFileType.UNKNOWN;
 
-		// for single gesture/config loads
+		/** Brush loaded from a single gesture or configuration file. */
 		public BrushData brush;
 
-				// for session loads
+		/** Session metadata for session manifest loads. */
 		public AudioBrushSessionIO.SessionMeta sessionMeta;
+		/** Brushes loaded from a session manifest. */
 		public List<BrushData> brushes;
 	}
 
+	/**
+	 * Loads a gesture, configuration, or session JSON file.
+	 *
+	 * @param chosenFile JSON file to load
+	 * @return load result for the detected file type
+	 * @throws IOException if the file cannot be read or its type is unsupported
+	 */
 	public static LoadResult load(File chosenFile) throws IOException {
 		if (chosenFile == null) {
 			throw new IllegalArgumentException("chosenFile cannot be null");
@@ -80,6 +99,13 @@ public final class AudioBrushSessionLoader {
 		};
 	}
 
+	/**
+	 * Reads a JSON file into a Processing {@link JSONObject}.
+	 *
+	 * @param file JSON file to read
+	 * @return parsed root object
+	 * @throws IOException if the file cannot be read
+	 */
 	public static JSONObject readRoot(File file) throws IOException {
 		if (file == null) {
 			throw new IllegalArgumentException("file cannot be null");
@@ -88,6 +114,12 @@ public final class AudioBrushSessionLoader {
 		return JSONObject.parse(json);
 	}
 
+	/**
+	 * Detects the AudioBrush JSON file type from its header format field.
+	 *
+	 * @param root parsed JSON root object
+	 * @return detected file type, or {@link JsonFileType#UNKNOWN}
+	 */
 	public static JsonFileType detectType(JSONObject root) {
 		if (root == null || !root.hasKey("header")) return JsonFileType.UNKNOWN;
 

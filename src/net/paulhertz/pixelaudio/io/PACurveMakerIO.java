@@ -32,39 +32,65 @@ import processing.data.JSONObject;
 
 /**
  * JSON read/write support for PACurveMaker.
- *
- * Filename convention suggestion:
- *   gesture_001_gesture.json
- *   
- * Used in the example sketch {@link Bagatelle}.
+ * <br>
+ * Filename convention suggestion: gesture_001_gesture.json
+ * 
+ * Used in the example sketch {@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle}.
  * 
  */
 public final class PACurveMakerIO {
 
     private PACurveMakerIO() {}
 
+    /** Format identifier written to gesture JSON headers. */
     public static final String FORMAT = "net.paulhertz.pixelaudio.gesture";
+    /** Gesture JSON format version. */
     public static final int VERSION = 1;
 
+    /** Optional metadata written with a gesture JSON file. */
     public static final class Meta {
+        /** Gesture identifier. */
         public String id;
+        /** Gesture display name. */
         public String name;
+        /** Gesture description. */
         public String description;
+        /** Free-form gesture notes. */
         public String notes;
+        /** Relative path to a linked configuration file. */
         public String linkedConfigPath;
+        /** True to include display style fields in the JSON. */
         public boolean includeStyle = false;
 
+        /** Creates an empty metadata object. */
         public Meta() {}
     }
 
+    /** Result of reading a gesture JSON file. */
     public static final class Result {
+        /** Reconstructed curve. */
         public final PACurveMaker curve;
+        /** Gesture identifier. */
         public final String id;
+        /** Gesture display name. */
         public final String name;
+        /** Gesture description. */
         public final String description;
+        /** Free-form gesture notes. */
         public final String notes;
+        /** Relative path to a linked configuration file. */
         public final String linkedConfigPath;
 
+        /**
+         * Creates a gesture read result.
+         *
+         * @param curve        reconstructed curve
+         * @param id           gesture identifier
+         * @param name         gesture display name
+         * @param description  gesture description
+         * @param notes        free-form gesture notes
+         * @param linkedConfigPath relative path to a linked configuration file
+         */
         public Result(PACurveMaker curve,
                       String id,
                       String name,
@@ -80,6 +106,13 @@ public final class PACurveMakerIO {
         }
     }
 
+    /**
+     * Serializes a {@link PACurveMaker} to a JSON object.
+     *
+     * @param curve   curve to serialize
+     * @param meta    optional metadata
+     * @return JSON root object
+     */
     public static JSONObject toJson(PACurveMaker curve, Meta meta) {
         if (curve == null) throw new IllegalArgumentException("curve cannot be null");
         if (meta == null) meta = new Meta();
@@ -137,18 +170,39 @@ public final class PACurveMakerIO {
         return root;
     }
 
+    /**
+     * Writes a curve JSON file.
+     *
+     * @param file   destination file
+     * @param curve  curve to serialize
+     * @param meta   optional metadata
+     * @throws IOException if the file cannot be written
+     */
     public static void write(File file, PACurveMaker curve, Meta meta) throws IOException {
         if (file == null) throw new IllegalArgumentException("file cannot be null");
         String json = toJson(curve, meta).toString();
         Files.writeString(file.toPath(), json, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Reads a curve JSON file.
+     *
+     * @param file     source file
+     * @return parsed  gesture result
+     * @throws IOException if the file cannot be read
+     */
     public static Result read(File file) throws IOException {
         if (file == null) throw new IllegalArgumentException("file cannot be null");
         String json = Files.readString(file.toPath(), StandardCharsets.UTF_8);
         return fromJson(JSONObject.parse(json));
     }
 
+    /**
+     * Reconstructs a curve from a parsed JSON root object.
+     *
+     * @param root   parsed JSON root
+     * @return parsed gesture result
+     */
     public static Result fromJson(JSONObject root) {
         if (root == null) throw new IllegalArgumentException("root cannot be null");
 

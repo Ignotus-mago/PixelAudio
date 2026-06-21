@@ -21,22 +21,32 @@ import java.io.File;
 
 /**
  * Generate JSON filenames for AudioBrush "session" format, with gesture and audio synth settings. 
- * Used in the example sketch {@link Bagatelle}.
+ * Used in the example sketch {@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle}.
  */
 public final class AudioBrushFileNamer {
 
     private AudioBrushFileNamer() {}
 
+    /** Suffix used for session manifest files. */
     public static final String SESSION_SUFFIX = "_session.json";
+    /** Suffix used for gesture data files. */
     public static final String GESTURE_SUFFIX = "_gesture.json";
+    /** Suffix used for configuration data files. */
     public static final String CONFIG_SUFFIX  = "_config.json";
 
+    /** Generated file names and relative link paths for an AudioBrush save set. */
     public static class Result {
+        /** Session manifest file. */
         public final File sessionFile;
+        /** Gesture data file. */
         public final File gestureFile;
+        /** Configuration data file. */
         public final File configFile;
+        /** Normalized base name shared by generated files. */
         public final String baseName;
+        /** Relative path from the session file to the gesture file. */
         public final String linkedGesturePath;
+        /** Relative path from the session file to the configuration file. */
         public final String linkedConfigPath;
 
         Result(File sessionFile, File gestureFile, File configFile, String baseName) {
@@ -49,6 +59,12 @@ public final class AudioBrushFileNamer {
         }
     }
 
+    /**
+     * Builds the related session, gesture, and configuration filenames from one chosen file.
+     *
+     * @param chosenFile user-selected file whose name and folder provide the base
+     * @return generated filename set
+     */
     public static Result build(File chosenFile) {
         if (chosenFile == null) {
             throw new IllegalArgumentException("chosenFile cannot be null");
@@ -64,6 +80,12 @@ public final class AudioBrushFileNamer {
         return new Result(sessionFile, gestureFile, configFile, baseName);
     }
 
+    /**
+     * Removes known JSON suffixes and normalizes spaces and dots for generated filenames.
+     *
+     * @param name source filename or base name
+     * @return normalized base name, or {@code untitled} for blank input
+     */
     public static String normalizeBaseName(String name) {
         if (name == null || name.isBlank()) {
             return "untitled";

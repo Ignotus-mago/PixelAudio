@@ -18,7 +18,7 @@
 
 package net.paulhertz.pixelaudio.schedule;
 
-// TODO extended classes for different time-based events. 
+// TODO extended classes for different types of time-based events, as in AudioScheduler
 
 /**
  * Used to schedule or track events that take place at specific coordinate locations.
@@ -31,6 +31,14 @@ public class TimedLocation implements Comparable<TimedLocation> {
 	private boolean isStale;
 	private int durationMs = 0;
 
+	/**
+	 * Creates a timed location with a duration.
+	 *
+	 * @param x x-coordinate
+	 * @param y y-coordinate
+	 * @param eventTime event time in milliseconds
+	 * @param durationMs duration in milliseconds
+	 */
 	public TimedLocation(int x, int y, int eventTime, int durationMs) {
 		this.x = x;
 		this.y = y;
@@ -39,34 +47,48 @@ public class TimedLocation implements Comparable<TimedLocation> {
 		this.isStale = false;
 	}
 
+	/**
+	 * Creates a timed location with no duration.
+	 *
+	 * @param x x-coordinate
+	 * @param y y-coordinate
+	 * @param eventTime event time in milliseconds
+	 */
 	public TimedLocation(int x, int y, int eventTime) {
 		this(x, y, eventTime, 0);
 	}
 
+	/** @return x-coordinate */
 	public int getX() {
 		return this.x;
 	}
 
+	/** @return y-coordinate */
 	public int getY() {
 		return this.y;
 	}
 
+	/** @return event time in milliseconds */
 	public int eventTime() {
 		return this.eventTime;
 	}
 
+	/** @return true when this location should be ignored by consumers */
 	public boolean isStale() {
 		return this.isStale;
 	}
 
+	/** @param stale true to mark this location stale */
 	public void setStale(boolean stale) {
 		this.isStale = stale;
 	}
 		
+	/** @return duration in milliseconds */
 	public int getDurationMs() {
 		return durationMs;
 	}
 
+	/** @param durationMs duration in milliseconds */
 	public void setDurationMs(int durationMs) {
 		this.durationMs = durationMs;
 	}

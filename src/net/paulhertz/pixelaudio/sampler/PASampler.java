@@ -37,16 +37,36 @@ public interface PASampler {
      */
     int play(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch, float pan);
 
-    /** Returns true if any currently active voice is looping. */
+    /**
+     * Returns true if any currently active voice is looping.
+     *
+     * @return true if one or more voices are looping
+     */
     boolean isLooping();
 
     /** Stops all voices immediately. */
     void stopAll();
 
+	/**
+	 * Updates the sampler output sample rate.
+	 *
+	 * @param newRate   new sample rate in Hz
+	 */
 	void setSampleRate(float newRate);
 	
+	/**
+	 * Replaces the sampler source buffer.
+	 *
+	 * @param buffer   mono source sample buffer
+	 */
 	public void setBuffer(float[] buffer);
 	
+	/**
+	 * Replaces the sampler source buffer and playback sample rate.
+	 *
+	 * @param buffer   mono source sample buffer
+	 * @param playbackSampleRate sample rate of the source buffer in Hz
+	 */
 	public void setBuffer(float[] buffer, float playbackSampleRate);
 	
 }

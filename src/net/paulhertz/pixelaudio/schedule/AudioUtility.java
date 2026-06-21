@@ -46,25 +46,46 @@ public final class AudioUtility {
     private static final double LOG2 = Math.log(2.0);
 
 
+    /**
+     * Converts milliseconds to the nearest sample count.
+     *
+     * @param millis       duration in milliseconds
+     * @param sampleRate   sample rate in Hz
+     * @return sample count rounded to nearest integer
+     */
     public static long millisToSamples(double millis, double sampleRate) {
         return (long) Math.floor((millis / 1000.0) * sampleRate + 0.5);
     }
 
+    /**
+     * Converts a sample count to milliseconds.
+     *
+     * @param samples      sample count
+     * @param sampleRate   sample rate in Hz
+     * @return duration in milliseconds
+     */
     public static double samplesToMillis(long samples, double sampleRate) {
         return (samples * 1000.0) / sampleRate;
     }
 
+    /**
+     * Converts seconds to the nearest sample count.
+     *
+     * @param secs         duration in seconds
+     * @param sampleRate   sample rate in Hz
+     * @return sample count rounded to nearest integer
+     */
     public static long secsToSamples(double secs, double sampleRate) {
         return (long) Math.floor(secs * sampleRate + 0.5);
     }
     
     /**
      * Converts a gain value in decibels (dB) to a linear amplitude multiplier.
-     *
-     *  0.0 dB  -> 1.0
-     * -6.0 dB  -> ~0.501
-     * +6.0 dB  -> ~1.995
-     *
+     * <pre>
+     * {@code  0.0 dB  -> 1.0}
+     * {@code -6.0 dB  -> ~0.501}
+     * {@code +6.0 dB  -> ~1.995}
+     * </pre>
      * @param dB gain in decibels
      * @return linear gain multiplier
      */
@@ -88,13 +109,14 @@ public final class AudioUtility {
     /**
      * Convert semitone offset to frequency ratio.
      *
-     * @param semitones number of semitones (can be fractional)
+     * @param semitones   number of semitones (can be fractional)
      * @return frequency ratio (>0)
-     *
+     * <pre>
      * Examples:
-     *   12  -> 2.0
-     *   0   -> 1.0
-     *  -12  -> 0.5
+     *  {@code  12  -> 2.0}
+     *  {@code   0  -> 1.0}
+     *  {@code -12  -> 0.5}
+     * </pre>
      */
     public static float semitonesToRatio(float semitones) {
     	return (float) Math.pow(2.0, semitones / 12.0);
@@ -103,7 +125,7 @@ public final class AudioUtility {
     /**
      * Convert frequency ratio to semitone offset.
      *
-     * @param ratio frequency ratio (>0)
+     * @param ratio   frequency ratio (>0)
      * @return semitone offset (can be fractional)
      */
     public static float ratioToSemitones(float ratio) {
@@ -115,6 +137,9 @@ public final class AudioUtility {
 
     /**
      * Convert MIDI-style key number to frequency (A4 = 440 Hz, key 49).
+     *
+     * @param keyNumber   MIDI-style key number, where A4 is 49
+     * @return frequency in Hz
      */
     public static float pianoKeyFrequency(float keyNumber) {
     	return (float) (440.0 * Math.pow(2.0, (keyNumber - 49.0) / 12.0));
@@ -122,6 +147,9 @@ public final class AudioUtility {
 
     /**
      * Convert frequency to fractional MIDI-style key number.
+     *
+     * @param freq   frequency in Hz
+     * @return fractional MIDI-style key number
      */
     public static float frequencyPianoKey(float freq) {
     	if (freq <= 0f) {
@@ -132,6 +160,10 @@ public final class AudioUtility {
 
     /**
      * Apply a semitone offset directly to a frequency.
+     *
+     * @param freq        source frequency in Hz
+     * @param semitones   transposition amount in semitones
+     * @return transposed frequency in Hz
      */
     public static float transposeFrequency(float freq, float semitones) {
         return freq * semitonesToRatio(semitones);
@@ -143,7 +175,7 @@ public final class AudioUtility {
     /**
      * Computes the peak absolute sample value of a signal.
      *
-     * @param signal The audio samples
+     * @param signal   the audio samples
      * @return Maximum absolute sample value (linear scale)
      */
     public static float computePeak(float[] signal) {
@@ -159,7 +191,7 @@ public final class AudioUtility {
     /**
      * Computes the RMS (root mean square) level of a signal.
      *
-     * @param signal The audio samples
+     * @param signal   the audio samples
      * @return RMS value (linear scale)
      */
     public static float computeRMS(float[] signal) {
@@ -174,19 +206,26 @@ public final class AudioUtility {
     
     // ------------- NORMALIZATION -------------
     
+    /**
+     * Strategies for adjusting signal level.
+     */
     enum NormalizationMode {
-    	DB,
+        /** Interpret the target as a decibel value. */
+        DB,
+        /** Scale the signal so its peak absolute sample reaches a target level. */
         PEAK,
+        /** Scale the signal so its root-mean-square level reaches a target level. */
         RMS,
+        /** Scale toward a target RMS level while limiting gain by a peak ceiling. */
         RMS_WITH_CEILING
     }
     
 	/**
 	 * Normalizes a single-channel signal array to a target RMS level in dBFS.
 	 *
-	 * @param signal    The audio samples to normalize (modified in place)
-	 * @param targetDB  The peak level in dB
-	 *                  (e.g. -3.0f for moderately loud, -12.0f for safe headroom)
+	 * @param signal     the audio samples to normalize (modified in place)
+	 * @param targetDB   the peak level in dB
+	 *                   (e.g. -3.0f for moderately loud, -12.0f for safe headroom)
 	 * @return gain applied to signal
 	 */
 	public static float normalizeRMS(float[] signal, float targetDB) {
@@ -204,7 +243,13 @@ public final class AudioUtility {
 	    return gain;
 	}
 	
-	public static void normalizePeakDb(float[] signal, float targetPeakDB) {
+    /**
+     * Normalizes a signal so its peak reaches a target dBFS value.
+     *
+     * @param signal         audio samples to modify in place
+     * @param targetPeakDB   target peak level in dBFS
+     */
+    public static void normalizePeakDb(float[] signal, float targetPeakDB) {
 	    if (signal == null || signal.length == 0) return;
 	    float peak = computePeak(signal);
 	    if (peak < 1e-12f) return; // silence
@@ -215,7 +260,13 @@ public final class AudioUtility {
 	    }
 	}
 	
-	public static void normalizePeakLevel(float[] signal, float targetPeakLevel) {
+    /**
+     * Normalizes a signal so its peak reaches a target linear level.
+     *
+     * @param signal            audio samples to modify in place
+     * @param targetPeakLevel   target peak level on a linear scale
+     */
+    public static void normalizePeakLevel(float[] signal, float targetPeakLevel) {
 	    if (signal == null || signal.length == 0) return;
 	    float peak = computePeak(signal);
 	    if (peak < 1e-12f) return; // silence
@@ -225,6 +276,13 @@ public final class AudioUtility {
 	    }
 	}
 
+	/**
+	 * Normalizes toward a target RMS level while limiting the applied gain by a peak ceiling.
+	 *
+	 * @param signal          audio samples to modify in place
+	 * @param targetRmsDB     target RMS level in dBFS
+	 * @param peakCeilingDB   maximum permitted peak level in dBFS
+	 */
 	public static void normalizeRmsWithCeiling(float[] signal, float targetRmsDB, float peakCeilingDB) {
 	    if (signal == null || signal.length == 0) return;
 	    // RMS
@@ -253,6 +311,14 @@ public final class AudioUtility {
     // ------------- RESAMPLING -------------
 	
 	
+	/**
+	 * Computes how many source-file samples are needed to fill a display map at output rate.
+	 *
+	 * @param mapSize          number of display/audio output samples
+	 * @param fileSampleRate   sample rate of the source audio file
+	 * @param audioOutRate     sample rate of the audio output
+	 * @return required source sample count, rounded up
+	 */
 	public static int fileSamplesRequiredForDisplay(int mapSize, float fileSampleRate, float audioOutRate) {
 	    if (mapSize <= 0 || fileSampleRate <= 0f || audioOutRate <= 0f)
 	        return 0;
@@ -268,9 +334,9 @@ public final class AudioUtility {
     /**
      * Resamples a mono buffer from sourceRate to targetRate using linear interpolation.
      *
-     * @param source     mono samples at sourceRate
-     * @param sourceRate sample rate of the source buffer (Hz)
-     * @param targetRate desired sample rate (Hz)
+     * @param source       mono samples at sourceRate
+     * @param sourceRate   sample rate of the source buffer (Hz)
+     * @param targetRate   desired sample rate (Hz)
      * @return new float[] at targetRate
      */
     public static float[] resampleMono(float[] source,
@@ -322,6 +388,11 @@ public final class AudioUtility {
 
     /**
      * Convenience: resample mono buffer from sourceRate to match AudioOutput sample rate.
+     *
+     * @param source       mono samples at sourceRate
+     * @param sourceRate   sample rate of the source buffer (Hz)
+     * @param out          target AudioOutput
+     * @return new mono buffer at the output sample rate
      */
     public static float[] resampleMonoToOutput(float[] source,
                                                float sourceRate,
@@ -342,6 +413,11 @@ public final class AudioUtility {
      *
      * For PixelAudio you may only need channel 0 (mono); this is available
      * mainly for completeness.
+     *
+     * @param src          source buffer to resample
+     * @param sourceRate   sample rate of the source buffer (Hz)
+     * @param targetRate   desired sample rate (Hz)
+     * @return new buffer at targetRate
      */
     public static MultiChannelBuffer resampleMCB(MultiChannelBuffer src,
                                                  float sourceRate,
@@ -395,6 +471,11 @@ public final class AudioUtility {
 
     /**
      * Convenience: resample MultiChannelBuffer from sourceRate to match AudioOutput.
+     *
+     * @param src          source buffer to resample
+     * @param sourceRate   sample rate of the source buffer (Hz)
+     * @param out          target AudioOutput
+     * @return new buffer at the output sample rate
      */
     public static MultiChannelBuffer resampleMCBToOutput(MultiChannelBuffer src,
                                                          float sourceRate,
@@ -418,7 +499,7 @@ public final class AudioUtility {
 	 * @param sampleRate		audio sample rate for the file
 	 * @param fileName			name of the file to save to
 	 * @throws IOException		an Exception you'll need to handle to call this method (see keyPressed entry for 's')
-	 * @throws UnsupportedAudioFileException		another Exception (see keyPressed entry for 's')
+	 * @throws UnsupportedAudioFileException 
 	 */
 	public static void saveAudioToFile(float[] samples, float sampleRate, String fileName)
 	        throws IOException, UnsupportedAudioFileException {
@@ -477,7 +558,7 @@ public final class AudioUtility {
 	 * @param sampleRate		audio sample rate for the file
 	 * @param fileName			name of the file to save to
 	 * @throws IOException		an Exception you'll need to handle to call this method (see keyPressed entry for 's')
-	 * @throws UnsupportedAudioFileException		another Exception (see keyPressed entry for 's')
+	 * @throws UnsupportedAudioFileException
 	 */
 	public static void saveStereoAudioToFile(float[] leftChannel, float[] rightChannel, float sampleRate, String fileName)
 	        throws IOException, UnsupportedAudioFileException {
@@ -516,7 +597,7 @@ public final class AudioUtility {
 	 * @param rightChannel		an array of floats in the audio range (-1.0f, 1.0f)
 	 * @param sampleRate		the sample rate for the file
 	 * @param fileName			name of the file
-	 * @throws IOException		an Exception you'll need to handle when calling this method
+	 * @throws IOException		
 	 */
 	public static void saveStereoAudioTo32BitPCMFile(float[] leftChannel, float[] rightChannel, float sampleRate, String fileName) throws IOException {
         int numSamples = leftChannel.length;

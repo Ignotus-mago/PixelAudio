@@ -28,28 +28,45 @@ import net.paulhertz.pixelaudio.granular.GestureGranularConfig;
 
 /**
  * Read AudioBrush library JSON format.
- * Used in the example sketch {@link Bagatelle}.
+ * Used in the example sketch {@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle}.
  * 
  */
 public final class AudioBrushLibraryLoader {
 
     private AudioBrushLibraryLoader() {}
 
+    /** Data loaded for one brush JSON file. */
     public static class BrushData {
+        /** Source JSON file. */
         public File sourceFile;
+        /** Gesture curve data, when available. */
         public PACurveMaker curve;
+        /** Granular configuration builder, when available. */
         public GestureGranularConfig.Builder config;
+        /** Instrument type declared by the brush configuration. */
         public GestureGranularConfigIO.InstrumentType instrumentType;
+        /** Brush identifier derived from the file or metadata. */
         public String id;
+        /** Display name for the brush. */
         public String name;
     }
 
+    /** Result of loading an AudioBrush library folder. */
     public static class LoadResult {
+        /** Successfully loaded brush records. */
         public final List<BrushData> brushes = new ArrayList<>();
+        /** JSON files skipped because they were not loadable brush gestures. */
         public final List<File> skippedFiles = new ArrayList<>();
+        /** Human-readable load messages and errors. */
         public final List<String> messages = new ArrayList<>();
     }
 
+    /**
+     * Loads all gesture JSON files in a folder, following linked configuration files when present.
+     *
+     * @param folder folder containing AudioBrush JSON files
+     * @return load result with brushes, skipped files, and messages
+     */
     public static LoadResult loadGestureLibrary(File folder) {
         if (folder == null) {
             throw new IllegalArgumentException("folder cannot be null");
