@@ -75,17 +75,17 @@ import com.hamoid.*;
  * </p><p>
  * PixelAudio provides two types of audio synthesis: Sampler intruments, introduced in
  * previous sketches, and Granular instruments. This sketch introduces PixelAudio's granular 
- * synthesis engine with the {@code PAGranularInstrumentDirector} class and provides
- * another class for Sampler instruments, {@code PASamplerInstrumentPool}. The Granular
+ * synthesis engine with the {@link PAGranularInstrumentDirector} class and provides
+ * another class for Sampler instruments, {@link PASamplerInstrumentPool}. The Granular
  * instruments and the Sampler instruments both depend on a hierarchy of classes that 
  * implement a signal-processing chain. It's unlikely that you will have to deal with the
  * low-level processing. PAGranularInstrumentDirector and PASamplerInstrumentPool provide
- * the control knobs you would want for a virtual electronic instrument while keeping the
- * math and audio engine hooks in the background. 
+ * the virtual control knobs you would typically want for a virtual electronic instrument 
+ * while keeping the math and audio engine in the background. 
  * </p>
  * <h2>QUICK START</h2>
  * 
- * <h2>Sampler Instrument</h2>
+ * <h3>Sampler Instrument</h3>
  * <ol>
  * <li>Launch TutorialOne_03_Drawing. The display window opens with a pre-loaded file, "Saucer_mixdown.wav",
  * where audio data is displayed as grayscale values. A spectrum of rainbow colors overlaid on the 
@@ -108,7 +108,7 @@ import com.hamoid.*;
  * </li>
  * <li>The Sampler instrument usually sounds good with ALL_POINTS or REDUCED_POINTS. It may produce distortion with CURVE_POINTS.
  * <ul>
- *   <li>Change the 'epsilon' value that controls the number of reduced points with the {@code '<' or '>'} keys.</li>
+ *   <li>Change the 'epsilon' value that controls the number of reduced points with the {@code '<'} or {@code '>'} keys.</li>
  *   <li>Change the number of curve steps with the '[' or ']' keys.</li>
  * </ul>
  * </li>
@@ -129,7 +129,7 @@ import com.hamoid.*;
  * </ul>
  * </li>
  * </ol>
- * <h2>Granular Instrument</h2>
+ * <h3>Granular Instrument</h3>
  * <ol>
  * <li>To switch a brushstroke to use the Granular instrument, hover over it and press 't'. 
  * The representation of the curve will change to CURVE_POINTS, the default for granular synthesis, 
@@ -167,12 +167,12 @@ import com.hamoid.*;
  * <p>See the key commands for various ways to alter the sound of the granular synth
  * and other features. Check out the comments on the various methods for detailed 
  * information about the features of TutorialOne_03_Drawing. For a GUI with greater control
- * over drawing, gesture, and audio synthesis, see the GesturePlayground and Bagatelle sketches.
+ * over drawing, gesture, and audio synthesis, see the {@link TutorialOne_05_GesturePlayground} and {@link Bagatelle} sketches.
  * </p>
  * <div>
  * <h2>Points + Times = Gestures</h2>
  * <p>
-  * The drawing tools and commands are a substantial addition. To implement them
+ * The drawing tools and commands are a substantial addition. To implement them
  * we call on a whole new package of code, {@link net.paulhertz.pixelaudio.curves
  * PixelAudio Curves Package}. To turn gestures into timing information that can
  * be used to schedule audio events, particularly with granular synthesis, we
@@ -180,7 +180,7 @@ import com.hamoid.*;
  * The workhorse of the Curves package is {@link net.paulhertz.pixelaudio.curves.PACurveMaker PACurveMaker}, 
  * which is used to  capture point and time information when you draw. A PACurveMaker 
  * instance is intialized with a list of unique points and a list of time offsets where 
- * both lists have the same number of elements. Each point is paired to the relative
+ * both lists have the same number of elements: Each point is paired to the relative
  * time when it was recorded. Points drawn on the display are stored in
  * PACurveMaker's ALL_POINTS representation of the gesture points. 
  * </p><p>
@@ -215,31 +215,23 @@ import com.hamoid.*;
  * It's a fairly simple but critical aspect of using drawing to create audio 
  * instrument events in PixelAudio. For the sake of simplicity, I've implemented
  * it in a somewhat redundant form here. In performance, a caching scheme might
- * be useful--this may show up in the Bagatelle example sketch. 
+ * be useful--this may eventually show up in the Bagatelle example sketch. 
  * </p>
  * <h2>Audio Processing</h2>
  * <p>
- * The {@code PAGranularInstrumentDirector} class manages the high level processes
- * for granular synthesis. Probably all the functionality you will commonly need 
- * is available in its methods. The various {@code playGestureNow(...)} methods 
- * allow you to control the timing, panning, pitch, and gain of individual grains, 
- * if you want to. Parameters for grain shaping and are set with the 
- * GestureGranularParams class. The GestureEventParams class supports arrays of 
- * values to set timing, pan, gain, and pitch for individual grains. The timing and 
- * pan settings for individual grains can also be passed as arrays to overloaded
- * {@code playGestureNow(...)} methods. 
+ * The {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector} 
+ * class manages the high level processes for granular synthesis. Probably all
+ * the functionality you will commonly need is available in its methods. The
+ * various {@code playGestureNow(...)} methods allow you to control the timing,
+ * panning, pitch, and gain of individual grains, if you want to. Parameters for
+ * grain shaping are set with the {@code GestureGranularParams} class. The
+ * GestureEventParams class supports arrays of values to set timing, pan, gain,
+ * and pitch for individual grains. The timing and pan settings for individual
+ * grains can also be passed as arrays to overloaded {@code playGestureNow(...)}
+ * methods. 
  * </p><p>
- * Here's an outline of the granular synbthesis chain, which you can feel free to skip:
- * {@code PAGranularInstrumentDirector} sets up the {@code PABurstGranularSource} 
- * and passes it to the granular synth processing chain, first to {@code PAGranularInstrument} 
- * and then to {@code PAGranularSampler}, where the {@code PABurstGranularSource} is 
- * one of various parameters used to create an {@code AudioScheduler} scheduler. In
- * {@code PAGranularSampler.uGenerate()}, {@code scheduler.processBlock()} is called, 
- * the audio signal {@code leftMix} and {@code rightMix} variables are initialized 
- * to 0 and used to accumulate the currently active {@code PAGranularVoice} instances. 
- * After that, uGenerate applies power normalization and soft clipping to the signal and returns 
- * its value. All of this is set in motion through Minim's UGen interface, 
- * which PAGranularSampler extends.
+ * If you're curious about how the granular synthesis engine works, there's an outline in
+ * {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector}.
  * </p><p>
  * This sketch and GesturePlayground provide a good introduction to the functions available 
  * in the granular synth. GesturePlayground goes into more detail than TutorialOne_03_Drawing, 
@@ -298,7 +290,7 @@ import com.hamoid.*;
  * </pre>
  * </div>
  * 
- * REVISIONS
+ * REVISIONS <br>
  * 
  * Rendering rule: mapper.mapSigToImgShifted(audioSignal, mapImage.pixels, chan, totalShift);<br>
  * Click rule: int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
@@ -597,7 +589,8 @@ public class TutorialOne_03_Drawing extends PApplet {
 	/* ------------------------------------------------------------------ */
     
 	// system-specific path to example files data
-    String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    
+	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
+	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
     String daFile = "Saucer_mixdown.wav";    // _sonic/FullMoonTonight_22050Hz.mp3
 
 
@@ -886,7 +879,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 			return;
 		}
 		// click outside any brush is handled here
-		audioMouseClick(mouseX, mouseY);
+		handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 	}
 
 		
@@ -963,7 +956,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 				}
 			}
 			else {
-				audioMouseClick(mouseX, mouseY);
+				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 			}
 			break;
 		case '1': // set brushstroke under cursor to PathMode ALL_POINTS
@@ -2063,16 +2056,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 	            .build();
 	}
 		
-	/**
-	 * Handles mouse clicks that happen outside a brushstroke.
-	 * 
-	 * @param x    x-coordinate of mouse click
-	 * @param y    y-coordinate of mouse click
-	 */
-	public void audioMouseClick(int x, int y) {
-		int durationMs = handleClickOutsideBrush(x, y);
-	}
-	
 	/**
 	 * @param x
 	 * @param y

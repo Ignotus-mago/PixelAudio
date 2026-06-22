@@ -53,12 +53,11 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <ol>
  * <li>Launch the sketch. A display window and a palette of Graphical User Interface (GUI) controls appears.
  * The display window has an audio file preloaded. The grayscale values in the image are transcoded audio
- * samples. An overlaid rainbow spectrum traces the Signal Path, which maps an audio signal to the image
- * pixels. The Signal Path is created by the PixelMapGen {@code multigen} and managed by the 
- * PixelAudioMapper {@code mapper}. The Signal Path starts in the upper left corner and ends 
- * in the lower right corner.</li> 
+ * samples. An overlaid rainbow spectrum traces the "signal path", which maps an audio signal to the image
+ * pixels. The signal path is created by the PixelMapGen {@code multigen} and managed by the 
+ * PixelAudioMapper {@code mapper}. </li> 
  * 
- * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing, 
+ * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in {@link TutorialOne_03_Drawing}, 
  * a brushstroke appears when you release the mouse. TutorialOne_03_Drawing gave you limited control over
  * the attributes of the brushstroke and its associated audio parameters. In GesturePlayground, you can
  * control nearly all the available parameters with the control palette.</li> 
@@ -182,7 +181,6 @@ import net.paulhertz.pixelaudio.sampler.*;
  * comments in {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector} may be useful. </li>
  * </ul>
  * 
- * 
  * <p>Part of the calling chain for a SamplerBrush:</p><ul>
  * <li>{@code mouseClicked()} calls {@code scheduleSamplerBrushClick(sb, x, y)}.</li>
  *
@@ -225,7 +223,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  * </pre>
  * 
  * 
- * See also: Bagatelle.java for a performance-oriented application with a GUI, presets, and networking. 
+ * <br>
+ * Note that animation is not enabled in this tutorial. 
+ * See {@link Bagatelle} for a performance-oriented application with a GUI, presets, and networking.<br>
  * 
  * 
  * 
@@ -516,9 +516,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	boolean isRunWordGame = false;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
 	boolean doPlayOnDraw = false;     // play audio when a curve is drawn
 	
-	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../../examples_data/"; 
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
-	String daFilename = "audioBlend.wav";
+	// system-specific path to example files data
+	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
+	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
+	String daFile = "audioBlend.wav";
 
 	
 	//------------- APPLICATION CODE -------------//
@@ -546,7 +547,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		if (isRunWordGame) {
 			sampleRate = 48000;
 			multigen = loadWordGen(genWidth/4, genHeight/4);
-			daFilename = "workflow_48Khz.wav";
+			daFile = "workflow_48Khz.wav";
 		}
 		else {
 			multigen = HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
@@ -563,7 +564,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		initDrawing();                  // set up drawing variables
 		initGUI();                      // set up the G4P control window and widgets
 		resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
-		preloadFiles(daPath, daFilename);    // load files - BEWARE system dependent file references!
+		preloadFiles(daPath, daFile);    // load files - BEWARE system dependent file references!
 		applyColorMap();                // apply spectrum to mapImage and baseImage
 		showHelp();                     // print key commands to console
 	}
@@ -2248,7 +2249,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	public GestureSchedule getScheduleForBrush(AudioBrush b) {
 		switch (b.cfg().pathMode) {
 			case REDUCED_POINTS: return b.curve().getReducedSchedule(b.cfg().rdpEpsilon);
-			case CURVE_POINTS: return b.curve().getCurveSchedule(b.cfg().rdpEpsilon, curveSteps, isAnimating);
+			case CURVE_POINTS: return b.curve().getCurveSchedule(b.cfg().rdpEpsilon, curveSteps, false);
 			case ALL_POINTS: default: return b.curve().getAllPointsSchedule();
 		}
 	}

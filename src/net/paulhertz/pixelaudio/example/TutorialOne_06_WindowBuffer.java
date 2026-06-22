@@ -47,7 +47,7 @@ import com.hamoid.*;
  * <p>
  * The new features are fit on top of Tutorial_03_Drawing variables and methods.
  * Support for WindowedBuffer is flagged with "// *** WindowedBuffer support *** //".
- * Look for the flag to how TutorialOne_03_Drawing was adapted. 
+ * Search for the flag to see how TutorialOne_03_Drawing was adapted. 
  * See Tutorial_03_Drawing for information about drawing, audio synthesis,
  * audio events and animation. Here we'll document just the new features.
  * </p><p>
@@ -56,20 +56,18 @@ import com.hamoid.*;
  * <h2>NEW FEATURES</h2>
  * <p>
  * This sketch adds a windowed audio buffer to the drawing, interaction and
- * audio synthesis tools of {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing
- * TutorialOne_03_Drawing}. A windowed audio buffer combines an audio buffer with a
- * method that positions a "window" within a larger source or "backing" buffer and
- * reads data from it to a separate data structure. TutorialOne_06_WindowBuffer uses
- * PixelAudio's {@code WindowedBuffer} class to store a backing buffer read
- * from an audio file. It uses the backing buffer as the source array for the
- * smaller audio buffers {@code audioSignal} and {@code playBuffer}. We
- * can use the window function to select which portion of the backing buffer we want
- * to see and interact with. Data in audioSignal is transcoded as pixel values in
- * {@code mapImage}, an image used in this sketch to provide a visual
- * representation of the data in the audio buffer. A PixelAudioMapper instance,
- * {@code mapper}, handles the mapping of data between image and audio
- * structures, and also maps mouse interactions on the display image to sample
- * indices in the audio buffer.
+ * audio synthesis tools of {@link TutorialOne_03_Drawing}. A windowed audio buffer 
+ * combines an audio buffer with a method that positions a "window" within a larger
+ * source or "backing" buffer and reads data from it to a separate data structure.
+ * TutorialOne_06_WindowBuffer uses PixelAudio's {@link net.paulhertz.pixelaudio.WindowedBuffer} class to store a
+ * backing buffer read from an audio file. It uses the backing buffer as the source
+ * array for the smaller audio buffers {@code audioSignal} and {@code playBuffer}. We
+ * can use the window function to select which portion of the backing buffer we want to
+ * see and interact with. Data in audioSignal is transcoded as pixel values in {@code
+ * mapImage}, an image used in this sketch to provide a visual representation of the
+ * data in the audio buffer. A PixelAudioMapper instance, {@code mapper}, handles the
+ * mapping of data between image and audio structures, and also maps mouse interactions
+ * on the display image to sample indices in the audio buffer.
  * </p><p>
  * The Granular and Sampler instruments both use the backing audio buffer directly
  * as their audio source, though they can also use the smaller audio buffers derived
@@ -502,7 +500,10 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	/* ------------------------------------------------------------------ */
     
 	// system-specific path to example files data
-    String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    
+    
+	// system-specific path to example files data
+	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
+	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
     String daFile = "_sonic/FullMoonTonight_22050Hz.mp3";    // _sonic/FullMoonTonight_22050Hz.mp3, Saucer_mixdown.wav
     
     boolean isDebugging = false;

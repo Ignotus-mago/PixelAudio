@@ -48,34 +48,37 @@ import com.hamoid.*;
  * index position. The animation provides an analog to visual "audio streaming"
  * and can be used to create a sort of "music box" audio player. 
  * </p>
- * <pre>
- *   QUICK START
  * 
- *   1. Launch the sketch and then press the 'o' key to open an image or audio
+ * <h2>QUICK START</h2>
+ * <ol>
+ *  <li>Launch the sketch and then press the 'o' key to open an image or audio
  *      file. The "audioBlend.wav" file is good for experimenting. The audio
- *      data in it will be transcoded to gray scale pixel data and displayed in
- *      the window. Click on the display image to trigger audio events. To see
- *      the signal path as a color overlay, press the 'K' key. 
+ *      data in it will be transcoded to gray scale pixel data and displayed
+ *      in the window.</li>
+ *      
+ *  <li>Press space or click on the display image to trigger audio events. 
+ *     To see the signal path as a color overlay, press the 'K' key.</li>
  *   
- *   2. Press 'm' to run the "Music Box" routine, which triggers an audio event
+ *  <li>Press 'm' to run the "Music Box" routine, which triggers an audio event
  *      every frame in the same location while animating the display image with
- *      pixel shifting. Use the UP and DOWN arrow keys to change the amount of
- *      pixel shifting, and the 'A' key to reverse the direction of shifting.
- *      Use the 'p' and 'P' keys to change the pitch of the audio. Press 'r'
- *      to turn random ADSR envelope selection on and off.
- *      See below for more information.
- * </pre>
+ *      pixel shifting.</li> 
+ *      
+ *  <li>Use the UP and DOWN arrow keys to change the amount of pixel shifting, 
+ *      and the 'A' key to reverse the direction of shifting. Use the 'p' and 'P' 
+ *      keys to change the pitch of the audio. Press 'r' to turn random ADSR 
+ *      envelope selection on and off. See below for more information.</li>
+ * </ol>
  * <p>
  * We add a simple form of animation in this sketch, which consists of shifting
- * the pixels in the display image along the Signal Path. This is a simple way
+ * the pixels in the display image along the "signal path". This is a simple way
  * to create an animation that is directly tied to the audio data. When the
  * image we are animating is a representation of audio data or some other sort
  * of periodic pattern, pixel-shfting can result in hypnotic animated patterns.
- * This is demonstrated by the the WaveSynth class and the WaveSynthEditor and
- * ArgosyMixer sample sketches. When the pixels in the display image are
- * shifted, the correspondence between pixel coordinates and audio buffer index
- * changes. This is particularly evident when the image is a visualization of
- * the audio buffer. If you are looking at an image that represents audio data,
+ * This is demonstrated by the the WaveSynth class and the {@link WaveSynthEditor}
+ * and {@link ArgosyMixer} sample sketches. When the pixels in the display image
+ * are shifted, the correspondence between pixel coordinates and audio buffer 
+ * index changes. This is particularly evident when the image is a visualization
+ * of the audio buffer. If you are looking at an image that represents audio data,
  * such as Saucer_mixdown.wav, you can see how animation changes the apparent
  * position of the audio data. When animation is running, repeated clicks at the
  * same location in the window will trigger different audio events.
@@ -129,36 +132,37 @@ import com.hamoid.*;
  * </p>    
  * 
  * Still to come, as the tutorial advances:<br>
- * -- drawing to trigger audio events<br>
- * -- the Granular Synthesis instruments<br>
- * -- UDP communication with Max and other media applications<br>
- * <br><br>
- * The key commands:
  * <ul>
- * <li>Press UP ARROW to increment pixel shift.</li>
- * <li>Press DOWN ARROW to decrement pixel shift.</li>
- * <li>Press ' ' (spacebar) to play sample at current mouse position.</li>
- * <li>Press 'a' to turn animation on or off.</li>
- * <li>Press 'A' to change animation direction.</li>
- * <li>Press 'f' to rotate pixels by shift value .</li>
- * <li>Press 'F' to rotate pixels by shift value .</li>
- * <li>Press 'm' to play audio events synced to audio sample rate and video frame rate.</li>
- * <li>Press 'c' to apply color from image file to display image (mapImage) only.</li>
- * <li>Press 'C' to apply color from image file to base image and map image.</li>
- * <li>Press 'k' to apply hue and saturation in the spectrum array to mapImage .</li>
- * <li>Press 'K' to apply hue and saturation in the spectrum array to baseImage.</li>
- * <li>Press 'o' or 'O' to open an audio or image file.</li>
- * <li>Press 'p' to select low pitch scaling or default pitch scaling.</li>
- * <li>Press 'P' to select high pitch scaling or default pitch scaling.</li>
- * <li>Press 'd' or 'D' to turn rain on and off.</li>
- * <li>Press 'r' or 'R' to toggle isRandomADSR, to use default envelope or a random choice.</li>
- * <li>Press 's' to save display image to a PNG file.</li>
- * <li>Press 'S' to save audio buffer to a .wav file.</li>
- * <li>Press 'V' to record a video from frame 0 to frame animSteps.</li>
- * <li>Press 'w' to show data values in display.</li>
- * <li>Press 'h' or 'H' to show help message.</li>
+ *    <li>drawing to trigger audio events</li>
+ *    <li>the Granular Synthesis instruments</li>
+ *    <li>UDP communication with Max and other media applications</li>
  * </ul>
- * 
+ * <br>
+ * <b>The key commands</b>
+ * <pre>
+ *   Press UP ARROW to increment pixel shift.
+ *   Press DOWN ARROW to decrement pixel shift.
+ *   Press ' ' (spacebar) to play sample at current mouse position.
+ *   Press 'a' to turn animation on or off.
+ *   Press 'A' to change animation direction.
+ *   Press 'f' to rotate pixels by shift value .
+ *   Press 'F' to rotate pixels by shift value .
+ *   Press 'm' to play audio events synced to audio sample rate and video frame rate.
+ *   Press 'c' to apply color from image file to display image (mapImage) only.
+ *   Press 'C' to apply color from image file to base image and map image.
+ *   Press 'k' to apply hue and saturation in the spectrum array to mapImage .
+ *   Press 'K' to apply hue and saturation in the spectrum array to baseImage.
+ *   Press 'o' or 'O' to open an audio or image file.
+ *   Press 'p' to select low pitch scaling or default pitch scaling.
+ *   Press 'P' to select high pitch scaling or default pitch scaling.
+ *   Press 'd' or 'D' to turn rain on and off.
+ *   Press 'r' or 'R' to toggle isRandomADSR, to use default envelope or a random choice.
+ *   Press 's' to save display image to a PNG file.
+ *   Press 'S' to save audio buffer to a .wav file.
+ *   Press 'V' to record a video from frame 0 to frame animSteps.
+ *   Press 'w' to show data values in display.
+ *   Press 'h' or 'H' to show help message.
+ * </pre>
  * 
  */
 public class TutorialOne_02_Animation extends PApplet {

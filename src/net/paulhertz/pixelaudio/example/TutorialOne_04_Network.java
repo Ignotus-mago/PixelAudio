@@ -40,11 +40,11 @@ import com.hamoid.*;
  * Adds networking with UDP to the previous Drawing tutorial. 
  * 
  * <p>
- * TutorialOne_04_Network is a copy of TutorialOne_03_Drawing with networking features added. 
+ * TutorialOne_04_Network is a copy of {@link TutorialOne_03_Drawing} with networking features added. 
  * Refer to the notes for TutorialOne_03_Drawing for information about drawing and audio synthesis
  * in TutorialOne_04_Network. Here, we're going to explain just the networking features.
  * </p><p>
- * TutorialOne_04_Network is designed to work with a Max patch, simpleAudioIO.maxpat, which is 
+ * TutorialOne_04_Network is designed to work with a Max patch, {@code simpleAudioIO.maxpat}, which is 
  * included in the example code for PixelAudio. The simpleAudioIO patch is designed to process 
  * audio output from TutorialOne_04_Network and to respond to UDP messages from TutorialOne_04_Network. 
  * We'll discuss the audio setup first, for MacOS (something similar can be done in the Windows OS). 
@@ -53,7 +53,7 @@ import com.hamoid.*;
  * Next, we'll discuss UDP network messaging. Finally we'll look at the {@code PANetworkClientINF} interface
  * and its implementation in {@code NetworkDelegate}, an inner class of TutorialOne_04_Network. 
  * </p>
- * <h3>Audio Setup with Blackhole in MacOS</h3>
+ * <h2>Audio Setup with Blackhole in MacOS</h2>
  * <p>
  * Using the System Settings for Sound in MacOS and the BlackHole audio routing tool 
  * (https://existential.audio/blackhole/), you can set up a wide range of inputs and outputs, 
@@ -61,15 +61,15 @@ import com.hamoid.*;
  * and Max. 
  * </p>
  * <ol>
- * <li>Open simpleAudioIO.maxpat</li>
- * <li>Open MacOS System Settings control panel and select the Sound tab.</li>
- * <li>In the Input and Output section, select BlackHole 16ch as the Output.</li>
- * <li>In the Max Audio Status control panel, set Input Device to BlackHole 16ch.</li>
- * <li>If you have external audio hardware, set that to your output.</li> 
- * <li>Open simpleAudioIO.maxpat in Max and turn on audio processing.</li>
- * <li>Run TutorialOne_04_Network and play some sounds.</li> 
+ *   <li>Open simpleAudioIO.maxpat</li>
+ *   <li>Open MacOS System Settings control panel and select the Sound tab.</li>
+ *   <li>In the Input and Output section, select BlackHole 16ch as the Output.</li>
+ *   <li>In the Max Audio Status control panel, set Input Device to BlackHole 16ch.</li>
+ *   <li>If you have external audio hardware, set that to your output.</li> 
+ *   <li>Open simpleAudioIO.maxpat in Max and turn on audio processing.</li>
+ *   <li>Run TutorialOne_04_Network and play some sounds.</li>
  * </ol>
- * <h3>UDP: User Datagram Protocol</h3>
+ * <h2>UDP: User Datagram Protocol</h2>
  * <p>UDP (User Datagram Protocol) is a network communications protocol that is apt for 
  * sending relatively short, real-time messages over a network. In Processing, it is implemented
  * with external libraries. I'm using the oscP5 library by Andreas Schlegel, which is included
@@ -85,18 +85,18 @@ import com.hamoid.*;
  * 127.0.0.1 on port 7401 using the udpsend object. TutorialOne_04_Network receives messages 
  * over port 7401. See the examples for oscP5 in Processing for more information. 
  * </p>
- * <h3>PANetworkClientINF and NetworkDelegate</h3>
+ * <h2>PANetworkClientINF and NetworkDelegate</h2>
  * <P>Since UDP communications are independent of the PixelAudio library, they are implemented in the 
  * example code, not in the library. The {@code PANetworkClientINF} interface is included in the example software. 
  * It defines the methods that an implementing class must provide:  
  * </p>
  * <ul>
- * <li>public PixelAudioMapper getMapper();</li>
- * <li>public int playSample(int samplePos);</li>
- * <li>public void {@code playPoints(ArrayList<PVector> pts);}</li>
- * <li>public void parseKey(char key, int keyCode);</li>
- * <li>public void controlMsg(String control, float val);</li>
- * <li>public PApplet getPApplet();</li>
+ *   <li>public PixelAudioMapper getMapper();</li>
+ *   <li>public int playSample(int samplePos);</li>
+ *   <li>public void {@code playPoints(ArrayList<PVector> pts);}</li>
+ *   <li>public void parseKey(char key, int keyCode);</li>
+ *   <li>public void controlMsg(String control, float val);</li>
+ *   <li>public PApplet getPApplet();</li>
  * </ul>
  * <p>If you are running Processing in an IDE like Eclipse, the PApplet class you create should implement 
  * PANetworkClientINF and provide these methods. In Processing, the PApplet host class doesn't provide
@@ -106,12 +106,12 @@ import com.hamoid.*;
  * PANetworkClientINF object as their first argument. In Processing, the constructors should require
  * an instance of your PApplet class, which is indicated with the name of your application.</p>
  * <ul>
- * <li>Eclipse:    {@code NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)}</li>
- * <li>Processing: {@code NetworkDelegate(TutorialOne_04_Network app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)}</li>
+ *   <li>Eclipse:    {@code NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)}</li>
+ *   <li>Processing: {@code NetworkDelegate(TutorialOne_04_Network app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort)}</li>
  * </ul>
- * <h3>Messages and Methods</h3>
+ * <h2>Messages and Methods</h2>
  * <p>To find the points at which networking code is implemented in methods in this sketch, 
- * search for "// *****>>> NETWORKING <<<***** //". 
+ * search for "// *****]]] NETWORKING [[[***** //". 
  * The NetworkDelegate class provides a number of messaging methods, each prefaced with "oscSend". 
  * For receiving remote messages, it calls oscP5's "plug" method (in initOscPlugs()) to link 
  * incoming messages to local methods. In addition, it provides some boolean toggles, such as
@@ -186,11 +186,6 @@ import com.hamoid.*;
  * </pre>
  * </div>
  * 
- * REVISIONS
- * 
- * Rendering rule: mapper.mapSigToImgShifted(audioSignal, mapImage.pixels, chan, totalShift);
- * Click rule: int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
- * 
  * 
  */
 public class TutorialOne_04_Network extends PApplet implements PANetworkClientINF {
@@ -235,7 +230,10 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video 
     boolean isBlending = false;     // flags blending of newly opened audio or image file with display/buffer 
 
-    String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // system-specific path to example files data
+	// system-specific path to example files data
+	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
+	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
+    String daFile = "Saucer_mixdown.wav";    // _sonic/FullMoonTonight_22050Hz.mp3
 
 
     /* ------------------------------------------------------------------ */
@@ -480,7 +478,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
         }
     }
     
-	// *****>>> NETWORKING <<<***** //
+	// *****]]] NETWORKING [[[***** //
 	NetworkDelegate nd;
 	boolean isUseNetworkDelegate = false;
 	boolean isNetSendDrawingPoints = true;
@@ -535,7 +533,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		// 6. set up the drawing environment and variables
 		initDrawing();
 		// 7. set up networking 
-	    // *****>>> NETWORKING <<<***** //
+	    // *****]]] NETWORKING [[[***** //
 		isUseNetworkDelegate = true;
 		initNetwork();
 		// 8. output a help message to the console
@@ -595,7 +593,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	void initNetwork() {
-	    // *****>>> NETWORKING <<<***** //
+	    // *****]]] NETWORKING [[[***** //
 		if (isUseNetworkDelegate) {
 			String remoteAddress = "127.0.0.1";
 			nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
@@ -792,9 +790,9 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			}
 		} else {
 			// click outside any brush is handled here
-			audioMouseClick(mouseX, mouseY);
+			handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 		}
-		// *****>>> NETWORKING <<<***** //
+		// *****]]] NETWORKING [[[***** //
 		int x = clipToWidth(mouseX);
 		int y = clipToHeight(mouseY);
 		int pos = getSamplePos(x, y);
@@ -875,7 +873,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				}
 			}
 			else {
-				audioMouseClick(mouseX, mouseY);
+				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 			}
 			break;
 		case '1': // set brushstroke under cursor to PathMode ALL_POINTS
@@ -1000,7 +998,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			println("-- animation is " + isAnimating);
 			break;
 		case '/': // turn drawing on or off
-			// turn off animation (if you insist, you can try drawing with it on, just press the 'a' key)
+			// "on" also turns animation off (if you insist, you can try drawing with it on, just press the 'a' key)
 			isAnimating = false;
 			isDrawMode = !isDrawMode;
 			println(isDrawMode ? "----- Drawing is turned on" : "----- Drawing is turned off");
@@ -1092,7 +1090,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			oldIsAnimating = isAnimating;
 			isAnimating = true;
 			break;
-		// *****>>> NETWORKING <<<***** // key commands for networking
+		// *****]]] NETWORKING [[[***** // key commands for networking
 		case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
 			if (nd != null) nd.oscSendOnOff(1, true);
 			break;
@@ -1540,7 +1538,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				println("----- Selected file " + fileName + "." + fileTag + " at "
 						+ filePath.substring(0, filePath.length() - fileName.length()));
 				loadAudioFile(audioFile);
-				// *****>>> NETWORKING <<<***** //
+				// *****]]] NETWORKING [[[***** //
 			    if (nd != null && isNetSendFileInfo) nd.oscSendFileInfo(filePath, fileName, fileTag);
 			} 
 			else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
@@ -1999,17 +1997,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	            .burstGrains(burstGrains)
 	            .build();
 	}
-		
-	/**
-	 * Handles mouse clicks that happen outside a brushstroke.
-	 * 
-	 * @param x    x-coordinate of mouse click
-	 * @param y    y-coordinate of mouse click
-	 */
-	public void audioMouseClick(int x, int y) {
-		int durationMs = handleClickOutsideBrush(x, y);
-	}
-	
+			
 	/**
 	 * @param x
 	 * @param y
@@ -2332,7 +2320,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	        currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
 	        allPoints.add(currentPoint);
 	        allTimes.add(millis() - startTime);
-		    // *****>>> NETWORKING <<<***** //
+		    // *****]]] NETWORKING [[[***** //
 			if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));	    
 	    }
 	}
@@ -2434,7 +2422,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    		scheduleSamplerBrushClick(b);
 	    	}
 	    }
-		// *****>>> NETWORKING <<<***** //
+		// *****]]] NETWORKING [[[***** //
 		if (nd != null && isNetSendGestures) {
 			int x = clipToWidth(mouseX);
 			int y = clipToHeight(mouseY);
@@ -2655,7 +2643,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		if (pts == null || pts.size() < 2) return;
 		GestureSchedule sched = getPlaybackScheduleForBrush(sb);
 		storeSamplerCurveTL(sb, sched, millis() + 10);
-		// *****>>> NETWORKING <<<***** //
+		// *****]]] NETWORKING [[[***** //
 		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(sb)); 
 	}
 
@@ -2725,7 +2713,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		GestureSchedule sched = getPlaybackScheduleForBrush(gb); 
 	    playGranularGesture(buf, sched, gParams, gb.pitchRatio); 
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
-		// *****>>> NETWORKING <<<***** //
+		// *****]]] NETWORKING [[[***** //
 		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(gb)); 
 	}	
 
