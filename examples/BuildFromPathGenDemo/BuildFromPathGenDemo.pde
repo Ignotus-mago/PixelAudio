@@ -41,24 +41,23 @@ import net.paulhertz.pixelaudio.*;
 PixelAudio pixelaudio;
 HilbertGen hGen;
 MultiGen multigen;
-int genWidth = 256;         // width of each gen (must be a power of 2 for HilbertGen
+int genWidth = 256;          // width of each gen (must be a power of 2 for HilbertGen
 int genHeight = 256;         // height of each gen (must equal width of genO
-int rows = 3;             // number of rows of gens
-int columns = 2;           // number of columns of gens
-PixelAudioMapper mapper;       // PixelAudioMapper to handle mapping of pixels to image
+int rows = 3;                // number of rows of gens
+int columns = 2;             // number of columns of gens
+PixelAudioMapper mapper;     // PixelAudioMapper to handle mapping of pixels to image
 
-PImage mapImage;           // A PImage to display
-PImage baseImage;                   // A PImage for reference
-int[] colors;             // an array of color values for pixels
-int shift = 512;           // amount to displace pixels for animation
-int totalShift = 0;                 // accumulated shift while animating
-boolean isAnimating = false;     // well, are we animating or not?
+PImage mapImage;             // A PImage to display
+PImage baseImage;            // A PImage for reference
+int[] colors;                // an array of color values for pixels
+int shift = 512;             // amount to displace pixels for animation
+int totalShift = 0;          // accumulated shift while animating
+boolean isAnimating = false;    // well, are we animating or not?
 boolean oldIsAnimating;
 
 // for JSON file I/O
 String currentFileName;
 PixelMapGen currentGen;
-String dataFolder = "/Users/paulhz/Code/Workspace/TestProcessing/src/net/paulhertz/testprocessing/data";
 
 public static void main(String[] args) {
   PApplet.main(new String[] { BuildFromPathGenDemo.class.getName() });

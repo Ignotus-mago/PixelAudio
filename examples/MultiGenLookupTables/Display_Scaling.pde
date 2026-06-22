@@ -69,6 +69,9 @@ public void setScaling(boolean isVerbose) {
   }
 }
 
+/**
+ * Toggles display window size between initial dimensions and fit to screen dimensions.
+ */
 public void resizeWindow() {
   if (offscreen.width > offscreen.height) {
     if (isFitToScreen) {

@@ -4,22 +4,22 @@ import net.paulhertz.pixelaudio.*;
 //import net.paulhertz.pixelaudio.AffineTransformType.*;
 
 /**
- * <h2>MultiGenDemo: How to Combine Gens into a MultiGen</h2>
- * <p>
- * MultiGen is child class of PixelMapGen that allows you to combine multiple PixelMapGens
+ * MultiGenDemo: How to Combine Gens into a MultiGen
+ *
+ * MultiGen is a child class of PixelMapGen that allows you to combine multiple PixelMapGens
  * into a single PixelMapGen, with a single signal path through all the gens. There are four
  * different constructors that you can use. The first two, MultiGen(int width, int height)
  * and MultiGen(int width, int height, AffineTransformType type), create two DiagonalZigzagGens
  * to fill whatever width and height you provide. Things get interesting with the two custom constructors,
  * MultiGen(int width, int height, int rows, int columns, ArrayList<PixelMapGen> genList)
  * and MultiGen(int width, int height, ArrayList<int[]> offsetList, ArrayList<PixelMapGen> genList).
- * </p><p>
+ *
  * Both custom constructors require an ArrayList of PixelMapGens. The dimensions
  * of the gens should be tailored for the width and height of the application window,
  * so that width == rows * genWidth and height == columns * genHeight. In the first
  * custom constructor, the number of rows and columns is used to calculate the
  * dimensions of the gens. It's easy to use.
- * </p><p>
+ *
  * The second custom constructor is the more flexible of the two. In the second
  * constructor, you can specify the location of the top left corner of each gen
  * in offsetList, an ArrayList of int[] arrays that specify x and y offsets for
@@ -27,24 +27,22 @@ import net.paulhertz.pixelaudio.*;
  * AffineTransformType applied to each gen in the genlist, you can often create
  * a continuous signal path through the final image. This application
  * demonstrates how to do that with HilbertGens.
- * </p><p>
+ *
  * The PixelMapGen subclasses HilbertGen, DiagonalZigzagGen, and BoustropheGen
  * include various static methods to generate MultiGen objects. Check them out.
- * </p><p>
+ *
  * Animation helps to visualize the orientation of PixelMapGen objects.
  * Press 'a' to toggle animation that shifts pixels along the signal path.
- * </p><p>
- * <pre>
+ *
  * KEY COMMANDS
  *
- * Press 'a' to toggle animation.
- * Press 'd' to show default MultiGen.
- * Press 't' to step through transformed MultiGen objects.
- * Press 'r' to show random mix of HilbertGen and DiagonalZigzagGen objects with a discontinuous signal path.
- * Press 'c' to show a MultiGen made of HilbertGen objects with a continuous signal path.
- * Press 'C' to show a MultiGen made with a mix of HilbertGen and DiagonalZigzagGen objects with a continuous path.
- * Press 'h' to show help message in Console.
- * </pre>
+ * - Press 'a' to toggle animation.
+ * - Press 'd' to show default MultiGen.
+ * - Press 't' to step through transformed MultiGen objects.
+ * - Press 'r' to show random mix of HilbertGen and DiagonalZigzagGen objects with a discontinuous signal path.
+ * - Press 'c' to show a MultiGen made of HilbertGen objects with a continuous signal path.
+ * - Press 'C' to show a MultiGen made with a mix of HilbertGen and DiagonalZigzagGen objects with a continuous path.
+ * - Press 'h' to show help message in Console.
  */
 PixelAudio pixelaudio;        // PixelAudio library instance
 HilbertGen hGen;              // a HilbertGen
@@ -76,7 +74,7 @@ Random rand = new Random();
 PImage mapImage;              // a bitmap image for display
 PImage baseImage;             // a reference image, unchanging, used as source for animation
 int[] spectrum;               // an array of colors that will be written along the "signal path" in mapImage
-int shift = 256;              // amount we shift for each animation step
+int shift = 512;              // amount we shift for each animation step
 int totalShift = 0;           // total amount we have shifted the image
 boolean isAnimating = false;  // toggle for animation
 
@@ -280,6 +278,7 @@ public void keyPressed() {
     refreshImages();
     break;
   case 'h': // show help message in Console
+    showHelp();
     break;
   default:
     break;

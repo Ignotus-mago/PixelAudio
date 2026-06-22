@@ -48,8 +48,7 @@ public JSONObject getJSONHeader() {
 public void importGenData() {
   oldIsAnimating = isAnimating;
   isAnimating = false;
-  File folderToStartFrom = new File(dataFolder + "//*.json");
-  selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);
+  selectInput("Select a file to open", "fileSelectedOpen");
 }
 
 public void fileSelectedOpen(File selection) {

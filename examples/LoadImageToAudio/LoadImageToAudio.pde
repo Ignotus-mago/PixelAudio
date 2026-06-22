@@ -2,7 +2,20 @@
  * LoadImageToAudio shows how to load an image and turn it into an audio file
  * that can be played by clicking on the image. You can also load an audio file
  * and turn it into an image.
- * 
+ *
+ * QUICK START
+ *
+ * 1. Run LoadImageToAudio. The sketch shows a rainbow-colored image generated
+ *    by the getColors() method.
+ * 2. Press 'o' to open an image file. Image and audio files for the PixelAudio
+ *    example sketches can be found in the PixelAudio library "examples/examples_data/"
+ *    directory. Your selected image appears in the display and is transcoded to audio.
+ * 3. Press the spacebar while the mouse is over the image to play its transcoded
+ *    audio signal.
+ * 4. Experiment with loading images and audio files to the various color
+ *    channels. Press '?' to see the available key commands ('h' is reserved for
+ *    the Hue channel).
+ *
  * You can write the current image to the audio signal with the 'w' key command.
  * The sound of an image will probably be noisy since it is not designed with cyclic
  * functions along the arbitrary signal path we impose on it with a PixelMapGen.
@@ -33,9 +46,9 @@
  * You can enhance image contrast by stretching its histogram ('m' key).
  * You can make the image brighter ('=' and '+' keys) or darker ('-' or '_' key)
  * using a gamma function, a non-linear adjustment.
- * 
- * 
- * Press ' ' to toggle animation.
+ *
+ * Press ' ' to play audio for the point the mouse is currently over.
+ * Press TAB to toggle animation.
  * Press 'o' to open an audio or image file in all RGB channels.
  * Press 'r' to open an audio or image file in the RED channel of the image.
  * Press 'g' to open an audio or image file in the GREEN channel of the image.
@@ -44,7 +57,7 @@
  * Press 'v' to open an audio or image file in the HSB Saturation channel of the image.
  * Press 'l' to open an audio or image file in the HSB Brightness channel of the image.
  * Press 'c' to apply color from an image file to the display image.
- * Press 'k' to apply the hue and saturation in the colors array to mapImage .
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage.
  * Press 'O' to reload the most recent image or audio file or show an Open File dialog.
  * Press 'm' to remap the histogram of the image.
  * Press '=' to use a gamma function to make the image lighter.
@@ -356,7 +369,8 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press ' ' to toggle animation.");
+  println(" * Press ' ' to play audio for the point the mouse is currently over.");
+  println(" * Press TAB to toggle animation.");
   println(" * Press 'o' to open an audio or image file in all RGB channels.");
   println(" * Press 'r' to open an audio or image file in the RED channel of the image.");
   println(" * Press 'g' to open an audio or image file in the GREEN channel of the image.");
@@ -365,7 +379,7 @@ public void showHelp() {
   println(" * Press 'v' to open an audio or image file in the HSB Saturation channel of the image.");
   println(" * Press 'l' to open an audio or image file in the HSB Brightness channel of the image.");
   println(" * Press 'c' to apply color from an image file to the display image.");
-  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
+  println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage.");
   println(" * Press 'O' to reload the most recent image or audio file or show an Open File dialog.");
   println(" * Press 'm' to remap the histogram of the image.");
   println(" * Press '=' to use a gamma function to make the image lighter.");
@@ -484,7 +498,7 @@ public double gauss(double mean, double variance) {
 public int playSample(int samplePos, int sampleCount, float amplitude) {
   sampleCount = synth.playSample(samplePos, sampleCount, amplitude);
   int durationMS = (int)(sampleCount/sampleRate * 1000);
-  println("----- audio event duration = "+ durationMS +" millisconds");
+  println("----- audio event duration = "+ durationMS +" milliseconds");
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
   return sampleCount;
@@ -499,64 +513,4 @@ public void writeImageToAudio() {
   playBuffer.setBufferSize(mapSize);
   playBuffer.setChannel(0, audioSignal);
   if (playBuffer != null) println("--->> audioBuffer length channel 0 = "+ playBuffer.getChannel(0).length);
-}
-
-
-// ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- //
-
-public int[] getHistoBounds(int[] source) {
-  int min = 255;
-  int max = 0;
-  for (int i = 0; i < source.length; i++) {
-    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-    for (int j = 0; j < comp.length; j++) {
-      if (comp[j] > max) max = comp[j];
-      if (comp[j] < min) min = comp[j];
-    }
-  }
-  println("--- min", min, " max ", max);
-  return new int[]{min, max};
-}
-
-// histogram stretch -- run getHistoBounds to determine low and high
-public int[] stretch(int[] source, int low, int high) {
-  int[] out = new int[source.length];
-  int r = 0, g = 0, b = 0;
-  for (int i = 0; i < out.length; i++) {
-    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-    r = comp[0];
-    g = comp[1];
-    b = comp[2];
-    r = (int) constrain(map(r, low, high, 1, 254), 0, 255);
-    g = (int) constrain(map(g, low, high, 1, 254), 0, 255);
-    b = (int) constrain(map(b, low, high, 1, 254), 0, 255);
-    out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
-  }
-  return out;
-}
-
-public void setGamma(float gamma) {
-  if (gamma != 1.0) {
-    this.gammaTable = new int[256];
-    for (int i = 0; i < gammaTable.length; i++) {
-      float c = i/(float)(gammaTable.length - 1);
-      gammaTable[i] = (int) Math.round(Math.pow(c, gamma) * (gammaTable.length - 1));
-    }
-  }
-}
-
-public int[] adjustGamma(int[] source) {
-  int[] out = new int[source.length];
-  int r = 0, g = 0, b = 0;
-  for (int i = 0; i < out.length; i++) {
-    int[] comp = PixelAudioMapper.rgbComponents(source[i]);
-    r = comp[0];
-    g = comp[1];
-    b = comp[2];
-    r = gammaTable[r];
-    g = gammaTable[g];
-    b = gammaTable[b];
-    out[i] = PixelAudioMapper.composeColor(r, g, b, 255);
-  }
-  return out;
 }

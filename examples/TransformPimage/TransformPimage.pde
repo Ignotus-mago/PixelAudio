@@ -18,7 +18,7 @@
  *
  *   NADA     no operation
  *   R270     rotate 90 degrees clockwise
- *   ROT180   rotate 180 degrees
+ *   R180     rotate 180 degrees
  *   R90      rotate 90 degrees counterclockwise
  *   FLIPX    reflect on y-axis, y coordinates do not change
  *   FX270    reflect on y-axis, then rotate 90 clockwise 
@@ -36,7 +36,7 @@
  * Press 'x' to flip x coordinates = mirror on y-axis (FLIPX).
  * Press 'y' to flip y coordinates = mirror on x-axis (FLIPY).
  * Press '1' to mirror on primary diagonal (FX90).
- * Press '2' to mirror on primary diagonal (FX270).
+ * Press '2' to mirror on secondary diagonal (FX270).
  * Press 'o' to reload the image.
  * Press 's' to save the image.
  * Press 'm' to print out the affine map of a small square or rectangle.
@@ -65,17 +65,17 @@ public void draw() {
 }
 
 public void showHelp() {
-println("\n * Press 'f' to rotate image 90 degrees clockwise (R270).");
-println(" * Press 'b' to rotate image 90 degrees counterclockwise (R90).");
-println(" * Press 'r' to rotate image 180 degrees (R180).");
-println(" * Press 'x' to flip x coordinates = mirror on y-axis (FLIPX).");
-println(" * Press 'y' to flip y coordinates = mirror on x-axis (FLIPY).");
-println(" * Press '1' to mirror on primary diagonal (FX90).");
-println(" * Press '2' to mirror on primary diagonal (FX270).");
-println(" * Press 'o' to reload the image.");
-println(" * Press 's' to save the image.");
-println(" * Press 'm' to print out the affine map of a small square or rectangle.");
-println(" * Press 'h' to show this help message.");
+  println("\n * Press 'f' to rotate image 90 degrees clockwise (R270).");
+  println(" * Press 'b' to rotate image 90 degrees counterclockwise (R90).");
+  println(" * Press 'r' to rotate image 180 degrees (R180).");
+  println(" * Press 'x' to flip x coordinates = mirror on y-axis (FLIPX).");
+  println(" * Press 'y' to flip y coordinates = mirror on x-axis (FLIPY).");
+  println(" * Press '1' to mirror on primary diagonal (FX90).");
+  println(" * Press '2' to mirror on secondary diagonal (FX270).");
+  println(" * Press 'o' to reload the image.");
+  println(" * Press 's' to save the image.");
+  println(" * Press 'm' to print out the affine map of a small square or rectangle.");
+  println(" * Press 'h' to show this help message.");
 }
 
 public void keyPressed() {
@@ -98,7 +98,7 @@ public void keyPressed() {
     case '1': // mirror on primary diagonal (FX90)
       img = BitmapTransform.imageTransform(img, AffineTransformType.FX90);
       break;
-    case '2': // mirror on primary diagonal (FX270)
+    case '2': // mirror on secondary diagonal (FX270)
       img = BitmapTransform.imageTransform(img, AffineTransformType.FX270);
       break;
     case 'o': // reload the image

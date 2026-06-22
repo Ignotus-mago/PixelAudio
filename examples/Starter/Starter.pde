@@ -1,5 +1,9 @@
 import net.paulhertz.pixelaudio.*;
 
+/**
+ * Basics of setting up a PixelAudio sketch.
+ */
+
 // PixelAudio sketches typically require these variables
 PixelAudio pixelaudio;        // the library that we need to load in setup()
 HilbertGen hGen;              // a PixelMapGen child class for making Hilbert curves

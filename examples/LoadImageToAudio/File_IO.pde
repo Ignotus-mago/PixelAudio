@@ -152,8 +152,8 @@ public void loadAudioFile(File audioFile) {
 
 
 /**
- * Convenience method to call writeAudioToImage(float[], PixelAudioMapper, PImage, ChannelNames.L)
- * with audioSignal, mapper, mapImage and chan.
+ * Convenience method to call writeAudioToImage(float[], PixelAudioMapper, PImage, PixelAudioMapper.ChannelNames)
+ * with audioSignal, mapper, and mapImage and ChannelNames.L as arguments.
  */
 public void writeAudioToImage() {
   writeAudioToImage(audioSignal, mapper, mapImage, ChannelNames.L);

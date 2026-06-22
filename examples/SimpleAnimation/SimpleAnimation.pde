@@ -5,9 +5,9 @@
  * we just shift an index into an array and then copy the pixels to the display using the shifted
  * index. We'll use this technique in all our examples.
  *
- * Press ' ' to toggle animation.
- * Drag the mouse to change pixel-shifting speed and direction.
- * Press 'm' to turn mouse tracking on and off.
+ * Press ' ' (spacebar) to toggle animation.
+ * When animating, drag the mouse to change pixel-shifting speed and direction.
+ * Press 'm' to turn mouse tracking on and off (it's on to begin with).
  * Press 'h' to print help to the console.
  *
  */
@@ -84,7 +84,7 @@ public void animate() {
   totalShift += shift;
   mapImage.loadPixels();
   // PixelAudioMapper has the method we need, copying baseImage to mapImage
-  // along the signal path, using the accumulated pixel-shifing value totalShift
+  // along the signal path, using the accumulated pixel-shifting value totalShift
   mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
   mapImage.updatePixels();
 }
@@ -115,8 +115,8 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press ' ' to toggle animation.");
-  println(" * Drag the mouse to change pixel-shifting speed and direction.");
-  println(" * Press 'm' to turn mouse tracking on and off.");
+  println(" * Press ' ' (spacebar) to toggle animation.");
+  println(" * When animating, drag the mouse to change pixel-shifting speed and direction.");
+  println(" * Press 'm' to turn mouse tracking on and off (it's on to begin with).");
   println(" * Press 'h' to print help to the console.");
 }

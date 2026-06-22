@@ -1,6 +1,5 @@
 /**
- *
- * LoadAudioToImage shows how you can open audio files and transcode their image data to an image.
+ * LoadAudioToImage shows how you can open audio files and transcode their audio data to an image.
  * Once the image is loaded, you can click on it to play back the audio using a PASamplerInstrument.
  * Hovering over the image and pressing the spacebar will also trigger an audio event.
  * The hightlightSample() method highlights the pixels that correspond to the audio signal
@@ -11,11 +10,10 @@
  * click in the image.
  *
  * This sketch also includes some common methods for adjusting the brightness and contrast of
- * an image: gamma adjustment changes contrast up of down and histogram equalization stretches
+ * an image: gamma adjustment changes contrast up or down and histogram equalization stretches
  * the range of brightness values in an image. These operations will change the audio, too, if
  * you write the image to the audio signal. The gamma operations both make the audio quieter,
  * while the histogram stretch usually makes the audio louder.
- *
  *
  * Press 'o' or 'O' to open an audio file and load it to the signal and all channels of the image.
  * Press 'r' to open an audio file and load it to the signal and the RED channel of the image.
@@ -112,8 +110,9 @@ public void setup() {
   initAudio();    // set up audio
   rando = new Random();
   chan = PixelAudioMapper.ChannelNames.L;
-  String path = "/Users/paulhz/Documents/Processing/libraries/PixelAudio/examples/LoadAudioToImage/data";
-  File audioSource = new File(path +"/youthorchestra.wav");
+  String daPath = sketchPath("") + "../examples_data/";
+  String daFile = "audioBlend.wav";
+  File audioSource = new File(daPath + daFile);
   fileSelected(audioSource);
   showHelp();
 }
@@ -121,7 +120,7 @@ public void setup() {
 public void initMapper() {
   pixelaudio = new PixelAudio(this);      // load the PixelAudio library
   hGen = new HilbertGen(width, height);   // create a Hilbert curve that fills our display
-  mapper = new PixelAudioMapper(hGen);    // initialize mapper with the HIlbert curve generator
+  mapper = new PixelAudioMapper(hGen);    // initialize mapper with the Hilbert curve generator
   mapSize = mapper.getSize();             // size of mapper's various arrays and of mapImage
   colors = getColors();                   // create an array of colors
   mapImage = createImage(width, height, ARGB); // an image to use with mapper
@@ -320,7 +319,7 @@ public int calcSampleLen(int durationMS) {
 public int playSample(int samplePos, int sampleCount, float amplitude) {
   sampleCount = synth.playSample(samplePos, sampleCount, amplitude);
   int durationMS = (int)(sampleCount/sampleRate * 1000);
-  println("----- audio event duration = "+ durationMS +" millisconds");
+  println("----- audio event duration = "+ durationMS +" milliseconds");
   // return the length of the sample
   return sampleCount;
 }
