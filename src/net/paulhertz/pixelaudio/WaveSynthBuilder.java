@@ -590,7 +590,7 @@ public class WaveSynthBuilder {
 		// set WaveSynth properties
 		int animSteps = (json.isNull("steps")) ? 240 : json.getInt("steps");
 		synth.setAnimSteps(animSteps);
-		int animStop = (json.isNull("stop")) ? WaveSynthBuilder.animSteps : json.getInt("stop");
+		int animStop = (json.isNull("stop")) ? animSteps : json.getInt("stop");
 		synth.setStop(animStop);
 		float myGamma = (json.isNull("gamma")) ? 1.0f : json.getFloat("gamma");
 		synth.setGamma(myGamma);
@@ -713,7 +713,7 @@ public class WaveSynthBuilder {
 		stateData.setInt("stop", synth.getStop());
 		stateData.setFloat("blendFactor", synth.gain);
 		stateData.setInt("dataFormat", 2);
-		stateData.setString("comments", synth.comments);
+		stateData.setString("comments", synth.comments == null ? "" : synth.comments);
 		// String videoName = selection.getName(); 
 		String videoName = synth.videoFilename;
 		if (videoName == null || videoName.equals("")) {
@@ -756,4 +756,3 @@ public class WaveSynthBuilder {
 		
 
 }
-
