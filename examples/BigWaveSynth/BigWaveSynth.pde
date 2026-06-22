@@ -1,6 +1,6 @@
 /**
  * BigWaveSynth shows how you can load a WaveSynth into the pixel array of a
- * MultiGen. MultiGen is child class of PixelMapGen that allows you to use
+ * MultiGen. MultiGen is a child class of PixelMapGen that allows you to use
  * multiple PixelMapGens to cover a single image with a single signal
  * path through them. This example also allows you to load JSON files in
  * this example's data folder to reconfigure the WaveSynth. Initially, we
@@ -8,16 +8,16 @@
  *
  * Press ' ' to turn animation on or off.
  * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.
- * Press 'o' to open a JSON file that defines a WaveSynth .
+ * Press 'o' to open a JSON file that defines a WaveSynth.
  * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.
  * Press 'j' or 'J' to save WaveSynth data to a JSON file.
  * Press 'f' to print the frameRate to the console.
- * Press 'r' to animation step to 0.
+ * Press 'r' to reset animation step to 0.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'h' to show help and key commands.
  *
  * See WaveSynthEditor for the complete set of WaveSynth parameters
- * you can edit in a GUI, load and save to files, and output as video. <br>
+ * you can edit in a GUI, load and save to files, and output as video.
  * See also: BigWaveSynthAudio, WaveSynthSequencer.
  *
  */
@@ -231,6 +231,7 @@ public void keyPressed() {
     break;
   case 'f': // print the frameRate to the console
     println("--->> frame rate: "+ frameRate);
+    break;
   case 'r':
   case 'R': // reset animation step to 0
     step = 0;
@@ -247,6 +248,7 @@ public void keyPressed() {
     }
     break;
   case 'h': // show help and key commands
+    showHelp();
     break;
   default:
     break;
@@ -256,11 +258,11 @@ public void keyPressed() {
 public void showHelp() {
   println(" * Press ' ' to turn animation on or off.");
   println(" * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.");
-  println(" * Press 'o' to open a JSON file that defines a WaveSynth .");
+  println(" * Press 'o' to open a JSON file that defines a WaveSynth.");
   println(" * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.");
   println(" * Press 'j' or 'J' to save WaveSynth data to a JSON file.");
   println(" * Press 'f' to print the frameRate to the console.");
-  println(" * Press 'r' to animation step to 0.");
+  println(" * Press 'r' to reset animation step to 0.");
   println(" * Press 'v' or 'V' to toggle video recording.");
   println(" * Press 'h' to show help and key commands.");
 }

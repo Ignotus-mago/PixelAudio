@@ -5,12 +5,12 @@
  * 
  * Press ' ' (spacebar) to toggle animation.
  * Press 'o' to open a new JSON file containing WaveSynth data.
- * Press 'O' to reload a JSON file, or open a JSON file is none has yet been loaded.
+ * Press 'O' to reload a JSON file, or open a JSON file if none has yet been loaded.
  * Press 'j' or 'J' to write WaveSynth data to a JSON file.
  * Press 'g' to swap in a new gen to replace the one in use for mapper.
  * Press 'f' to rotate gen 90 degrees clockwise.
  * Press 'r' or 'R' to reset animation to step 0.
- * Press 'v' or 'V' to record a video .
+ * Press 'v' or 'V' to record a video.
  * Press 'h' to show Help Message in the console.
  * 
  */
@@ -32,7 +32,7 @@ PixelAudioMapper mapper;
 ArrayList<WaveData> wdList;
 WaveSynth wavesynth;
 /*
-   * display dimensions are used for PixelMapGen instances, PixelAudioMapper, and
+ * display dimensions are used for PixelMapGen instances, PixelAudioMapper, and
  * WaveSynth. For HilbertGen and MooreGen, dimensions must be equal powers of 2.
  */
 int imageWidth = 1024;
@@ -95,7 +95,7 @@ public ArrayList<WaveData> initWaveDataList() {
   // now create a WaveData instance and add it to the list
   WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
   list.add(wd);
-  // lest's create another WaveData object
+  // let's create another WaveData object
   frequency = 192.0f;            // 1/4 of previous frequency
   phase = 0.0f;              // same phase as previous
   cycles = 2.0f;              // cycling twice as fast the previous one
@@ -108,7 +108,7 @@ public ArrayList<WaveData> initWaveDataList() {
 /**
  * Sets up a WaveSynth's variables.
  *
- * @param synth    a WaveSynth instances
+ * @param synth    a WaveSynth instance
  * @return
  */
 public WaveSynth initWaveSynth(WaveSynth synth) {
@@ -183,7 +183,7 @@ public void keyPressed() {
     isAnimating = false;
     this.loadWaveData();
     break;
-  case 'O': // reload a JSON file, or open a JSON file is none has yet been loaded
+  case 'O': // reload a JSON file, or open a JSON file if none has yet been loaded
     if (currentDataFile == null) {
       loadWaveData();
     } else {
@@ -240,11 +240,11 @@ public void keyPressed() {
 public void showHelp() {
   println(" * Press ' ' (spacebar) to toggle animation.");
   println(" * Press 'o' to open a new JSON file containing WaveSynth data.");
-  println(" * Press 'O' to reload a JSON file, or open a JSON file is none has yet been loaded.");
+  println(" * Press 'O' to reload a JSON file, or open a JSON file if none has yet been loaded.");
   println(" * Press 'j' or 'J' to write WaveSynth data to a JSON file.");
   println(" * Press 'g' to swap in a new gen to replace the one in use for mapper.");
   println(" * Press 'f' to rotate gen 90 degrees clockwise.");
   println(" * Press 'r' or 'R' to reset animation to step 0.");
-  println(" * Press 'v' or 'V' to record a video .");
+  println(" * Press 'v' or 'V' to record a video.");
   println(" * Press 'h' to show Help Message in the console.");
 }

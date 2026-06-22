@@ -137,7 +137,7 @@ public void keyPressed() {
     wavesynth.setGamma(myGamma);
     println("----- WaveSynth.gamma is set to "+ wavesynth.getGamma());
     break;
-  case '2': // set WaveSynth gamme to 1.4
+  case '2': // set WaveSynth gamma to 1.4
     myGamma = 1.4f;
     wavesynth.setGamma(myGamma);
     println("----- WaveSynth.gamma is set to "+ wavesynth.getGamma());

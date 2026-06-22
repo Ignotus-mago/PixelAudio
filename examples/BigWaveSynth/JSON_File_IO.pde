@@ -71,7 +71,7 @@ public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
 }
 
 /**
- * Outputs fields from current waveAnimal and it waveDataList
+ * Outputs current WaveSynth settings and WaveData list.
  */
 public void printWaveData(WaveSynth synth) {
   java.nio.file.Path path = java.nio.file.Paths.get(currentFileName);
@@ -141,14 +141,12 @@ public void fileSelectedWrite(File selection) {
   }
   // put the array into an object that tracks other state variables
   JSONObject stateData = new JSONObject();
+  stateData.setJSONObject("header", getWaveSynthJSONHeader());
   stateData.setInt("steps", synth.animSteps);
   stateData.setInt("stop", animStop);
   stateData.setFloat("blendFactor", synth.gain);
   stateData.setInt("dataFormat", 2);
-  if (!selection.exists())
-    stateData.setString("comments", "---");
-  else
-    stateData.setString("comments", synth.comments);
+  stateData.setString("comments", synth.comments == null ? "" : synth.comments);
   // String videoName = selection.getName();
   String videoName = synth.videoFilename;
   if (videoName == null || videoName.equals("")) {
@@ -170,4 +168,12 @@ public void fileSelectedWrite(File selection) {
   saveJSONObject(stateData, currentFileName);
   currentDataFile = new File(currentFileName);
   surface.setTitle(currentFileName);
+}
+
+public JSONObject getWaveSynthJSONHeader() {
+  JSONObject header = new JSONObject();
+  header.setString("PXAU", "WSYN");
+  header.setString("description", "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.");
+  header.setString("PixelAudioURL", "https://github.com/Ignotus-mago/PixelAudio");
+  return header;
 }

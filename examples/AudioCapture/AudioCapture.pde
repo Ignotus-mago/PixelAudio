@@ -127,7 +127,7 @@ int[] rgbSignal;
 int audioLength;
 /** audio sampling rate */
 int sampleRate = 44100;
-/** duration of a sample played by the WFInstrument, in seconds */
+/** duration of a sample played by the PASamplerInstrument, in seconds */
 float noteDuration = 0.5f;
 /** actual length of a sample played by instrument */
 int samplelen;
@@ -146,7 +146,7 @@ int pixelPos;
 int samplePos;
 
 boolean isVerbose = false;    // set true to get feedback in console
-String daPath;                // filoe path to resources, set in setup() method
+String daPath;                // file path to resources, set in setup() method
 
 
 
@@ -249,6 +249,7 @@ public void keyPressed() {
     if (isVerbose) println("---- isVerbose is now true, if it's false I won't say anything");
     break;
   case 'h':
+    showHelp();
     break;
   default:
     break;

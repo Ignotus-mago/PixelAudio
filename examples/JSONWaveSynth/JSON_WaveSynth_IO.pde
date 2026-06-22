@@ -145,10 +145,7 @@ public void fileSelectedWrite(File selection) {
   stateData.setInt("stop", animStop);
   stateData.setFloat("blendFactor", synth.gain);
   stateData.setInt("dataFormat", 2);
-  if (!selection.exists())
-    stateData.setString("comments", "---");
-  else
-    stateData.setString("comments", synth.comments);
+  stateData.setString("comments", synth.comments == null ? "" : synth.comments);
   // String videoName = selection.getName();
   String videoName = synth.videoFilename;
   if (videoName == null || videoName.equals("")) {

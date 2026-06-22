@@ -1,9 +1,10 @@
 public void initAudio() {
   // file is monophonic, and we generally want a monophonic audio buffer for PixelAudio instruments
   this.audioIn = minim.getLineIn(Minim.MONO);
+  sampleRate = Math.round(audioIn.sampleRate());
   // PixelAudio instruments require a STEREO output. 
   // It's convenient to match input and output sample rates
-  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, audioIn.sampleRate());
+  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
   this.audioBuffer = new MultiChannelBuffer(mapSize, 1);
   this.audioSignal = new float[mapSize];
   this.rgbSignal = new int[mapSize];
