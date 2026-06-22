@@ -6,6 +6,8 @@ import net.paulhertz.pixelaudio.PixelAudio;
 import net.paulhertz.pixelaudio.BitmapTransform;
 import net.paulhertz.pixelaudio.AffineTransformType;
 
+// TODO a version that uses window resizing for transforms that swap width and height.
+
 /**
 *
 * TransformPImage demonstrates some of the commands available in the BitmapTransform class.
@@ -27,7 +29,7 @@ import net.paulhertz.pixelaudio.AffineTransformType;
 *
 *   NADA     no operation
 *   R270     rotate 90 degrees clockwise
-*   ROT180   rotate 180 degrees
+*   R180     rotate 180 degrees
 *   R90      rotate 90 degrees counterclockwise
 *   FLIPX    reflect on y-axis, y coordinates do not change
 *   FX270    reflect on y-axis, then rotate 90 clockwise 
@@ -85,17 +87,17 @@ public class TransformPImage extends PApplet {
 	}
 
 	public void showHelp() {
-	  println("\n * Press 'f' to rotate image clockwise.");
-	  println(" * Press 'b' to rotate image counterclockwise.");
-	  println(" * Press 'r' to rotate image 180 degrees.");
-	  println(" * Press 'x' to flip x coordinates = mirror on y-axis.");
-	  println(" * Press 'y' to flip y coordinates = mirror on x-axis.");
-	  println(" * Press '1' to mirror on primary diagonal.");
-	  println(" * Press '2' to mirror on secondary diagonal.");
-	  println(" * Press 'o' to reload image.");
-	  println(" * Press 's' to save display to a file.");
-	  println(" * Press 'm' to test index remapping.");
-	  println(" * Press 'h' to show this help message in the console.\n");
+		println("\n * Press 'f' to rotate image 90 degrees clockwise (R270).");
+		println(" * Press 'b' to rotate image 90 degrees counterclockwise (R90).");
+		println(" * Press 'r' to rotate image 180 degrees (R180).");
+		println(" * Press 'x' to flip x coordinates = mirror on y-axis (FLIPX).");
+		println(" * Press 'y' to flip y coordinates = mirror on x-axis (FLIPY).");
+		println(" * Press '1' to mirror on primary diagonal (FX90).");
+		println(" * Press '2' to mirror on secondary diagonal (FX270).");
+		println(" * Press 'o' to reload the image.");
+		println(" * Press 's' to save the image.");
+		println(" * Press 'm' to print out the affine map of a small square or rectangle.");
+		println(" * Press 'h' to show this help message.");
 	}
 
 	public void keyPressed() {

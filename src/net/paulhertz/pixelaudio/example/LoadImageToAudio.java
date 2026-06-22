@@ -19,6 +19,19 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * LoadImageToAudio shows how to load an image and turn it into an audio file
  * that can be played by clicking on the image. You can also load an audio file
  * and turn it into an image. 
+ * <h2>QUICK START</h2>
+ * <ol> 
+ *   <li>Run LoadImageToAudio. The sketch shows a rainbow-colored image generated 
+ *   by the getColors() method.</li>
+ *   <li>Press 'o' to open an image file. Image and audio files for the PixelAudio
+ *   example sketches can be found in the PixelAudio library "examples/example_data/" 
+ *   directory. Your selected image appears in the display and is transcoded to audio.</li>
+ *   <li>Press the spacebar while the mouse is over the image to play its transcoded
+ *   audio signal.</li>
+ *   <li>Experiment with loading images and audio files to the various color 
+ *   channels. Press '?' to see the available key commands ('h' is reserved for
+ *   the Hue channel).</li>
+ * </ol>
  * <p>
  * You can write the current image to the audio signal with the 'w' key command. 
  * The sound of an image will probably be noisy since it is not designed with cyclic 
@@ -26,8 +39,8 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * RGB values range in integer steps from 0 to 255. When we transcode them to 
  * audio values in the range (-1.0, 1.0), we have less resolution than the full 
  * range of floating point values. There's always some noise in values transcoded 
- * from images. In most of the examples for the PixelAudio library when you load 
- * an audio file and it gets transcoded into an image, we still use the audio 
+ * from images. In most of the examples for the PixelAudio library, when you load 
+ * an audio file and it gets transcoded into an image we still use the audio 
  * signal with all its resolution to play sounds. When you click in the image, 
  * you will be playing a sample from the signal. 
  * </p><p>
@@ -52,7 +65,8 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * using a gamma function, a non-linear adjustment. 
  * </p>
  * <pre>
- * Press ' ' to toggle animation.
+ * Press ' ' to play audio for the point the mouse is currently over.
+ * Press TAB to toggle animation.
  * Press 'o' to open an audio or image file in all RGB channels.
  * Press 'r' to open an audio or image file in the RED channel of the image.
  * Press 'g' to open an audio or image file in the GREEN channel of the image.
@@ -61,7 +75,7 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * Press 'v' to open an audio or image file in the HSB Saturation channel of the image.
  * Press 'l' to open an audio or image file in the HSB Brightness channel of the image.
  * Press 'c' to apply color from an image file to the display image.
- * Press 'k' to apply the hue and saturation in the colors array to mapImage .
+ * Press 'k' to apply the hue and saturation in the colors array to mapImage.
  * Press 'O' to reload the most recent image or audio file or show an Open File dialog.
  * Press 'm' to remap the histogram of the image.
  * Press '=' to use a gamma function to make the image lighter.
@@ -364,7 +378,8 @@ public class LoadImageToAudio extends PApplet {
 	}
 	
 	public void showHelp() {
-		println(" * Press ' ' to toggle animation.");
+		println(" * Press ' ' to play audio for the point the mouse is currently over.");
+		println(" * Press TAB to toggle animation.");
 		println(" * Press 'o' to open an audio or image file in all RGB channels.");
 		println(" * Press 'r' to open an audio or image file in the RED channel of the image.");
 		println(" * Press 'g' to open an audio or image file in the GREEN channel of the image.");
@@ -373,7 +388,7 @@ public class LoadImageToAudio extends PApplet {
 		println(" * Press 'v' to open an audio or image file in the HSB Saturation channel of the image.");
 		println(" * Press 'l' to open an audio or image file in the HSB Brightness channel of the image.");
 		println(" * Press 'c' to apply color from an image file to the display image.");
-		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage .");
+		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage.");
 		println(" * Press 'O' to reload the most recent image or audio file or show an Open File dialog.");
 		println(" * Press 'm' to remap the histogram of the image.");
 		println(" * Press '=' to use a gamma function to make the image lighter.");
@@ -510,6 +525,12 @@ public class LoadImageToAudio extends PApplet {
 	}
 
 	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                       UTILITY METHODS                          */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+
 	// ------------- HISTOGRAM AND GAMMA ADJUSTMENTS ------------- // 
 		
 	public int[] getHistoBounds(int[] source) {
@@ -729,8 +750,8 @@ public class LoadImageToAudio extends PApplet {
 
 	
 	/**
-	 * Convenience method to call writeAudioToImage(float[], PixelAudioMapper, PImage, ChannelNames.L)
-	 * with audioSignal, mapper, mapImage and chan.
+	 * Convenience method to call writeAudioToImage(float[], PixelAudioMapper, PImage, PixelAudioMapper.ChannelNames)
+	 * with audioSignal, mapper, and mapImage and ChannelNames.L as arguments.
 	 */
 	public void writeAudioToImage() {
 		writeAudioToImage(audioSignal, mapper, mapImage, ChannelNames.L);

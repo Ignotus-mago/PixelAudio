@@ -20,14 +20,14 @@ import ddf.minim.*;
  * You can also load audio to individual RGB or HSB Hue and Brightness channels. To hear the 
  * results of loading to different channels, write the image to the audio signal ('w' key) and 
  * click in the image. 
- * 
+ * <p>
  * This sketch also includes some common methods for adjusting the brightness and contrast of 
  * an image: gamma adjustment changes contrast up of down and histogram equalization stretches
  * the range of brightness values in an image. These operations will change the audio, too, if 
  * you write the image to the audio signal. The gamma operations both make the audio quieter, 
  * while the histogram stretch usually makes the audio louder.
- * 
- * 
+ * </p>
+ * <pre>
  * Press 'o' or 'O' to open an audio file and load it to the signal and all channels of the image.
  * Press 'r' to open an audio file and load it to the signal and the RED channel of the image.
  * Press 'g' to open an audio file and load it to the signal and the GREEN channel of the image.
@@ -41,7 +41,7 @@ import ddf.minim.*;
  * Press 'w' to transcode the image HSB Brightness channel and write it to the signal.
  * Press 's' to save the current display image as a PNG file.
  * Press '?' to show Help Message in the console.
- * 
+ * </pre>
  */
 public class LoadAudioToImage extends PApplet {
 	/** PixelAudio library */

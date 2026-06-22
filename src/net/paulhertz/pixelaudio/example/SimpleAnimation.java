@@ -11,7 +11,7 @@ import net.paulhertz.pixelaudio.*;
  * we just shift an index into an array and then copy the pixels to the display using the shifted
  * index. We'll use this technique in all our examples. 
  * 
- * Press 'a' to toggle animation.
+ * Press ' ' (spacebar) to toggle animation.
  * Press 'h' to print help to the console.
  * 
  */
@@ -123,8 +123,8 @@ public class SimpleAnimation extends PApplet {
 	
 	public void showHelp() {
 		println(" * Press ' ' to toggle animation.");
-		println(" * Drag the mouse to change pixel-shifting speed and direction.");
-		println(" * Press 'm' to turn mouse tracking on and off.");
+		println(" * When animating, drag the mouse to change pixel-shifting speed and direction.");
+		println(" * Press 'm' to turn mouse tracking on and off (it's on to begin with).");
 		println(" * Press 'h' to print help to the console.");
 	}
 	

@@ -86,7 +86,7 @@ public class MultiGenLookupTables extends PApplet {
 	int imageHeight = 1024;    // imageWidth:imageHeight == 3:2
 	int genW = 4;              // the width of generator: must be a power of 2 for Hilbert and Moore curves,
 					           // 4 the minimum and probably is best for your MultiGens, but 8 might be worth a try. 
-	int genH = 4;              // the height of generator: must be a power of 2 for Hilbert and Moore
+	int genH = genW;           // the height of generator: must be a power of 2 for Hilbert and Moore
 	                           // and equal to genW (in this context, and always for Hilbert and Moore curves)
 	int drawingScale = 1;      // scaling of drawing
 	int offset = 0;            // offset of big text
@@ -296,10 +296,6 @@ public class MultiGenLookupTables extends PApplet {
 		case 'K':
 			printLUTs();
 			break;
-		case 't':
-		case 'T':
-			testAffineMap(genW, genH);
-			break;
 		case 'r':
 			currentTransform = r180;
 			gen.setTransformType(currentTransform);
@@ -319,7 +315,6 @@ public class MultiGenLookupTables extends PApplet {
 			// I omit transforms that exchange width and height
 			// There's enough to deal with in this sketch
 			// without adding coordinate swapping and window resizing. 
-			// Feel free to uncomment and experiment. 
 
 		case 'w':
 			// toggles display window to fit screen or display at size

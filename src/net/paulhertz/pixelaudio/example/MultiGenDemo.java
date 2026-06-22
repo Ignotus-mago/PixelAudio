@@ -81,7 +81,7 @@ public class MultiGenDemo extends PApplet {
 	PImage mapImage;              // a bitmap image for display
 	PImage baseImage;             // a reference image, unchanging, used as source for animation
 	int[] spectrum;               // an array of colors that will be written along the "signal path" in mapImage
-	int shift = 256;              // amount we shift for each animation step
+	int shift = 512;              // amount we shift for each animation step
 	int totalShift = 0;           // total amount we have shifted the image
 	boolean isAnimating = false;  // toggle for animation
 	
@@ -290,6 +290,7 @@ public class MultiGenDemo extends PApplet {
 			refreshImages();
 			break;
 		case 'h': // show help message in Console
+			showHelp();
 			break;
 		default:
 			break;
