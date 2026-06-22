@@ -12,7 +12,7 @@ import com.hamoid.*;
 
 /**
  * BigWaveSynth shows how to load a WaveSynth into the pixel array of a
- * MultiGen. MultiGen is child class of PixelMapGen that allows you to use
+ * MultiGen. MultiGen is a child class of PixelMapGen that allows you to use
  * multiple PixelMapGens to cover a single image with a single signal
  * path through them. This example also allows you to load JSON files in 
  * this example's data folder to reconfigure the WaveSynth. Initially, we 
@@ -20,16 +20,16 @@ import com.hamoid.*;
  * <pre>
  * Press ' ' to turn animation on or off.
  * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen. 
- * Press 'o' to open a JSON file that defines a WaveSynth .
+ * Press 'o' to open a JSON file that defines a WaveSynth.
  * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.
  * Press 'j' or 'J' to save WaveSynth data to a JSON file.
  * Press 'f' to print the frameRate to the console.
- * Press 'r' to animation step to 0.
+ * Press 'r' to reset animation step to 0.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'h' to show help and key commands.
  * </pre>
  * See WaveSynthEditor for the complete set of WaveSynth parameters 
- * you can edit in a GUI, load and save to files, and output as video. <br>
+ * you can edit in a GUI, load and save to files, and output as video.
  * See also: BigWaveSynthAudio, WaveSynthSequencer.
  * 
  */
@@ -236,6 +236,7 @@ public class BigWaveSynth extends PApplet {
 			break;
 		case 'f': // print the frameRate to the console
 			println("--->> frame rate: "+ frameRate);
+			break;
 		case 'r': case 'R': // reset animation step to 0 
 			step = 0;
 			wavesynth.renderFrame(step);
@@ -250,6 +251,7 @@ public class BigWaveSynth extends PApplet {
 			}
 			break;
 		case 'h': // show help and key commands
+			showHelp();
 			break;
 		default:
 			break;
@@ -259,11 +261,11 @@ public class BigWaveSynth extends PApplet {
 	public void showHelp() {
 		println(" * Press ' ' to turn animation on or off.");
 		println(" * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.");
-		println(" * Press 'o' to open a JSON file that defines a WaveSynth .");
+		println(" * Press 'o' to open a JSON file that defines a WaveSynth.");
 		println(" * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.");
 		println(" * Press 'j' or 'J' to save WaveSynth data to a JSON file.");
 		println(" * Press 'f' to print the frameRate to the console.");
-		println(" * Press 'r' to animation step to 0.");
+		println(" * Press 'r' to reset animation step to 0.");
 		println(" * Press 'v' or 'V' to toggle video recording.");
 		println(" * Press 'h' to show help and key commands.");
 	}
@@ -368,7 +370,7 @@ public class BigWaveSynth extends PApplet {
 	}
 
 	/**
-	 * Outputs fields from current waveAnimal and it waveDataList
+	 * Outputs current WaveSynth settings and WaveData list.
 	 */
 	public void printWaveData(WaveSynth synth) {
 		java.nio.file.Path path = java.nio.file.Paths.get(currentFileName);
@@ -438,14 +440,12 @@ public class BigWaveSynth extends PApplet {
 		}
 		// put the array into an object that tracks other state variables
 		JSONObject stateData = new JSONObject();
+		stateData.setJSONObject("header", getWaveSynthJSONHeader());
 		stateData.setInt("steps", synth.animSteps);
 		stateData.setInt("stop", animStop);
 		stateData.setFloat("blendFactor", synth.gain);
 		stateData.setInt("dataFormat", 2);
-		if (!selection.exists())
-			stateData.setString("comments", "---");
-		else
-			stateData.setString("comments", synth.comments);
+		stateData.setString("comments", synth.comments == null ? "" : synth.comments);
 		// String videoName = selection.getName(); 
 		String videoName = synth.videoFilename;
 		if (videoName == null || videoName.equals("")) {
@@ -467,6 +467,14 @@ public class BigWaveSynth extends PApplet {
 		saveJSONObject(stateData, currentFileName);
 		currentDataFile = new File(currentFileName);
 		surface.setTitle(currentFileName);
+	}
+
+	public JSONObject getWaveSynthJSONHeader() {
+		JSONObject header = new JSONObject();
+		header.setString("PXAU", "WSYN");
+		header.setString("description", "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.");
+		header.setString("PixelAudioURL", "https://github.com/Ignotus-mago/PixelAudio");
+		return header;
 	}
 	
 }

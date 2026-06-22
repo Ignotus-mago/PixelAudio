@@ -18,6 +18,38 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
 // TODO revise for PixelAudio library release.
 
+/*
+ * Checked `BigWaveSynthAudio` against the Processing sketch. I did not edit files.
+ *
+ * Main things to revisit:
+ *
+ * - Both versions have a likely bug in `raindrops()`: they compute `signalPos`, but call
+ *   `playSample(samplePos, ...)` instead of `playSample(signalPos, ...)`. 
+ *   Java: 
+ *   [BigWaveSynthAudio.java](/Users/paulhz/Code/Workspace/PixelAudio/src/net/paulhertz/pixelaudio/example/BigWaveSynthAudio.java:332)
+ *   Processing:
+ *   [BigWaveSynthAudio.pde](/Users/paulhz/Code/Workspace/PixelAudio/examples/BigWaveSynthAudio/BigWaveSynthAudio.pde:342)
+ *
+ * - Processing has a better stale-buffer refresh than Java. Java re-renders but does not call
+ *   `synth.setBuffer(audioBuffer)` or clear `isBufferStale`, so it may keep re-rendering every
+ *   frame and not update the sampler pool as expected. 
+ *   Java:
+ *   [BigWaveSynthAudio.java](/Users/paulhz/Code/Workspace/PixelAudio/src/net/paulhertz/pixelaudio/example/BigWaveSynthAudio.java:297)
+ *   Processing:
+ *   [BigWaveSynthAudio.pde](/Users/paulhz/Code/Workspace/PixelAudio/examples/BigWaveSynthAudio/BigWaveSynthAudio.pde:304)
+ *
+ * - JSON I/O still has the older no-header / `---` comments behavior, unlike `WaveSynthBuilder`
+ *   and the files we just touched. Processing:
+ *   [JSON_file_io.pde](/Users/paulhz/Code/Workspace/PixelAudio/examples/BigWaveSynthAudio/JSON_file_io.pde:144)
+ *
+ * - Processing has some legacy clutter: duplicate imports and unused imports around
+ *   [BigWaveSynthAudio.pde](/Users/paulhz/Code/Workspace/PixelAudio/examples/BigWaveSynthAudio/BigWaveSynthAudio.pde:91).
+ *
+ * Checks: no whitespace problems reported for the Java or Processing files.
+ * 
+ * 
+ */
+
 /**
  * Loads the color output of WaveSynth into 
  * a MultiGen and plays the WaveSynth's audio signal with a PASamplerInstrument.

@@ -41,6 +41,7 @@ import g4p_controls.*;
 // TODO error on editing a GUI field while animating: FIXED
 // TODO goofy output to console when editing text fields: PENDING, solution is to replace Spinner with TextField
 // TODO different results for each press of 'i', 'e', some field entries -- FIXED, in WaveData.prepareFrame(...)
+// TODO if possible, enable key commands when the control window has focus, not just when the display window has focus.
 
 
 /**
@@ -122,7 +123,7 @@ import g4p_controls.*;
  * </p>
  * <pre>
  * ::: KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE :::
-
+ *
  * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
  * Press ' ' (spacebar) to trigger audio playback at the current mouse position.

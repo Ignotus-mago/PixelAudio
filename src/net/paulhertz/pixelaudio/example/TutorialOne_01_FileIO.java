@@ -39,19 +39,21 @@ import ddf.minim.*;
  * If you are just starting to work with PixelAudio coding, I suggest looking through these
  * sketches before doing the TutorialOne sequence:
  * </p><ul>
- *   <li><b>LookupTables:</b> an introduction to a core concept in PixelAudio, lookup tables. Start here.</li>
- *   <li><b>Starter:</b> basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.</li>
- *   <li><b>SimpleAnimation:</b> a simple way to animate a bitmap using PixelAudioMapper.</li>
- *   <li><b>MultiGenDemo:</b> chain PixelMapGens together to generate a large image.</li>
- *   <li><b>MultiGenLookupTables:</b> lookup tables in MultiGens, a useful place to test your MultiGenCode.</li> 
- *   <li><b>TransformPimage</b> (optional): introduces the affine transforms available in the BitmapTransform class.</li>
+ *   <li><b>{@link LookupTables}:</b> an introduction to a core concept in PixelAudio, lookup tables. Start here.</li>
+ *   <li><b>{@link Starter}:</b> basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.</li>
+ *   <li><b>{@link SimpleAnimation}:</b> a simple way to animate a bitmap using PixelAudioMapper.</li>
+ *   <li><b>{@link MultiGenDemo}:</b> chain PixelMapGens together to generate a large image.</li>
+ *   <li><b>{@link MultiGenLookupTables}:</b> lookup tables in MultiGens, a useful place to test your MultiGenCode.</li> 
+ *   <li><b>{@link TransformPImage}</b> (optional): introduces the affine transforms available in the BitmapTransform class.</li>
  * </ul><p>
- * The opening sequence, above, shows the basics of loading the PixelAudio library and 
+ * This series of example sketches shows the basics of loading the PixelAudio library and 
  * using it to display a rainbow array of colors along the signal path. It also provides
- * a close look at how to create MultiGen objects, which can use multiple PixelMapGen 
+ * a first look at how to create MultiGen objects, which can use multiple PixelMapGen 
  * objects to create a composite PixelMapGen class. You don't need to create your own
  * custom MultiGen classes. The PixelMapGen subclasses HilbertGen, DiagonalZigzagGen, 
- * and BoustropheGen include various static methods to generate MultiGen objects.
+ * and BoustropheGen include various static methods to generate MultiGen objects. The 
+ * TutorialOne sequence provides examples of creating and using MultiGen objects that
+ * you can modify. 
  * </p><p>
  * TutorialOne_01_FileIO can open and display audio and image files, transcode RGB pixel 
  * data to audio samples and transcode audio samples to RGB pixel data. It can also save audio
@@ -62,15 +64,16 @@ import ddf.minim.*;
  * the sketch.
  * </p><p>
  *   1. Launch the sketch and then press the 'o' key to open a image or an audio file.
- *      The "Saucer_mixdown.wav" and "snowfence.jpg" files are good for experimenting.
- *      To see the signal path as a color overlay, press the 'k' key. 
+ *      Files for the example sketches are located in the "examples/example_data/" 
+ *      folder. The "Saucer_mixdown.wav" and "snowfence.jpg" files are good for
+ *      experimenting. To see the signal path as a color overlay, press the 'k' key. 
  * </p><p>     
- *   2. Saucer_mixdown.wav is loaded into an audio buffer, playBuffer, and then
- *      transcoded into the PImage mapImage, which is displayed on screen. The audio 
+ *   2. Saucer_mixdown.wav is loaded into an audio buffer, {@code playBuffer}, and then
+ *      transcoded into the PImage {@code mapImage}, which is displayed on screen. Audio 
  *      samples are floating point values from -1.0 to +1.0. They are transcoded to RGB
- *      color values in the range (0, 255). The samples follow a path over the image
- *      that visits every pixel, the signal path. In this sketch, the signal path consists
- *      of 6 connected Hilbert curves. The Hilbert curve is a 2D fractal curve which is
+ *      color values in the range (0, 255). The samples are mapped to a path over the image
+ *      that visits every pixel, the "signal path". In this sketch, the signal path consists
+ *      of 6 connected Hilbert curves. A Hilbert curve is a 2D fractal curve which is
  *      often used in scientific visualization to reveal hidden patterns in 1D data. 
  *      In the image created from Saucer_mixdown, high frequency sounds create fine-grained
  *      patterns and low frequency sounds create coarse-grained patterns. 
@@ -86,7 +89,7 @@ import ddf.minim.*;
  *      communicate with pictures. Try loading "saucer_image.png" to hear how this works. 
  *      Image data doesn't have as good a resolution as audio data, so there is some 
  *      loss of quality in saving audio as an image and then reloading it as audio. 
- *      
+ *      <br>
  *      Note: If you press 'k' to load the color overlay, you will not affect audio 
  *      quality. Loading the hue and saturation channels of an image has very little
  *      effect on the brightness levels, which are the source of the audio signal. 
@@ -94,16 +97,16 @@ import ddf.minim.*;
  *   4. Transcoding is automated in this tutorial, but we'll provide separate loading
  *      of audio and image in later tutorials. 
  * </p><p>     
- *   5. Experiment with different image and audio files. 
- *      Press 'c' to load only color data (hue and saturation) from an image file. 
- *      Click in the image or hover and press the spacebar to play an audio sample.
+ *   5. Experiment with different image and audio files. <br>
+ *      Press 'c' to load only color data (hue and saturation) from an image file. <br>
+ *      Click in the image or hover and press the spacebar to play an audio sample. <br>
  *      Press 'r' to toggle selection of a random ADSR envelope for the audio sample. 
  * </p><p>
- * Audio events are generated through PASamplerInstrument. PASamplerInstrument lets
- * us add an ADSR (attack, decay, sustain, release) envelope to audio output from 
- * audio samples. It can also shift pitch and set stereo panning. It can support 
- * multiple voices -- in the initAudio() method we set the number to 8. This is a
- * reasonable number of voices for tracking rapid mouse clicks, but you can change it. 
+ * Audio events are generated with a {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrument PASamplerInstrument}. 
+ * PASamplerInstrument lets us add an ADSR (attack, decay, sustain, release) envelope to
+ * audio output from audio samples. It can also shift pitch and set stereo panning. It
+ * can support multiple voices -- in the initAudio() method we set the number to 8,
+ * a reasonable number of voices for tracking rapid mouse clicks, which you can change. 
  * </p><p>
  * In this sketch, audio events are triggered with one of two methods:
  * <pre>
@@ -130,7 +133,7 @@ import ddf.minim.*;
  * <li>loading a file to memory and traversing it with a windowed buffer</li>
  * </ul>
  * <p>
- * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
+ * See also: example sketch {@link LoadImageToAudio}, with a complete set of commands for loading
  * images and audio to different color channels. 
  * </p>
  * <pre>

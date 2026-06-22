@@ -102,7 +102,7 @@ public class JSONWaveSynth extends PApplet {
 		// now create a WaveData instance and add it to the list
 		WaveData wd = new WaveData(frequency, amplitude, phase, dc, cycles, waveColor, steps);
 		list.add(wd);
-		// lest's create another WaveData object
+		// let's create another WaveData object
 		frequency = 192.0f;						// 1/4 of previous frequency
 		phase = 0.0f;							// same phase as previous
 		cycles = 2.0f;							// cycling twice as fast the previous one
@@ -405,10 +405,7 @@ public class JSONWaveSynth extends PApplet {
 		stateData.setInt("stop", animStop);
 		stateData.setFloat("blendFactor", synth.gain);
 		stateData.setInt("dataFormat", 2);
-		if (!selection.exists())
-			stateData.setString("comments", "---");
-		else
-			stateData.setString("comments", synth.comments);
+		stateData.setString("comments", synth.comments == null ? "" : synth.comments);
 		// String videoName = selection.getName(); 
 		String videoName = synth.videoFilename;
 		if (videoName == null || videoName.equals("")) {
