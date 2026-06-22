@@ -42,7 +42,7 @@
  *      In the image created from Saucer_mixdown, high frequency sounds create fine-grained
  *      patterns and low frequency sounds create coarse-grained patterns.
  *
- *   3. Snowfence.jpg is loaded into mapImage and then transcoded from to the playBuffer and
+ *   3. Snowfence.jpg is loaded into mapImage and then transcoded to the playBuffer and
  *      audioSignal variables. If you click in the image, you can hear the sound created
  *      by reading the brightness levels of pixels along the signal path and changing
  *      them into audio sample data. The sky, with very little variation in texture, is
@@ -105,6 +105,7 @@
  * Press 'k' to apply the hue and saturation in the colors array to mapImage.
  * Press 'o' or 'O' to open an audio or image file.
  * Press 'r' or 'R' to use the default envelope or a random envelope from a list.
+ * Press 'd' to toggle doResample: if true, resample audio when fileSampleRate != audioOut.sampleRate().
  * Press 'h' or 'H' to show help and key commands in console.
  *
  *
@@ -365,7 +366,7 @@ public void showHelp() {
  * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
  *
  * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
+ * @param graySource     a target array of RGB data from which to obtain brightness values
  * @param lut            a lookup table, must be the same size as colorSource and graySource
  * @return the graySource array of RGB values, with hue and saturation values changed
  * @throws IllegalArgumentException if array arguments are null or if they are not the same length

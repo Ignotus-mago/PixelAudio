@@ -229,7 +229,7 @@ public void loadImageFile(File imgFile) {
  *
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format
+ * @param sig       a target array of float in audio format
  * @param chan      a color channel
  */
 public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {

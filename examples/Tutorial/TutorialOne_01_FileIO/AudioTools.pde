@@ -38,7 +38,7 @@ public void initAudio() {
 void ensureSamplerReady() {
   if (synth == null) {
     synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv);
-    println("-- initilialized audio sampler synth");
+    println("-- initialized audio sampler synth");
     // set the synth gain with a linear value derived from a dB value
     synth.setGain(AudioUtility.dbToLinear(samplerGain));
   }
@@ -223,7 +223,7 @@ public int calcSampleLen() {
 
 /**
  * Tracks and runs TimedLocation events in the timeLocsArray list, which is
- * associated with mouse clicks that trigger audio a the click point.
+ * associated with mouse clicks that trigger audio at the click point.
  */
 public synchronized void runTimeArray() {
   int currentTime = millis();

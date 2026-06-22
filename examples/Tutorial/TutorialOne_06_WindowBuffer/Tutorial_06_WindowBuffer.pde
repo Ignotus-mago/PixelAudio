@@ -504,9 +504,8 @@ float samplerSourceRateRef = -1;
 /* ------------------------------------------------------------------ */
 
 // system-specific path to example files data
-// in Processing, for PixelAudio Tutorial examples, use this in setup():
-// daPath = sketchPath("") + "../../examples_data/";
-String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";
+// String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";  // Eclipse
+String daPath = sketchPath("") + "../../examples_data/";                               // Processing
 String daFile = "_sonic/FullMoonTonight_22050Hz.mp3";    // _sonic/FullMoonTonight_22050Hz.mp3, Saucer_mixdown.wav
 
 boolean isDebugging = false;
