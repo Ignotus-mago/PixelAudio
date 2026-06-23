@@ -140,7 +140,7 @@ public void loadAudioFile(File audFile) {
   fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
   // load the audio file and resample it if necessary
   if (fileSampleRate > 0) {
-    if (fileSampleRate != audioOut.sampleRate()) {
+    if (fileSampleRate != audioOut.sampleRate() && doResample) {
       float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
       buff.setBufferSize(resampled.length);
       buff.setChannel(0, resampled);

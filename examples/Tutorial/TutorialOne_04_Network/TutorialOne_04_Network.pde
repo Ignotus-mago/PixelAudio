@@ -245,7 +245,8 @@ float outputGain = 0.0f;        // gain setting for audio output, decibels
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset, not used in TutorialOneDrawing
 float sampleRate = 48000;       // target audio engine rate used to configure audioOut
 float fileSampleRate;           // sample rate of most recently opened file (before resampling)
-float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
+float bufferSampleRate;         // sample rate of playBuffer: fileSampleRate when not resampled, audioOut.sampleRate() when resampled
+boolean doResample = true;      // if true, resample audio from files whose sampling rate != audioOut.sampleRate()
 float[] audioSignal;      // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image

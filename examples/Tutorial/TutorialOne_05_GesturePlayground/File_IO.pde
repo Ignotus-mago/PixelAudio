@@ -61,7 +61,7 @@ public void fileSelected(File selectedFile) {
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
  * writeAudioToImage() to transcode audio data and write it to mapImage.
- * Resamples files that are recorded with a different sample rate than the current audio output.
+ * If doResample is true, resamples files whose sample rate differs from the current audio output.
  * If you want to load the image file and audio file separately, comment out writeAudioToImage().
  *
  * @param audFile    an audio file
@@ -70,7 +70,7 @@ public void loadAudioFile(File audFile) {
   MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
   fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
   if (fileSampleRate > 0) {
-    if (fileSampleRate != audioOut.sampleRate()) {
+    if (fileSampleRate != audioOut.sampleRate() && doResample) {
       float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
       buff.setBufferSize(resampled.length);
       buff.setChannel(0, resampled);
@@ -278,7 +278,7 @@ public static int setAlpha(int argb, int alpha) {
  *
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format
+ * @param sig       a target array of float in audio format
  * @param chan      a color channel
  * @param shift     number of indices to shift
  */
@@ -321,4 +321,95 @@ public void refreshMapImageFromBase() {
   mapImage.loadPixels();
   mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
   mapImage.updatePixels();
+}
+
+/**
+ * Calls Processing's selectOutput method to start the process of saving
+ * the current audio signal to a .wav file.
+ */
+public void saveToAudio() {
+  // File folderToStartFrom = new File(dataPath("") + "/");
+  // selectOutput("Select an audio file to write to:", "audioFileSelectedWrite", folderToStartFrom);
+  selectOutput("Select an audio file to write to:", "audioFileSelectedWrite");
+}
+
+/**
+ * @param selection    a File to write as audio
+ */
+public void audioFileSelectedWrite(File selection) {
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+    return;
+  }
+  String fileName = selection.getAbsolutePath();
+  if (selection.getName().indexOf(".wav") != selection.getName().length() - 4) {
+    fileName += ".wav";
+  }
+  try {
+    // Save at the current audio output rate. This favors performance use, but the rate
+    // may differ from the originally loaded file if resampling was disabled or applied.
+    saveAudioToFile(audioSignal, sampleRate, fileName);
+  }
+  catch (IOException e) {
+    println("--->> There was an error outputting the audio file " + fileName +", "  + e.getMessage());
+  }
+  catch (UnsupportedAudioFileException e) {
+    println("--->> The file format is unsupported " + e.getMessage());
+  }
+}
+
+/**
+ * Saves audio data to 16-bit integer PCM format, which Processing can also open.
+ * This same method can be called as a static method in AudioUtility.
+ *
+ * @param samples       an array of floats in the audio range (-1.0f, 1.0f)
+ * @param sampleRate    audio sample rate for the file
+ * @param fileName      name of the file to save to
+ * @throws IOException  an Exception you'll need to handle to call this method
+ * @throws UnsupportedAudioFileException    another Exception
+ */
+public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
+  throws IOException, UnsupportedAudioFileException {
+  // Convert samples from float to 16-bit PCM
+  byte[] audioBytes = new byte[samples.length * 2];
+  int index = 0;
+  for (float sample : samples) {
+    // Scale sample to 16-bit signed integer
+    int intSample = (int) (sample * 32767);
+    // Convert to bytes
+    audioBytes[index++] = (byte) (intSample & 0xFF);
+    audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
+  }
+  // Create an AudioInputStream
+  ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+  AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+  AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
+  // Save the AudioInputStream to a WAV file
+  File outFile = new File(fileName);
+  AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
+}
+
+/**
+ * Calls Processing's selectOutput method to start the process of saving
+ * the mapImage (the offscreen copy of the display image) to a .png file.
+ */
+public void saveToImage() {
+  // File folderToStartFrom = new File(dataPath(""));
+  selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
+}
+
+public void imageFileSelectedWrite(File selection) {
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+    return;
+  }
+  String fileName = selection.getAbsolutePath();
+  if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
+    fileName += ".png";
+  }
+  saveImageToFile(mapImage, fileName);
+}
+
+public void saveImageToFile(PImage img, String fileName) {
+  img.save(fileName);
 }

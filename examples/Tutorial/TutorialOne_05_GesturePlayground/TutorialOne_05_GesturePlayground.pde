@@ -164,6 +164,8 @@
  * Press 'o' to open an audio file.
  * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
+ * Press 's' to save display image to a PNG file.
+ * Press 'S' to save audio buffer to a .wav file.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
  * Press 'h' or 'H' to print help.
@@ -173,7 +175,9 @@
  *
  */
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -183,6 +187,13 @@ import java.util.ListIterator;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
+
+//Audio support from Java
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 // video export
 import com.hamoid.VideoExport;
@@ -256,7 +267,8 @@ AudioOutput audioOut;           // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 float sampleRate = 44100;       // target audio engine rate used to configure audioOut
 float fileSampleRate;           // sample rate of most recently opened file (before resampling)
-float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
+float bufferSampleRate;         // sample rate of playBuffer: fileSampleRate when not resampled, audioOut.sampleRate() when resampled
+boolean doResample = true;      // if true, resample audio from files whose sampling rate != audioOut.sampleRate()
 float[] audioSignal;            // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;  // a buffer for playing the audio signal
 int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
@@ -943,6 +955,12 @@ public void parseKey(char key, int keyCode) {
       syncGuiFromConfig();
     }
     break;
+  case 's': // save display image to a PNG file
+    saveToImage();
+    break;
+  case 'S': // save audio buffer to a .wav file
+    saveToAudio();
+    break;
   case 'x': // delete the current active brush shape or the oldest brush shape
     if (hoverBrush != null) {
       removeHoverBrush();
@@ -984,6 +1002,8 @@ public void showHelp() {
   println(" * Press 'o' to open an audio file.");
   println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
   println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
+  println(" * Press 's' to save display image to a PNG file.");
+  println(" * Press 'S' to save audio buffer to a .wav file.");
   println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
   println(" * Press 'X' to delete the most recent brush shape.");
   println(" * Press 'h' or 'H' to show help message.");

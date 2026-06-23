@@ -142,8 +142,8 @@ public void fileSelected(File selectedFile) {
  * Attempts to load audio data from a selected file into playBuffer, then
  * calls writeAudioToImage() to transcode audio data and write it to mapImage
  *
- * As in most PixelAudio examples, we provide built-in resampling of audio data
- * from the file to match the sampling rate of the buffer to audioOut.sampleRate().
+ * If doResample is true, resamples files whose sample rate differs from
+ * the current audio output.
  *
  * @param audFile    an audio file
  */
