@@ -166,8 +166,6 @@ import com.hamoid.*;
  * Press 'Y' to toggle raindrop point events while windowing.
  * </pre>
  * 
- * REVISIONS
- * 
  * 
  * 
  */
@@ -817,7 +815,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 			return;
 		}
 		// click outside any brush is handled here
-		audioMouseClick(mouseX, mouseY);
+		handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 	}
 
 		
@@ -894,7 +892,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 				}
 			}
 			else {
-				audioMouseClick(mouseX, mouseY);
+				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 			}
 			break;
 		case '1': // set brushstroke under cursor to PathMode ALL_POINTS
@@ -2023,16 +2021,6 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	            .build();
 	}
 		
-	/**
-	 * Handles mouse clicks that happen outside a brushstroke.
-	 * 
-	 * @param x    x-coordinate of mouse click
-	 * @param y    y-coordinate of mouse click
-	 */
-	public void audioMouseClick(int x, int y) {
-		int durationMs = handleClickOutsideBrush(x, y);
-	}
-	
     // *** WindowedBuffer support *** //
 	/**
      * Point clicks are mouse location, but the initial samplePos is the 
