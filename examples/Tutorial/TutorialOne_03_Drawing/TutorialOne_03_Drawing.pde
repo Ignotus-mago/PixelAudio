@@ -864,7 +864,7 @@ public void mouseClicked() {
     return;
   }
   // click outside any brush is handled here
-  audioMouseClick(mouseX, mouseY);
+  handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 }
 
 
@@ -936,7 +936,7 @@ public void parseKey(char key, int keyCode) {
         scheduleGranularBrushClick(hoverBrush);   // Granular brush clicked event
       }
     } else {
-      audioMouseClick(mouseX, mouseY);
+      handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
     }
     break;
   case '1': // set brushstroke under cursor to PathMode ALL_POINTS

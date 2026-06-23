@@ -426,6 +426,8 @@ public void audioFileSelectedWrite(File selection) {
         fileName += ".wav";
     }
     try {
+        // Save at the current audio output rate. This favors performance use, but the rate
+        // may differ from the originally loaded file if resampling was disabled or applied.
         saveAudioToFile(audioSignal, sampleRate, fileName);
     } catch (IOException e) {
         println("--->> There was an error outputting the audio file " + fileName +", "  + e.getMessage());

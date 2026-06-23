@@ -215,16 +215,6 @@ public void initGranularParams() {
     .build();
 }
 
-/**
- * Handles mouse clicks that happen outside a brushstroke.
- *
- * @param x    x-coordinate of mouse click
- * @param y    y-coordinate of mouse click
- */
-public void audioMouseClick(int x, int y) {
-  int durationMs = handleClickOutsideBrush(x, y);
-}
-
 // *** WindowedBuffer support *** //
 /**
  * Point clicks are mouse location, but the initial samplePos is the
