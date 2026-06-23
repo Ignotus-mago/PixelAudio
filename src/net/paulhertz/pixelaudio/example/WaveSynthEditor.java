@@ -189,7 +189,7 @@ public class WaveSynthEditor extends PApplet {
 	 * width and height. Set renderWidth and renderHeight to the dimensions
 	 * of the PixelMapGen you want render and animate.
 	 */
-	boolean isDesignMode = true;
+	boolean isDesignMode = false;
 	int genWidth = isDesignMode ? 1024 : 512;         // for Hilbert and Moore curves, genWidth must be a power of 2
 	int genHeight = isDesignMode ? 1024 : 512;        // for Hilbert and Moore curves, genHeight must be a power of 2
 	int designWidth = genWidth;

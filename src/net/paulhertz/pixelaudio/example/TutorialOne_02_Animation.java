@@ -832,8 +832,8 @@ public class TutorialOne_02_Animation extends PApplet {
 	 * Attempts to load audio data from a selected file into playBuffer, then
 	 * calls writeAudioToImage() to transcode audio data and write it to mapImage
 	 * 
-	 * As in most PixelAudio examples, we provide built-in resampling of audio data
-	 * from the file to match the sampling rate of the buffer to audioOut.sampleOut().
+	 * If doResample is true, resamples files whose sample rate differs from
+	 * the current audio output.
 	 * 
 	 * @param audFile    an audio file
 	 */
@@ -842,7 +842,7 @@ public class TutorialOne_02_Animation extends PApplet {
 		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
         // load the audio file and resample it if necessary
 		if (fileSampleRate > 0) {
-			if (fileSampleRate != audioOut.sampleRate()) {
+			if (fileSampleRate != audioOut.sampleRate() && doResample) {
 				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
 				buff.setChannel(0, resampled);

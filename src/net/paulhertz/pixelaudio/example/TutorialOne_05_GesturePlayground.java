@@ -1,6 +1,8 @@
 package net.paulhertz.pixelaudio.example;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,6 +13,11 @@ import java.util.ListIterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import processing.core.PApplet;
 import processing.core.PImage;
@@ -217,6 +224,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'o' to open an audio file.
  * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
+ * Press 's' to save display image to a PNG file.
+ * Press 'S' to save audio buffer to a .wav file.
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
  * Press 'h' or 'H' to print help.
@@ -283,7 +292,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset
 	float sampleRate = 44100;       // target audio engine rate used to configure audioOut
 	float fileSampleRate;           // sample rate of most recently opened file (before resampling)
-	float bufferSampleRate;         // sample rate of playBuffer, usually == audioOut.sampleRate()
+	float bufferSampleRate;         // sample rate of playBuffer: fileSampleRate when not resampled, audioOut.sampleRate() when resampled
+	boolean doResample = true;      // if true, resample audio from files whose sampling rate != audioOut.sampleRate()
 	float[] audioSignal;			// the audio signal as an array of floats
 	MultiChannelBuffer playBuffer;	// a buffer for playing the audio signal
 	int samplePos;                  // an index into the audio signal, selected by a mouse click on the display image
@@ -995,6 +1005,12 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 				syncGuiFromConfig();
 			}
 			break;
+		case 's': // save display image to a PNG file
+			saveToImage();
+			break;
+		case 'S': // save audio buffer to a .wav file
+			saveToAudio();
+			break;
 		case 'x': // delete the current active brush shape or the oldest brush shape
 			if (hoverBrush != null) {
 				removeHoverBrush();
@@ -1036,6 +1052,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		println(" * Press 'o' to open an audio file.");
 		println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
+		println(" * Press 's' to save display image to a PNG file.");
+		println(" * Press 'S' to save audio buffer to a .wav file.");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
 		println(" * Press 'h' or 'H' to show help message.");
@@ -1178,7 +1196,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	/**
 	 * Attempts to load audio data from a selected file into playBuffer, then calls
 	 * writeAudioToImage() to transcode audio data and write it to mapImage.
-	 * Resamples files that are recorded with a different sample rate than the current audio output.
+	 * If doResample is true, resamples files whose sample rate differs from the current audio output.
 	 * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
 	 * 
 	 * @param audFile    an audio file
@@ -1187,7 +1205,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
 		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
 		if (fileSampleRate > 0) {
-			if (fileSampleRate != audioOut.sampleRate()) {
+			if (fileSampleRate != audioOut.sampleRate() && doResample) {
 				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
 				buff.setChannel(0, resampled);
@@ -1401,7 +1419,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
-	 * @param sig       an target array of float in audio format 
+	 * @param sig       a target array of float in audio format
 	 * @param chan      a color channel
 	 * @param shift     number of indices to shift 
 	 */
@@ -1444,6 +1462,97 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	    mapImage.loadPixels();
 	    mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
 	    mapImage.updatePixels();
+	}
+
+	/**
+	 * Calls Processing's selectOutput method to start the process of saving
+	 * the current audio signal to a .wav file.
+	 */
+	public void saveToAudio() {
+		// File folderToStartFrom = new File(dataPath("") + "/");
+		// selectOutput("Select an audio file to write to:", "audioFileSelectedWrite", folderToStartFrom);
+		selectOutput("Select an audio file to write to:", "audioFileSelectedWrite");
+	}
+
+	/**
+	 * @param selection    a File to write as audio
+	 */
+	public void audioFileSelectedWrite(File selection) {
+		if (selection == null) {
+			println("Window was closed or the user hit cancel.");
+			return;
+		}
+		String fileName = selection.getAbsolutePath();
+		if (selection.getName().indexOf(".wav") != selection.getName().length() - 4) {
+			fileName += ".wav";
+		}
+		try {
+			// Save at the current audio output rate. This favors performance use, but the rate
+			// may differ from the originally loaded file if resampling was disabled or applied.
+			saveAudioToFile(audioSignal, sampleRate, fileName);
+		}
+		catch (IOException e) {
+			println("--->> There was an error outputting the audio file " + fileName +", "  + e.getMessage());
+		}
+		catch (UnsupportedAudioFileException e) {
+			println("--->> The file format is unsupported " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Saves audio data to 16-bit integer PCM format, which Processing can also open.
+	 * This same method can be called as a static method in AudioUtility.
+	 *
+	 * @param samples       an array of floats in the audio range (-1.0f, 1.0f)
+	 * @param sampleRate    audio sample rate for the file
+	 * @param fileName      name of the file to save to
+	 * @throws IOException  an Exception you'll need to handle to call this method
+	 * @throws UnsupportedAudioFileException    another Exception
+	 */
+	public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
+		throws IOException, UnsupportedAudioFileException {
+		// Convert samples from float to 16-bit PCM
+		byte[] audioBytes = new byte[samples.length * 2];
+		int index = 0;
+		for (float sample : samples) {
+			// Scale sample to 16-bit signed integer
+			int intSample = (int) (sample * 32767);
+			// Convert to bytes
+			audioBytes[index++] = (byte) (intSample & 0xFF);
+			audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
+		}
+		// Create an AudioInputStream
+		ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+		AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+		AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
+		// Save the AudioInputStream to a WAV file
+		File outFile = new File(fileName);
+		AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
+	}
+
+	/**
+	 * Calls Processing's selectOutput method to start the process of saving
+	 * the mapImage (the offscreen copy of the display image) to a .png file.
+	 */
+	public void saveToImage() {
+		// File folderToStartFrom = new File(dataPath(""));
+		selectOutput("Select an image file to write to:", "imageFileSelectedWrite");
+	}
+
+	public void imageFileSelectedWrite(File selection) {
+		if (selection == null) {
+			println("Window was closed or the user hit cancel.");
+			return;
+		}
+		String fileName = selection.getAbsolutePath();
+		if (selection.getName().indexOf(".png") != selection.getName().length() - 4) {
+			fileName += ".png";
+		}
+		saveImageToFile(mapImage, fileName);
+	}
+
+	public void saveImageToFile(PImage img, String fileName) {
+		img.save(fileName);
 	}
 	
 	/*----------------------------------------------------------------*/
