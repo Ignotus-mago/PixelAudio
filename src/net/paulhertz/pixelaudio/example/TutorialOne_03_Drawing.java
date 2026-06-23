@@ -374,8 +374,8 @@ public class TutorialOne_03_Drawing extends PApplet {
     String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
     int presetIndex = envPresets.length - 1;    // current preset index
     float overlapFactor = 3.0f;     // envelope overlap
-    int envMinDurationMs = 40;        // min envelope duration, milliseconds
-    int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
+    int envMinDurationMs = 40;      // min envelope duration, milliseconds
+    int envMaxDurationMs = 1280;    // max envelope duration, milliseconds
     
     // Sampler Instrument setup
 	int samplelen;                  // calculated sample synth note length, samples
@@ -1127,20 +1127,8 @@ public class TutorialOne_03_Drawing extends PApplet {
 			saveToAudio();
 			break;
 		case 'w': // write the image HSB Brightness channel to the audio buffer as transcoded sample values 
-			// TODO refactor with loadImageFile() and loadAudioFile() code
-			// prepare to copy image data to audio variables
-			// resize the buffer to mapSize, if necessary -- signal will not be overwritten
-			if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-			audioSignal = playBuffer.getChannel(0);
-			// transcode mapImage brightness channel in HSB color space to audio sample values
-			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-			commitMapImageToBaseImage();
-			// now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-			updateAudioChain(audioSignal);
+			commitMapImageToAudio();
 			println("--->> Wrote image to audio as audio data.");
-		    // load the buffer of our PASamplerInstrument (it will use a copy)
-			ensureSamplerReady();
-			ensureGranularReady();
 			break;
 		case 'W': // write the audio buffer samples to the image as color values
 			renderAudioToMapImage(chan, totalShift);
@@ -1328,158 +1316,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 			mapImage.updatePixels();
 		}
 	}
-	
-	
-	
-// TODO DELETE SECTION 	
-	
-//	
-//	// ------------- Granular Schedule Optimization ------------- //	
-//	
-//	// It will be difficult to optimize scheduling in TutorialOne_03_Drawing: 
-//	// we rely on GestureScheduleBuilder, which is not introduced until GesturePlayground. 
-//	public void optimizeActiveBrush(float alpha) {
-//		if (activeBrush == null) return;
-//		if (activeBrush.output() != BrushOutput.GRANULAR) {
-//			println("-- optimization only applies to Granular brushes. Select a granular brush.");
-//			return;
-//		}
-//
-//		GestureSchedule sched = getScheduleForBrush(activeBrush);
-//		int N = sched.points.size();
-//
-//		float[] times = sched.timesMs;
-//		float t0 = times[0];
-//		float t1 = times[times.length - 1];
-//		float tMs = Math.max(0f, t1 - t0);
-//
-//		// hopSample, granSamples, sampleRate, (ArrayList<PVector>) schedule.points
-//		// are easily obtained or built-in variables
-//
-//		float S = PACurveUtility.pathLength(sched.points);
-//		float Tsec = sched.durationMs() / 1000f;
-//		float hsec = hopSamples / audioOut.sampleRate();
-//		float dHop = (S / Tsec) * hsec;          // pixels per hop
-//		float targetSpacingPx = dHop * alpha;    // or 0.75 * dHop, etc.
-//
-//		StringBuffer info = new StringBuffer();
-//		int optGrainCount = calcGranularOptHints(
-//				"activeBrush",
-//				N,
-//				tMs,
-//				hopSamples,
-//				granSamples,
-//				audioOut.sampleRate(),
-//				(ArrayList<PVector>) sched.points,
-//				targetSpacingPx,
-//				1.0f,    // proportion of granular window
-//				0.25f,   // proportion of hop between windows
-//				info
-//				);
-//		println(info.toString());
-//
-//	}
-//
-//	/**
-//	 * Calculate optimal configuration settings for a granular brush. 
-//	 * 
-//	 * @return optimal number of samples if time duration is kept as is
-//	 */
-//	public int calcGranularOptHints(
-//			String tag,
-//			int N, float Tms,
-//			int hopSamples, int grainLenSamples,
-//			float sr,
-//			List<PVector> scheduledPoints,   // the list you will actually schedule
-//			float targetSpacingPx, float wt, float ws,
-//			StringBuffer sb
-//			) {
-//		// ---- GUI ranges ----
-//		final int   RESAMPLE_MIN = 2,    RESAMPLE_MAX = 2048;
-//		final float DUR_MIN_MS   = 50f,  DUR_MAX_MS   = 16000f; // bump from 10000 -> 16000 if desired
-//
-//		// Path length in px
-//		float S = PACurveUtility.pathLength(scheduledPoints);
-//
-//		// Guard rails
-//		N = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, N));
-//		Tms = Math.max(DUR_MIN_MS, Math.min(DUR_MAX_MS, Tms));
-//
-//		float T = Math.max(0.001f, Tms / 1000f);
-//		float h = hopSamples / sr;        // seconds
-//		float hopMs = 1000f * h;
-//
-//		int Nm1 = Math.max(1, N - 1);
-//		float dtMs = Tms / Nm1;
-//		float r = dtMs / hopMs;           // dt/hop ratio
-//		float dsPx = (S > 0 ? S / Nm1 : Float.NaN);
-//
-//		// Time-opt formulas
-//		float ToptRawMs = 1000f * (Nm1 * h);
-//		int NoptRaw = 1 + Math.max(1, Math.round((T * sr) / hopSamples));
-//
-//		// Clamp to widget ranges
-//		float ToptMs = Math.max(DUR_MIN_MS, Math.min(DUR_MAX_MS, ToptRawMs));
-//		int Nopt = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, NoptRaw));
-//
-//		// Compromise N* (time+space)
-//		int NstarRaw = -1; 
-//		int Nstar = -1;
-//		if (S > 0 && targetSpacingPx > 0 && (wt > 0 || ws > 0)) {
-//			float numer = wt * T * T + ws * S * S;
-//			float denom = wt * T * h + ws * S * targetSpacingPx;
-//			if (denom > 1e-9f) {
-//				float xStar = numer / denom; // x = N-1
-//				NstarRaw = 1 + Math.max(1, Math.round(xStar));
-//				Nstar = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, NstarRaw));
-//			}
-//		}
-//
-//		float overlapPct = Float.NaN;
-//		if (grainLenSamples > 0) overlapPct = 100f * (1f - hopSamples / (float)grainLenSamples);
-//
-//		String densityWord = (r > 1.25f) ? "SPARSE" : (r < 0.80f ? "DENSE" : "OK");
-//
-//		// construct informative StringBuffer
-//		sb.append("\n---- Granular OptHints" + (tag == null ? "" : " [" + tag + "]") + " ----\n");
-//		sb.append("Current: N=" + N + "  Tms=" + fmt(Tms, 2) +
-//				"  hop=" + hopSamples + " samp (" + fmt(hopMs, 3) + " ms)" +
-//				"  grain=" + grainLenSamples + " samp  sr=" + fmt(sr, 1) +"\n");
-//		sb.append("Timing:  avg dt≈" + fmt(dtMs, 3) + " ms  dt/hop≈" + fmt(r, 2) + "  => " + densityWord +"\n");
-//		if (!Float.isNaN(dsPx)) sb.append("Space:   pathLen≈" + fmt(S, 2) + " px  avg ds≈" + fmt(dsPx, 3) + " px");
-//		if (!Float.isNaN(overlapPct)) sb.append("Overlap: ≈" + fmt(overlapPct, 1) + "% (1 - H/L)\n");
-//		sb.append("If keep N:  Topt≈" + fmt(ToptRawMs, 2) + " ms" +
-//				(ToptMs != ToptRawMs ? "  (clamped→" + fmt(ToptMs, 2) + ")" : ""));
-//		sb.append("\n");
-//		sb.append("If keep T:  Nopt≈" + NoptRaw +
-//				(Nopt != NoptRaw ? "  (clamped→" + Nopt + ")" : ""));
-//		sb.append("\n");
-//		if (Nstar > 0) {
-//			sb.append("Compromise (wt=" + fmt(wt,3) + ", ws=" + fmt(ws,3) + ", d0=" + fmt(targetSpacingPx,2) + "px): N*≈" +
-//					NstarRaw + (Nstar != NstarRaw ? " (clamped→" + Nstar + ")" : ""));
-//			sb.append("\n");
-//		}
-//		// Extra guidance when clamped
-//		if (NoptRaw > RESAMPLE_MAX && r > 1.25f) {
-//			sb.append("Note: Nopt exceeds max; likely sparse even at max resample. Consider CURVE_POINTS, shorter T, or smaller hop.\n");
-//		}
-//		if (ToptRawMs > DUR_MAX_MS && r > 1.25f) {
-//			sb.append("Note: Topt exceeds max; consider raising Duration max (you mentioned 16000ms), or increase N / use CURVE_POINTS.\n");
-//		}
-//		sb.append("-------------------------------------------");
-//
-//		// optimal number of samples if time is kept as is
-//		return Nstar;
-//	}
-//
-//	static String fmt(float v, int decimals) {
-//		return String.format("%." + decimals + "f", v);
-//	}
-//	
-	
-	
-	
-
 	
 	
 	/*----------------------------------------------------------------*/
@@ -1702,16 +1538,11 @@ public class TutorialOne_03_Drawing extends PApplet {
 			mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
 		}
 		if (isLoadToBoth) {
-			// create a new array for the audio signal
-			float[] sig = new float[mapper.getSize()];
-			audioSignal = sig;
-			// write transcoded pixel data from HSB Brightness channel to audioSignal
-			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-			// update all dependent audio data
-			updateAudioChain(sig);
-			// update baseImage from mapImage
+			commitMapImageToAudio();
 		}
-		commitMapImageToBaseImage();
+		else {
+			commitMapImageToBaseImage();
+		}
 	}
 
 	/**
@@ -1841,6 +1672,14 @@ public class TutorialOne_03_Drawing extends PApplet {
 		writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
 	}
 	
+	public void commitMapImageToAudio() {
+		float[] sig = new float[mapper.getSize()];
+		audioSignal = sig;
+		renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+		updateAudioChain(sig);
+		commitMapImageToBaseImage();
+	}
+
 	/**
 	 * Writes the mapImage, which may change with animation, to the baseImage, a reference image
 	 * that usually only changes when a new file is loaded.

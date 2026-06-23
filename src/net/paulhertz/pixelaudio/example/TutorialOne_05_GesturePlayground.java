@@ -1282,24 +1282,11 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
 		}
 		if (isLoadToBoth) {
-		    // prepare to copy image data to audio variables
-		    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-		    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-		    audioSignal = playBuffer.getChannel(0);
-		    renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-		    // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-		    playBuffer.setChannel(0, audioSignal);
-		    audioLength = audioSignal.length;
-		    // load the buffer of our PASamplerInstrument (created in initAudio() on starting the sketch)
-		    ensureSamplerReady();
-		    // because playBuffer is used by synth and pool and should not change, while audioSignal changes
-		    // when the image animates, we don't want playBuffer and audioSignal to point to the same array
-		    // copy channel 0 of the buffer into audioSignal, truncated or padded to fit mapSize
-		    audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
-		    granSignal = audioSignal;
-		    audioLength = audioSignal.length;
+			commitMapImageToAudio();
 		}
-		commitMapImageToBaseImage();
+		else {
+			commitMapImageToBaseImage();
+		}
 	}
 
 	/**
@@ -1436,6 +1423,15 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
 		writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
 	}
+
+	public void commitMapImageToAudio() {
+		float[] sig = new float[mapper.getSize()];
+		audioSignal = sig;
+		renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+		updateAudioChain(sig);
+		commitMapImageToBaseImage();
+	}
+
 	/**
 	 * Writes the mapImage, which may change with animation, to the baseImage, a reference image
 	 * that usually only changes when a new file is loaded.
