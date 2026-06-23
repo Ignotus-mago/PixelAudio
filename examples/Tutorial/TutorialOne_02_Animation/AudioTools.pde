@@ -37,7 +37,7 @@ public void initAudio() {
 void ensureSamplerReady() {
   if (synth == null) {
     synth = new PASamplerInstrument(playBuffer, audioOut.sampleRate(), 8, audioOut, defaultEnv);
-    println("-- initilialized audio sampler synth");
+    println("-- initialized audio sampler synth");
     // set the synth gain with a linear value derived from a dB value
     synth.setGain(AudioUtility.dbToLinear(samplerGain));
   }

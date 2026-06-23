@@ -143,7 +143,7 @@ public void fileSelected(File selectedFile) {
  * calls writeAudioToImage() to transcode audio data and write it to mapImage
  *
  * As in most PixelAudio examples, we provide built-in resampling of audio data
- * from the file to match the sampling rate of the buffer to audioOut.sampleOut().
+ * from the file to match the sampling rate of the buffer to audioOut.sampleRate().
  *
  * @param audFile    an audio file
  */
@@ -152,7 +152,7 @@ public void loadAudioFile(File audFile) {
   fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
   // load the audio file and resample it if necessary
   if (fileSampleRate > 0) {
-    if (fileSampleRate != audioOut.sampleRate()) {
+    if (fileSampleRate != audioOut.sampleRate() && doResample) {
       float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
       buff.setBufferSize(resampled.length);
       buff.setChannel(0, resampled);
@@ -170,7 +170,7 @@ public void loadAudioFile(File audFile) {
     return;
   }
   // update dependent audio sources
-  updateAudioChain(buff.getChannel(0), fileSampleRate);
+  updateAudioChain(buff.getChannel(0), bufferSampleRate);
   // automatically write the signal to mapImage -- this will change in later tutorials
   renderAudioToMapImage(chan, 0);
   commitMapImageToBaseImage();
@@ -256,7 +256,7 @@ public void loadImageFile(File imgFile) {
  *
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format
+ * @param sig       a target array of float in audio format
  * @param chan      a color channel
  * @param shift     number of indices to shift
  */
@@ -310,6 +310,8 @@ public void audioFileSelectedWrite(File selection) {
     fileName += ".wav";
   }
   try {
+    // Save at the current audio output rate. This favors performance use, but the rate
+    // may differ from the originally loaded file if resampling was disabled or applied.
     saveAudioToFile(audioSignal, sampleRate, fileName);
   }
   catch (IOException e) {

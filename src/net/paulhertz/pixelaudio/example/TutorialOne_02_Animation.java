@@ -861,7 +861,7 @@ public class TutorialOne_02_Animation extends PApplet {
 			return;
 		}
 		// update dependent audio sources
-		updateAudioChain(buff.getChannel(0), fileSampleRate);
+		updateAudioChain(buff.getChannel(0), bufferSampleRate);
 		// automatically write the signal to mapImage -- this will change in later tutorials
         renderAudioToMapImage(chan, 0);
         commitMapImageToBaseImage();

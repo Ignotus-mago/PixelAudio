@@ -37,8 +37,8 @@
  * the pixels in the display image along the Signal Path. This is a simple way
  * to create an animation that is directly tied to the audio data. When the
  * image we are animating is a representation of audio data or some other sort
- * of periodic pattern, pixel-shfting can result in hypnotic animated patterns.
- * This is demonstrated by the the WaveSynth class and the WaveSynthEditor and
+ * of periodic pattern, pixel-shifting can result in hypnotic animated patterns.
+ * This is demonstrated by the WaveSynth class and the WaveSynthEditor and
  * ArgosyMixer sample sketches. When the pixels in the display image are
  * shifted, the correspondence between pixel coordinates and audio buffer index
  * changes. This is particularly evident when the image is a visualization of
@@ -49,7 +49,7 @@
  *
  * Pixel shifting animation works by moving the pixels in the display image
  * mapImage once every frame by the number of pixels specified by
- * the variable shift, and tracking the accummulated shifting with
+ * the variable shift, and tracking the accumulated shifting with
  * another variable, totalShift. The audio buffer itself is never
  * shifted, nor is the canonic image baseImage. We just use
  * totalShift to determine where to locate pixels or audio samples. The shifting
@@ -104,8 +104,8 @@
  *   Press ' ' (spacebar) to play sample at current mouse position.
  *   Press 'a' to turn animation on or off.
  *   Press 'A' to change animation direction.
- *   Press 'f' to rotate pixels by shift value .
- *   Press 'F' to rotate pixels by shift value .
+ *   Press 'f' to rotate pixels by shift value.
+ *   Press 'F' to rotate pixels by shift value.
  *   Press 'm' to play audio events synced to audio sample rate and video frame rate.
  *   Press 'c' to apply color from image file to display image (mapImage) only.
  *   Press 'C' to apply color from image file to base image and map image.
@@ -467,7 +467,7 @@ public void mouseReleased() {
  * By moving key event handling outside the built-in keyPressed method,
  * we make it possible to post key commands without an actual key event.
  * Methods and interfaces and even other threads can call parseKey().
- * This opens up many possibilities and a some dangers, too.
+ * This opens up many possibilities and some dangers, too.
  *
  * @param key
  * @param keyCode
@@ -580,8 +580,8 @@ public void showHelp() {
   println(" * Press ' ' (spacebar) to play sample at current mouse position.");
   println(" * Press 'a' to turn animation on or off.");
   println(" * Press 'A' to change animation direction.");
-  println(" * Press 'f' to rotate pixels by shift value .");
-  println(" * Press 'F' to rotate pixels by shift value .");
+  println(" * Press 'f' to rotate pixels by shift value.");
+  println(" * Press 'F' to rotate pixels by shift value.");
   println(" * Press 'm' to play audio events synced to audio sample rate and video frame rate.");
   println(" * Press 'c' to apply color from image file to display image (mapImage) only.");
   println(" * Press 'C' to apply color from image file to base image and map image.");
@@ -604,7 +604,7 @@ public void showHelp() {
  * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
  *
  * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
+ * @param graySource     a target array of RGB data from which to obtain brightness values
  * @param lut            a lookup table, must be the same size as colorSource and graySource
  * @return the graySource array of RGB values, with hue and saturation values changed
  * @throws IllegalArgumentException if array arguments are null or if they are not the same length
@@ -618,7 +618,7 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
  * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
  *
  * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
+ * @param graySource     a target array of RGB data from which to obtain brightness values
  * @param lut            a lookup table, must be the same size as colorSource and graySource
  * @param pixelShift     total amount of pixel shifting in the image
  * @return the graySource array of RGB values, with hue and saturation values changed
