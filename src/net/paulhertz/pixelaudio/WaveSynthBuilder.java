@@ -528,13 +528,15 @@ public class WaveSynthBuilder {
 	 * @param isStrict     if true, return false if no WaveSynth header is found in the JSON file
 	 * @return             true if the File 
 	 */
-	public static boolean getJSONFromFile(File selection, JSONObject json, WaveSynth synth, boolean isStrict) {
+	public static boolean getJSONFromFile(File selection, WaveSynth synth, boolean isStrict) {
 		if (selection == null) {
 			System.out.println("Window was closed or the user hit cancel.");
 			return false;
 		}
-		// println("User selected " + selection.getAbsolutePath());
-		json = PApplet.loadJSONObject(selection);
+		if (synth == null) {
+			throw new IllegalArgumentException("WaveSynth object must be non-null");
+		}
+		JSONObject json = PApplet.loadJSONObject(selection);
 		boolean goodHeader = checkJSONHeader(json, "PXAU", "WSYN");
 		if (goodHeader) {
 			System.out.println("--->> JSON file contains WaveSynthEditor data. It should load correctly.");
@@ -554,7 +556,7 @@ public class WaveSynthBuilder {
 	
 	// overloaded version of getJSONFromFile() that defaults to isStrict = false
 	public static boolean getJSONFromFile(File selection, JSONObject json, WaveSynth synth) {
-		return getJSONFromFile(selection, json, synth, false);
+		return getJSONFromFile(selection, synth, false);
 	}
 
 	/**
@@ -627,7 +629,6 @@ public class WaveSynthBuilder {
 			waveDataList.add(wd);
 		}
 		synth.setWaveDataList(waveDataList);
-		synth.prepareAnimation();
 		synth.renderFrame(0);
 	}
 
@@ -640,21 +641,21 @@ public class WaveSynthBuilder {
 		StringBuffer sb = new StringBuffer();
 		String fname = path.getFileName().toString();
 		sb.append("\n--------=====>>> Current WaveSynth instance for file " + fname + " <<<=====--------\n");
-		sb.append("Animation steps: " + synth.getAnimSteps());
+		sb.append("Animation steps: " + synth.getAnimSteps() +"\n");
 		// println("Stop frame: "+ waveAnimal.getAnimSteps());
-		sb.append("gain: " + synth.getGain());
-		sb.append("gamma: " + synth.getGamma());
+		sb.append("gain: " + synth.getGain() +"\n");
+		sb.append("gamma: " + synth.getGamma() +"\n");
 		if (synth.isScaleHisto()) {
 			sb.append("scaleHisto: " + synth.isScaleHisto());
-			sb.append("histoLow: " + synth.getHistoLow());
-			sb.append("histoHigh: " + synth.getHistoHigh());
+			sb.append("histoLow: " + synth.getHistoLow() +", ");
+			sb.append("histoHigh: " + synth.getHistoHigh() +"\n");
 		}
-		sb.append(fname);
-		sb.append("video filename: " + synth.getVideoFilename());
+		sb.append("filename: " + fname +", ");
+		sb.append("video filename: " + synth.getVideoFilename() +"\n");
 		// println("WaveData list for: "+ videoFilename);
 		for (int i = 0; i < synth.waveDataList.size(); i++) {
 			WaveData wd = synth.waveDataList.get(i);
-			sb.append("  " + (i + 1) + ":: " + wd.toString());
+			sb.append("  " + (i + 1) + ":: " + wd.toString() +"\n");
 		}
 		sb.append("comments: " + synth.getComments() +"\n");
 		return sb.toString();
@@ -666,20 +667,23 @@ public class WaveSynthBuilder {
 	 * @param selection		a File object that represents the file to which the JSON data will be saved
 	 * @param synth			the WaveSynth whose settings and WaveData list will be saved to the JSON file
 	 */
-	public static void saveWaveSynthJSON(PApplet app, File selection, WaveSynth synth) {
+	public static String saveWaveSynthJSON(PApplet app, File selection, WaveSynth synth) {
 		if (selection == null) {
 			System.out.println("Window was closed or the user hit cancel.");
-			return;
+			return "";
+		}
+		if (synth == null) {
+			throw new IllegalArgumentException("WaveSynth object must be non-null");
 		}
 		System.out.println("User selected " + selection.getAbsolutePath());
-		String currentFileName;
+		String jsonFileName;
 		// Do we have a .json at the end?
 		if (selection.getName().length() < 5
 				|| selection.getName().indexOf(".json") != selection.getName().length() - 5) {
 			// problem missing ".json"
-			currentFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
+			jsonFileName = selection.getAbsolutePath() + ".json"; // very rough approach...
 		} else {
-			currentFileName = selection.getAbsolutePath();
+			jsonFileName = selection.getAbsolutePath();
 		}
 		// put WaveData objects into an array
 		JSONArray waveDataArray = new JSONArray();
@@ -732,7 +736,8 @@ public class WaveSynthBuilder {
 		stateData.setFloat("histoHigh", synth.histoHigh);
 		stateData.setFloat("histoLow", synth.histoLow);
 		stateData.setJSONArray("waves", waveDataArray);
-		app.saveJSONObject(stateData, currentFileName);
+		app.saveJSONObject(stateData, jsonFileName);
+		return jsonFileName;
 	}
 	
 	/**
