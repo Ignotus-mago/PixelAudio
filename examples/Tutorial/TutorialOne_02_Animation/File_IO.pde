@@ -233,15 +233,7 @@ public void loadImageFile(File imgFile) {
     mixImage.updatePixels();
     mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
   }
-  // create a new array for the audio signal
-  float[] sig = new float[mapper.getSize()];
-  audioSignal = sig;
-  // write transcoded pixel data from HSB Brightness channel to audioSignal
-  renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-  // update all dependent audio data
-  updateAudioChain(sig);
-  // update baseImage from mapImage
-  commitMapImageToBaseImage();
+  commitMapImageToAudio();
   // uncomment next line to get automatic color overlay update on image file load
   // applyColorMapToDisplay(true);
 }
@@ -272,6 +264,14 @@ public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, 
  */
 public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
   writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
+}
+
+public void commitMapImageToAudio() {
+  float[] sig = new float[mapper.getSize()];
+  audioSignal = sig;
+  renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+  updateAudioChain(sig);
+  commitMapImageToBaseImage();
 }
 
 public void commitMapImageToBaseImage() {

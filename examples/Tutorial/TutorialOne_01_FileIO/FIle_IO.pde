@@ -211,13 +211,7 @@ public void loadImageFile(File imgFile) {
     mixImage.updatePixels();
     mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
   }
-  // initialize a new buffer for audioSignal
-  float[] sig = new float[mapper.getSize()];
-  audioSignal = sig;
-  // render the HSB brightness channel (ChannelNames.L) to the audio signal as transcoded samples
-  renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-  // update all audio data structures that depend on audioSignal
-  updateAudioChain(sig);
+  commitMapImageToAudio();
 }
 
 /**
@@ -244,6 +238,13 @@ public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, 
  */
 public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
   writeImageToAudio(mapImage, mapper, audioSignal, chan);
+}
+
+public void commitMapImageToAudio() {
+  float[] sig = new float[mapper.getSize()];
+  audioSignal = sig;
+  renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+  updateAudioChain(sig);
 }
 
 

@@ -1043,20 +1043,8 @@ public void parseKey(char key, int keyCode) {
     saveToAudio();
     break;
   case 'w': // write the image HSB Brightness channel to the audio buffer as transcoded sample values
-    // TODO refactor with loadImageFile() and loadAudioFile() code
-    // prepare to copy image data to audio variables
-    // resize the buffer to mapSize, if necessary -- signal will not be overwritten
-    if (playBuffer.getBufferSize() != mapper.getSize()) playBuffer.setBufferSize(mapper.getSize());
-    audioSignal = playBuffer.getChannel(0);
-    // transcode mapImage brightness channel in HSB color space to audio sample values
-    renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-    commitMapImageToBaseImage();
-    // now that the image data has been written to audioSignal, set playBuffer channel 0 to the new audio data
-    updateAudioChain(audioSignal);
+    commitMapImageToAudio();
     println("--->> Wrote image to audio as audio data.");
-    // load the buffer of our PASamplerInstrument (it will use a copy)
-    ensureSamplerReady();
-    ensureGranularReady();
     break;
   case 'W': // write the audio buffer samples to the image as color values
     renderAudioToMapImage(chan, totalShift);
