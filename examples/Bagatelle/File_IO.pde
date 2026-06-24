@@ -60,7 +60,7 @@ public void fileSelected(File selectedFile) {
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
  * writeAudioToImage() to transcode audio data and write it to mapImage.
- * Resamples files that are recorded with a different sample rate than the current audio output.
+ * If doResample is true, resamples files whose sample rate differs from the current audio output.
  * If you want to load the image file and audio file separately, comment out writeAudioToImage().
  *
  * @param audFile    an audio file
@@ -73,9 +73,9 @@ public void loadAudioFile(File audFile) {
     return;
   }
   float sig[];
-  if (fileSampleRate != audioOut.sampleRate()) {
+  if (fileSampleRate != audioOut.sampleRate() && doResample) {
     sig = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
-    bufferSampleRate = sampleRate;
+    bufferSampleRate = audioOut.sampleRate();
   } else {
     sig = Arrays.copyOf(buff.getChannel(0), buff.getBufferSize());
     bufferSampleRate = fileSampleRate;
@@ -85,7 +85,7 @@ public void loadAudioFile(File audFile) {
     +", buffer sample rate = "+ bufferSampleRate
     +", audio output sample rate = "+ audioOut.sampleRate());
   ensureSamplerReady();
-  updateAudioChain(sig);
+  updateAudioChain(sig, bufferSampleRate);
   if (isLoadToBoth) {
     println("---- loading to both ----");
     writeAudioToImage(audioSignal, mapper, mapImage, chan);
@@ -135,14 +135,10 @@ public void loadImageFile(File imgFile) {
     mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
   }
   if (isLoadToBoth) {
-    float[] sig = new float[mapper.getSize()];
-    // preserve previous signal for possible crossfade / layering
-    float[] prev = audioSignal;
-    audioSignal = sig;
-    renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
-    updateAudioChain(sig);
+    commitMapImageToAudio();
+  } else {
+    commitMapImageToBaseImage();
   }
-  commitMapImageToBaseImage();
   if (applyColorMapOnLoad) applyColorMapToDisplay(true);
 }
 
@@ -216,6 +212,17 @@ public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, 
  */
 public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
   writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
+}
+
+/**
+ * Writes mapImage to the audio chain and makes the displayed image the new base image.
+ */
+public void commitMapImageToAudio() {
+  float[] sig = new float[mapper.getSize()];
+  audioSignal = sig;
+  renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+  updateAudioChain(sig, audioOut.sampleRate());
+  commitMapImageToBaseImage();
 }
 
 /**

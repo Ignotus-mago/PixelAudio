@@ -89,6 +89,7 @@ AudioOutput audioOut;        // line out to sound hardware
 float sampleRate = 48000;         // target audio engine rate used to configure audioOut
 float fileSampleRate;             // sample rate of most recently opened file (before resampling)
 float bufferSampleRate;           // sample rate of playBuffer, usually == audioOut.sampleRate()
+boolean doResample = true;        // if true, resample audio from files whose sampling rate != audioOut.sampleRate()
 float[] audioSignal;        // the audio signal as an array of floats
 MultiChannelBuffer playBuffer;    // a buffer for playing the audio signal
 int samplePos;                    // an index into the audio signal, selected by a mouse click on the display image
