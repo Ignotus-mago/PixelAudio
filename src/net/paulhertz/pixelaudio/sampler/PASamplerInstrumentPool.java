@@ -28,9 +28,6 @@ import java.util.*;
  * Manages a group of PASamplerInstruments sharing the same source buffer
  * and audio output. Provides polyphony management, buffer swapping, and
  * per-instrument voice recycling. 
- * <p>
- * -- TODO Uses a Minim MultiChannelBuffer for its audio sample storage. This could change.
- * </p>
  *
  * <p>
  * Features:
@@ -87,11 +84,6 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
 
     // ------------------------------------------------------------------------
     // Constructors
-    // TODO is there a standard order for constructor arguments?
-    // TODO do we duplicate MultiChannelBuffers supplied to instruments or not? RESOLVED: we do.
-    // If we do it for one PASamplerInstrument*, we should do it for all. PASharedBufferSampler
-    // and PASamplerVoice are not affected by this choice. 
-    //
     // ------------------------------------------------------------------------
 
     /**

@@ -162,7 +162,6 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     /**
      * Play command with all the useful arguments in standard order, overrides PASampler.play().
-     * TODO We plan to make this the only play() method PASharedBufferSampler. 
      */
      @Override
     public synchronized int play(int samplePos, int sampleLen, float amplitude,

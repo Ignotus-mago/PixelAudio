@@ -49,8 +49,6 @@ import ddf.minim.*;
 //video export library
 import com.hamoid.*;
 
-// TODO optimize granular brush 'q' command (NO, not necessary for a demo)
-
 /**
  * Introduces drawing, curve modeling and brushstroke creation, with interactive
  * triggering of audio events using the Sampler and Granular synthesis engines. 
@@ -2334,7 +2332,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 
 	/**
 	 * Entry point for drawing brushstrokes on the screen.
-	 * TODO distinguish brush types by color.
 	 */
 	public void drawBrushShapes() {
 		if (brushes == null || brushes.isEmpty()) return;

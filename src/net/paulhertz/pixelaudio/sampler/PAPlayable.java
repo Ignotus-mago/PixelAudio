@@ -18,7 +18,7 @@
 
 package net.paulhertz.pixelaudio.sampler;
 
-// TODO use in granular engine, too? 
+// TODO use in granular engine, too? NO, granular stages play differently.
 /**
  * Generic interface for anything that can be "played."
  * Provides a minimal playback API plus backward-compatible overloads

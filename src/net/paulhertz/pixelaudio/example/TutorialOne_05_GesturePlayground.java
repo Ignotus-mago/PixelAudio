@@ -48,7 +48,7 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
- * TODO
+ * 
  */
 
 /**
@@ -340,7 +340,6 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	
 	String currentGranStatus = "";
 	
-	// TODO -- ADD FOR REFACTOR  
     public PAGranularInstrumentDirector gDir;   // director of granular events
     public float granularGain = 1.0f;           // gain for a granular gesture event
     public float granularPointGain = 0.9f;      // gain for a granular point event ("granular burst")
@@ -569,7 +568,6 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
 		initImages();                   // load baseImage and mapImage
 		initAudio();                    // set up Minima and our granular and sampling synths
-		// initListener();              // PLACEHOLDER: sample-accurate audio timer -- TODO future implementation
 		initConfig();                   // set up configuration for granular and sampling instruments
 		initDrawing();                  // set up drawing variables
 		initGUI();                      // set up the G4P control window and widgets
@@ -991,7 +989,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		case 'o': // open an audio file
 			chooseFile();
 			break;
-		case 'r': case 'R': // reset synths to defaults -- TODO may be dropped
+		case 'r': case 'R': // reset synths to defaults
 			resetToDefaults(); 
 			break;
 		case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
@@ -1402,7 +1400,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
 	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
 	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
-	 * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync.
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
@@ -1806,7 +1804,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 	}
 	
-	// debugging -- TODO drop in release
+	// debugging -- TODO drop in PROCESSING sketch
 	static void debugIndexHeadroom(float[] buf, int[] startIndices, GestureGranularParams ggp) {
 	    int bufLen = buf.length;
 	    int grainLen = Math.max(1, ggp.grainLengthSamples);
@@ -1841,7 +1839,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	        + " overMaxStart=" + over + "/" + startIndices.length);
 	}
 
-	// debugging -- TODO drop in release
+	// debugging -- TODO drop in PROCESSING sketch
 	static void debugTimesMs(GestureSchedule s) {
 	    int n = s.size();
 	    if (n <= 1 || s.timesMs == null) return;
@@ -2180,7 +2178,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		gConfig.resampleCount = 0;
 		gConfig.targetDurationMs = 0;
 		gConfig.pitchSemitones = 0.0f;
-		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {             // TODO implement complete logic for mode, if mode is PLAY we should be here...
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {  // TODO implement complete logic for mode, what if mode is PLAY_ONLY?
 			SamplerBrush sb = new SamplerBrush(curveMaker, gConfig.copy());
 			this.samplerBrushes.add(sb);                   // add new brush to sampler brush list
 			setActiveBrush(sb, samplerBrushes.size() - 1);
@@ -2409,7 +2407,6 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	//------------- REMOVE BRUSHES -------------//
 	
-	// TODO verify correct action -- active brush is not always getting set
 	
 	/**
 	 * Removes the current active PACurveMaker instance, flagged by a highlighted brush stroke,
@@ -2814,15 +2811,9 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
 		int i = 0;
-		//int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		//int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
-		// we store the point and the current time + time offset, where timesMs[0] == 0
 		for (PVector loc : sched.points) {
 			int x = Math.round(loc.x);
 			int y = Math.round(loc.y);
-			// we can rely on sched for accurate times -- TODO drop in next iteration
-			// int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
-			// int d = (isGesture) ? 200 : durMsFixed;
 			int t = startTime + Math.round(sched.timesMs[i++]);
 			int d = 200;
 			this.grainTimeLocs.add(new TimedLocation(x, y, t, d));

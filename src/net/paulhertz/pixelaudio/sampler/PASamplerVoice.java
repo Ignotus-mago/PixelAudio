@@ -308,15 +308,5 @@ public class PASamplerVoice {
     public void setPlaybackSampleRate(float newRate) {
     	this.playbackSampleRate = newRate;
     }
-    
-    // Utility methods show up in {@link AudioUtility}. TODO adapt this method for AudioUtility.
-    /*
-     *   // worth considering for noise reduction, but the sum call is not supported in Java Arrays
-    public float[] subtractDC(float[] buffer) {
-    	float mean = Arrays.stream(buffer).sum() / buffer.length;
-    	for (int i = 0; i < buffer.length; i++) buffer[i] -= mean;
-    	return buffer;
-    }
-    */
-    
+        
 }

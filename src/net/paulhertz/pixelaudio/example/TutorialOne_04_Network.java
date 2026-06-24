@@ -2438,7 +2438,6 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 
 	/**
 	 * Entry point for drawing brushstrokes on the screen.
-	 * TODO distinguish brush types by color.
 	 */
 	public void drawBrushShapes() {
 		if (brushes == null || brushes.isEmpty()) return;
@@ -2784,17 +2783,6 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	public boolean mouseInPoly(ArrayList<PVector> poly) {
 		return PABezShape.pointInPoly(poly, mouseX, mouseY);
 	}
-
-	
-	/**
-	 * Reinitializes audio and clears event lists.   
-	 * -- TODO drop, this used to be the "emergency off" switch for runaway audio processing
-	 */
-	@Deprecated
-	public void reset() {
-
-	}
-
 
 	/**
 	 * Removes the current active AudioBrushLite instance.

@@ -274,7 +274,6 @@ public class WaveData {
 	}
 	
 	// TODO develop this idea: use waveValue() as the signature method of an interface.
-	// TODO can we precalculate this.freq * mapInc? mapInc is supposedly a constant.
 	// ::::: sample amplitude = sin(initial phase + phase shift + frequency * i * (TWO_PI/n)) :::::
 	// wd.phaseInc = (wd.cycles * TWO_PI)/animSteps; mapInc = TWO_PI / mapSize; 
 	// Instead of incrementing phase at each step, we subtract (frame * phase increment)

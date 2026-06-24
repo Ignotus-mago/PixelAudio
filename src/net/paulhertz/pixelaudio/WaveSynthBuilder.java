@@ -29,7 +29,7 @@ import net.paulhertz.pixelaudio.WaveData.WaveState;
 
 /**
  * Utilities for generating WaveSynth "instruments" and working with WaveSynth data. 
- * TODO piano key methods and semitoneFac are in AudioUtility, maybe access them from here...
+ * TODO piano key methods and semitoneFac are in AudioUtility, refactor to use them
  * 
  */
 public class WaveSynthBuilder {

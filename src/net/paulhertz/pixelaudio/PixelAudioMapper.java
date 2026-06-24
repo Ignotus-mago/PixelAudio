@@ -26,6 +26,9 @@ import java.util.List;
 
 import processing.core.PVector;
 
+/*
+ * TODO unit test suite prior to public release.
+ */
 
 /**
  * <p>

@@ -24,6 +24,7 @@ import java.util.function.DoubleUnaryOperator;
 import processing.core.PVector;
 
 // TODO evaluate for deletion: used very little, but possibly good for future use.
+// KEEP this code.
 
 /**
  *

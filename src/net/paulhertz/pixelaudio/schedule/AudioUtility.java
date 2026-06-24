@@ -31,7 +31,8 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
 
-// TODO add subtractDC() method, etc. 
+// TODO add mix protection methods: level management, dynamic range control
+// soft limiting, overload protection, output conditioning, maybe DC removal
 
 /** 
  * Utility conversions for audio. 

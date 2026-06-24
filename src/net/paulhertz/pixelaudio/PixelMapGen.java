@@ -22,6 +22,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
+/*
+ * TODO all PixelMapGen classes should throw an IllegalArgumentException when validation fails
+ * because of bad input. Errors in LUT formation might throw an IllegalStateException. 
+ */
+
 /**
  *
  * <p>
@@ -170,7 +175,6 @@ public abstract class PixelMapGen {
 	 *                   the index maps {@code pixelMap} and {@code sampleMap} 
 	 */
 	public PixelMapGen(int width, int height, AffineTransformType type) {
-		// TODO throw an exception instead? That's not the usual way of handling errors in Processing, AFAIK.
 		if (!this.validate(width, height)) {
 			System.out.println("Error: Validation failed");
 			return;

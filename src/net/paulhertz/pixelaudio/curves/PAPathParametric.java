@@ -38,6 +38,7 @@ import processing.core.PVector;
  * This preserves any "bunching" of points in high-curvature regions
  * produced by the polygonization.
  */
+@Deprecated
 public final class PAPathParametric {
 
     private final List<PVector> points;

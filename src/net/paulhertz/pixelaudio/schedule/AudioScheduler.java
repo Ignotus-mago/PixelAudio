@@ -53,7 +53,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * block boundaries, you can still use this scheduler for deterministic block timing today, and later
  * upgrade your instrument to accept offsets without changing scheduling code. This is currently the 
  * case with the Sampler instrument as implemented in current example code. 
- * TODO sample-accurate playback of Sampler instrument. 
+ * TODO sample-accurate playback of Sampler instrument, a demo sketch to point to here. 
  * </p>
  */
 public final class AudioScheduler<H> {

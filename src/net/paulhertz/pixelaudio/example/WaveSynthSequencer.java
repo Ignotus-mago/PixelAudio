@@ -22,7 +22,6 @@ import net.paulhertz.pixelaudio.schedule.*;
  * An early example of audio/image sequencing with the WaveSynth color organ, 
  * used for a performance at Experimental Sound Studio, Chicago. 
  * 
- * TODO: Revise to comply with more recent UI features, for example, spacebar to play audio, TAB to animate.
  * 
  * <h2>INSTRUCTIONS FOR PERFORMANCE</h2>
  * <pre>
@@ -46,7 +45,8 @@ import net.paulhertz.pixelaudio.schedule.*;
  * in setup() for details. 
  * 
  * 
- * Press ' ' to start and stop WaveSynth animation.
+ * Press ' ' (spacebar) or click to play audio at the mouse location.
+ * Press TAB to start and stop WaveSynth animation.
  * Press 'o' to open a JSON WaveSynth configuration file.
  * Press 'O' to reload the most recent JSON WaveSynth configuration file.
  * Press 'j' or 'J' to save current WaveSynth configuration to a JSON file.
@@ -284,7 +284,11 @@ public class WaveSynthSequencer extends PApplet {
 
 	public void keyPressed() {
 		switch (key) {
-		case ' ':
+		case ' ': { // trigger audio at current mouse position
+			audioMouseClick(constrain(mouseX, 0, width - 1), constrain(mouseY, 0, height - 1));
+			return;
+		}
+		case '\t':
 			isWaveSynthAnimating = !isWaveSynthAnimating;
 			println(isWaveSynthAnimating ? "Starting animation at frame " + step + " of " + animSteps
 					: "Stopping animation at frame " + step + " of " + animSteps);
@@ -367,7 +371,8 @@ public class WaveSynthSequencer extends PApplet {
 	}
 	
 	public void showHelp() {
-		println(" * Press ' ' to start and stop WaveSynth animation.");
+		println(" * Press ' ' (spacebar) or click to play audio at the mouse location.");
+		println(" * Press TAB to start and stop WaveSynth animation.");
 		println(" * Press 'o' to open a JSON WaveSynth configuration file.");
 		println(" * Press 'O' to reload the most recent JSON WaveSynth configuration file.");
 		println(" * Press 'j' or 'J' to save current WaveSynth configuration to a JSON file.");
@@ -398,8 +403,8 @@ public class WaveSynthSequencer extends PApplet {
 		}
 	}
 
-	public void mousePressed() {
-		audioMousePressed(constrain(mouseX, 0, width - 1), constrain(mouseY, 0, height - 1));
+	public void mouseClicked() {
+		audioMouseClick(constrain(mouseX, 0, width - 1), constrain(mouseY, 0, height - 1));
 	}
 		
 	/*----------------------------------------------------------------*/
@@ -426,7 +431,7 @@ public class WaveSynthSequencer extends PApplet {
 	}
 
 	// Called by mousePressed(), this should be a bottleneck method for all playSample() calls.
-	public void audioMousePressed(int sampleX, int sampleY) {
+	public void audioMouseClick(int sampleX, int sampleY) {
 	  this.sampleX = sampleX;
 	  this.sampleY = sampleY;
 	  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
