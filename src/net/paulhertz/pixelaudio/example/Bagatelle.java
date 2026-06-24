@@ -25,9 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 
@@ -43,7 +41,6 @@ import com.hamoid.VideoExport;
 import ddf.minim.AudioOutput;
 import ddf.minim.Minim;
 import ddf.minim.MultiChannelBuffer;
-import ddf.minim.AudioListener;
 
 //GUI library for Processing
 import g4p_controls.*;
@@ -52,8 +49,6 @@ import g4p_controls.*;
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 import net.paulhertz.pixelaudio.curves.*;
-import net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing.AudioBrushLite;
-import net.paulhertz.pixelaudio.example.TutorialOne_04_Network.NetworkDelegate;
 import net.paulhertz.pixelaudio.schedule.*;
 import netP5.NetAddress;
 import oscP5.OscMessage;
@@ -65,7 +60,13 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
- * TODO
+ * TODO do we add a real time audio here? Or does it work better in a simpler context, syncing 
+ * programmed events rather than UI events, in a sketch designed specifically for that purpose?
+ * I think the latter is the better solution. 
+ * 
+ * TODO a release version with two different preset lists and performance cues that can be swapped
+ * depending on whether we're performing DEADBODYWORKFLOW or Abstract Jailbreak. Top javadocs will 
+ * change, so I'm not doing much editing for the current version. 
  */
 
 /**
@@ -75,7 +76,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * We played Christopher Walczak's composition "Abstract Jailbreak", one of a series of "Bagatelles" we
  * are collaborating on, and my composition "DEADBODYWORKFLOW". The presets in this version of the Bagatelle 
  * sketch are set up for "Abstract Jailbreak". If you change {@code isRunWordGame} to {@code true},
- * this sketch will run the responses for DEADBODYWORKFLOW in {@link runPerformanceCue runPerformanceCue},
+ * this sketch will run the responses for DEADBODYWORKFLOW in {@link #runPerformanceCue(char)}, but
  * without the correct PerformancePreset settings. The correct presets are commented out at the end of
  * this file, and can be swapped with Abstract Jailbreak's presets to set up Bagatelle for a 
  * performance of DEADBODYWORKFLOW. 
@@ -118,7 +119,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   <li>Set the variable 'daPath" to point to the directory where you store your performance files</li>
  *   <li>Edit the entries in {@code runPerformanceCue(...)} to access your own files</li>
  *   </ol>
- *   
+ * </li>
  * <li>At the top of the control palette, you'll find Path Source radio buttons and sliders for setting 
  * the geometry of the brush curve. When the curve is set to Reduced Points or Curve Points, the epsilon 
  * slider will allow you to visualize changes in the curve. For the curve points representation of the 
@@ -295,7 +296,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * </pre>
  * 
  * 
- * <h3>MacOS AUDIO TO MAX SETUP</h3>
+ * <h2>MacOS AUDIO TO MAX SETUP</h2>
  * 
  * In MacOS:<br> 
  *   Ignore Sound.inputDevice() and Sound.outputDevice(), use the System Settings instead.<br>
@@ -570,12 +571,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	interface Happening { int x(); int y(); }
 		
 	AudioScheduler<Happening> audioSched = new AudioScheduler<>();	
-
-	// Future development: Tracks current absolute sample position (block start) on the audio thread
-	private final AtomicLong audioBlockStartSample = new AtomicLong(0);
-
-	// Optional, Future development: if you want to schedule “now”, this is a safe estimate of the next block start.
-	private final AtomicLong audioNextBlockStartSample = new AtomicLong(0);
 		
 	// grain density mod
 	float hopScale = 1.0f;
@@ -6115,7 +6110,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 
 	/*
-	 * DEADBODYWORKFLOW presets, commented out. 
+	 * DEADBODYWORKFLOW presets, commented out. LEAVE THIS IN, for now.
 	 * To run DEADBODYWORKFLOW presets and performance cues, swap the code
 	 * below for the Abstract Jailbreak presets used above and set isRunWordGame = true.
 	 */

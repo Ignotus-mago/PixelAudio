@@ -1365,12 +1365,13 @@ public class WaveSynthEditor extends PApplet {
 	}
 
 	public void fileSelectedOpen(File selection) {
-		boolean success =  WaveSynthBuilder.getJSONFromFile(selection, wavesynth, false);
+		boolean success = WaveSynthBuilder.getJSONFromFile(selection, wavesynth);
 		if (success) {
 			currentDataFile = selection;
 			currentFileName = selection.getAbsolutePath();
 			println("User selected " + currentFileName);		
 			surface.setTitle(currentFileName);
+			syncEditorAfterWaveSynthLoad();
 			loadGlobalPanelValues();
 			loadWaveDataPanelValues(currentWD);
 			printWaveData(wavesynth);
@@ -1379,11 +1380,22 @@ public class WaveSynthEditor extends PApplet {
 		isAnimating = oldIsAnimating;
 	}
 
+	private void syncEditorAfterWaveSynthLoad() {
+		animSteps = wavesynth.getAnimSteps();
+		animStop = wavesynth.getStop();
+		comments = wavesynth.getComments();
+		videoFilename = wavesynth.getVideoFilename();
+		waveDataIndex = 0;
+		currentWD = wavesynth.waveDataList.isEmpty() ? null : wavesynth.waveDataList.get(0);
+		wavesynth.prepareAnimation();
+		wavesynth.renderFrame(0);
+	}
+
 	/**
 	 * Outputs current wavesynth settings and WaveData list.
 	 */
 	public void printWaveData(WaveSynth synth) {
-		String wavesynthDescription = WaveSynthBuilder.waveSynthAsString(wavesynth);
+		String wavesynthDescription = WaveSynthBuilder.waveSynthAsString(synth);
 		println(wavesynthDescription +"\n");
 	}
 	
@@ -1397,6 +1409,7 @@ public class WaveSynthEditor extends PApplet {
 	}
 
 	public void fileSelectedWrite(File selection) {
+		applyPendingWaveEdits();
 		String jsonFileName = WaveSynthBuilder.saveWaveSynthJSON(this, selection, wavesynth);
 		if (jsonFileName == null || jsonFileName.isEmpty()) return;
 		currentDataFile = new File(jsonFileName);
