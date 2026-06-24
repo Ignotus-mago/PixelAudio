@@ -50,7 +50,7 @@ Version 0.9.5-beta, November 12, 2025: A new package of classes to support digit
 
 Version 0.9.6-beta was created for a workshop in Chicago. It provided gesture capture and playback classes plus thoroughly revised [Sampler](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/sampler) and [Granular Synthesis](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/granular) polyphonic audio instruments, and a speedier WaveSynth. It also included a complete tutorial sequence.
 
-Release 0.9.8.0-beta, nearly ready for publication, ready for user-testing. Obsolete and @Deprecated classes have been dropped. Tutorials have new material, included a real-time performance app. Javadocs are substantial and worth reading for an overview of PixelAudio and PixelAudio packages. See [Issue 42](https://github.com/Ignotus-mago/PixelAudio/issues/42#issue-4736996032) for tasks to complete before publication. 
+Release 0.9.8.0-beta, nearly ready for publication, ready for user-testing. Obsolete and `@Deprecated` classes have been dropped. Tutorials have new material, included a real-time performance app. Javadocs are substantial and worth reading for an overview of PixelAudio and PixelAudio packages. See [Issue 42](https://github.com/Ignotus-mago/PixelAudio/issues/42#issue-4736996032) for tasks to complete before publication. 
 
 
 
