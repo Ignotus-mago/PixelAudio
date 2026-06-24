@@ -1,4 +1,4 @@
-As of June 1, 2026, we have these examples, in the suggested order for learning about PixelAudio:
+As of June 24, 2026, we have these examples, in the suggested order for learning about PixelAudio:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
@@ -13,7 +13,7 @@ As of June 1, 2026, we have these examples, in the suggested order for learning 
    4. **TutorialOne_04_Network**: Communicate with Max and other media apps with UDP. 
    5. **TutorialOne_05_GesturePlayground**: Explore granular and sampler synthesis with a GUI.
    6. **TutorialOne_06_WindowBuffer**: Use a windowed buffer to interact with a large audio file.
-- **LoadAudioToImage**: read an audio file, trancode it into an image and then play audio samples. 
+- **LoadAudioToImage**: read an audio file, transcode it into an image and then play audio samples. 
 - **LoadImageToAudio**: read, write, play, and mix channels of images and audio files. 
 - **BuildFromPathGenDemo**: read and write data from a PixelMapGen in JSON format. 
 - **SimpleWaveSynth**: basics of creating a WaveSynth animation. 
@@ -30,7 +30,7 @@ The tutorial is designed to get you up and running with creating your own sampli
 
 **Bagatelle** is a live performance application with a GUI, presets, JSON i/o  for brushstroke and audio synthesis settings, UDP communications and wide range of options. Offered as an experimental sketch, it shows some of the capabilities of PixelAudio for performance. 
 
-If you are interested in combining PixelAudio output with other applications, the AudioCapture sketch provides information about audio signal routing for MacOS, and TutorialOne_05_UDP provides some clues about communicating with other applications using UDP. If you want to capture audio and video from PixelAudio examples, I suggets OBS (Open Broadcast System) as one way to do this.
+If you are interested in combining PixelAudio output with other applications, the AudioCapture sketch provides information about audio signal routing for MacOS, and TutorialOne_04_Networking provides some clues about communicating with other applications using UDP. If you want to capture audio and video from PixelAudio examples, I suggest OBS (Open Broadcast System) as one way to do this.
 
 You can open library examples with the Processing File menu->Examples... command. 
 Look for PixelAudio in the Contributed LIbraries in the Java Examples. 
