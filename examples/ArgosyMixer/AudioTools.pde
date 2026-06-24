@@ -35,13 +35,13 @@ public void initAudio() {
 }
 
 /**
- * Typically called from mousePressed with mouseX and mouseY, generates audio events.
+ * Typically called from mouseClicked with mouseX and mouseY, generates audio events.
  * TODO play these argo1 and argo2 signals in a stereo buffer.
  * 
  * @param x    x-coordinate within a PixelAudioMapper's width
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
-public void audioMousePressed(int x, int y) {
+public void audioMouseClick(int x, int y) {
   this.sampleX = x;
   this.sampleY = y;
   argo1SamplePos = getSamplePos(argo1, x, y, argo1Step);

@@ -22,6 +22,12 @@ import net.paulhertz.pixelaudio.sampler.*;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
+/*
+ * TODO the pattern-making methods section, with all its different MultiGens, should be
+ * ported to a demo sketch just to show off the different sorts of MultiGens one can create.
+ * Such a sketch would probably need a minimalist GUI, with a menu of available MultiGens.
+ */
+
 /* ------------------------------------------------------------------ */
 /*                          PAPPLET SETTINGS                          */
 /* ------------------------------------------------------------------ */
@@ -54,7 +60,9 @@ Random rand;
 /* ------------------------------------------------------------------ */
 /*                         ARGOSY VARIABLES                           */
 /* ------------------------------------------------------------------ */
-int roig = 0xfff64c2f; int groc = 0xfff6e959; int blau = 0xff5990e9; int blau2 = 0xff90b2dc; 
+
+// some colors, which I name in Catalan
+int roig = 0xfff64c2f; int groc = 0xfff6e959; int blau = 0xff5990e9; int blau2 = 0xff90b2dc;
 int blanc = 0xfffef6e9; int gris = 0xffa09faa; int negre = 0xff080d15; int grana = 0xffe56ad8;
 int vert = 0xff7bb222; int taronja = 0xfffea537; int roigtar = 0xffE9907B; int violet = 0xffb29de9;
 // Standard black, gray, white colors without transparency
@@ -166,7 +174,7 @@ boolean isSavePatterns = false;   // for future use
 /* ------------------------------------------------------------------ */
 /*                           AUDIO VARIABLES                          */
 /* ------------------------------------------------------------------ */
-Minim minim;          // library that handles audio 
+Minim minim;          // library that handles audio
 AudioOutput audioOut;      // line out to sound hardware
 boolean isBufferStale = false;  // flags that audioBuffer needs to be reset
 float sampleRate = 48000;       // a critical value for display and audio, see the setup method
@@ -334,7 +342,7 @@ public void initArgo2(int shift) {
   argo2Mapper = selectMapper(argo2GenSelect, argo2Gen);
   argo2GapColor = PixelAudioMapper.setAlpha(argo2GapColor, argo2GapAlpha);
   argo2 = getArgosy(argo2Mapper, argo2Pattern, argo2Unit, argo2Reps, argo2IsCentered, argo2Colors, argo2Gap, argo2GapColor, argo2Step);
-  if (shift > 0) {
+  if (shift != 0) {
     argo2.shift(-shift, true);
   }
   argo2Image.loadPixels();
@@ -364,7 +372,7 @@ public Argosy getArgosy(PixelAudioMapper mapper, int[] argosyPattern, int argosy
   return new Argosy(mapper, argosyPattern, argosyUnitSize, argosyReps, isCentered, argosyColors, argosyGap, argosyGapColor, argoStep);
 }
 
-// TODO set alpha in the the Argosy color palette, but don't change the gap color alpha -- part done
+// TODO set alpha in the Argosy color palette, but don't change the gap color alpha -- part done
 /**
  * Updates argo1 and argo2 to reflect animation and other changes.
  */
@@ -484,12 +492,20 @@ public void recordVideo() {
 }
 
 /**
- * The built-in mousePressed handler for Processing, but note that it forwards mouse coords to audiMousePressed().
+ * The built-in mouseClicked handler for Processing, forwards clipped mouse coords to audioMouseClick().
  */
-public void mousePressed() {
-  // println("mousePressed:", mouseX, mouseY);
+public void mouseClicked() {
+  // println("mouseClicked:", mouseX, mouseY);
   // handle audio generation in response to a mouse click
-  audioMousePressed(mouseX, mouseY);
+  audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
+}
+
+public int clipToWidth(int x) {
+  return PixelAudio.constrain(x, 0, width - 1);
+}
+
+public int clipToHeight(int y) {
+  return PixelAudio.constrain(y, 0, height - 1);
 }
 
 /**
@@ -536,9 +552,13 @@ public void parseKey(char key, int keyCode) {
   argo1PixelCount =  argo1.getArgosySize() * argo1.getUnitSize();
   argo2PixelCount =  argo2.getArgosySize() * argo2.getUnitSize();
   switch(key) {
-  case ' ': { // toggle animation
-    isAnimating = ! isAnimating;
-    break;
+  case ' ': { // trigger audio at current mouse position
+    audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
+    return;
+  }
+  case '\t': { // toggle animation
+    toggleAnimation();
+    return;
   }
   case 'e': { // trigger elliptical trail of audio events
     animationPoints(width - 40, height - 40, 120);
@@ -643,12 +663,12 @@ public void parseKey(char key, int keyCode) {
     showArgosyStats();
     break;
   }
-  case 'S': { // save current display to an PNG file
+  case 'S': { // save current Argosy signals to a stereo WAV file
     saveToAudio(true);
     println("Saved audio signals to stereo audio file.");
     break;
   }
-  case 's': { // save current display to an PNG file
+  case 's': { // save current display to a PNG file
     saveImage();
     break;
   }
@@ -672,7 +692,7 @@ public void parseKey(char key, int keyCode) {
       }
     }
     else {
-      println("-- video recording is on, press spacebar to toggle animation");
+      println("-- video recording is on, press TAB to toggle animation");
       initAnimation();
     }
     break;
@@ -691,7 +711,7 @@ public void parseKey(char key, int keyCode) {
     argo1.shift(-argo1.getArgosyPixelShift(), true);
     break;
   }
-  case 'Z': { // reset argosy 2 to inttial position
+  case 'Z': { // reset argosy 2 to initial position
     argo2.shift(-argo2.getArgosyPixelShift(), true);
     break;
   }
@@ -711,7 +731,8 @@ public void parseKey(char key, int keyCode) {
  * Posts key command help to the console.
  */
 public void showHelp() {
-  println(" * Press ' ' to toggle animation.");
+  println(" * Press ' ' to trigger audio at the current mouse position.");
+  println(" * Press TAB to toggle animation.");
   println(" * Press 'e' to trigger elliptical trail of audio events.");
   println(" * Press 'a' to shift left one argosy unit.");
   println(" * Press 'A' to shift right one argosy unit.");
@@ -731,14 +752,14 @@ public void showHelp() {
   println(" * Press 'f' to freeze changes to argosy 1.");
   println(" * Press 'F' to freeze changes to argosy 2.");
   println(" * Press 'i' or 'I' to show stats about argosies.");
-  println(" * Press 'S' to save current display to an PNG file.");
-  println(" * Press 's' to save current display to an PNG file.");
+  println(" * Press 'S' to save current Argosy signals to a stereo WAV file.");
+  println(" * Press 's' to save current display to a PNG file.");
   println(" * Press 'u' or 'U' to reinitialize any argosies that aren't frozen.");
   println(" * Press 'v' or 'V' to toggle video recording.");
   println(" * Press 'w' to reset animation tracking.");
   println(" * Press 'W' to reset animation tracking.");
   println(" * Press 'z' to reset argosy 1 to initial position.");
-  println(" * Press 'Z' to reset argosy 2 to inttial position.");
+  println(" * Press 'Z' to reset argosy 2 to initial position.");
   println(" * Press 'h' or 'H' to show help message in console.");
 }
 
@@ -749,6 +770,13 @@ public void showHelp() {
 public void setAudioGain(float g) {
   audioOut.setGain(g);
   outputGain = audioOut.getGain();
+}
+
+/**
+ * Toggle animation and handle any side effects (none for the moment).
+ */
+public void toggleAnimation() {
+  isAnimating = !isAnimating;
 }
 
 /**

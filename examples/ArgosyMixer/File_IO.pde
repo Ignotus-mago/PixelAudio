@@ -88,18 +88,3 @@ public void saveToAudio(boolean isStereo) {
     fileIndex++;
   }
 }
-
-/**
- * This method writes a color channel from the an image to playBuffer, fulfilling a
- * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
- * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
- * img.width * img.height != mapper.getWidth() * mapper.getHeight().
- *
- * @param img       a PImage, a source of data
- * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format
- * @param chan      a color channel
- */
-public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
-  sig = mapper.mapImgToSig(img.pixels, sig, chan);
-}

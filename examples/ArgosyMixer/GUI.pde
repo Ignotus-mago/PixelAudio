@@ -738,7 +738,7 @@ public void argo2FreezeCheck_hit(GCheckbox source, GEvent event) {
 }
 
 public void argo2InitAndShift() {
-  int shift = argo1.getArgosyPixelShift();
+  int shift = argo2.getArgosyPixelShift();
   this.initArgo2(shift);
   isBufferStale = true;
 }

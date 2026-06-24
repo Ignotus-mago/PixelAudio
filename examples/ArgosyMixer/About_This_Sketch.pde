@@ -64,7 +64,7 @@
  * You can create stereo drones with the 'e' command, which creates a series of audio events along 
  * the points of an ellipse. 
  * 
- * Press the spacebar to start or stop animation. 
+ * Press TAB to start or stop animation.
  *   
  *   
  * --------------------------------------------------------------------------------------------
@@ -73,7 +73,8 @@
  * 
  * Key Commands
  * 
- * Press ' ' to toggle animation.
+ * Press ' ' to trigger audio at the current mouse position.
+ * Press TAB to toggle animation.
  * Press 'e' to trigger elliptical trail of audio events.
  * Press 'a' to shift left one argosy unit.
  * Press 'A' to shift right one argosy unit.
@@ -93,14 +94,14 @@
  * Press 'f' to freeze changes to argosy 1.
  * Press 'F' to freeze changes to argosy 2.
  * Press 'i' or 'I' to show stats about argosies.
- * Press 'S' to save current display to an PNG file.
- * Press 's' to save current display to an PNG file.
+ * Press 'S' to save current Argosy signals to a stereo WAV file.
+ * Press 's' to save current display to a PNG file.
  * Press 'u' or 'U' to reinitialize any argosies that aren't frozen.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'w' to reset animation tracking.
  * Press 'W' to reset animation tracking.
  * Press 'z' to reset argosy 1 to initial position.
- * Press 'Z' to reset argosy 2 to inttial position.
+ * Press 'Z' to reset argosy 2 to initial position.
  * Press 'h' or 'H' to show help message in console.
  * 
  */
