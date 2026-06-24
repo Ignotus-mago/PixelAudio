@@ -222,7 +222,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
  * Press 'f' or 'F' to toggle verbose output to the console.
  * Press 'o' to open an audio file.
- * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.
+ * Press 'r' or 'R' to reset synths to defaults
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
  * Press 's' to save display image to a PNG file.
  * Press 'S' to save audio buffer to a .wav file.
@@ -1048,7 +1048,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		println(" * Press 'l' or'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
 		println(" * Press 'f' or 'F' to toggle verbose output to the console.");
 		println(" * Press 'o' to open an audio file.");
-		println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
+		println(" * Press 'r' or 'R' to reset synths to defaults.");
 		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
 		println(" * Press 's' to save display image to a PNG file.");
 		println(" * Press 'S' to save audio buffer to a .wav file.");

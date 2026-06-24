@@ -93,15 +93,9 @@ void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
 
 public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
   int i = 0;
-  //int hopMs = (int) Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-  //int durMsFixed = (int) Math.round(AudioUtility.samplesToMillis(granSamples, sampleRate)); // or hopMs if you prefer
-  // we store the point and the current time + time offset, where timesMs[0] == 0
   for (PVector loc : sched.points) {
     int x = Math.round(loc.x);
     int y = Math.round(loc.y);
-    // we can rely on sched for accurate times -- TODO drop in next iteration
-    // int t = (isGesture) ? startTime + Math.round(sched.timesMs[i++]) : startTime + i++ * hopMs;
-    // int d = (isGesture) ? 200 : durMsFixed;
     int t = startTime + Math.round(sched.timesMs[i++]);
     int d = 200;
     this.grainTimeLocs.add(new TimedLocation(x, y, t, d));

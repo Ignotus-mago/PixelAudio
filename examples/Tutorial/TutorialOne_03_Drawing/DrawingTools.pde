@@ -144,7 +144,6 @@ PathMode defaultPathModeFor(BrushOutput out) {
 
 /**
  * Entry point for drawing brushstrokes on the screen.
- * TODO distinguish brush types by color.
  */
 public void drawBrushShapes() {
   if (brushes == null || brushes.isEmpty()) return;

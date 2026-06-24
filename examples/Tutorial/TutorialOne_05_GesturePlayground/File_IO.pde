@@ -260,7 +260,7 @@ public static int setAlpha(int argb, int alpha) {
  * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
  * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
  * img.width * img.height != mapper.getWidth() * mapper.getHeight().
- * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
+ * Sets totalShift = 0 on completion: the image and audio are now in sync.
  *
  * @param img       a PImage, a source of data
  * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal

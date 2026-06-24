@@ -21,8 +21,8 @@ public void initAudio() {
   timeLocsArray = new ArrayList<TimedLocation>();
 }
 
-// Called by mousePressed(), this should be a bottleneck method for all playSample() calls.
-public void audioMousePressed(int sampleX, int sampleY) {
+// Called by mouseClicked(), this should be a bottleneck method for all playSample() calls.
+public void audioMouseClick(int sampleX, int sampleY) {
   this.sampleX = sampleX;
   this.sampleY = sampleY;
   samplePos = mapper.lookupSignalPos(sampleX, sampleY);

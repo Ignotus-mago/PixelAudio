@@ -252,7 +252,7 @@ public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranu
   gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 }
 
-// debugging -- TODO drop in release
+// debugging -- TODO drop in PROCESSING sketch
 static void debugIndexHeadroom(float[] buf, int[] startIndices, GestureGranularParams ggp) {
   int bufLen = buf.length;
   int grainLen = Math.max(1, ggp.grainLengthSamples);
@@ -287,7 +287,7 @@ static void debugIndexHeadroom(float[] buf, int[] startIndices, GestureGranularP
     + " overMaxStart=" + over + "/" + startIndices.length);
 }
 
-// debugging -- TODO drop in release
+// debugging -- TODO drop in PROCESSING sketch
 static void debugTimesMs(GestureSchedule s) {
   int n = s.size();
   if (n <= 1 || s.timesMs == null) return;

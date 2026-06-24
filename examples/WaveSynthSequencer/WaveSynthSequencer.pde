@@ -24,7 +24,8 @@
  * in setup() for details.
  *
  *
- * Press ' ' to start and stop WaveSynth animation.
+ * Press ' ' (spacebar) or click to play audio at the mouse location.
+ * Press TAB to start and stop WaveSynth animation.
  * Press 'o' to open a JSON WaveSynth configuration file.
  * Press 'O' to reload the most recent JSON WaveSynth configuration file.
  * Press 'j' or 'J' to save current WaveSynth configuration to a JSON file.
@@ -237,7 +238,11 @@ public void stepAnimation() {
 
 public void keyPressed() {
   switch (key) {
-  case ' ':
+  case ' ': { // trigger audio at current mouse position
+    audioMouseClick(constrain(mouseX, 0, width - 1), constrain(mouseY, 0, height - 1));
+    return;
+  }
+  case '\t':
     isWaveSynthAnimating = !isWaveSynthAnimating;
     println(isWaveSynthAnimating ? "Starting animation at frame " + step + " of " + animSteps
       : "Stopping animation at frame " + step + " of " + animSteps);
@@ -318,7 +323,8 @@ public void stepWaveSynth() {
 }
 
 public void showHelp() {
-  println(" * Press ' ' to start and stop WaveSynth animation.");
+  println(" * Press ' ' (spacebar) or click to play audio at the mouse location.");
+  println(" * Press TAB to start and stop WaveSynth animation.");
   println(" * Press 'o' to open a JSON WaveSynth configuration file.");
   println(" * Press 'O' to reload the most recent JSON WaveSynth configuration file.");
   println(" * Press 'j' or 'J' to save current WaveSynth configuration to a JSON file.");
@@ -349,6 +355,6 @@ public void saveToAudio() {
   }
 }
 
-public void mousePressed() {
-  audioMousePressed(constrain(mouseX, 0, width - 1), constrain(mouseY, 0, height - 1));
+public void mouseClicked() {
+  audioMouseClick(constrain(mouseX, 0, width - 1), constrain(mouseY, 0, height - 1));
 }

@@ -162,7 +162,7 @@
  * Press 'l' or 'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
  * Press 'f' or 'F' to toggle verbose output to the console.
  * Press 'o' to open an audio file.
- * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.
+ * Press 'r' or 'R' to reset synths to defaults
  * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
  * Press 's' to save display image to a PNG file.
  * Press 'S' to save audio buffer to a .wav file.
@@ -315,7 +315,6 @@ public ADSRParams granEnvelope = new ADSRParams(1.0f, 0.02f, 0.06f, 0.9f, 0.10f)
 
 String currentGranStatus = "";
 
-// TODO -- ADD FOR REFACTOR
 public PAGranularInstrumentDirector gDir;   // director of granular events
 public float granularGain = 1.0f;           // gain for a granular gesture event
 public float granularPointGain = 0.9f;      // gain for a granular point event ("granular burst")
@@ -526,7 +525,6 @@ public void setup() {
   colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
   initImages();                   // load baseImage and mapImage
   initAudio();                    // set up Minima and our granular and sampling synths
-  // initListener();              // PLACEHOLDER: sample-accurate audio timer -- TODO future implementation
   initConfig();                   // set up configuration for granular and sampling instruments
   initDrawing();                  // set up drawing variables
   initGUI();                      // set up the G4P control window and widgets
@@ -941,7 +939,7 @@ public void parseKey(char key, int keyCode) {
     chooseFile();
     break;
   case 'r':
-  case 'R': // reset synths to defaults -- TODO may be dropped
+  case 'R': // reset synths to defaults
     resetToDefaults();
     break;
   case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
@@ -1000,7 +998,7 @@ public void showHelp() {
   println(" * Press 'l' or'L' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
   println(" * Press 'f' or 'F' to toggle verbose output to the console.");
   println(" * Press 'o' to open an audio file.");
-  println(" * Press 'r' or 'R' to reset synths to defaults -- TODO may be dropped.");
+  println(" * Press 'r' or 'R' to reset synths to defaults.");
   println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
   println(" * Press 's' to save display image to a PNG file.");
   println(" * Press 'S' to save audio buffer to a .wav file.");

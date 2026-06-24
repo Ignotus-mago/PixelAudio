@@ -182,7 +182,7 @@ public AudioBrush initCurveMakerAndAddBrush() {
   gConfig.resampleCount = 0;
   gConfig.targetDurationMs = 0;
   gConfig.pitchSemitones = 0.0f;
-  if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {             // TODO implement complete logic for mode, if mode is PLAY we should be here...
+  if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {  // TODO implement complete logic for mode, what if mode is PLAY_ONLY?
     SamplerBrush sb = new SamplerBrush(curveMaker, gConfig.copy());
     this.samplerBrushes.add(sb);                   // add new brush to sampler brush list
     setActiveBrush(sb, samplerBrushes.size() - 1);

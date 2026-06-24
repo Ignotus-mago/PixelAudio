@@ -6,8 +6,6 @@
 
 //------------- REMOVE BRUSHES -------------//
 
-// TODO verify correct action -- active brush is not always getting set
-
 /**
  * Removes the current active PACurveMaker instance, flagged by a highlighted brush stroke,
  * from brushShapesList, if there is one.
