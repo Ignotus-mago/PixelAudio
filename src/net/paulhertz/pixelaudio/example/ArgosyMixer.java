@@ -47,8 +47,7 @@ import ddf.minim.*;
 /**
  * 
  * ArgosyMixer demonstrates how the Argosy class can create and animate patterns 
- * and save them to video. This is still a work in progress, with the new PASamplerInstrument 
- * class and audio events not yet handled in the most efficient way. There will be updates.
+ * and save them to video. This is experimental code. 
  * <p>
  * The Argosy class turns arrays of integers into color patterns. It steps through the Pattern
  * array to create blocks of pixels and assigns color to the blocks as it steps through the 
