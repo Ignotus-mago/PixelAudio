@@ -555,7 +555,7 @@ public class WaveSynthBuilder {
 	}
 	
 	// overloaded version of getJSONFromFile() that defaults to isStrict = false
-	public static boolean getJSONFromFile(File selection, JSONObject json, WaveSynth synth) {
+	public static boolean getJSONFromFile(File selection, WaveSynth synth) {
 		return getJSONFromFile(selection, synth, false);
 	}
 
