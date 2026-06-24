@@ -37,3 +37,4 @@ Look for PixelAudio in the Contributed LIbraries in the Java Examples.
 To modify an example sketch, first save it to your sketches folder. 
 Files opened from Contributed Libraries can only be saved to new sketches. 
 
+All of the Processing example sketches except for AudioCapture were developed as Java classes in Eclipse. The Javadocs for the Java examples are repeated in the Processing sketches in a format modified for Processing. It may prove useful to open the Javadocs for a sketch that you are running in Processing--you won't have to scroll in Processing to find instructions and key commands. The javadocs for Package net.paulhertz.pixelaudio.example list all the example code, with links to each Java example.
