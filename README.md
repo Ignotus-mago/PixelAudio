@@ -38,23 +38,19 @@ Example sketches in Processing and Java provide a survey of PixelAudio features,
 - capturing live audio
 - adjusting audio synthesis settings
 - using JSON files for additive synthesis, gesture-modeling and audio synthesis settings
-- communicaton with external applications via UDP
+- communication with external applications via UDP
 
 Some sketches include graphical user interfaces and can be used directly in live performance. See the [Examples README](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples "Examples README") for descriptions of each example.
 
 ### Release Notes
 
-PixelAudio is at the late beta testing stage, functional but not quite incomplete. You can download it as a Processing library and run the examples and expect them to do interesting things. Most features are fully realized. Documentation is the biggest task, along with deleting obsolete code.
-
 Composer Christopher Walczak and I used the `WaveSynth`, `Argosy` and `Lindenmayer` classes to produce the music and animation for [Campos | Temporales](https://vimeo.com/856300250 "Campos | Temporales") (2023). The first beta release of the PixelAudio library happened November 9, 2024, at [Experimental Sound Studio](https://ess.org/) in Chicago, where I was the Spain-Chicago artist in residence. New workshop and beta releases arrived in January and May, 2025.  In early July 2025, I presented PixelAudio at the [EVA London Conference](http://www.eva-london.org/)—version 0.9.1-beta was the release for the EVA London workshop. 
 
 Version 0.9.5-beta, November 12, 2025: A new package of classes to support digital audio sampling synthesis was a major addition to PixelAudio and replaced previous audio generation classes, which were mostly created within Processing. 
 
-Version 0.9.6-beta was created for a workshop in Chicago. It provides gesture capture and playback classes plus thoroughly revised [Sampler](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/sampler) and [Granular Synthesis](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/granular) polyphonic audio instruments. It includes a complete tutorial sequence, leading to a sketch that can be used for live performance. Revisions under the hood include speeding up WaveSynth calculations 2x and adding normalization to Sampler and Granular polyphonic voices. Sample and Granular audio chains have been regularized to such an extent that a number of classes are now slated to be dropped.
+Version 0.9.6-beta was created for a workshop in Chicago. It provided gesture capture and playback classes plus thoroughly revised [Sampler](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/sampler) and [Granular Synthesis](https://github.com/Ignotus-mago/PixelAudio/tree/master/src/net/paulhertz/pixelaudio/granular) polyphonic audio instruments, and a speedier WaveSynth. It also included a complete tutorial sequence.
 
-As of mid-April 2026, I am advancing on a first public release, version 1.0. Nearly all planned features are in place. Revision of JavaDocs and other documentation is the largest unfinished task. There will be some interim releases: expect 0.9.7 by the end of April. 
-
-
+Release 0.9.8.0-beta, nearly ready for publication, ready for user-testing. Obsolete and @Deprecated classes have been dropped. Tutorials have new material, included a real-time performance app. Javadocs are substantial and worth reading for an overview of PixelAudio and PixelAudio packages. See [Issue 42](https://github.com/Ignotus-mago/PixelAudio/issues/42#issue-4736996032) for tasks to complete before publication. 
 
 
 
