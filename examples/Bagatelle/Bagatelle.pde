@@ -282,7 +282,7 @@ DrawingMode drawingMode = DrawingMode.DRAW_EDIT_GRANULAR;
 
 static final int CURVE_STEPS_HARD_MAX = 128;   // Curve steps GUI slider max
 static final int CURVE_STEPS_SAFE_MAX = 32;    // Curve steps preferred max threshold
-static final int CURVE_STEPS_FLOOR = 4;        // don’t go too low
+static final int CURVE_STEPS_FLOOR = 4;        // don't go too low
 
 
 /* ------------------------------------------------------------------ */
@@ -559,7 +559,7 @@ boolean shiftIsDown = false;         // flag for shift key down
 
 // performance state
 
-boolean isRunWordGame = true;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
+boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
 boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
 boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
 boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it
