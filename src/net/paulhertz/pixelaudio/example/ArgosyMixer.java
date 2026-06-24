@@ -44,6 +44,12 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
 //audio library
 import ddf.minim.*;
 
+/*
+ * TODO the pattern-making methods section, with all its different MultiGens, should be
+ * ported to a demo sketch just to show off the different sorts of MultiGens one can create.
+ * Such a sketch would probably need a minimalist GUI, with a menu of available MultiGens.
+ */
+
 /**
  * 
  * ArgosyMixer demonstrates how the Argosy class can create and animate patterns 
@@ -120,7 +126,8 @@ import ddf.minim.*;
  * 
  * Key Commands
  * 
- * Press ' ' to toggle animation.
+ * Press ' ' to trigger audio at the current mouse position.
+ * Press TAB to toggle animation.
  * Press 'e' to trigger elliptical trail of audio events.
  * Press 'a' to shift left one argosy unit.
  * Press 'A' to shift right one argosy unit.
@@ -140,21 +147,19 @@ import ddf.minim.*;
  * Press 'f' to freeze changes to argosy 1.
  * Press 'F' to freeze changes to argosy 2.
  * Press 'i' or 'I' to show stats about argosies.
- * Press 'S' to save current display to an PNG file.
- * Press 's' to save current display to an PNG file.
+ * Press 'S' to save current Argosy signals to a stereo WAV file.
+ * Press 's' to save current display to a PNG file.
  * Press 'u' or 'U' to reinitialize any argosies that aren't frozen.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'w' to reset animation tracking.
  * Press 'W' to reset animation tracking.
  * Press 'z' to reset argosy 1 to initial position.
- * Press 'Z' to reset argosy 2 to inttial position.
+ * Press 'Z' to reset argosy 2 to initial position.
  * Press 'h' or 'H' to show help message in console.
  * 
  * </pre>
  * 
  * TODO save two image files, two audio files -- one for each Argosy<br>
- * TODO bug fix, when changing gap color argosy resets with 0 shift<br>
- * TODO reset animation with a key command 
  * 
  */
 public class ArgosyMixer extends PApplet {
@@ -164,10 +169,11 @@ public class ArgosyMixer extends PApplet {
 	int imageWidth = 1536;
 	int imageHeight = 1024;
 	int bgColor = color(0, 0, 0);
-	
+
 	/* ------------------------------------------------------------------ */
 	/*                       PIXELAUDIO VARIABLES                         */
 	/* ------------------------------------------------------------------ */
+
 	PixelAudio pixelaudio;
 	int mapSize;
 	PImage mapImage;
@@ -190,7 +196,9 @@ public class ArgosyMixer extends PApplet {
 	/* ------------------------------------------------------------------ */
 	/*                         ARGOSY VARIABLES                           */
 	/* ------------------------------------------------------------------ */
-	int roig = 0xfff64c2f; int groc = 0xfff6e959; int blau = 0xff5990e9; int blau2 = 0xff90b2dc; 
+
+	// some colors, which I name in Catalan
+	int roig = 0xfff64c2f; int groc = 0xfff6e959; int blau = 0xff5990e9; int blau2 = 0xff90b2dc;
 	int blanc = 0xfffef6e9; int gris = 0xffa09faa; int negre = 0xff080d15; int grana = 0xffe56ad8;
 	int vert = 0xff7bb222; int taronja = 0xfffea537; int roigtar = 0xffE9907B; int violet = 0xffb29de9;
 	// Standard black, gray, white colors without transparency
@@ -259,7 +267,7 @@ public class ArgosyMixer extends PApplet {
 	boolean argo2IsCentered;
 	PImage argo2Image;
 	boolean isShowArgo2 = true;
-	
+
 	/* ------------------------------------------------------------------ */
 	/*                     ARGOSY ANIMATION VARIABLES                     */
 	/* ------------------------------------------------------------------ */
@@ -302,7 +310,8 @@ public class ArgosyMixer extends PApplet {
 	/* ------------------------------------------------------------------ */
 	/*                           AUDIO VARIABLES                          */
 	/* ------------------------------------------------------------------ */
-	Minim minim;					// library that handles audio 
+
+	Minim minim;					// library that handles audio
 	AudioOutput audioOut;			// line out to sound hardware
 	boolean isBufferStale = false;	// flags that audioBuffer needs to be reset
 	float sampleRate = 48000;       // a critical value for display and audio, see the setup method
@@ -474,7 +483,7 @@ public class ArgosyMixer extends PApplet {
 		argo2Mapper = selectMapper(argo2GenSelect, argo2Gen);
 		argo2GapColor = PixelAudioMapper.setAlpha(argo2GapColor, argo2GapAlpha);
 		argo2 = getArgosy(argo2Mapper, argo2Pattern, argo2Unit, argo2Reps, argo2IsCentered, argo2Colors, argo2Gap, argo2GapColor, argo2Step);
-		if (shift > 0) {
+		if (shift != 0) {
 			argo2.shift(-shift, true);
 		}
 		argo2Image.loadPixels();
@@ -504,7 +513,7 @@ public class ArgosyMixer extends PApplet {
 		return new Argosy(mapper, argosyPattern, argosyUnitSize, argosyReps, isCentered, argosyColors, argosyGap, argosyGapColor, argoStep);
 	}
 	
-	// TODO set alpha in the the Argosy color palette, but don't change the gap color alpha -- part done
+	// TODO set alpha in the Argosy color palette, but don't change the gap color alpha -- part done
 	/**
 	 * Updates argo1 and argo2 to reflect animation and other changes.
 	 */
@@ -586,9 +595,6 @@ public class ArgosyMixer extends PApplet {
 	        animstep2++;
 	    }
 	}
-	
-	
-	
 	/**
 	 * record a frame of video
 	 */
@@ -622,14 +628,22 @@ public class ArgosyMixer extends PApplet {
 			println("-- video recording frame " + currentFrame + " of " + animDuration);
 		}
 	}
-	
+
 	/**
-	 * The built-in mousePressed handler for Processing, but note that it forwards mouse coords to audiMousePressed().
+	 * The built-in mouseClicked handler for Processing, forwards clipped mouse coords to audioMouseClick().
 	 */
-	public void mousePressed() {
-		// println("mousePressed:", mouseX, mouseY);
+	public void mouseClicked() {
+		// println("mouseClicked:", mouseX, mouseY);
 		// handle audio generation in response to a mouse click
-		audioMousePressed(mouseX, mouseY);
+		audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
+	}
+
+	public int clipToWidth(int x) {
+		return PixelAudio.constrain(x, 0, width - 1);
+	}
+
+	public int clipToHeight(int y) {
+		return PixelAudio.constrain(y, 0, height - 1);
 	}
 	
 	/**
@@ -676,9 +690,13 @@ public class ArgosyMixer extends PApplet {
 		argo1PixelCount =  argo1.getArgosySize() * argo1.getUnitSize();
 		argo2PixelCount =  argo2.getArgosySize() * argo2.getUnitSize();
 		switch(key) {
-		case ' ': { // toggle animation
-			isAnimating = ! isAnimating;
-			break;
+		case ' ': { // trigger audio at current mouse position
+			audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
+			return;
+		}
+		case '\t': { // toggle animation
+			toggleAnimation();
+			return;
 		}
 		case 'e': { // trigger elliptical trail of audio events
 			animationPoints(width - 40, height - 40, 120);
@@ -783,12 +801,12 @@ public class ArgosyMixer extends PApplet {
 			showArgosyStats();
 			break;
 		}
-		case 'S': { // save current display to an PNG file
+		case 'S': { // save current Argosy signals to a stereo WAV file
 			saveToAudio(true);
 			println("Saved audio signals to stereo audio file.");
 			break;
 		}
-		case 's': { // save current display to an PNG file
+		case 's': { // save current display to a PNG file
 			saveImage();
 			break;
 		}
@@ -812,7 +830,7 @@ public class ArgosyMixer extends PApplet {
 				}
 			}
 			else {
-				println("-- video recording is on, press spacebar to toggle animation");
+				println("-- video recording is on, press TAB to toggle animation");
 				initAnimation();
 			}
 			break;
@@ -831,7 +849,7 @@ public class ArgosyMixer extends PApplet {
 			argo1.shift(-argo1.getArgosyPixelShift(), true);
 			break;
 		}
-		case 'Z': { // reset argosy 2 to inttial position
+		case 'Z': { // reset argosy 2 to initial position
 			argo2.shift(-argo2.getArgosyPixelShift(), true);
 			break;
 		}
@@ -851,7 +869,8 @@ public class ArgosyMixer extends PApplet {
 	 * Posts key command help to the console.
 	 */
 	public void showHelp() {
-		println(" * Press ' ' to toggle animation.");
+		println(" * Press ' ' to trigger audio at the current mouse position.");
+		println(" * Press TAB to toggle animation.");
 		println(" * Press 'e' to trigger elliptical trail of audio events.");
 		println(" * Press 'a' to shift left one argosy unit.");
 		println(" * Press 'A' to shift right one argosy unit.");
@@ -871,14 +890,14 @@ public class ArgosyMixer extends PApplet {
 		println(" * Press 'f' to freeze changes to argosy 1.");
 		println(" * Press 'F' to freeze changes to argosy 2.");
 		println(" * Press 'i' or 'I' to show stats about argosies.");
-		println(" * Press 'S' to save current display to an PNG file.");
-		println(" * Press 's' to save current display to an PNG file.");
+		println(" * Press 'S' to save current Argosy signals to a stereo WAV file.");
+		println(" * Press 's' to save current display to a PNG file.");
 		println(" * Press 'u' or 'U' to reinitialize any argosies that aren't frozen.");
 		println(" * Press 'v' or 'V' to toggle video recording.");
 		println(" * Press 'w' to reset animation tracking.");
 		println(" * Press 'W' to reset animation tracking.");
 		println(" * Press 'z' to reset argosy 1 to initial position.");
-		println(" * Press 'Z' to reset argosy 2 to inttial position.");
+		println(" * Press 'Z' to reset argosy 2 to initial position.");
 		println(" * Press 'h' or 'H' to show help message in console.");
 	}
 	
@@ -889,6 +908,13 @@ public class ArgosyMixer extends PApplet {
 	public void setAudioGain(float g) {
 		audioOut.setGain(g);
 		outputGain = audioOut.getGain();
+	}
+
+	/**
+	 * Toggle animation and handle any side effects (none for the moment).
+	 */
+	public void toggleAnimation() {
+		isAnimating = !isAnimating;
 	}
 
 	/**
@@ -2297,7 +2323,7 @@ public class ArgosyMixer extends PApplet {
 	}
 
 	public void argo2InitAndShift() {
-		int shift = argo1.getArgosyPixelShift();
+		int shift = argo2.getArgosyPixelShift();
 		this.initArgo2(shift);
 		isBufferStale = true;
 	}
@@ -2439,21 +2465,6 @@ public class ArgosyMixer extends PApplet {
 	}
 	
 	/**
-	 * This method writes a color channel from the an image to playBuffer, fulfilling a 
-	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
-	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
-	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
-	 * 
-	 * @param img       a PImage, a source of data
-	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
-	 * @param sig       an target array of float in audio format 
-	 * @param chan      a color channel
-	 */
-	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
-		sig = mapper.mapImgToSig(img.pixels, sig, chan);
-	}		
-
-	/**
 	 * Calls Argosy to get a floating point representation of an argosy array.
 	 * Values in the returned array are scaled by argosy alpha / 255.0f, 
 	 * so that opacity corresponds to audio gain. The arrays from Argosy are 
@@ -2474,13 +2485,13 @@ public class ArgosyMixer extends PApplet {
 	}
 
 	/**
-	 * Typically called from mousePressed with mouseX and mouseY, generates audio events.
+	 * Typically called from mouseClicked with mouseX and mouseY, generates audio events.
 	 * TODO play these argo1 and argo2 signals in a stereo buffer.
 	 * 
 	 * @param x    x-coordinate within a PixelAudioMapper's width
 	 * @param y    y-coordinate within a PixelAudioMapper's height
 	 */
-	public void audioMousePressed(int x, int y) {
+	public void audioMouseClick(int x, int y) {
 		this.sampleX = x;
 		this.sampleY = y;
 		argo1SamplePos = getSamplePos(argo1, x, y, argo1Step);
