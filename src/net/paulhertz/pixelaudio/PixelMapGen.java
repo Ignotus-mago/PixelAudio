@@ -25,6 +25,9 @@ import java.util.Random;
 /*
  * TODO all PixelMapGen classes should throw an IllegalArgumentException when validation fails
  * because of bad input. Errors in LUT formation might throw an IllegalStateException. 
+ * the validate() method then becomes private and called in the constructor. Where there's some 
+ * nuance about arguments, a prevalidate() method, as in HilbertGen, might be useful. Also, 
+ * we may want to rename validate to requireValidDimensions. 
  */
 
 /**
@@ -176,8 +179,7 @@ public abstract class PixelMapGen {
 	 */
 	public PixelMapGen(int width, int height, AffineTransformType type) {
 		if (!this.validate(width, height)) {
-			System.out.println("Error: Validation failed");
-			return;
+			throw new IllegalArgumentException("Error: Validation failed, probably due to a bad width or height argument");
 		}
 		this.w = width;
 		this.h = height;

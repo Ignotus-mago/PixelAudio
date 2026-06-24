@@ -54,8 +54,7 @@ public class BoustropheGen extends PixelMapGen {
 	@Override
 	public boolean validate(int width, int height) {
 		if (width < 2 || height < 2) {
-			System.out.println("Width and height for BoustropheGen must be greater than 1.");
-			return false;
+			throw new IllegalArgumentException("Width and height for BoustropheGen must be greater than 1.");
 		}
 		return true;
 	}
