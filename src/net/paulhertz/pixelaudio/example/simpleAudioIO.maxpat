@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 1536.0, -740.0, 611.0, 629.0 ],
+        "rect": [ 814.0, -893.0, 611.0, 629.0 ],
         "boxes": [
             {
                 "box": {
@@ -185,8 +185,8 @@
                     "numinlets": 0,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 338.0, 375.0, 45.0, 22.0 ],
-                    "text": "r press"
+                    "patching_rect": [ 338.0, 375.0, 39.0, 22.0 ],
+                    "text": "r click"
                 }
             },
             {
@@ -378,7 +378,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 394.0, 536.0, 116.0, 22.0 ],
-                    "text": "/sampleHit 1409841"
+                    "text": "/sampleHit 469084"
                 }
             },
             {
@@ -444,8 +444,8 @@
                     "maxclass": "newobj",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 174.0, 79.0, 47.0, 22.0 ],
-                    "text": "s press"
+                    "patching_rect": [ 174.0, 79.0, 41.0, 22.0 ],
+                    "text": "s click"
                 }
             },
             {
@@ -647,7 +647,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 136.0, 91.0, 163.0, 22.0 ],
-                                    "text": "1409841 920 882"
+                                    "text": "469084 621 355"
                                 }
                             },
                             {
@@ -769,8 +769,8 @@
                     "numinlets": 5,
                     "numoutlets": 5,
                     "outlettype": [ "", "", "", "", "" ],
-                    "patching_rect": [ 58.0, 49.0, 169.0, 21.0 ],
-                    "text": "route /trig /onoff /press /setnum"
+                    "patching_rect": [ 58.0, 49.0, 163.0, 21.0 ],
+                    "text": "route /trig /onoff /click /setnum"
                 }
             },
             {
