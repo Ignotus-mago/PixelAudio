@@ -27,11 +27,13 @@ public void initAllPoints() {
  */
 public void addDrawingPoint(int x, int y) {
   if (x != currentPoint.x || y != currentPoint.y) {
-    currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
+    x = clipToWidth(x);
+    y = clipToHeight(y);
+    currentPoint = new PVector(x, y);
     allPoints.add(currentPoint);
     allTimes.add(millis() - startTime);
-    // *****>>> NETWORKING <<<***** //
-    if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));
+    // *****]]] NETWORKING [[[***** //
+    if (nd != null && isNetSendDrawingPoints) nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
   }
 }
 
@@ -132,11 +134,11 @@ public AudioBrushLite initCurveMakerAndAddBrush() {
       scheduleSamplerBrushClick(b);
     }
   }
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (nd != null && isNetSendGestures) {
     int x = clipToWidth(mouseX);
     int y = clipToHeight(mouseY);
-    nd.oscSendMousePressed(x, y, getSamplePos(x, y));
+    nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
     nd.oscSendDrawPoints(curveMaker.getRdpPoints());
     nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
   }
@@ -351,7 +353,7 @@ void scheduleSamplerBrushClick(AudioBrushLite sb) {
   if (pts == null || pts.size() < 2) return;
   GestureSchedule sched = getPlaybackScheduleForBrush(sb);
   storeSamplerCurveTL(sb, sched, millis() + 10);
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(sb));
 }
 
@@ -421,7 +423,7 @@ void scheduleGranularBrushClick(AudioBrushLite gb) {
   GestureSchedule sched = getPlaybackScheduleForBrush(gb);
   playGranularGesture(buf, sched, gParams, gb.pitchRatio);
   storeGranularCurveTL(sched, millis() + 10, isGesture);
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(brushes.indexOf(gb));
 }
 

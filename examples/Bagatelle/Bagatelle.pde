@@ -587,7 +587,7 @@ boolean isBrushSelectionModal = false;     // if false, select all brushes, othe
 PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
 PABoundsPolicy boundsPolicy;
 
-// *****>>> NETWORKING <<<***** //
+// *****]]] NETWORKING [[[***** //
 NetworkDelegate nd;
 boolean isUseNetworkDelegate = false;
 boolean isNetSendDrawingPoints = true;
@@ -640,7 +640,7 @@ public void setup() {
   initDrawing();                  // set up drawing variables
   initGUI();                      // set up the G4P control window and widgets
   resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   isUseNetworkDelegate = true;
   initNetwork();
   // customize environment
@@ -789,7 +789,7 @@ void initCustomSettings() {
 }
 
 void initNetwork() {
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (isUseNetworkDelegate) {
     String remoteAddress = "127.0.0.1";
     nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);

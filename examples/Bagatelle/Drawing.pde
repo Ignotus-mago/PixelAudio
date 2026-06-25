@@ -93,8 +93,8 @@ public int handleClickOutsideBrush(int x, int y) {
     }
   } else {
   }
-  // *****>>> NETWORKING <<<***** //
-  if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMousePressed(x, y, pos);
+  // *****]]] NETWORKING [[[***** //
+  if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMouseClicked(x, y, pos);
   return pos;
 }
 
@@ -257,8 +257,8 @@ public void addDrawingPoint(int x, int y) {
   allPoints.add(currentPoint);
   allTimes.add(millis() - startTime);   // store time offset, not absolute time
 
-  // *****>>> NETWORKING <<<***** //
-  if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));
+  // *****]]] NETWORKING [[[***** //
+  if (nd != null && isNetSendDrawingPoints) nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
 
   if (!doPlayWhileDrawing) return;
   // preview only while drawing in editable synth modes
@@ -326,11 +326,11 @@ public AudioBrush initCurveMakerAndAddBrush() {
     GranularBrush gb = (GranularBrush) brush;
     scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
   }
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (nd != null && isNetSendGestures) {
     int x = clipToWidth(mouseX);
     int y = clipToHeight(mouseY);
-    nd.oscSendMousePressed(x, y, getSamplePos(x, y));
+    nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
     nd.oscSendDrawPoints(curveMaker.getRdpPoints());
     nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
   }

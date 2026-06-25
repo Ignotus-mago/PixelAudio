@@ -21,7 +21,7 @@ void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY, PAContro
   sched = boundsPolicy.applySchedule(sched);
   if (sched == null || sched.isEmpty()) return;
   storeSamplerBrushEvents(sched, snap, millis() + 10, gainCurve);
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(samplerBrushes.indexOf(sb));
   if (isDebugging) {
     PVector startPoint = sched.points.get(0);
@@ -152,7 +152,7 @@ public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY,
   GestureEventParams eventParams = prepareGranularGesture(buf, sched, gParams, gainCurve);
   playGranularGesture(buf, sched, gParams, eventParams);
   storeGranularCurveTL(sched, millis() + 10, isGesture);
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(granularBrushes.indexOf(gb));
   if (isDebugging) {
     PVector startPoint = sched.points.get(0);

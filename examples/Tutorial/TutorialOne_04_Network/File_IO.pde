@@ -110,7 +110,7 @@ public void fileSelected(File selectedFile) {
       println("----- Selected file " + fileName + "." + fileTag + " at "
         + filePath.substring(0, filePath.length() - fileName.length()));
       loadAudioFile(audioFile);
-      // *****>>> NETWORKING <<<***** //
+      // *****]]] NETWORKING [[[***** //
       if (nd != null && isNetSendFileInfo) nd.oscSendFileInfo(filePath, fileName, fileTag);
     } else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
       || fileTag.equalsIgnoreCase("jpeg")) {

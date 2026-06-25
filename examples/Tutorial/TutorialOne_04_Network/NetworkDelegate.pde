@@ -145,8 +145,8 @@ public class NetworkDelegate {
   /*                                                                */
   /*----------------------------------------------------------------*/
 
-  public void oscSendMousePressed(int sampleX, int sampleY, int sample) {
-    OscMessage msg = new OscMessage("/press");
+  public void oscSendMouseClicked(int sampleX, int sampleY, int sample) {
+    OscMessage msg = new OscMessage("/click");
     msg.add(sample);
     msg.add(sampleX);
     msg.add(sampleY);
