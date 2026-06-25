@@ -851,7 +851,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     PABoundsPolicy boundsPolicy;
 	
 	
-	// *****>>> NETWORKING <<<***** //
+	// *****]]] NETWORKING [[[***** //
 	NetworkDelegate nd;
 	boolean isUseNetworkDelegate = false;
 	boolean isNetSendDrawingPoints = true;
@@ -912,7 +912,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		initDrawing();                  // set up drawing variables
 		initGUI();                      // set up the G4P control window and widgets
 		resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
-	    // *****>>> NETWORKING <<<***** //
+	    // *****]]] NETWORKING [[[***** //
 		isUseNetworkDelegate = true;
 		initNetwork();
 		// customize environment, including daPath
@@ -1061,7 +1061,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	void initNetwork() {
-	    // *****>>> NETWORKING <<<***** //
+	    // *****]]] NETWORKING [[[***** //
 		if (isUseNetworkDelegate) {
 			String remoteAddress = "127.0.0.1";
 			nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
@@ -2260,7 +2260,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				println("----- Selected file " + fileName + "." + fileTag + " at "
 						+ filePath.substring(0, filePath.length() - fileName.length()));
 				loadAudioFile(audioFile);
-				// *****>>> NETWORKING <<<***** //
+				// *****]]] NETWORKING [[[***** //
 			    if (nd != null && isNetSendFileInfo) nd.oscSendFileInfo(filePath, fileName, fileTag);
 			} 
 			else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
@@ -3440,8 +3440,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		else {
 			
 		}
-		// *****>>> NETWORKING <<<***** //
-	    if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMousePressed(x, y, pos);
+		// *****]]] NETWORKING [[[***** //
+	    if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMouseClicked(x, y, pos);
 		return pos;
 	}
 	
@@ -3604,8 +3604,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    allPoints.add(currentPoint);
 	    allTimes.add(millis() - startTime);   // store time offset, not absolute time
 
-	    // *****>>> NETWORKING <<<***** //
-		if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));	    
+	    // *****]]] NETWORKING [[[***** //
+		if (nd != null && isNetSendDrawingPoints) nd.oscSendMouseClicked(x, y, getSamplePos(x, y));	    
 	    
 	    if (!doPlayWhileDrawing) return;	    
 	    // preview only while drawing in editable synth modes
@@ -3671,11 +3671,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		if (doPlayOnNewBrush && brush instanceof GranularBrush gb) {
 			scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 		}
-		// *****>>> NETWORKING <<<***** //
+		// *****]]] NETWORKING [[[***** //
 		if (nd != null && isNetSendGestures) {
 			int x = clipToWidth(mouseX);
 			int y = clipToHeight(mouseY);
-			nd.oscSendMousePressed(x, y, getSamplePos(x, y));
+			nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
 			nd.oscSendDrawPoints(curveMaker.getRdpPoints());
 			nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
 		}
@@ -4352,7 +4352,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    sched = boundsPolicy.applySchedule(sched);
 	    if (sched == null || sched.isEmpty()) return;
 	    storeSamplerBrushEvents(sched, snap, millis() + 10, gainCurve);
-		// *****>>> NETWORKING <<<***** //
+		// *****]]] NETWORKING [[[***** //
 		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(samplerBrushes.indexOf(sb)); 
 	    if (isDebugging) {
 	    	PVector startPoint = sched.points.get(0);
@@ -4483,7 +4483,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		GestureEventParams eventParams = prepareGranularGesture(buf, sched, gParams, gainCurve);
 		playGranularGesture(buf, sched, gParams, eventParams);
 		storeGranularCurveTL(sched, millis() + 10, isGesture);
-		// *****>>> NETWORKING <<<***** //
+		// *****]]] NETWORKING [[[***** //
 		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(granularBrushes.indexOf(gb)); 
 	    if (isDebugging) {
 	    	PVector startPoint = sched.points.get(0);
@@ -4787,8 +4787,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		/*                                                                */
 		/*----------------------------------------------------------------*/
 		
-		public void oscSendMousePressed(int sampleX, int sampleY, int sample) {
-		  OscMessage msg = new OscMessage("/press");
+		public void oscSendMouseClicked(int sampleX, int sampleY, int sample) {
+		  OscMessage msg = new OscMessage("/click");
 		  msg.add(sample);
 		  msg.add(sampleX);
 		  msg.add(sampleY);

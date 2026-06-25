@@ -794,10 +794,18 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 		}
 		// *****]]] NETWORKING [[[***** //
-		int x = clipToWidth(mouseX);
-		int y = clipToHeight(mouseY);
+		sendCoordsUDP(mouseX, mouseY);
+	}
+
+	/**
+	 * Send coordinates and corresponding sample position through network connection.
+	 * Coords will be clipped to display and sent with sample index if isNetSendOutsideBrushPoints == true.
+	 */
+	public void sendCoordsUDP(int x, int y) {
+		x = clipToWidth(x);
+		y = clipToHeight(y);
 		int pos = getSamplePos(x, y);
-	    if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMousePressed(x, y, pos);
+	    if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMouseClicked(x, y, pos);
 	}
 
 		
@@ -875,6 +883,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			}
 			else {
 				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+				// *****]]] NETWORKING [[[***** //
+				sendCoordsUDP(mouseX, mouseY);
 			}
 			break;
 		case '1': // set brushstroke under cursor to PathMode ALL_POINTS
@@ -2311,11 +2321,13 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 */
 	public void addDrawingPoint(int x, int y) {
 	    if (x != currentPoint.x || y != currentPoint.y) {
-	        currentPoint = new PVector(clipToWidth(x), clipToHeight(y));
+	    	x = clipToWidth(x);
+	    	y = clipToHeight(y);
+	        currentPoint = new PVector(x, y);
 	        allPoints.add(currentPoint);
 	        allTimes.add(millis() - startTime);
 		    // *****]]] NETWORKING [[[***** //
-			if (nd != null && isNetSendDrawingPoints) nd.oscSendMousePressed(x, y, getSamplePos(x, y));	    
+			if (nd != null && isNetSendDrawingPoints) nd.oscSendMouseClicked(x, y, getSamplePos(x, y));	    
 	    }
 	}
 		
@@ -2420,7 +2432,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		if (nd != null && isNetSendGestures) {
 			int x = clipToWidth(mouseX);
 			int y = clipToHeight(mouseY);
-			nd.oscSendMousePressed(x, y, getSamplePos(x, y));
+			nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
 			nd.oscSendDrawPoints(curveMaker.getRdpPoints());
 			nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
 		}
@@ -3007,8 +3019,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		/*                                                                */
 		/*----------------------------------------------------------------*/
 		
-		public void oscSendMousePressed(int sampleX, int sampleY, int sample) {
-		  OscMessage msg = new OscMessage("/press");
+		public void oscSendMouseClicked(int sampleX, int sampleY, int sample) {
+		  OscMessage msg = new OscMessage("/click");
 		  msg.add(sample);
 		  msg.add(sampleX);
 		  msg.add(sampleY);

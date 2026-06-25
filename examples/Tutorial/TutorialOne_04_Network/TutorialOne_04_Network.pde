@@ -76,7 +76,7 @@
  * ====================
  *
  * To find the points at which networking code is implemented in methods in this sketch,
- * search for "// *****>>> NETWORKING <<<***** //".
+ * search for "// *****]]] NETWORKING [[[***** //".
  * The NetworkDelegate class provides a number of messaging methods, each prefaced with "oscSend".
  * For receiving remote messages, it calls oscP5's "plug" method (in initOscPlugs()) to link
  * incoming messages to local methods. In addition, it provides some boolean toggles, such as
@@ -486,7 +486,7 @@ public static final class BrushHit {
   }
 }
 
-// *****>>> NETWORKING <<<***** //
+// *****]]] NETWORKING [[[***** //
 NetworkDelegate nd;
 boolean isUseNetworkDelegate = false;
 boolean isNetSendDrawingPoints = true;
@@ -538,7 +538,7 @@ public void setup() {
   // 6. set up the drawing environment and variables
   initDrawing();
   // 7. set up networking
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   isUseNetworkDelegate = true;
   initNetwork();
   // 8. output a help message to the console
@@ -598,7 +598,7 @@ public void initDrawing() {
 }
 
 void initNetwork() {
-  // *****>>> NETWORKING <<<***** //
+  // *****]]] NETWORKING [[[***** //
   if (isUseNetworkDelegate) {
     String remoteAddress = "127.0.0.1";
     nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
@@ -795,11 +795,19 @@ public void mouseClicked() {
     // click outside any brush is handled here
     handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
   }
-  // *****>>> NETWORKING <<<***** //
-  int x = clipToWidth(mouseX);
-  int y = clipToHeight(mouseY);
+  // *****]]] NETWORKING [[[***** //
+  sendCoordsUDP(mouseX, mouseY);
+}
+
+/**
+ * Send coordinates and corresponding sample position through network connection.
+ * Coords will be clipped to display and sent with sample index if isNetSendOutsideBrushPoints == true.
+ */
+public void sendCoordsUDP(int x, int y) {
+  x = clipToWidth(x);
+  y = clipToHeight(y);
   int pos = getSamplePos(x, y);
-  if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMousePressed(x, y, pos);
+  if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMouseClicked(x, y, pos);
 }
 
 
@@ -872,6 +880,8 @@ public void parseKey(char key, int keyCode) {
       }
     } else {
       handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+      // *****]]] NETWORKING [[[***** //
+      sendCoordsUDP(mouseX, mouseY);
     }
     break;
   case '1': // set brushstroke under cursor to PathMode ALL_POINTS
@@ -1077,7 +1087,7 @@ public void parseKey(char key, int keyCode) {
     oldIsAnimating = isAnimating;
     isAnimating = true;
     break;
-    // *****>>> NETWORKING <<<***** // key commands for networking
+    // *****]]] NETWORKING [[[***** // key commands for networking
   case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
     if (nd != null) nd.oscSendOnOff(1, true);
     break;
