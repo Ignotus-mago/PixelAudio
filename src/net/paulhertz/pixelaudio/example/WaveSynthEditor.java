@@ -167,6 +167,7 @@ import g4p_controls.*;
  * Press 'V' to record a complete video loop from frame 0 to stop frame.
  * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.
  * Press 'z' to find nearest zero crossing in the audio signal and play from there.
+ * Press 'q' to show animation status on screen (will not be recorded).
  * Press '?' to print window dimensions, video frame rate, and audio settings to the console.
  * press 'h' or 'H' to show this help message in the console.
 
@@ -310,7 +311,6 @@ public class WaveSynthEditor extends PApplet {
 	float samplerGain = 0.875f;     // instrument gain
 	
 
-
 	// ADSR and params
 	ADSRParams samplerEnv;                   // good old attack, decay, sustain, release
 	float maxAmplitude = 0.9f;
@@ -337,7 +337,12 @@ public class WaveSynthEditor extends PApplet {
 	boolean imageDirty = true;
 	boolean audioDirty = true;
 
-
+	/* ------------------------------------------------------------------ */
+	/*                        SHOW TEXT ON SCREEN                         */
+	/* ------------------------------------------------------------------ */
+	
+	String screenMsg = "";
+	boolean showAnimationStatus = false;
 	
 	/* ------------------------------------------------------------------ */
 	/*                           APPLICATION                              */
@@ -528,11 +533,41 @@ public class WaveSynthEditor extends PApplet {
 			renderVisualFrame();  // calls wavesynth.renderFrame(step)
 		}
 		image(mapImage, 0, 0, width, height);
-		runTimeArray();
 		if (isRecordingVideo && videx != null) {
 			videx.saveFrame();
 			println("-- video recording frame " + step + " of " + animStop);
 		}
+		runTimeArray();           // audio playback animation won't be recorded 
+		if (showAnimationStatus) {
+			// String msg = ""+ step +" of "+ animSteps +" at "+ (int) frameRate + " fps, loop: "+ isLooping +", recording "+ isRecordingVideo;
+			screenMsg = (isAnimating ? "running: step " : "paused: step ")
+					+ step +" of "+ animSteps +" at "+ (int) frameRate + " fps, loop: "+ isLooping +", recording: "+ isRecordingVideo;
+			writeToScreen(screenMsg, 64, 1000, 24, true);
+		}
+	}
+	
+	/**
+	 * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
+	 * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
+	 *
+	 * @param msg     message to write
+	 * @param x       x coordinate
+	 * @param y       y coordinate
+	 * @param weight  font weight
+	 * @param isWhite if true, white text, otherwise, black text
+	 */
+	public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
+	  int fill1 = isWhite? 0 : 255;
+	  int fill2 = isWhite? 255 : 0;
+	  pushStyle();
+	  textSize(weight);
+	  float tw = textWidth(msg);
+	  int pad = 4;
+	  fill(fill1);
+	  rect(x - pad, y - pad - weight, x + tw + pad, y + weight/2 + pad);
+	  fill(fill2);
+	  text(msg, x, y);
+	  popStyle();
 	}
 
 	/**
@@ -969,6 +1004,10 @@ public class WaveSynthEditor extends PApplet {
     		println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
     		toggleZeroCrossing(isFindZeroCrossing);
     		break;
+    	case 'q': // show animation status on screen (will not be recorded)
+    		showAnimationStatus = !showAnimationStatus;
+    		println("-- showAnimationStatus is "+ showAnimationStatus);
+    		break;
     	case '?': // print some global information to the console
     		println("-- window dimensions = "+ width +" x "+ height);
     		println("-- current frame = "+ step);
@@ -1030,6 +1069,7 @@ public class WaveSynthEditor extends PApplet {
 		println(" * Press 'V' to record a complete video loop from frame 0 to stop frame.");
 		println(" * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.");
 		println(" * Press 'z' to find nearest zero crossing in the audio signal and play from there.");
+		println(" * Press 'q' to show animation status on screen (will not be recorded).");
 		println(" * Press '?' to print window dimensions, video frame rate, and audio settings to the console.");
 		println(" * press 'h' or 'H' to show this help message in the console.");
 		println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
