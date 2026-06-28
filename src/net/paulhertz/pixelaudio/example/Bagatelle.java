@@ -58,10 +58,6 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
- * TODO do we add a real time audio here? Or does it work better in a simpler context, syncing 
- * programmed events rather than UI events, in a sketch designed specifically for that purpose?
- * I think the latter is the better solution. 
- * 
  * TODO a release version with two different preset lists and performance cues that can be swapped
  * depending on whether we're performing DEADBODYWORKFLOW or Abstract Jailbreak. Top javadocs will 
  * change, so I'm not doing much editing for the current version. 
@@ -821,6 +817,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	boolean shiftIsDown = false;         // flag for shift key down
 	
 	// performance state
+	
+	enum PerformanceMode {
+	    ABSTRACT_JAILBREAK,
+	    WORD_GAME
+	}
+
+	static final PerformanceMode pMode = PerformanceMode.ABSTRACT_JAILBREAK;
 	
 	boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
 	boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
