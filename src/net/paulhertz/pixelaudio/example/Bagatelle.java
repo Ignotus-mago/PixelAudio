@@ -58,23 +58,26 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
- * TODO a release version with two different preset lists and performance cues that can be swapped
- * depending on whether we're performing DEADBODYWORKFLOW or Abstract Jailbreak. Top javadocs will 
- * change, so I'm not doing much editing for the current version. 
+ * TODO a release version where two different preset lists and performance cues can be swapped. DONE
+ * 
  */
 
 /**
- * Experimental real time performance application, with an editing GUI, presets, and
- * JSON-format files for persistent brushstroke and audio configuration data. Used in performance
- * at the Outside the Box New Music Festival at Southern Illinois University, Carbondale, March 2026.
- * We played Christopher Walczak's composition "Abstract Jailbreak", one of a series of "Bagatelles" we
- * are collaborating on, and my composition "DEADBODYWORKFLOW". The presets in this version of the Bagatelle 
- * sketch are set up for "Abstract Jailbreak". If you change {@code isRunWordGame} to {@code true},
- * this sketch will run the responses for DEADBODYWORKFLOW in {@link #runPerformanceCue(char)}, but
- * without the correct PerformancePreset settings. The correct presets are commented out at the end of
- * this file, and can be swapped with Abstract Jailbreak's presets to set up Bagatelle for a 
- * performance of DEADBODYWORKFLOW. 
- * 
+ * Experimental real time performance application, with an editing GUI, presets, and JSON-format
+ * files for persistent brushstroke and audio configuration data. Used in performance at the
+ * Outside the Box New Music Festival at Southern Illinois University, Carbondale, March 2026.
+ * We played Christopher Walczak's composition "Abstract Jailbreak", one of a series of
+ * "Bagatelles" we are collaborating on, and my composition "DEADBODYWORKFLOW". 
+ * <p>
+ * The presets and performance cues in this version of the Bagatelle sketch are set up for
+ * "Abstract Jailbreak". If you change {@code pMode} to {@code PerformanceMode.DEADBODYWORKFLOW}, 
+ * this sketch will run the presets and cues for "DEADBODYWORKFLOW". 
+ * </p><p>
+ * Bagatelle is an experiment. I have tried to document it reasonably well, but some features are bound to
+ * appear opaque or mysterious. I think most of the features will reveal themselves with experimentation.
+ * You may even find that you can write your own presets and use them for your performances. That
+ * would be an ideal outcome, to my mind.
+ * </p>
  * <DIV>
  * <h2>QUICK START</h2>
  * <ol>
@@ -83,25 +86,20 @@ import net.paulhertz.pixelaudio.sampler.*;
  * samples. An overlaid rainbow spectrum traces the Signal Path, the mapping of the audio signal to the image
  * pixels created by the PixelMapGen {@code multigen} and managed by the PixelAudioMapper {@code mapper}.
  * The Signal Path starts in the upper left corner and ends in the lower right corner. 
- * <br>
+ * <br><br>
  * Bagatelle is set up for a performance of "Abstract Jailbreak," a musical work by Christopher Walczak. 
  * Abstract Jailbreak makes use of the Performance Presets built in to the application. The presets 
  * can be triggered with the number keys. At this point you could press '1' to load the first preset.
  * For more information, see the "PRESET LIST" in the variables section of the Bagatelle tab, and the  
  * various methods in the Performance tab. There are five presets for Abstract Jailbreak. They control
  * audio synthesis parameters and brush drawing style. More than one can be loaded at one time. To clear 
- * presets from the preset stack, press '0'.
- * <br>
- * Bagatelle is an experiment. I have tried to document it reasonably well, but some features are bound to
- * appear opaque or mysterious. I think most of the features will reveal themselves with experimentation.
- * You may even find that you can write your own presets and use them for your performances.
- * </li>
+ * presets from the preset stack, press '0'. <br><br></li>
  *
  * <li>Drawing is already turned on, so go ahead and drag the mouse to draw a line. As in TutorialOne_03_Drawing, 
  * a brushstroke appears when you release the mouse. TutorialOne_03_Drawing gave you limited control over
  * the attributes of a brushstroke and its associated audio parameters. In GesturePlayground, you can
  * control nearly all the available parameters with the control palette. Building on GesturePlayground,
- * Bagatelle provides a framework for live performance.</li>
+ * Bagatelle provides a framework for live performance. <br><br></li>
  * 
  * <li>You can probably use Bagatelle "right out of the box" by just supplying your own audio and image files
  * and open your files with the 'o' key command. If you want to use your own files with Bagatelle's 
@@ -110,25 +108,25 @@ import net.paulhertz.pixelaudio.sampler.*;
  * There are three things you need to modify to use your own performance presets:<br>
  *   <ol>
  *   <li>Create your own PerformancePreset list by editing the existing one.</li> 
- *   <li>Set the variable 'daPath" to point to the directory where you store your performance files</li>
+ *   <li>Set the variable {@code performanceBasePath} to point to the directory where you store your performance files</li>
  *   <li>Edit the entries in {@code runPerformanceCue(...)} to access your own files</li>
  *   </ol>
- * </li>
+ * <br></li>
  * <li>At the top of the control palette, you'll find Path Source radio buttons and sliders for setting 
  * the geometry of the brush curve. When the curve is set to Reduced Points or Curve Points, the epsilon 
  * slider will allow you to visualize changes in the curve. For the curve points representation of the 
- * curve, theCurve Points slider will add or subtract points.</li>
+ * curve, theCurve Points slider will add or subtract points.<br><br></li>
  * 
  * <li>The control palette displays knobs for the type of audio synthesis instrument you have selected.
  * Press the 't' key to change the instrument. The control palette will reflect the changes. The 
  * control palette provides three play modes: one for editing granular synthesis parameters, another
  * for the sampler synthesizer, and a "play only" mode where you can play both instruments but
- * don't have editing enabled.</li>
+ * don't have editing enabled.<br><br></li>
  * 
  * <li>The controls for the Sampler are fairly simple. You can change the number of points in the curve
  * with the geometry controls. You can also change the duration of the gesture and the number of 
  * points in it with the Resample and Duration sliders. Finally, there's a Sampler Envelope menu
- * that will change the ADSR envelope of each sampler event point.</li> 
+ * that will change the ADSR envelope of each sampler event point.<br><br></li> 
  * 
  * <li>The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus 
  * many controls for granular synthesis:
@@ -141,7 +139,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   <li>Grain Length and Hop Length sliders control the spacing of the grains. Hop Length is only 
  *   used for Fixed Hop Mode. Grain and Hop durations are in milliseconds.</li> 
  *   <li>The Warp radio buttons and slider control non-linear timing changes to the gesture.</li> 
- *   </ol></li>
+ *   </ol><br><br></li>
  * <li>There are many key commands too, including the 'o' command to load a new audio files. Some 
  * commands are particularly useful with granular synthesis:
  *   <ol>
@@ -155,7 +153,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   <li>The 'x' command key deletes the brush you are hovering over, if it is editable.</li>
  *   <li>The 'z' command key swaps the instrument type of the brush you are hovering over and changes 
  *   edit mode to match.</li>
- *   </ol></li> 
+ *   </ol><br><br></li> 
  * </ol>
  * 
  * <h2>About Bagatelle</h2>
@@ -237,55 +235,64 @@ import net.paulhertz.pixelaudio.sampler.*;
  * 
  * 
  * <pre>
+ * ----- Audio Gain -----
  * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).
  * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).
  * Press RIGHT ARROW to increase current instrument gain by 3.0 dB.
  * Press LEFT ARROW to decrease current instrument gain by 3.0 dB.
+ * Press '`' to fade out all instruments.
+ * ----- Presets and Cues -----
  * Keys 1 through 9 are reserved for triggering Performance Presets 1-9, '0' will clear all presets.
+ * ----- Drawing, Audio Settings, Playback -----
  * Press TAB to set brush to active, if cursor is over a brush.
  * Press ' ' to (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event.
+ * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.
  * Press 'a' to toggle animation.
- * Press 'c' or 'C' to print the current configuration status to the console.
  * Press 't' to switch between Granular, Sampler, and Play Only modes.
  * Press 'z' to change the drawing mode of the hover brush.
+ * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
+ * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.
  * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
- * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
+ * Press 'r' to reset instrument configuration to defaults in GUI.
+ * Press 'c' or 'C' to print the current configuration status to the console.
+ * ----- File IO and Mapping -----
  * Press 'f' or 'F' to open a folder with JSON brush data and load all files.
  * Press 'j' to save the active brush curve and config to JSON files.
  * Press 'J' to save all brushes curve and config to JSON Session file.
  * Press 'o' to open an audio file, image file, or JSON file.
- * Press 'w' to write the map image to the audio buffer.
+ * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open a file.
+ * Press 'w' to write the display image to the audio buffer.
  * Press 'W' to write the audio buffer to the display image.
- * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.
+ * ----- Audio Mix Dynamics -----
  * Press 'n' to set noise reduction policy for Sampler instrument audio mix.
- * Press 'R' to reset transform of active brush if it has a transform TODO clarify.
- * Press 'r' to reset instrument configuration to defaults in GUI.
- * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
- * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  * Press 'g' to toggle use of dynamics in gainCurve with gesture .
- * Press 'G' to create a beatBrush.
- * Press 'l' to loop hovered brush 4 times.
- * Press 'L' to run an infinite loop on hovered brush.
- * Press ';' to stop loop for hovered brush.
+ * ----- Special FX -----
+ * Press 'l' to loop the hovered brush 4 times.
+ * Press 'L' to run an infinite loop on the hovered brush.
+ * Press ';' to stop loop for the hovered brush.
  * Press ':' to stop all loops.
  * Press 'y' to toggle transform animation test.
  * Press 'Y' to freeze / unfreeze brush geometric transform animation.
+ * Press 'R' to reset transform of active brush if it has a transform.
+ * Press 'G' to create a beatBrush.
+ * Press '.' to turn random raindrops audio events on or off.
+ * ----- Brush Deletion -----
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
- * Press '.' to turn random raindrops audio events on or off.
  * Press '≈' to option-x on MacOS keyboard, clear all brushes.
- * Press '`' to fade out all instruments.
+ * ----- Network -----
  * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
  * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
  * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.
  * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.
  * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
  * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
+ * ----- Help -----
  * Press 'h' or 'H' to show help message.
  * </pre>
  * 
@@ -657,7 +664,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * code. You can address the host application with the {@code app} parameter, 
 	 * but keep in mind that it is called on every brush. 
 	 */
-	enum PerformancePreset {
+	enum AJ_PerformancePreset {
 		DURATION_5SEC_SWELL('1') {
 			@Override
 			CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
@@ -770,12 +777,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	    final char key;
 
-	    PerformancePreset(char key) {
+	    AJ_PerformancePreset(char key) {
 	        this.key = key;
 	    }
 
-	    static PerformancePreset fromKey(char k) {
-	        for (PerformancePreset c : values()) {
+	    static AJ_PerformancePreset fromKey(char k) {
+	        for (AJ_PerformancePreset c : values()) {
 	            if (c.key == k) return c;
 	        }
 	        return null;
@@ -793,7 +800,113 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app);
 	}
 	
-	ArrayList<PerformancePreset> presetStack = new ArrayList<>();
+	ArrayList<AJ_PerformancePreset> aj_presetStack = new ArrayList<>();
+	
+
+	/* ------------------------------------------------------------------ */
+	/*                   DEADBODYWORKFLOW PRESET LIST                     */
+	/* ------------------------------------------------------------------ */
+	
+	/* Presets for DeadBodyWorkFlow 
+     *    1. Drone on open, 'a' to animate, '.' for raindrops begin .. end 
+     *    2. When raindrops end, load DBWF audio + image, voice + bass clarinet enter
+     *    3. -- PixelAudio improv
+     *    4. -- PixelAudio improv
+     *    5. REPRISE, load file "dbwf_02_session.json", 'm' for magic, play
+     *    6. CLOSE, group improv once through the 16-bar section, all but b.c. dropping out in last 4 measures,
+     *       voice sotto voce, with FX, "dead body work flow busy word game play".
+     *    TODO brush color variations1
+	 */ 
+	/**
+	 * Presets are applied to each new brush at the moment drawing is completed by 
+	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
+	 * all brush creation. Presets are best used just for brush modifications. If you
+	 * want to change application settings, use runPerformanceCue() with your own custom 
+	 * code. You can address the host application with the <code>app</code> parameter, 
+	 * but keep in mind that is is called on every brush. 
+	 */
+	enum DBWF_PerformancePreset {
+	    DRONE_RAINDROPS('1') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	            return new CueResult(curve, cfg);
+	        }
+	    },
+	    VOICE_AND_MELODY('2') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	            return new CueResult(curve, cfg);
+	        }
+	    },
+	    GLITCH_CORTO('3') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	        	cfg.rdpEpsilon = 12.0f;
+	        	cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+	        	cfg.hopLengthSamples = 256;
+	        	cfg.grainLengthSamples = 1024;
+	        	cfg.burstGrains = 4;
+	            return new CueResult(curve, cfg);
+	        }
+	    },
+	    GLITCH_LARGO('4') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	        	curve.setBezierBias(0.5f);
+	        	curve.setDrawWeighted(true);
+	        	cfg.rdpEpsilon = 2.0f;
+	        	cfg.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
+	        	cfg.hopLengthSamples = 128;
+	        	cfg.grainLengthSamples = 512;
+	        	cfg.burstGrains = 16;
+	        	cfg.pitchSemitones = -12.0f;
+	            app.doPlayOnNewBrush = true;
+	            app.doPlayWhileDrawing = true;
+	        	app.usePitchedGrains = true;
+	        	app.pitchJitter = 0.5f;
+	            return new CueResult(curve, cfg);
+	        }	    
+	    },
+	    REPRISE('5') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	            return new CueResult(curve, cfg);
+	        }	    
+	    },
+	    CLOSE('6') {
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	            return new CueResult(curve, cfg);
+	        }	    
+	    };
+
+	    final char key;
+
+	    DBWF_PerformancePreset(char key) {
+	        this.key = key;
+	    }
+
+	    static DBWF_PerformancePreset fromKey(char k) {
+	        for (DBWF_PerformancePreset c : values()) {
+	            if (c.key == k) return c;
+	        }
+	        return null;
+	    }
+	    
+	    /**
+	     * Abstract method for concrete apply() methods implemented by each enum constant. In the preset
+	     * logic, each constant is in effect its own function, which can be invoked by reference. 
+	     * 
+	     * @param cfg      configuration parameters for GestureGranularConfig, used to modify audio synthesis
+	     * @param curve    a PACurveMaker gesture, which can be modifed by the concrete apply() method
+	     * @param app      a reference to the host application, use with caution
+	     * @return         a reference to the concrete apply() method for an enum constant 
+	     */
+	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app);
+	}
+
+	ArrayList<DBWF_PerformancePreset> dbwf_presetStack = new ArrayList<>();
+
 	
 	/**
 	 * Gesture and audio configuration data returned by a PerformancePreset.
@@ -818,14 +931,17 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	// performance state
 	
+	/**
+	 * available performance states, used to determine performance preset and cues
+	 */
 	enum PerformanceMode {
 	    ABSTRACT_JAILBREAK,
-	    WORD_GAME
+	    DEADBODYWORKFLOW
 	}
 
-	static final PerformanceMode pMode = PerformanceMode.ABSTRACT_JAILBREAK;
+	/** current performance mode */
+	PerformanceMode pMode = PerformanceMode.ABSTRACT_JAILBREAK;
 	
-	boolean isRunWordGame = false;       // presets and files: if true, run DeadBodyWorkFlow; if false, run Bagatelle 1
 	boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
 	boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
 	boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
@@ -863,8 +979,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	boolean isNetSendFileInfo = false;
 	boolean isNetSendGestures = false;
 	
-	// in Processing, for PixelAudio Tutorial examples, use this in setup(): daPath = sketchPath("") + "../examples_data/"; 
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";   // system-specific path to example files data
+	// system-specific path to example files data
+	// in Processing, for PixelAudio Tutorial examples, use this: performanceBasePath = sketchPath("") + "../examples_data/"; 
+	static String performanceBasePath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/"; 
+	String daPath;   // path derived from performancBasePath
 	String daFilename = "audioBlend.wav";    // "audioBlend.wav";
 	ArrayList<String> daFilelist = new ArrayList<>();
 
@@ -884,23 +1002,17 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	public void setup() {
-		// daPath = sketchPath("") + "../examples_data/";    // PROCESSING ONLY! otherwise use system-specific path
 		// set a standard animation framerate -- in most example sketches we use 44100
 		// but in performance sketches like DeadBodyWorkFlow we use 48000
 		sampleRate = 48000;    // could be a little redundant, but I'm too lazy to scroll up to the top
 		frameRate(120);
-		surface.setTitle(isRunWordGame ? "DeadBodyWorkFlow" : "Abstract Jailbreak");
+		surface.setTitle(performanceTitle());
 		// we can put application and control panel always on top, see createControlWindow()
 		surface.setAlwaysOnTop(true);    
 		// 1) initialize our library
 		pixelaudio = new PixelAudio(this);
 		// 2) create a PixelMapGen instance with dimensions equal to the display window.
-		if (isRunWordGame) {
-			multigen = loadWordGen(genWidth/4, genHeight/4);
-		}
-		else {
-			multigen = HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
-		}
+		multigen = loadPerformanceGen();
 		// 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
 		mapper = new PixelAudioMapper(multigen);
 		mapSize = mapper.getSize();
@@ -918,7 +1030,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    // *****]]] NETWORKING [[[***** //
 		isUseNetworkDelegate = true;
 		initNetwork();
-		// customize environment, including daPath
+		// customize environment, setting daPath from performanceBasePath
 		initCustomSettings();
 		applyColorMap();                // apply spectrum to mapImage and baseImage
 		showHelp();                     // print key commands to console
@@ -936,7 +1048,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/**
 	 * Adds PixelMapGen objects to the local variable genList. The genList 
 	 * initializes a MultiGen, which can be used to map audio and pixel data.
-	 * This method follows the words in the workFlowPanel.png graphic.
+	 * Generation order in {@code offsetList} follows the words in the workFlowPanel.png graphic.
+	 *
+	 * @param wordGenW    width of single gen element
+	 * @param wordGenH    height of single gen element
+	 * @return a MultiGen for DEADBODYWORKFLOW performance
 	 */
 	public MultiGen loadWordGen(int wordGenW, int wordGenH) {
 		// list of PixelMapGens that create an image using mapper
@@ -1000,9 +1116,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * Initializes mapImage with the colors array. 
-	 * MapImage handles the color data for mapper and also serves as our display image.
-	 * BaseImage is intended as a reference image that usually only changes when you open a new image file.
+	 * Initializes {@code mapImage} with the colors array. 
+	 * {@code mapImage} handles the color data for {@code mapper} and also serves as our display image.
+	 * {@code baseImage} is a reference image that usually only changes when you open a new image file.
 	 */
 	public void initImages() {
 		mapImage = createImage(width, height, ARGB);
@@ -1048,21 +1164,61 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		controlWindow.loop();
 	}
 	
-	void initCustomSettings() {
-		if (isRunWordGame) {
-			isLoadToBoth = false;
-			daFilename = "workflow_48Khz.wav";
-			daPath = daPath + "Body/";
-			loadAudioFile(new File(daPath + daFilename));
-			daFilename = "workFlowPanel.png";
-			preloadFiles(daPath, daFilename);
-		} else {
-			daPath = daPath + "Bag/";
-			daFilename = "bag_1_gest_1_tail.wav";
-			preloadFiles(daPath, daFilename);
+	/**
+	 * @return display title for the current performance mode
+	 */
+	String performanceTitle() {
+		switch (pMode) {
+		case DEADBODYWORKFLOW:
+			return "DeadBodyWorkFlow";
+		case ABSTRACT_JAILBREAK:
+			return "Abstract Jailbreak";
+		default:
+			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		}
 	}
 	
+	/**
+	 * @return a MultiGen appropriate to the current performance mode
+	 */
+	MultiGen loadPerformanceGen() {
+		switch (pMode) {
+		case DEADBODYWORKFLOW:
+			return loadWordGen(genWidth/4, genHeight/4);
+		case ABSTRACT_JAILBREAK:
+			return HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
+		default:
+			throw new IllegalStateException("Unhandled performance mode: " + pMode);
+		}
+	}
+	
+	/**
+	 * Initializes performance presets and cues, including path to performance files, and loads
+	 * initial audio image files. 
+	 */
+	void initCustomSettings() {
+		switch (pMode) {
+		case DEADBODYWORKFLOW:
+			isLoadToBoth = false;
+			daFilename = "workflow_48Khz.wav";
+			daPath = performanceBasePath + "Body/";
+			loadAudioFile(new File(daPath + daFilename));
+			daFilename = "workFlowPanel.png";
+			preloadFiles(daPath, daFilename);
+			break;
+		case ABSTRACT_JAILBREAK:
+			daPath = performanceBasePath + "Bag/";
+			daFilename = "bag_1_gest_1_tail.wav";
+			preloadFiles(daPath, daFilename);
+			break;
+		default:
+			throw new IllegalStateException("Unhandled performance mode: " + pMode);
+		}
+	}
+	
+	/**
+	 * Sets up network for UDP communication.
+	 */
 	void initNetwork() {
 	    // *****]]] NETWORKING [[[***** //
 		if (isUseNetworkDelegate) {
@@ -1134,8 +1290,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	/**
-	 * Renders a frame of animation: moving along the signal path, copies baseImage pixels to
-	 * mapImage pixels, adjusting the index position of the copy using totalShift --
+	 * Renders a frame of pixel-shifting animation: moving along the signal path, copies baseImage
+	 * pixels to mapImage pixels, adjusting the index position of the copy using totalShift --
 	 * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
 	 * 
 	 * @param step   current animation step
@@ -1210,7 +1366,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 					}
 				}
 			}
-		} else {
+		} 
+		else {
 			for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
 				SamplerBrush b = samplerBrushes.get(i);
 				if (mouseInPoly(b.curve().getBrushPoly())) {
@@ -1242,6 +1399,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    }
 	}
 	
+	/**
+	 * Tests whether a supplied coordinate pair is within a rectangular tile that contains 
+	 * a brush, if so, returns the brush in a BrushHit object.
+	 * 
+	 * @param x        x-coordinate to test
+	 * @param y        y-coordinate to test
+	 * @param wStep    tiling rectangle offset on x-axis
+	 * @param hStep    tiling rectangle offset on y-axis
+	 * @return a BrushHit object or null, if no brush was selected
+	 */
 	BrushHit getBrushInRect(int x, int y, int wStep, int hStep) {
 		float[] r = new float[4];
 		int x1 = (x / wStep) * wStep;
@@ -1412,8 +1579,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * Methods and interfaces and even other threads can call parseKey(). 
 	 * This opens up many possibilities and a some risks, too.  
 	 * 
-	 * @param key
-	 * @param keyCode
+	 * @param key        {@code char} for key that was pressed 
+	 * @param keyCode    numeric code for key that was pressed
 	 */
 	public void parseKey(char key, int keyCode) { // TODO create auto-adjust Sampler note duration toggle
 		String msg;
@@ -1719,55 +1886,72 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * // println(" * Press $1 to $2.");
 	 */
 	public void showHelp() {
+		println(" * ----- Audio Gain -----");
 		println(" * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).");
 		println(" * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).");
 		println(" * Press RIGHT ARROW to increase current instrument gain by 3.0 dB.");
 		println(" * Press LEFT ARROW to decrease current instrument gain by 3.0 dB.");
+		println(" * Press '`' to fade out all instruments.");
+
+		println(" * ----- Presets and Cues -----");
 		println(" * Keys 1 through 9 are reserved for triggering Performance Presets 1-9, '0' will clear all presets.");
+
+		println(" * ----- Drawing, Audio Settings, Playback -----");
 		println(" * Press TAB to set brush to active, if cursor is over a brush.");
 		println(" * Press ' ' to (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
+		println(" * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.");
 		println(" * Press 'a' to toggle animation.");
-		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
 		println(" * Press 't' to switch between Granular, Sampler, and Play Only modes.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
+		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
+		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
 		println(" * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.");
 		println(" * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
-		println(" * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open either an image or an audio file.");
+		println(" * Press 'r' to reset instrument configuration to defaults in GUI.");
+		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
+		
+		println(" * ----- File IO and Mapping -----");
 		println(" * Press 'f' or 'F' to open a folder with JSON brush data and load all files.");
 		println(" * Press 'j' to save the active brush curve and config to JSON files.");
 		println(" * Press 'J' to save all brushes curve and config to JSON Session file.");
 		println(" * Press 'o' to open an audio file, image file, or JSON file.");
-		println(" * Press 'w' to write the map image to the audio buffer.");
+		println(" * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open a file.");
+		println(" * Press 'w' to write the display image to the audio buffer.");
 		println(" * Press 'W' to write the audio buffer to the display image.");
-		println(" * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.");
+		
+		println(" * ----- Audio Mix Dynamics -----");
 		println(" * Press 'n' to set noise reduction policy for Sampler instrument audio mix.");
-		println(" * Press 'R' to reset transform of active brush if it has a transform TODO clarify.");
-		println(" * Press 'r' to reset instrument configuration to defaults in GUI.");
-		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
-		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
 		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
 		println(" * Press 'g' to toggle use of dynamics in gainCurve with gesture .");
-		println(" * Press 'G' to create a beatBrush.");
-		println(" * Press 'l' to loop hovered brush 4 times.");
-		println(" * Press 'L' to run an infinite loop on hovered brush.");
-		println(" * Press ';' to stop loop for hovered brush.");
+		
+		println(" * ----- Special FX -----");
+		println(" * Press 'l' to loop the hovered brush 4 times.");
+		println(" * Press 'L' to run an infinite loop on the hovered brush.");
+		println(" * Press ';' to stop loop for the hovered brush.");
 		println(" * Press ':' to stop all loops.");
 		println(" * Press 'y' to toggle transform animation test.");
 		println(" * Press 'Y' to freeze / unfreeze brush geometric transform animation.");
+		println(" * Press 'R' to reset transform of active brush if it has a transform.");    // TODO clarify
+		println(" * Press 'G' to create a beatBrush.");
+		println(" * Press '.' to turn random raindrops audio events on or off.");
+		
+		println(" * ----- Brush Deletion -----");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
 		println(" * Press 'X' to delete the most recent brush shape.");
-		println(" * Press '.' to turn random raindrops audio events on or off.");
 		println(" * Press '≈' to option-x on MacOS keyboard, clear all brushes.");
-		println(" * Press '`' to fade out all instruments.");
+		
+		println(" * ----- Network -----");		
 		println(" * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
 		println(" * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
 		println(" * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
 		println(" * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
 		println(" * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.");
 		println(" * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
+		
+		println(" * ----- Help -----");
 		println(" * Press 'h' or 'H' to show help message.");
 	}
 
@@ -1777,36 +1961,75 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/*----------------------------------------------------------------*/
 	
 	/**
-	 * @param key
+	 * @param key    key that was pressed (should be a number key)
 	 */
 	void numericKey(char key) {
-		// load a function that modifies the next brush when it is created by makeBrush()
-	    runPerformancePreset(PerformancePreset.fromKey(key), key);
-	    // execute cues in anticipation of the preset immediately (load files, etc.)
-	    runPerformanceCue(key);
+		switch (pMode) {
+		case ABSTRACT_JAILBREAK:
+			runAJ_PerformancePreset(AJ_PerformancePreset.fromKey(key), key);
+			break;
+		case DEADBODYWORKFLOW:
+			runDBWF_PerformancePreset(DBWF_PerformancePreset.fromKey(key), key);
+			break;
+		default:
+			throw new IllegalStateException("Unhandled performance mode: " + pMode);
+		}
 	}
 
 	/**
-	 * @param key
+	 * Handles cue and performance preset commands for "Abstract Jailbreak".
+	 * @param cue    a performance preset
+	 * @param key    char for the key that triggered the call
 	 */
-	public void runPerformancePreset(PerformancePreset cue, char key) {
+	public void runAJ_PerformancePreset(AJ_PerformancePreset cue, char key) {
+	    boolean changed = false;
 	    if (cue != null) {
-	        if (presetStack.contains(cue)) {
-	            presetStack.remove(cue);
+	        if (aj_presetStack.contains(cue)) {
+	            aj_presetStack.remove(cue);
 	        } else {
-	            presetStack.add(cue);
+	            aj_presetStack.add(cue);
+	            runPerformanceCue(key);
 	        }
+	        changed = true;
 	    } else if (key == '0') {
-	        presetStack.clear();
+	        aj_presetStack.clear();
+	        changed = true;
 	    }
-	    println("-- cues: " + presetStack);
+	    if (changed) println("-- cues: " + aj_presetStack);
 	}
 	
 	/**
-	 * @param key
+	 * Handles cue and performance preset commands for "DEADBODYWORKFLOW".
+	 * @param cue    a performance preset
+	 * @param key    char for the key that triggered the call
+	 */
+	public void runDBWF_PerformancePreset(DBWF_PerformancePreset cue, char key) {
+	    boolean changed = false;
+	    if (cue != null) {
+	        if (dbwf_presetStack.contains(cue)) {
+	            dbwf_presetStack.remove(cue);
+	        } else {
+	            dbwf_presetStack.add(cue);
+				// execute cues in anticipation of the preset immediately (load files, etc.)
+				runPerformanceCue(key);	
+	        }
+	        changed = true;
+	    } else if (key == '0') {
+	        dbwf_presetStack.clear();
+	        changed = true;
+	    }
+	    if (changed) println("-- cues: " + dbwf_presetStack);
+	}
+
+	
+	/**
+	 * Runs cues for live performance of "Abstract Jailbreak" or "DEADBODYWORKFLOW".
+	 * @param key   a {@code char} used to trigger performance cues
 	 */
 	void runPerformanceCue(char key) {
-		if (isRunWordGame) {
+		switch (pMode) {
+		
+		case DEADBODYWORKFLOW: {
 			switch (key) {
 			case '1': // DRONE_RAINDROPS
 				isLoadToBoth = true;
@@ -1829,18 +2052,18 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				break;
 			case '3': // GLITCH_CORTO('3')
 				setMode(DrawingMode.DRAW_EDIT_GRANULAR);
-	            this.doPlayOnNewBrush = true;
-	            this.doPlayWhileDrawing = true;
-	        	this.usePitchedGrains = true;
-	        	this.pitchJitter = 0.1f;
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = true;
+				this.usePitchedGrains = true;
+				this.pitchJitter = 0.1f;
 				break;
 			case '4': // GLITCH_LARGO('4')
 				break;
 			case '5': // REPRISE
-	            this.doPlayOnNewBrush = true;
-	            this.doPlayWhileDrawing = false;
-	        	this.usePitchedGrains = false;
-	        	this.pitchJitter = 0.1f;
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = false;
+				this.usePitchedGrains = false;
+				this.pitchJitter = 0.1f;
 				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
 				resetConfigToDefaults(); 
 				break;
@@ -1848,8 +2071,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
 				resetConfigToDefaults(); 
 				break;
-			}
-		} else {    // Bagatelle "Abstract Jailbreak"
+			}  // switch (key)
+			break;
+		}  // case DEADBODYWORKFLOW
+		
+		case ABSTRACT_JAILBREAK: {    // Bagatelle "Abstract Jailbreak"
 			applyColorMapOnLoad = true;
 			isLoadToBoth = true;
 			switch (key) {
@@ -1859,24 +2085,24 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 					println("-- trig 1 -- reverb ON");
 				}
 				loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
-	            this.doPlayOnNewBrush = true;
-	            this.doPlayWhileDrawing = false;
-	            this.isAutoOptimize = true;
-	        	this.isAddDynamics = true;
-	        	float[] timesMs = new float[] {0, 500, 2500, 5000};
-	        	float dur = timesMs[timesMs.length - 1];
-	        	float[] values = new float[] {0.1f, 1.0f, 1.0f, 0.1f};
-	        	float[] times = new float[timesMs.length];
-	        	for (int i = 0; i < times.length; i++) {
-	        		times[i] =  map(timesMs[i], 0f, dur, 0f, 1f);
-	        	}
-	        	this.dynamics = new PAKeyframeControlCurve (times, values); 
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = false;
+				this.isAutoOptimize = true;
+				this.isAddDynamics = true;
+				float[] timesMs = new float[] {0, 500, 2500, 5000};
+				float dur = timesMs[timesMs.length - 1];
+				float[] values = new float[] {0.1f, 1.0f, 1.0f, 0.1f};
+				float[] times = new float[timesMs.length];
+				for (int i = 0; i < times.length; i++) {
+					times[i] =  map(timesMs[i], 0f, dur, 0f, 1f);
+				}
+				this.dynamics = new PAKeyframeControlCurve (times, values); 
 				break;
 			case '2': // preset = LONG_ECHO('2')
 				this.doPlayOnNewBrush = true;
-	            this.doPlayWhileDrawing = false;
-	            this.isAutoOptimize = true;
-	        	this.isAddDynamics = true;
+				this.doPlayWhileDrawing = false;
+				this.isAutoOptimize = true;
+				this.isAddDynamics = true;
 				loadAudioFile(new File(daPath + "bag_1_gest_2_tail.wav"));
 				break;
 			case '3': // preset = GLITCH_CORTO('3')
@@ -1884,39 +2110,47 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 					this.nd.oscSendTrig(0);
 					println("-- trig 0 -- reverb OFF");
 				}
-	            this.doPlayOnNewBrush = false;
-	            this.doPlayWhileDrawing = true;
-	        	this.usePitchedGrains = true;
-	        	this.pitchJitter = 0.1f;
-	        	loadAudioFile(new File(daPath + "bag_1_crackle.wav"));
+				this.doPlayOnNewBrush = false;
+				this.doPlayWhileDrawing = true;
+				this.usePitchedGrains = true;
+				this.pitchJitter = 0.1f;
+				loadAudioFile(new File(daPath + "bag_1_crackle.wav"));
 				//doPlayWhileDrawing = true;
 				break;
 			case '4': // preset = GLITCH_LARGO('4')
-	            this.doPlayOnNewBrush = true;
-	            this.doPlayWhileDrawing = true;
-	        	this.usePitchedGrains = true;
-	        	this.pitchJitter = 0.5f;
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = true;
+				this.usePitchedGrains = true;
+				this.pitchJitter = 0.5f;
 				break;
 			case '5': // preset = SIXTEENTHS('5')
-	        	this.doPlayOnNewBrush = false;
-	        	this.doPlayWhileDrawing = false;
-	        	this.isAutoOptimize = false;
-	        	this.usePitchedGrains = false;
-	        	this.isAddDynamics = true; // ???
+				this.doPlayOnNewBrush = false;
+				this.doPlayWhileDrawing = false;
+				this.isAutoOptimize = false;
+				this.usePitchedGrains = false;
+				this.isAddDynamics = true; // ???
 				loadAudioFile(new File(daPath + "bag_1_newSpiral.wav"));
 				break;
 			case '6': // preset = DYNAMICS_1('6')
-	        	this.doPlayOnNewBrush = true;
-	        	this.doPlayWhileDrawing = false;
-	        	this.isAutoOptimize = true;
-	        	this.usePitchedGrains = false;
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = false;
+				this.isAutoOptimize = true;
+				this.usePitchedGrains = false;
 				loadAudioFile(new File(daPath + "High_Swells.wav"));
 				break;
 			default:
-			}	
-		}
+			}  // switch (key)
+			break;
+		}  // case ABSTRACT_JAILBREAK
+		default:
+			throw new IllegalStateException("Unhandled performance mode: " + pMode);
+		
+		}  // switch (pMode)
 	}
 	
+	/**
+	 * Resets variables that may have been altered from expected base states by performance cues and presets.
+	 */
 	void resetPerformanceState() {
 		doPlayOnNewBrush = false;    // play audio when a curve is drawn
 		doPlayWhileDrawing = false;  // play audio events while drawing, or not
@@ -1965,7 +2199,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	/**
-	 * 
+	 * Sets GUI to edit a brush.
+	 * @param brush    the AudioBrush to accept for editing
 	 */
 	public void openBrushEditor(AudioBrush brush) {
 		setActiveBrush(brush);
@@ -1974,7 +2209,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Sets audioOut.gain.
-	 * @param g  gain value for audioOut, in decibels
+	 * @param g    new value for audioOut, in decibels
 	 */
 	public void setAudioGain(float g) {
 		audioOut.setGain(g);
@@ -1982,8 +2217,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * Sets audioOut.gain.
-	 * @param g   gain value for audioOut, in decibels
+	 * Adjusts audioOut.gain.
+	 * @param g   value to add to audioOut.gain, in decibels
 	 */
 	public void adjustAudioGain(float g) {
 		float ag = audioOut.getGain();
@@ -1994,7 +2229,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * Sets Sampler instrument {@code pool} gain in dB.
+	 * Adjusts current instrument gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustInstrumentGain(float g) {
@@ -2008,7 +2243,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     }
 
 	/**
-	 * Sets Sampler instrument {@code pool} gain in dB.
+	 * Adjusts Sampler instrument {@code pool} gain in dB.
 	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustSamplerGain(float g) {
@@ -2020,8 +2255,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	/**
-	 * Sets Granular instrument gain in dB.
-	 * @param g   gain value for audioOut, in decibels
+	 * Adjusts Granular instrument gain in dB.
+	 * @param g   gain increment or decrement, in decibels
 	 */
 	public void adjustGranGain(float g) {		
 		float gg = gDir.getInstrument().getGlobalGainDb();
@@ -2033,7 +2268,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		
 	
 	/**
-	 * Sets the drawing mode.
+	 * Sets the drawing mode to one of {DRAW_EDIT_GRANULAR, DRAW_EDIT_SAMPLER, PLAY_ONLY}.
 	 * @param newMode
 	 */
 	void setMode(DrawingMode newMode) {
@@ -2047,7 +2282,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		switch (drawingMode) {
 		case DRAW_EDIT_GRANULAR: 
 			nextActive = activeGranularBrush;
-    			break;
+    		break;
 		case DRAW_EDIT_SAMPLER:  
 			nextActive = activeSamplerBrush;
 			break;
@@ -2125,6 +2360,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	
+	/**
+	 * Generates a {@code SamplerBrush} in code.
+	 * @param count         number of points to draw
+	 * @param intervalMs    interval between points (milliseconds)
+	 * @return a SamplerBrush with requested characteristics
+	 */
 	public SamplerBrush generateSamplerBeatBrush(int count, int intervalMs) {
 		ArrayList<Integer> times = new ArrayList<>();
 		ArrayList<PVector> points = new ArrayList<>();
@@ -2153,6 +2394,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		return beatBrush;
 	}
 	
+	/**
+	 * Generates a {@code GranularBrush} in code.
+	 * @param count         number of points to draw
+	 * @param intervalMs    interval between points (milliseconds)
+	 * @return a GranularBrush with requested characteristics
+	 */
 	public GranularBrush generateGranularBeatBrush(int count, int intervalMs) {
 		ArrayList<Integer> times = new ArrayList<>();
 		ArrayList<PVector> points = new ArrayList<>();
@@ -2189,7 +2436,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * Trigger a sample at a random location.
+	 * Triggers a sample at a random location.
 	 */
 	public void raindrops() {
 	  int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
@@ -2969,6 +3216,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param samplePos    position of the sample in the audio buffer
 	 * @param samplelen    length of the sample (will be adjusted)
 	 * @param amplitude    amplitude of the sample on playback
+	 * @param pan          stereo pan [-1.0, 1.0] for sample
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
@@ -2998,7 +3246,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param env          an ADSR envelope for the sample
 	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher 
 	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
-	 * @return
+	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
 		if (isDebugging) println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
@@ -3006,6 +3254,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
+	 * @param dur         sample duration in milliseconds
+	 * @param mean        multiplier for duration, 1.0 leaves duration as mean value
+	 * @param variance    variance from mean value
 	 * @return a length in samples with some Gaussian variation
 	 */
 	public int calcSampleLen(int dur, float mean, float variance) {
@@ -3019,10 +3270,20 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		return samplelen;
 	}
 	
+	/**
+	 * Convenience method for calcSampleLen(envDuration, 1.0f, 0.0625f).
+	 * @return calculated sample length in samples of an envelope
+	 */
 	public int calcSampleLen() {
 		return calcSampleLen(envDuration, 1.0f, 0.0625f);
 	}
 
+	/**
+	 * @param sched         a {@code GestureSchedule} to access for calculating an envelope duration
+	 * @param envName       name of an envelope preset
+	 * @param fallbackMs    default duration in milliseconds
+	 * @return calculated sample length in samples of an envelope
+	 */
 	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
 	    int n = sched.points.size();
 	    if (n < 2) return fallbackMs;
@@ -3170,6 +3431,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	// ------------- LOOPING ------------- //
 	
+	/**
+	 * Updates looping instruments.
+	 */
 	public synchronized void updateInstrumentLoops() {
 		if (activeLoops.isEmpty()) return;
 		long now = millis();
@@ -3190,6 +3454,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		activeLoops.removeIf(loop -> !loop.active);
 	}
 
+	/**
+	 * Stops all loops.
+	 */
 	public synchronized void stopAllLoops() {
 		for (InstrumentLoop loop : activeLoops) {
 			loop.stop();
@@ -3197,6 +3464,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		activeLoops.clear();
 	}
 
+	/**
+	 * Stop looping for a specified brush
+	 * @param brush    AudioBrush whose looping will end
+	 */
 	public synchronized void stopLoopsForBrush(AudioBrush brush) {
 		if (brush == null || activeLoops.isEmpty()) return;
 		for (InstrumentLoop loop : activeLoops) {
@@ -3215,6 +3486,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		return false;
 	}
 	
+	/**
+	 * Estimate loop duration for a Granular instrument.
+	 * @param sched     a GestureSchedule associated with a brush
+	 * @param params    a GestureGranularParams object 
+	 * @return expected duration of a loop
+	 */
 	public int estimateLoopDurationMs(GestureSchedule sched, GestureGranularParams params) {
 		if (sched == null || sched.size() == 0) return 1;
 		int schedMs = Math.max(1, Math.round(sched.durationMs()));
@@ -3225,6 +3502,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		return schedMs + grainTailMs;
 	}
 	
+	/**
+	 * Estimate loop duration for a Sampler instrument.
+	 * @param sched             a GestureSchedule associated with a brush
+	 * @param env               an ADSRParams envelope
+	 * @param noteLenSamples    number of samples in audio event ("note")
+	 * @return expected duration of a loop
+	 */
 	public int estimateLoopDurationMs(GestureSchedule sched, ADSRParams env, int noteLenSamples) {
 	    if (sched == null || sched.size() == 0) return 1;
 	    int schedMs = Math.max(1, Math.round(sched.durationMs()));
@@ -3239,6 +3523,17 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    return schedMs + tailMs;
 	}
 	
+	/**
+	 * @param gb            a GranularBrush to loop
+	 * @param buf           buffer to play from
+	 * @param sched         a GestureSchedule
+	 * @param params        runtime parameters for gesture playback
+	 * @param eventParams   optional pan, gain, and pitch modifiers per grain
+	 * @param repeats       number of times to loop
+	 * @param gapMs         time between loop events
+	 * @param animate       use TimedLocation animation (not used in method, true by default, TODO clarify)
+	 * @return              an InstrumentLoop object
+	 */
 	public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
 			float[] buf, 
 			GestureSchedule sched,
@@ -3276,11 +3571,17 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		return loop;
 	}
 	
+	/**
+	 * @param gb        a GranularBrush
+	 * @param repeats   number of times to repeat loop
+	 * @param gapMs     time between repetitions, ms
+	 * @return          an InstrumentLoop object
+	 */
 	public InstrumentLoop loopGranularBrush(GranularBrush gb, int repeats, int gapMs) {
 	    if (gb == null) return null;
 	    ensureGranularReady();
 	    GestureGranularConfig.Builder cfg = gb.cfg().copy();
-	    CueResult result = applyPresets(cfg, gb.curve());
+	    CueResult result = applyPerformancePresets(cfg, gb.curve());
 	    PACurveMaker curve = result.curve;
 	    GestureGranularConfig snap = result.cfg.build();
 	    GestureSchedule sched = scheduleBuilder.build(curve, snap, audioOut.sampleRate());
@@ -3291,6 +3592,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
 	}
 	
+	/**
+	 * @param sb               a SamplerBrush
+	 * @param sched            GestureSchedule for brush events
+	 * @param env              ADSRParams envelope for each Sampler event in schedule
+	 * @param noteLenSamples   length of a note in samples
+	 * @param repeats          number of times to repeat loop
+	 * @param gapMs            time between loop repetitions, ms
+	 * @param animate          use TimedLocation animation (not used in method, true by default, TODO clarify)
+	 * @return                 an InstrumentLoop object
+	 */
 	public synchronized InstrumentLoop startSamplerLoop(SamplerBrush sb, GestureSchedule sched,
 	        ADSRParams env, int noteLenSamples, int repeats, int gapMs, boolean animate) {
 	    if (sb == null || sched == null || sched.size() == 0) return null;
@@ -3327,6 +3638,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    return loop;
 	}
 
+	/**
+	 * @param sb        a SamplerBrush instance
+	 * @param repeats   number of times to repeat
+	 * @param gapMs     time between loop repetitions, ms
+	 * @return
+	 */
 	public InstrumentLoop loopSamplerBrush(SamplerBrush sb, int repeats, int gapMs) {
 	    if (sb == null) return null;
 	    ensureSamplerReady();
@@ -3580,7 +3897,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    // if (isVerbose) println("----- granular draw taste, grains = " + n + ", x = " + x + ", y = " + y);
 	}	
 	
-	// NOT USED
+	// NOT USED -- TODO decide it we want to keep this method
 	boolean isOverAnyBrush(int x, int y) {
 	    // optionally gate by mode; or check both lists always
 	    for (int i = granularBrushes.size() - 1; i >= 0; i--) {
@@ -3598,6 +3915,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * While user is dragging the mouse and mode == Mode.DRAW_EDIT_GRANULAR or DRAW_EDIT_SAMPLER, 
 	 * accumulates new points to allPoints and event times to allTimes. Coordinates should be 
 	 * constrained to display window bounds. 
+	 *
+	 * @param x    x-coordinate 
+	 * @param y    y-coordinate
 	 */
 	public void addDrawingPoint(int x, int y) {
 	    if (allPoints == null || allTimes == null) return;
@@ -3635,6 +3955,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		return min(max(0, y), height - 1);
 	}
 	
+	/**
+	 * Displaces a supplied point by a random Gaussian variable.
+	 * @param x              x-coordinate
+	 * @param y              y-coordinate
+	 * @param deviationPx    average deviation, in pixels
+	 * @return a displace coordinate point as a PVector
+	 */
 	public PVector jitterCoord(int x, int y, int deviationPx) {
 	    double variance = deviationPx * deviationPx;
 	    int jx = (int)Math.round(PixelAudio.gauss(0, variance));
@@ -3644,6 +3971,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    return new PVector(nx, ny);
 	}
 	
+	/**
+	 * Builds a {@code GestureSchedule} for a {@code PACurveMaker} brush and a snapshot of a {@code GestureGranularConfig}
+	 * @param brush    a {@code PACurveMaker} brush
+	 * @param snap     a snapshot of a {@code GestureGranularConfig}
+	 * @return a {@code GestureSchedule}
+	 */
 	public GestureSchedule loadGestureSchedule(PACurveMaker brush, GestureGranularConfig snap) {
 	    if (brush == null || snap == null) return null;
 	    GestureSchedule schedule = scheduleBuilder.build(brush, snap, audioOut.sampleRate());
@@ -3686,7 +4019,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * @return
+	 * @return an AudioBrush generated from the current GUI configuration and {@code PACurveMaker} object {@code curveMaker}.
 	 */
 	public AudioBrush makeBrushFromCurveMaker() {
 		// reset some fields in gConfig
@@ -3697,6 +4030,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		return makeBrush(curveMaker, cfg);
 	}
 	
+	/**
+	 * @param curve     a PACurveMaker instance
+	 * @param config    a GestureGranularConfig.Builder
+	 * @return an AudioBrush generated from the supplied {@code GestureGranularConfig} and {@code PACurveMaker}
+	 */
 	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config) {
 		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {             
 			return makeBrush(curve, config, GestureGranularConfigIO.InstrumentType.SAMPLER);
@@ -3720,9 +4058,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
         GestureGranularConfig.Builder cfg = config.copy();
 		PACurveMaker useCurve = curve;
 		// handle cues
-		CueResult r = applyPresets(cfg, curve);
-		cfg = r.cfg;
-		useCurve = r.curve;
+	    CueResult result = applyPerformancePresets(cfg, curve);
+		cfg = result.cfg;
+		useCurve = result.curve;
 		// now make brushes
 	    if (instrumentType == GestureGranularConfigIO.InstrumentType.SAMPLER) {
 	        SamplerBrush sb = new SamplerBrush(useCurve, cfg);
@@ -3750,13 +4088,36 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 //	    if (dbCue != null) dbCue.apply(cfg, curve, this);
 //	}
 	
-	public CueResult applyPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
-	    if (presetStack == null || presetStack.isEmpty()) {
+	/**
+	 * Apply performance presets from the stack associated with the current performance mode.
+	 * @param cfg     audio and curve configuration
+	 * @param curve   PACurveMaker instance for brush
+	 * @return gesture and audio configuration determined by preset
+	 */
+	public CueResult applyPerformancePresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+		switch (pMode) {
+		case DEADBODYWORKFLOW:
+			return applyDBWFPresets(cfg, curve);
+		case ABSTRACT_JAILBREAK:
+			return applyAJPresets(cfg, curve);
+		default:
+			throw new IllegalStateException("Unhandled performance mode: " + pMode);
+		}
+	}
+	
+	/**
+	 * Apply a performance preset from aj_presetStack, for "Abstract Jailbreak" performance.
+	 * @param cfg     audio and curve configuration
+	 * @param curve   PACurveMaker instance for brush
+	 * @return gesture and audio configuration determined by preset
+	 */
+	public CueResult applyAJPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+	    if (aj_presetStack == null || aj_presetStack.isEmpty()) {
 	        return new CueResult(curve, cfg);
 	    }
 	    PACurveMaker curCurve = curve;
 	    GestureGranularConfig.Builder curCfg = cfg;
-	    for (PerformancePreset cue : presetStack) {
+	    for (AJ_PerformancePreset cue : aj_presetStack) {
 	        CueResult r = cue.apply(curCfg, curCurve, this);
 	        if (r != null) {
 	            if (r.cfg != null) curCfg = r.cfg;
@@ -3766,6 +4127,32 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    return new CueResult(curCurve, curCfg);
 	}
 	
+	/**
+	 * Apply a performance preset from dbwf_presetStack, for "DEADBODYWORKFLOW" performance.
+	 * @param cfg     audio and curve configuration
+	 * @param curve   PACurveMaker instance for brush
+	 * @return gesture and audio configuration determined by preset
+	 */
+	public CueResult applyDBWFPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+	    if (dbwf_presetStack == null || dbwf_presetStack.isEmpty()) {
+	        return new CueResult(curve, cfg);
+	    }
+	    PACurveMaker curCurve = curve;
+	    GestureGranularConfig.Builder curCfg = cfg;
+	    for (DBWF_PerformancePreset cue : dbwf_presetStack) {
+	        CueResult r = cue.apply(curCfg, curCurve, this);
+	        if (r != null) {
+	            if (r.cfg != null) curCfg = r.cfg;
+	            if (r.curve != null) curCurve = r.curve;
+	        }
+	    }
+	    return new CueResult(curCurve, curCfg);
+	}
+	
+	/**
+	 * @param b   an AudioBrush instance
+	 * @return    return true if brush aligns with current drawingMode
+	 */
 	boolean isBrushInteractable(AudioBrush b) {
 	    switch (drawingMode) {
 	        case DRAW_EDIT_SAMPLER: return b instanceof SamplerBrush;
@@ -3775,10 +4162,19 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    }
 	}
 
+	/**
+	 * Assigns a brush to be the current active brush, accessible for editing and other options.
+	 * @param brush   an AudioBrush to assign
+	 */
 	void setActiveBrush(AudioBrush brush) {
 		setActiveBrush(brush, hoverIndex);
 	}
 
+	/**
+	 * Assigns a brush to be the current active brush, accessible for editing and other options.
+	 * @param brush   an AudioBrush to assign
+	 * @param idx     index with a list of brushes of a particular type
+	 */
 	void setActiveBrush(AudioBrush brush, int idx) {
 		if (brush == null) return;
 		activeBrush = brush;
@@ -3801,6 +4197,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		syncGuiFromConfig();
 	}
 	
+	/**
+	 * Caching for UI settings, may be superfluous. 
+	 */
 	void recomputeUIBaselinesFromActiveBrush() {
 		if (activeBrush == null) {
 			baselineCount = 0;
@@ -3846,14 +4245,21 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	
 	/**
-	 * Iterates over brushShapesList and draws the brushstrokes stored in 
-	 * each PACurveMaker in the list. 
+	 * Draws brushes in available brush lists, calls {@code drawBrushes(List<? extends AudioBrush>, int, int, int)},
+	 * passing each list and colors for flagging its UI status. 
 	 */
 	public void drawBrushShapes() {
 		drawBrushes(granularBrushes, readyGranColor, hoverGranColor, activeGranColor);
 		drawBrushes(samplerBrushes, readySamplerColor, hoverSamplerColor, activeSamplerColor);
 	}
 	
+	/**
+	 * Iterates over a brush list and draws the brushstrokes stored in each PACurveMaker in the list. 
+	 * @param brushes      
+	 * @param readyColor
+	 * @param hoverColor
+	 * @param selectedColor
+	 */
 	public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int hoverColor, int selectedColor) {
 		if (brushes.isEmpty()) return;
 		for (int i = 0; i < brushes.size(); i++) {
@@ -3899,6 +4305,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		}
 	}
 	
+	/**
+	 * Provides the list of points for a brush in its assigned PathMode representation. 
+	 * @param b   an AudioBrush
+	 * @return points in the path associated with the brush, as a list of PVector
+	 */
 	ArrayList<PVector> getPathPoints(AudioBrush b) {
 		PACurveMaker cm = b.curve();
 		switch (b.cfg().pathMode) {
@@ -3910,6 +4321,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
+	 * Provides the times associated with a brush in its assigned PathMode representation.
 	 * @param b    an AudioBrush instance
 	 * @return     GestureSchedule for the current pathMode of the brush
 	 */
@@ -3922,6 +4334,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
+	 * Provides a GestureSchedule associated with a brush, applying the {@code boundsPolicy} 
+	 * to bring all points in bounds.
 	 * @param b    an AudioBrushLIte instance
 	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
 	 */
@@ -3933,6 +4347,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	// ------------- TRANSFORMS ------------- //
 	
+	/**
+	 * Initializes a brush to apply a geometric transform. 
+	 * @param b   an AudioBrush instance
+	 */
 	void initBrushTransform(AudioBrush b) {
 	    if (b == null) return;
 	    GestureTransformState st = b.ensureTransform();
@@ -3941,6 +4359,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    st.resetTransform();
 	}
 	
+	/**
+	 * Test code to apply a geometric transform to the active brush, a form of animation
+	 * when repeatedly applied over time. 
+	 */
 	void updateAnimatedBrushes() {
 	    if (!isBrushTransformTest) return;
 	    if (isBrushTransformFrozen) return;
@@ -4137,6 +4559,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Convert a brush explicitly to SamplerBrush.
+	 * @param brush   an AudioBrush instance
+	 * @return the brush reconfigured as a SamplerBrush
 	 */
 	SamplerBrush toSamplerBrush(AudioBrush brush) {
 	    if (brush == null) return null;
@@ -4149,6 +4573,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Convert a brush explicitly to GranularBrush.
+	 * @param brush   an AudioBrush instance
+	 * @return the brush reconfigured as a GranularBrush
 	 */
 	GranularBrush toGranularBrush(AudioBrush brush) {
 	    if (brush == null) return null;
@@ -4204,6 +4630,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Append a granular brush and return its new index.
+	 * @param gb   a GranularBrush instance
+	 * @return the index of the brush in the {@code granularBrushes} list
 	 */
 	int appendGranularBrush(GranularBrush gb) {
 	    if (gb == null) return -1;
@@ -4213,6 +4641,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Append a sampler brush and return its new index.
+	 * @param sb   a SamplerBrush instance
+	 * @return the index of the brush in the {@code samplerBrushes} list
 	 */
 	int appendSamplerBrush(SamplerBrush sb) {
 	    if (sb == null) return -1;
@@ -4222,6 +4652,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Remove a granular brush using index when reliable, else by object.
+	 * @param gb
+	 * @param idx
 	 */
 	void removeGranularBrush(AudioBrush gb, int idx) {
 		if (gb instanceof SamplerBrush) return;
@@ -4240,6 +4672,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Remove a sampler brush using index when reliable, else by object.
+	 * @param sb
+	 * @param idx
 	 */
 	void removeSamplerBrush(AudioBrush sb, int idx) {
 		if (sb instanceof GranularBrush) return;
@@ -4257,8 +4691,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * Normalize config values when converting to SamplerBrush.
-	 * Keep most gesture/path information intact.
+	 * Normalize config values when converting to SamplerBrush. Keep most gesture/path information intact.
+	 * @param cfg   a GestureGranularConfig.Builder instance
 	 */
 	void normalizeConfigForSampler(GestureGranularConfig.Builder cfg) {
 	    if (cfg == null) return;
@@ -4276,6 +4710,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/**
 	 * Normalize config values when converting to GranularBrush.
 	 * Keep most gesture/path information intact, but make a few granular-friendly adjustments.
+	 * @param cfg   a GestureGranularConfig.Builder instance
 	 */
 	void normalizeConfigForGranular(GestureGranularConfig.Builder cfg) {
 	    if (cfg == null) return;
@@ -4340,10 +4775,23 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	// ------------- STANDARD SAMPLER AND GRANULAR BRUSH SCHEDULING ------------- //
 
+	/**
+	 * Schedule a simple animation to mark the activation of Sampler audio events at display locations.
+	 * @param sb       a SamplerBrush instance
+	 * @param clickX   x-coordinate
+	 * @param clickY   y-coordinate
+	 */
 	void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
 		scheduleSamplerBrushClick(sb, clickX, clickY, null);
 	}
 
+	/**
+	 * Schedule a simple animation to mark the activation of Sampler audio events at a display locations.
+	 * @param sb          a SamplerBrush instance
+	 * @param clickX      x-coordinate
+	 * @param clickY      y-coordinate
+	 * @param gainCurve   PAControlCurve for gain dynamics
+	 */
 	void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY, PAControlCurve gainCurve) {
 	    if (sb == null) return;
 	    ArrayList<PVector> pts = getPathPoints(sb);
@@ -4369,6 +4817,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println("-- schedule number of points= "+ sched.points.size());
 	}
 	
+	/**
+	 * Adds audio/animation events to {@code samplerBrushEvents}
+	 * @param sched       schedule of audio/animation events
+	 * @param snap        snapshot of audio and curve configuration settings
+	 * @param startTime   time to start events, milliseconds
+	 * @param gainCurve   optional control curve for gain dynamics
+	 */
 	public void storeSamplerBrushEvents(GestureSchedule sched, GestureGranularConfig snap, int startTime, PAControlCurve gainCurve) {
 	    if (sched == null || sched.points == null || sched.timesMs == null) return;
 	    if (samplerBrushEvents == null) samplerBrushEvents = new ArrayList<>();
@@ -4421,7 +4876,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	/**
 	 * Runs sampler brush events in the samplerTimeLocs list.
-	 * TODO move audio events into a sample-accurate (or at least block-accurate) schedule
 	 */
 	public void runSamplerBrushEvents() {
 	    if (samplerBrushEvents == null || samplerBrushEvents.isEmpty()) return;
@@ -4443,6 +4897,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    }
 	}
 	
+	/**
+	 * Convenience method when gain dynamics are not applied to a brush. 
+	 * 
+	 * @param gb        a GranularBrush
+	 * @param clickX    x-coordinate of point of activation
+	 * @param clickY    y-coordinate of point of activation
+	 */
 	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
 		scheduleGranularBrushClick(gb, clickX, clickY, null);
 	}
@@ -4451,9 +4912,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/**
 	 * Schedules a response to a mouse click or hover + spacebar on a granular brush.
 	 * 
-	 * @param gb        a GranularBrush
-	 * @param clickX    x-coordinate of point of activation
-	 * @param clickY    y-coordinate of point of activation
+	 * @param gb          a GranularBrush
+	 * @param clickX      x-coordinate of point of activation
+	 * @param clickY      y-coordinate of point of activation
+	 * @param gainCurve   a control curve for gain dynamics
 	 */
 	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY, PAControlCurve gainCurve) {
 	    if (gb == null) return;
@@ -4700,7 +5162,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			init();
 		}
 			
-		public void init() {
+		private void init() {
 			this.remoteFrom = new NetAddress(this.remoteFromAddress, this.inPort);
 			this.remoteTo = new NetAddress(this.remoteToAddress, this.outPort);
 			System.out.println("== remoteFromAddress "+ remoteFromAddress +", in port: "+ inPort);
@@ -4775,7 +5237,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		}
 
 
-		/* incoming osc message are forwarded to the oscEvent method. */
+		/** Post address pattern and typetag from incoming osc message to the console. 
+		 * @param theOscMessage  forwarded OscMessage
+		 */
 		void oscEvent(OscMessage theOscMessage) {
 		  /* print the address pattern and the typetag of the received OscMessage */
 		  PApplet.print("### received an osc message.");
@@ -4790,6 +5254,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		/*                                                                */
 		/*----------------------------------------------------------------*/
 		
+		/**
+		 * Sends display coordinates and audio buffer index associated with a mouse click.
+		 * @param sampleX
+		 * @param sampleY
+		 * @param sample
+		 */
 		public void oscSendMouseClicked(int sampleX, int sampleY, int sample) {
 		  OscMessage msg = new OscMessage("/click");
 		  msg.add(sample);
@@ -4799,6 +5269,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		  // PApplet.println("---> msg: "+ msg);
 		}
 
+		/**
+		 * Sends a list of points as possible Max MultiSlider settings.
+		 * @param drawPoints
+		 */
 		public void oscSendMultiSlider(ArrayList<PVector> drawPoints) {
 		  int y0 = (int) drawPoints.get(0).y;
 		  int sliders = 12;
@@ -4816,6 +5290,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		  osc.send(msg, this.remoteTo);
 		}  
 		
+		/**
+		 * Sends a list of points.
+		 * @param drawPoints
+		 */
 		public void oscSendDrawPoints(ArrayList<PVector> drawPoints) {
 			OscMessage msg = new OscMessage("/draw");
 			int i = 0;
@@ -4831,6 +5309,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			osc.send(msg, this.remoteTo);
 		}
 		
+		/**
+		 * Sends a "/time" message with a time stamp and offset.
+		 * @param timeStamp    milliseconds time stamp
+		 * @param timeOffset   milliseconds time offset
+		 */
 		public void oscSendTimeStamp(int timeStamp, int timeOffset) {
 			OscMessage msg = new OscMessage("/time");
 			msg.add(drawCount);
@@ -4839,12 +5322,21 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			osc.send(msg, this.remoteTo);
 		}
 		  	
+		/**
+		 * Sends a trigger message, "/trig", with a numerical value.
+		 * @param index   number to send
+		 */
 		public void oscSendTrig(int index) {
 			OscMessage msg = new OscMessage("/trig");
 			msg.add(index);
 			osc.send(msg, this.remoteTo);
 		}
 		
+		/**
+		 * Sends an "/onoff" message with an index and state value.  
+		 * @param index
+		 * @param state
+		 */
 		public void oscSendOnOff(int index, boolean state) {
 			OscMessage msg = new OscMessage("/onoff");
 			msg.add(state ? 1 : 0);
@@ -4852,6 +5344,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			osc.send(msg, this.remoteTo);
 		}
 		
+		/**
+		 * Sends a "/setnum" message with an index and value. 
+		 * @param index
+		 * @param value
+		 */
 		public void oscSendSetnum(int index, float value) {
 			OscMessage msg = new OscMessage("/setnum");
 			msg.add(value);
@@ -4859,17 +5356,29 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			osc.send(msg, this.remoteTo);
 		}
 		
+		/**
+		 * Sends a "/del" message with an index.
+		 * @param index
+		 */
 		public void oscSendDelete(int index) {
 			OscMessage msg = new OscMessage("/del");
 			msg.add(index);
 			osc.send(msg, this.remoteTo);
 		}
 		
+		/**
+		 * Sends a "/clear" message.
+		 */
 		public void oscSendClear() {
 			OscMessage msg = new OscMessage("/clear");
 			osc.send(msg, this.remoteTo);
 		}
 		
+		/** Sends a "/file" message with file path, file name, and file tag.
+		 * @param path
+		 * @param name
+		 * @param tag
+		 */
 		public void oscSendFileInfo(String path, String name, String tag) {
 			OscMessage msg = new OscMessage("/file");
 			msg.add(path);
@@ -4894,12 +5403,20 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		 * between client and delegate explicit. 
 		 */
 		
+		/**
+		 * Play an audio event at a position in the audio buffer.
+		 * @param sam   buffer index
+		 */
 		public void sampleHit(int sam) {
 			int[] xy = app.getMapper().lookupImageCoord(sam);
 			PApplet.println("---> sampleHit " + xy[0], xy[1]);
 			app.playSample(sam);
 		}
 
+		/**
+		 * Play audio/animation events using a supplied list of event points.
+		 * @param args
+		 */
 		public void drawHit(int... args) {
 			ArrayList<PVector> pts = new ArrayList<PVector>();
 			PApplet.println("---> drawHit "+ args.length);
@@ -4911,6 +5428,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			app.playPoints(pts);
 		}
 
+		/**
+		 * Receive Max MultiSlider data.
+		 * @param args   MultiSlider values
+		 */
 		public void multislider(int... args) {
 			PApplet.print("---> multislider: ");
 			for (int pos : args) {
@@ -4919,6 +5440,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			PApplet.println();
 		}
 		
+		/**
+		 * Interprets a received value as a char and uses it as an argument to {@code parseKey()}.
+		 * @param arg
+		 */
 		public void parseKey(int arg) {
 			char ch = PApplet.parseChar(arg);
 			PApplet.println("---> parseKey: "+ ch);
@@ -6124,114 +6649,5 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 
-	/*
-	 * DEADBODYWORKFLOW presets, commented out. LEAVE THIS IN, for now.
-	 * To run DEADBODYWORKFLOW presets and performance cues, swap the code
-	 * below for the Abstract Jailbreak presets used above and set isRunWordGame = true.
-	 */
-	
-	
-//	/* ------------------------------------------------------------------ */
-//	/*                   DEADBODYWORKFLOW PRESET LIST                     */
-//	/* ------------------------------------------------------------------ */
-//	
-//	/* Presets for DeadBodyWorkFlow 
-//     *    1. Drone on open, 'a' to animate, '.' for raindrops begin .. end 
-//     *    2. When raindrops end, load DBWF audio + image, voice + bass clarinet enter
-//     *    3. -- PixelAudio improv
-//     *    4. -- PixelAudio improv
-//     *    5. REPRISE, load file "dbwf_02_session.json", 'm' for magic, play
-//     *    6. CLOSE, group improv once through the 16-bar section, all but b.c. dropping out in last 4 measures,
-//     *       voice sotto voce, with FX, "dead body work flow busy word game play".
-//     *    TODO brush color variations1
-//	 */ 
-//	/**
-//	 * Presets are applied to each new brush at the moment drawing is completed by 
-//	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
-//	 * all brush creation. Presets are best used just for brush modifications. If you
-//	 * want to change application settings, use runPerformanceCue() with your own custom 
-//	 * code. You can address the host application with the <code>app</app> parameter, 
-//	 * but keep in mind that is is called on every brush. 
-//	 */
-//	enum PerformancePreset {
-//	    DRONE_RAINDROPS('1') {
-//	        @Override
-//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-//	            return new CueResult(curve, cfg);
-//	        }
-//	    },
-//	    VOICE_AND_MELODY('2') {
-//	        @Override
-//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-//	            return new CueResult(curve, cfg);
-//	        }
-//	    },
-//	    GLITCH_CORTO('3') {
-//	        @Override
-//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-//	        	cfg.rdpEpsilon = 12.0f;
-//	        	cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
-//	        	cfg.hopLengthSamples = 256;
-//	        	cfg.grainLengthSamples = 1024;
-//	        	cfg.burstGrains = 4;
-//	            return new CueResult(curve, cfg);
-//	        }
-//	    },
-//	    GLITCH_LARGO('4') {
-//	        @Override
-//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-//	        	curve.setBezierBias(0.5f);
-//	        	curve.setDrawWeighted(true);
-//	        	cfg.rdpEpsilon = 2.0f;
-//	        	cfg.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
-//	        	cfg.hopLengthSamples = 128;
-//	        	cfg.grainLengthSamples = 512;
-//	        	cfg.burstGrains = 16;
-//	        	cfg.pitchSemitones = -12.0f;
-//	            app.doPlayOnNewBrush = true;
-//	            app.doPlayWhileDrawing = true;
-//	        	app.usePitchedGrains = true;
-//	        	app.pitchJitter = 0.5f;
-//	            return new CueResult(curve, cfg);
-//	        }	    
-//	    },
-//	    REPRISE('5') {
-//	        @Override
-//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-//	            return new CueResult(curve, cfg);
-//	        }	    
-//	    },
-//	    CLOSE('6') {
-//	        @Override
-//	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app) {
-//	            return new CueResult(curve, cfg);
-//	        }	    
-//	    };
-//
-//	    final char key;
-//
-//	    PerformancePreset(char key) {
-//	        this.key = key;
-//	    }
-//
-//	    static PerformancePreset fromKey(char k) {
-//	        for (PerformancePreset c : values()) {
-//	            if (c.key == k) return c;
-//	        }
-//	        return null;
-//	    }
-//	    
-//	    /**
-//	     * Abstract method for concrete apply() methods implemented by each enum constant. In the preset
-//	     * logic, each constant is in effect its own function, which can be invoked by reference. 
-//	     * 
-//	     * @param cfg      configuration parameters for GestureGranularConfig, used to modify audio synthesis
-//	     * @param curve    a PACurveMaker gesture, which can be modifed by the concrete apply() method
-//	     * @param app      a reference to the host application, use with caution
-//	     * @return         a reference to the concrete apply() method for an enum constant 
-//	     */
-//	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, DeadBodyWorkFlow app);
-//	}
-	 
 
 }
