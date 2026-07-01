@@ -612,4 +612,13 @@ public final class PAGranularInstrumentDirector {
         if (instrument != null) instrument.cancelAndReleaseAll();
     }
     
+    /**
+     * Counts active or releasing granular voices in the underlying instrument.
+     *
+     * @return active or releasing voice count
+     */
+    public synchronized int activeOrReleasingVoiceCount() {
+        return (instrument != null) ? instrument.activeOrReleasingVoiceCount() : 0;
+    }
+    
 }

@@ -248,6 +248,19 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         }
         return false;
     }
+    
+    /**
+     * Counts all active or releasing sampler voices across the instrument pool.
+     *
+     * @return total active or releasing voice count
+     */
+    public synchronized int samplerActiveVoiceCount() {
+    	int count = 0;
+    	for (PASamplerInstrument inst : pool) {
+    		if (inst != null) count += inst.activeOrReleasingVoiceCount();
+    	}
+    	return count;
+    }
 
     /** Stops playback on all pooled instruments. */
     // @Override

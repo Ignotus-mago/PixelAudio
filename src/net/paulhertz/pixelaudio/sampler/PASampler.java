@@ -44,8 +44,11 @@ public interface PASampler {
      */
     boolean isLooping();
 
-    /** Stops all voices immediately. */
-    void stopAll();
+	/** Stops all voices immediately. */
+	void stopAll();
+	
+	/** Releases all voices through their envelopes. */
+	void releaseAll();
 
 	/**
 	 * Updates the sampler output sample rate.

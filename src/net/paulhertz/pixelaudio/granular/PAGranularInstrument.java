@@ -347,6 +347,15 @@ public class PAGranularInstrument {
     public void cancelAndReleaseAll() {
         if (sampler != null) sampler.cancelAndReleaseAll();
     }
+    
+    /**
+     * Counts active or releasing granular voices.
+     *
+     * @return active or releasing voice count
+     */
+    public int activeOrReleasingVoiceCount() {
+        return (sampler != null) ? sampler.activeOrReleasingVoiceCount() : 0;
+    }
 
     
     // ------------------------------------------------------------------------

@@ -458,6 +458,19 @@ public class PAGranularSampler extends UGen {
             }
         }
     }
+    
+    /**
+     * Counts voices that are active or releasing.
+     *
+     * @return active or releasing voice count
+     */
+    public synchronized int activeOrReleasingVoiceCount() {
+        int count = 0;
+        for (PAGranularVoice v : voices) {
+            if (v.isActive() || v.isReleasing()) count++;
+        }
+        return count;
+    }
 
     /**
      * Sets the maximum number of voices in the pool.

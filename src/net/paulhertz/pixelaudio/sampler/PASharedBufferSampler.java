@@ -343,6 +343,15 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             for (PASamplerVoice v : voices) v.stop();
         }
     }
+    
+    @Override
+    public void releaseAll() {
+        synchronized (this) {
+            for (PASamplerVoice v : voices) {
+                if (v.isActive() || v.isReleasing()) v.release();
+            }
+        }
+    }
 
     @Override
     public boolean isLooping() {

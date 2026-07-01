@@ -462,10 +462,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 
 	/** Smoothly release all active voices (used only if we must recycle an instrument). */
 	public void releaseAllVoices() {
-		if (!(getSampler() instanceof PASharedBufferSampler s)) return;
-		for (PASamplerVoice v : s.getVoices()) {
-	        if (v.isActive() || v.isReleasing()) v.release();
-	    }
+		if (sampler != null) sampler.releaseAll();
 	}
 
 	/** @return sampler implementation used by this instrument */
