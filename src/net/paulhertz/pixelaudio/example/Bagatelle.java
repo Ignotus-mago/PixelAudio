@@ -684,7 +684,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
 	            cfg.grainLengthSamples = 1024;
 	            cfg.hopLengthSamples = 256;
-	        	cfg.targetDurationMs = curve.getTimeOffset() * 2;
+	        	cfg.targetDurationMs = min(curve.getTimeOffset() * 2, 8000); // if we want to limit time
 	            return new CueResult(curve, cfg);
 	        }
 	    },
@@ -926,6 +926,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	boolean isVerbose = true;
 	boolean isDebugging = false;
+	boolean isTrackSamplerVoices = true;
 	
 	boolean shiftIsDown = false;         // flag for shift key down
 	
@@ -1607,7 +1608,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
 				}
 			}
-			else {
+			else {				
 				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
 			}
 			break;
@@ -1872,6 +1873,18 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				nd.oscSendSetnum(4, 5120.0f);
 			}
 			break;
+		case '%': // switch performance presets and cue handlers
+			if (pMode == PerformanceMode.ABSTRACT_JAILBREAK) {
+				dbwf_presetStack.clear();
+				setPerformanceMode(PerformanceMode.DEADBODYWORKFLOW, true);
+			} else {
+				aj_presetStack.clear();
+				setPerformanceMode(PerformanceMode.ABSTRACT_JAILBREAK, true);
+			}
+			break;
+		case '&': // clear events in granular and sample synths
+			clearSynthEvents();
+		    break;
 		case 'h': case 'H': // show help message
 			showHelp();
 			break; 
@@ -2029,52 +2042,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	void runPerformanceCue(char key) {
 		switch (pMode) {
 		
-		case DEADBODYWORKFLOW: {
-			switch (key) {
-			case '1': // DRONE_RAINDROPS
-				isLoadToBoth = true;
-				applyColorMapOnLoad = true;
-				setAudioGain(-24.0f);
-				loadAudioFile(new File(daPath + "D-flat2_bassClar_window.wav"));
-				break;
-			case '2': // VOICE_AND_MELODY
-				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
-				controlWindow.setTitle("Sampler Synth");								
-				envDuration = 432;
-				samplerEnv = envPreset("Percussion");
-				isLoadToBoth = false;
-				isAnimating = false;
-				setAudioGain(-6.0f);
-				daFilename = "workflow_48Khz.wav";
-				loadAudioFile(new File(daPath + daFilename));
-				daFilename = "workFlowPanel.png";    			
-				preloadFiles(daPath, daFilename);
-				break;
-			case '3': // GLITCH_CORTO('3')
-				setMode(DrawingMode.DRAW_EDIT_GRANULAR);
-				this.doPlayOnNewBrush = true;
-				this.doPlayWhileDrawing = true;
-				this.usePitchedGrains = true;
-				this.pitchJitter = 0.1f;
-				break;
-			case '4': // GLITCH_LARGO('4')
-				break;
-			case '5': // REPRISE
-				this.doPlayOnNewBrush = true;
-				this.doPlayWhileDrawing = false;
-				this.usePitchedGrains = false;
-				this.pitchJitter = 0.1f;
-				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
-				resetConfigToDefaults(); 
-				break;
-			case '6': // CLOSE
-				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
-				resetConfigToDefaults(); 
-				break;
-			}  // switch (key)
-			break;
-		}  // case DEADBODYWORKFLOW
-		
 		case ABSTRACT_JAILBREAK: {    // Bagatelle "Abstract Jailbreak"
 			applyColorMapOnLoad = true;
 			isLoadToBoth = true;
@@ -2142,6 +2109,53 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			}  // switch (key)
 			break;
 		}  // case ABSTRACT_JAILBREAK
+
+		case DEADBODYWORKFLOW: {
+			switch (key) {
+			case '1': // DRONE_RAINDROPS
+				isLoadToBoth = true;
+				applyColorMapOnLoad = true;
+				setAudioGain(-24.0f);
+				loadAudioFile(new File(daPath + "D-flat2_bassClar_window.wav"));
+				break;
+			case '2': // VOICE_AND_MELODY
+				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+				controlWindow.setTitle("Sampler Synth");								
+				envDuration = 432;
+				samplerEnv = envPreset("Percussion");
+				isLoadToBoth = false;
+				isAnimating = false;
+				setAudioGain(-6.0f);
+				daFilename = "workflow_48Khz.wav";
+				loadAudioFile(new File(daPath + daFilename));
+				daFilename = "workFlowPanel.png";    			
+				preloadFiles(daPath, daFilename);
+				break;
+			case '3': // GLITCH_CORTO('3')
+				setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = true;
+				this.usePitchedGrains = true;
+				this.pitchJitter = 0.1f;
+				break;
+			case '4': // GLITCH_LARGO('4')
+				break;
+			case '5': // REPRISE
+				this.doPlayOnNewBrush = true;
+				this.doPlayWhileDrawing = false;
+				this.usePitchedGrains = false;
+				this.pitchJitter = 0.1f;
+				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
+				resetConfigToDefaults(); 
+				break;
+			case '6': // CLOSE
+				fileSelected(new File(daPath + "session_02/dbwf_02_session.json"));
+				resetConfigToDefaults(); 
+				break;
+			}  // switch (key)
+			break;
+		}  // case DEADBODYWORKFLOW
+		
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		
@@ -2172,15 +2186,59 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		isBrushTransformTest = false;      // testing animation feature (key 'y')
 		isBrushTransformFrozen = false;    // freeze animation (key 'Y')
 
-		isBrushSelectionModal = false;     // if false, select all brushes, otherwise, select by active mode
-		
+		isBrushSelectionModal = false;     // if false, select all brushes, otherwise, select by active mode		
+	}
+	
+	/**
+	 * Changes the current performance mode during live performance. Currently there are 
+	 * only two performance modes in Bagatelle, ABSTRACT_JAILBREAK and DEADBODYWORKFLOW. 
+	 * @param newMode            a new performance mode
+	 * @param recolorAfterLoad   apply signal path spectrum to display image or not
+	 */
+	void setPerformanceMode(PerformanceMode newMode, boolean recolorAfterLoad) {
+	    if (newMode == null || newMode == pMode) return;
+
+	    suspendScheduledEvents();
+	    stopAllLoops();
+	    if (pool != null) pool.fadeOutAll();
+	    if (gDir != null) gDir.cancelAndReleaseAll();
+
+	    pMode = newMode;
+
+	    resetPerformanceState();
+	    resetConfigForMode();
+
+	    surface.setTitle(performanceTitle());
+
+	    multigen = loadPerformanceGen();
+	    mapper = new PixelAudioMapper(multigen);
+	    mapSize = mapper.getSize();
+	    boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
+	    colors = getColors(mapSize);
+	    initImages();
+	    initDrawing();
+	    initCustomSettings();
+
+	    if (recolorAfterLoad) applyColorMap();
+	}
+	
+	void clearGranularActivity() {
+	    if (gDir != null) gDir.cancelAndReleaseAll();
+	}
+
+	void clearSynthEvents() {
+	    suspendScheduledEvents();
+	    stopAllLoops();
+	    if (pool != null) pool.releaseAll();
+	    if (gDir != null) gDir.cancelAndReleaseAll();
+	    println("-- released all audio events in queue");
 	}
 	
 	/*----------------------------------------------------------------*/
 	/*                   END PREFORMANCE METHODS                      */
 	/*----------------------------------------------------------------*/
 	
-	
+		
 	/**
 	 * Apply color map hue and saturation to mapImage or baseImage.
 	 */
@@ -3249,8 +3307,24 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		if (isDebugging) println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
-		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+		int beforeCount = 0;
+		int afterCount = 0;
+    	int voiceCount = gDir.activeOrReleasingVoiceCount();
+    	println("-- gDir voice count = "+ voiceCount);
+		// tracking Sampler voice count for possible problems
+		if (isTrackSamplerVoices) {
+			// println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
+			beforeCount = pool.samplerActiveVoiceCount();
+			// println("-- sampler voices BEFORE: "+ beforeCount);
+		}
+		int sampleLen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+		if (isTrackSamplerVoices) {
+			afterCount = pool.samplerActiveVoiceCount();
+			if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
+			if (afterCount > 64) println("-- high voice count "+ afterCount);
+			// println("-- sampler voices AFTER: "+ afterCount);
+		}
+		return sampleLen;
 	}
 
 	/**
@@ -4420,6 +4494,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param isClearCurves
 	 */
 	public void reset(boolean isClearCurves) {
+		if (pool != null) {
+		    pool.close();
+		    pool = null;
+		}
 		// note that initAudio also clears TimedLocation event lists
 		initAudio();
 		if (audioFile != null)
@@ -4848,8 +4926,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            int x = Math.round(loc.x);
 	            int y = Math.round(loc.y);
 	            int pos = mapper.lookupSignalPos(x, y);
-	            envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration ) : noteDuration;
-	            int len = calcSampleLen();
+	            int eventDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration) : noteDuration;
+	            int len = calcSampleLen(eventDuration, 1.0f, 0.0625f);
 	            int t = startTime + Math.round(sched.timesMs[i]);
 	            float pan = map(x, 0, width - 1, -0.875f, 0.875f);
 	            float gain = baseGain;
