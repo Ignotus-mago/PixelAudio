@@ -593,6 +593,9 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    samplerTimeLocs = new ArrayList<>();   // capture timing data when drawing
 	}
 	
+	/**
+	 * Sets up network for UDP communication.
+	 */
 	void initNetwork() {
 	    // *****]]] NETWORKING [[[***** //
 		if (isUseNetworkDelegate) {
@@ -664,7 +667,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	/**
-	 * Renders a frame of animation: moving along the signal path, copies baseImage pixels to
+	 * Renders a frame of pixel-shifting animation: moving along the signal path, copies baseImage pixels to
 	 * mapImage pixels, adjusting the index position of the copy using totalShift --
 	 * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
 	 * 
@@ -1184,8 +1187,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 
 	/**
-	 * Sets audioOut.gain.
-	 * @param g   gain value for audioOut, in decibels
+	 * Adjusts audioOut.gain.
+	 * @param g   value to add to audioOut.gain, in decibels
 	 */
 	public void adjustAudioGain(float g) {
 		float ag = audioOut.getGain();
@@ -1223,7 +1226,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
 	 * 
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
-	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
 	 * @return the graySource array of RGB values, with hue and saturation values changed
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
@@ -1238,9 +1241,9 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * taking into account any pixels that were shifted.
 	 * 
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
-	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
-	 * @param shift          number of pixels/array indices to shift
+	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
 	 * @return the graySource array of RGB values, with hue and saturation values changed
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
 	 */
@@ -1765,7 +1768,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
-	 * @param sig       an target array of float in audio format 
+	 * @param sig       a target array of float in audio format
 	 * @param chan      a color channel
 	 * @param shift     number of indices to shift 
 	 */
@@ -2349,10 +2352,11 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	/**
+	 * Displaces a supplied point by a random Gaussian variable.
 	 * @param x              x-coordinate
 	 * @param y              y-coordinate
-	 * @param deviationPx    distance deviation from mean
-	 * @return               a PVector with coordinates shifted by a Gaussing variable
+	 * @param deviationPx    average deviation, in pixels
+	 * @return a displaced coordinate point as a PVector
 	 */
 	public PVector jitterCoord(int x, int y, int deviationPx) {
 	    double variance = deviationPx * deviationPx;
@@ -2611,6 +2615,12 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	
+	/**
+	 * @param sched         a {@code GestureSchedule} to access for calculating an envelope duration
+	 * @param envName       name of an envelope preset
+	 * @param fallbackMs    default duration in milliseconds
+	 * @return calculated sample length in samples of an envelope
+	 */
 	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
 	    int n = sched.points.size();
 	    if (n < 2) return fallbackMs;

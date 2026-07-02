@@ -386,7 +386,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * Unlike most of the code in PixelAudio, which avoids dependencies on Processing, the 
 	 * curves.* classes interface with Processing to draw to PApplets and PGraphics instances. 
 	 * See the CurveMaker class for details of how drawing works. 
-	 * 
+	 *
 	 */
 	
 	// curve drawing and interaction
@@ -589,7 +589,11 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	/**
 	 * Adds PixelMapGen objects to the local variable genList. The genList 
 	 * initializes a MultiGen, which can be used to map audio and pixel data.
-	 * This method follows the words in the workFlowPanel.png graphic.
+	 * Generation order in {@code offsetList} follows the words in the workFlowPanel.png graphic.
+	 *
+	 * @param wordGenW    width of single gen element
+	 * @param wordGenH    height of single gen element
+	 * @return a MultiGen following the workFlowPanel.png layout
 	 */
 	public MultiGen loadWordGen(int wordGenW, int wordGenH) {
 		// list of PixelMapGens that create an image using mapper
@@ -1058,8 +1062,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 
 	/**
-	 * Sets audioOut.gain.
-	 * @param g   gain value for audioOut, in decibels
+	 * Adjusts audioOut.gain.
+	 * @param g   value to add to audioOut.gain, in decibels
 	 */
 	public void adjustAudioGain(float g) {
 		float ag = audioOut.getGain();
@@ -1361,6 +1365,20 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	    img.updatePixels();
 	}
 
+	/**
+	 * Transcodes audio data in sig[] and writes it to color channel chan of mapImage
+	 * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(),
+	 * which will throw an IllegalArgumentException if sig.length != img.pixels.length
+	 * or sig.length != mapper.getSize().
+	 * We typically use PixelAudioMapper.ChannelNames.ALL or PixelAudioMapper.ChannelNames.L
+	 * as the chan value. Both result in gray values, with PixelAudioMapper.ChannelNames.L
+	 * maintaining previous hue and saturation color values in the image.
+	 *
+	 * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
+	 * @param mapper      a PixelAudioMapper
+	 * @param img         a PImage
+	 * @param chan        a color channel
+	 */
 	public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
 		// If sig.length == mapper.getSize() == mapImage.width * mapImage.height, we can call safely mapper.mapSigToImg()	
 		img.loadPixels();
@@ -1371,7 +1389,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	
 	/**
 	 * Sets the alpha channel of an RGBA color, conditionally setting alpha = 0 if all other channels = 0.
-	 * 
+	 *
 	 * @param argb     an RGBA color value
 	 * @param alpha    the desired alpha value to apply to argb
 	 * @return         the argb color with changed alpha channel value
@@ -1648,8 +1666,9 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 
 	/**
-	 * @param pos    an index into the audio signal
-	 * @return a PVector representing the image pixel mapped to pos
+	 * Calculates the display image coordinates corresponding to a specified audio sample index.
+	 * @param pos    an index into an audio signal, must be between 0 and width * height - 1.
+	 * @return       a PVector with the x and y coordinates
 	 */
 	public PVector getCoordFromSignalPos(int pos) {
 		int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
@@ -1884,7 +1903,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Calculate an envelope of length totalSamples. 
-	 * @param linear     desired linear gain, currently ignored
+	 * @param linear     desired gain as a linear ratio, currently ignored
 	 * @param totalMs    desired duration of the envelope in milliseconds
 	 * @return an ADSRParams envelope
 	 */
@@ -1909,6 +1928,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * @param samplePos    position of the sample in the audio buffer
 	 * @param samplelen    length of the sample (will be adjusted)
 	 * @param amplitude    amplitude of the sample on playback
+	 * @param pan          stereo pan [-1.0, 1.0] for sample
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
@@ -1945,6 +1965,9 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 
 	/**
+	 * @param dur         sample duration in milliseconds
+	 * @param mean        multiplier for duration, 1.0 leaves duration as mean value
+	 * @param variance    variance from mean value
 	 * @return a length in samples with some Gaussian variation
 	 */
 	public int calcSampleLen(int dur, float mean, float variance) {
@@ -2002,7 +2025,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
 	 * 
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
-	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
 	 * @return the graySource array of RGB values, with hue and saturation values changed
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
@@ -2021,8 +2044,12 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 
 	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+	 * taking into account any pixels that were shifted.
+	 *
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
-	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
 	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
 	 * @return the graySource array of RGB values, with hue and saturation values changed
@@ -2134,6 +2161,13 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		return min(max(0, y), height - 1);
 	}
 	
+	/**
+	 * Displaces a supplied point by a random Gaussian variable.
+	 * @param x              x-coordinate
+	 * @param y              y-coordinate
+	 * @param deviationPx    average deviation, in pixels
+	 * @return a displaced coordinate point as a PVector
+	 */
 	public PVector jitterCoord(int x, int y, int deviationPx) {
 	    double variance = deviationPx * deviationPx;
 	    int jx = (int)Math.round(PixelAudio.gauss(0, variance));
@@ -2152,6 +2186,12 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		return pitch;
 	}
 
+	/**
+	 * Builds a {@code GestureSchedule} for a {@code PACurveMaker} brush and a snapshot of a {@code GestureGranularConfig}
+	 * @param brush    a {@code PACurveMaker} brush
+	 * @param snap     a snapshot of a {@code GestureGranularConfig}
+	 * @return a {@code GestureSchedule}
+	 */
 	public GestureSchedule loadGestureSchedule(PACurveMaker brush, GestureGranularConfig snap) {
 	    if (brush == null || snap == null) return null;
 	    GestureSchedule schedule = scheduleBuilder.build(brush, snap, audioOut.sampleRate());
@@ -2203,6 +2243,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		}
 	}
 	
+	/**
+	 * @param b   an AudioBrush instance
+	 * @return    return true if brush aligns with current drawingMode
+	 */
 	boolean isBrushInteractable(AudioBrush b) {
 	    switch (drawingMode) {
 	        case DRAW_EDIT_SAMPLER: return b instanceof SamplerBrush;
@@ -2212,6 +2256,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	    }
 	}
 
+	/**
+	 * Assigns a brush to be the current active brush, accessible for editing and other options.
+	 * @param brush   an AudioBrush to assign
+	 */
 	void setActiveBrush(AudioBrush brush) {
 		setActiveBrush(brush, hoverIndex);
 	}
@@ -2237,6 +2285,9 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		syncGuiFromConfig();
 	}
 	
+	/**
+	 * Caching for UI settings, may be superfluous.
+	 */
 	void recomputeUIBaselinesFromActiveBrush() {
 		if (activeBrush == null) {
 			baselineCount = 0;
@@ -2290,6 +2341,13 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		drawBrushes(samplerBrushes, readyBrushColor2, hoverBrushColor2, selectedBrushColor2);
 	}
 	
+	/**
+	 * Iterates over a brush list and draws the brushstrokes stored in each PACurveMaker in the list.
+	 * @param brushes
+	 * @param readyColor
+	 * @param hoverColor
+	 * @param selectedColor
+	 */
 	public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int hoverColor, int selectedColor) {
 		if (brushes.isEmpty()) return;
 		for (int i = 0; i < brushes.size(); i++) {
@@ -2335,6 +2393,11 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		}
 	}
 	
+	/**
+	 * Provides the list of points for a brush in its assigned PathMode representation.
+	 * @param b   an AudioBrush
+	 * @return points in the path associated with the brush, as a list of PVector
+	 */
 	ArrayList<PVector> getPathPoints(AudioBrush b) {
 		PACurveMaker cm = b.curve();
 		switch (b.cfg().pathMode) {
@@ -2521,6 +2584,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Convert a brush explicitly to SamplerBrush.
+	 * @param brush   an AudioBrush instance
+	 * @return the brush reconfigured as a SamplerBrush
 	 */
 	SamplerBrush toSamplerBrush(AudioBrush brush) {
 	    if (brush == null) return null;
@@ -2533,6 +2598,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Convert a brush explicitly to GranularBrush.
+	 * @param brush   an AudioBrush instance
+	 * @return the brush reconfigured as a GranularBrush
 	 */
 	GranularBrush toGranularBrush(AudioBrush brush) {
 	    if (brush == null) return null;
@@ -2588,6 +2655,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Append a granular brush and return its new index.
+	 * @param gb   a GranularBrush instance
+	 * @return the index of the brush in the {@code granularBrushes} list
 	 */
 	int appendGranularBrush(GranularBrush gb) {
 	    if (gb == null) return -1;
@@ -2597,6 +2666,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Append a sampler brush and return its new index.
+	 * @param sb   a SamplerBrush instance
+	 * @return the index of the brush in the {@code samplerBrushes} list
 	 */
 	int appendSamplerBrush(SamplerBrush sb) {
 	    if (sb == null) return -1;
@@ -2606,6 +2677,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Remove a granular brush using index when reliable, else by object.
+	 * @param gb    an AudioBrush expected to be a GranularBrush
+	 * @param idx   index in the granular brush list, or a negative value when unknown
 	 */
 	void removeGranularBrush(AudioBrush gb, int idx) {
 		if (gb instanceof SamplerBrush) return;
@@ -2624,6 +2697,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	/**
 	 * Remove a sampler brush using index when reliable, else by object.
+	 * @param sb    an AudioBrush expected to be a SamplerBrush
+	 * @param idx   index in the sampler brush list, or a negative value when unknown
 	 */
 	void removeSamplerBrush(AudioBrush sb, int idx) {
 		if (sb instanceof GranularBrush) return;
@@ -2643,6 +2718,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	/**
 	 * Normalize config values when converting to SamplerBrush.
 	 * Keep most gesture/path information intact.
+	 * @param cfg   a GestureGranularConfig.Builder instance
 	 */
 	void normalizeConfigForSampler(GestureGranularConfig.Builder cfg) {
 	    if (cfg == null) return;
@@ -2660,6 +2736,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	/**
 	 * Normalize config values when converting to GranularBrush.
 	 * Keep most gesture/path information intact, but make a few granular-friendly adjustments.
+	 * @param cfg   a GestureGranularConfig.Builder instance
 	 */
 	void normalizeConfigForGranular(GestureGranularConfig.Builder cfg) {
 	    if (cfg == null) return;

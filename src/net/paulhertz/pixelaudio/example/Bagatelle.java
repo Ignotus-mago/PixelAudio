@@ -71,7 +71,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <p>
  * The presets and performance cues in this version of the Bagatelle sketch are set up for
  * "Abstract Jailbreak". If you change {@code pMode} to {@code PerformanceMode.DEADBODYWORKFLOW}, 
- * this sketch will run the presets and cues for "DEADBODYWORKFLOW". 
+ * this sketch will run the presets and cues for "DEADBODYWORKFLOW". You can toggle {@code pMode}
+ * at runtime with the '%' key--this is new feature, YMMV.
  * </p><p>
  * Bagatelle is an experiment. I have tried to document it reasonably well, but some features are bound to
  * appear opaque or mysterious. I think most of the features will reveal themselves with experimentation.
@@ -281,6 +282,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'R' to reset transform of active brush if it has a transform.
  * Press 'G' to create a beatBrush.
  * Press '.' to turn random raindrops audio events on or off.
+ * Press '`' to fade out all instruments.
+ * Press '%' to switch performance presets and cue handlers.
+ * Press '&' to clear events in granular and sample synths.
  * ----- Brush Deletion -----
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
@@ -454,7 +458,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * Unlike most of the code in PixelAudio, which avoids dependencies on Processing, the 
 	 * curves.* classes interface with Processing to draw to PApplets and PGraphics instances. 
 	 * See the CurveMaker class for details of how drawing works. 
-	 * 
+	 *
 	 */
 	
 	// curve drawing and interaction
@@ -646,7 +650,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	final ArrayList<InstrumentLoop> activeLoops = new ArrayList<>();
 
 	/* ------------------------------------------------------------------ */
-	/*                              PRESET LIST                           */
+	/*                    ABSTRACT JAILBREAK PRESET LIST                  */
 	/* ------------------------------------------------------------------ */
 
 	/* Presets for Bagatelle "Abstract Jailbreak" 
@@ -926,7 +930,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	boolean isVerbose = true;
 	boolean isDebugging = false;
-	boolean isTrackSamplerVoices = true;
+	boolean isTrackSamplerVoices = false;
 	
 	boolean shiftIsDown = false;         // flag for shift key down
 	
@@ -1845,6 +1849,18 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			if (gDir != null) gDir.cancelAndReleaseAll();
 			println("-- fade out all");
 			break;
+		case '%': // switch performance presets and cue handlers
+			if (pMode == PerformanceMode.ABSTRACT_JAILBREAK) {
+				dbwf_presetStack.clear();
+				setPerformanceMode(PerformanceMode.DEADBODYWORKFLOW, true);
+			} else {
+				aj_presetStack.clear();
+				setPerformanceMode(PerformanceMode.ABSTRACT_JAILBREAK, true);
+			}
+			break;
+		case '&': // clear events in granular and sample synths
+			clearSynthEvents();
+		    break;
 		case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
 			if (nd != null) nd.oscSendOnOff(1, true);
 			break;
@@ -1873,18 +1889,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				nd.oscSendSetnum(4, 5120.0f);
 			}
 			break;
-		case '%': // switch performance presets and cue handlers
-			if (pMode == PerformanceMode.ABSTRACT_JAILBREAK) {
-				dbwf_presetStack.clear();
-				setPerformanceMode(PerformanceMode.DEADBODYWORKFLOW, true);
-			} else {
-				aj_presetStack.clear();
-				setPerformanceMode(PerformanceMode.ABSTRACT_JAILBREAK, true);
-			}
-			break;
-		case '&': // clear events in granular and sample synths
-			clearSynthEvents();
-		    break;
 		case 'h': case 'H': // show help message
 			showHelp();
 			break; 
@@ -1950,6 +1954,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println(" * Press 'R' to reset transform of active brush if it has a transform.");    // TODO clarify
 		println(" * Press 'G' to create a beatBrush.");
 		println(" * Press '.' to turn random raindrops audio events on or off.");
+		println(" * Press '`' to fade out all instruments.");
+		println(" * Press '%' to switch performance presets and cue handlers.");
+		println(" * Press '&' to clear events in granular and sample synths.");
 		
 		println(" * ----- Brush Deletion -----");
 		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
@@ -2686,6 +2693,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(), 
 	 * which will throw an IllegalArgumentException if sig.length != img.pixels.length
 	 * or sig.length != mapper.getSize(). 
+	 * We typically use PixelAudioMapper.ChannelNames.ALL or PixelAudioMapper.ChannelNames.L
+	 * as the chan value. Both result in gray values, with PixelAudioMapper.ChannelNames.L
+	 * maintaining previous hue and saturation color values in the image.
 	 * 
 	 * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
 	 * @param mapper      a PixelAudioMapper
@@ -2730,11 +2740,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
 	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
 	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
-	 * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync.
 	 * 
 	 * @param img       a PImage, a source of data
 	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
-	 * @param sig       an target array of float in audio format 
+	 * @param sig       a target array of float in audio format
 	 * @param chan      a color channel
 	 * @param shift     number of indices to shift 
 	 */
@@ -2745,7 +2755,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	/**
 	 * Writes a specified channel of mapImage to audioSignal.
-	 * 
+	 *
 	 * @param chan    the selected color channel
 	 */
 	public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
@@ -3083,8 +3093,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
-	 * @param pos    an index into the audio signal
-	 * @return a PVector representing the image pixel mapped to pos
+	 * Calculates the display image coordinates corresponding to a specified audio sample index.
+	 * @param pos    an index into an audio signal, must be between 0 and width * height - 1.
+	 * @return       a PVector with the x and y coordinates
 	 */
 	public PVector getCoordFromSignalPos(int pos) {
 		int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
@@ -3309,10 +3320,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
 		int beforeCount = 0;
 		int afterCount = 0;
-    	int voiceCount = gDir.activeOrReleasingVoiceCount();
-    	println("-- gDir voice count = "+ voiceCount);
-		// tracking Sampler voice count for possible problems
+    	int voiceCount = 0;
+		// tracking Sampler voice count for possible problems, which we discovered and fixed
 		if (isTrackSamplerVoices) {
+			voiceCount = gDir.activeOrReleasingVoiceCount();
+	    	println("-- gDir voice count = "+ voiceCount);
 			// println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
 			beforeCount = pool.samplerActiveVoiceCount();
 			// println("-- sampler voices BEFORE: "+ beforeCount);
@@ -3321,7 +3333,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		if (isTrackSamplerVoices) {
 			afterCount = pool.samplerActiveVoiceCount();
 			if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
-			if (afterCount > 64) println("-- high voice count "+ afterCount);
+			if (afterCount > 256) println("-- high sampler voice count "+ afterCount);
 			// println("-- sampler voices AFTER: "+ afterCount);
 		}
 		return sampleLen;
@@ -3745,7 +3757,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
 	 * 
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
-	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
 	 * @return the graySource array of RGB values, with hue and saturation values changed
 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
@@ -3764,8 +3776,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 
 	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+	 * taking into account any pixels that were shifted.
+	 *
 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
-	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
 	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
 	 * @return the graySource array of RGB values, with hue and saturation values changed
@@ -4034,7 +4050,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param x              x-coordinate
 	 * @param y              y-coordinate
 	 * @param deviationPx    average deviation, in pixels
-	 * @return a displace coordinate point as a PVector
+	 * @return a displaced coordinate point as a PVector
 	 */
 	public PVector jitterCoord(int x, int y, int deviationPx) {
 	    double variance = deviationPx * deviationPx;
@@ -4730,8 +4746,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Remove a granular brush using index when reliable, else by object.
-	 * @param gb
-	 * @param idx
+	 * @param gb    an AudioBrush expected to be a GranularBrush
+	 * @param idx   index in the granular brush list, or a negative value when unknown
 	 */
 	void removeGranularBrush(AudioBrush gb, int idx) {
 		if (gb instanceof SamplerBrush) return;
@@ -4750,8 +4766,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	/**
 	 * Remove a sampler brush using index when reliable, else by object.
-	 * @param sb
-	 * @param idx
+	 * @param sb    an AudioBrush expected to be a SamplerBrush
+	 * @param idx   index in the sampler brush list, or a negative value when unknown
 	 */
 	void removeSamplerBrush(AudioBrush sb, int idx) {
 		if (sb instanceof GranularBrush) return;

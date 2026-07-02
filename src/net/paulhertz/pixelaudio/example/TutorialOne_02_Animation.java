@@ -966,17 +966,28 @@ public class TutorialOne_02_Animation extends PApplet {
 		commitMapImageToBaseImage();
 	}
 
+	/**
+	 * Writes the mapImage, which may change with animation, to the baseImage, a reference image
+	 * that usually only changes when a new file is loaded.
+	 */
 	public void commitMapImageToBaseImage() {
 		baseImage = mapImage.copy();
 		totalShift = 0;
 	}
 
+	/**
+	 * Copies the supplied PImage to mapImage and baseImage, sets totalShift to 0 (the images are identical).
+	 * @param img
+	 */
 	public void commitNewBaseImage(PImage img) {
 	    baseImage = img.copy();
 	    mapImage = img.copy();
 	    totalShift = 0;
 	}
 	
+	/**
+	 * Writes baseImage to mapImage with an index position offset of totalShift.
+	 */
 	public void refreshMapImageFromBase() {
 	    mapImage.loadPixels();
 	    mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
