@@ -20,11 +20,11 @@ public void scaleAmps(ArrayList<WaveData> waveDataList, float scale) {
   }
 }
 
-/**
- * Shifts the colors of an ArrayList of WaveData objects.
- * @param waveDataList  an ArrayList of WaveData objects
- * @param shift    the amount shift each color
- */
+	/**
+	 * Shifts the colors of an ArrayList of WaveData objects.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 * @param shift		the amount shift each color
+	 */
 public void shiftColors(ArrayList<WaveData> waveDataList, float shift) {
   for (WaveData wd : waveDataList) {
     if (wd.isMuted)
@@ -34,11 +34,11 @@ public void shiftColors(ArrayList<WaveData> waveDataList, float shift) {
   if (isVerbose) println("----->>> shift colors " + shift);
 }
 
-/**
- * Scales the frequencies of an ArrayList of WaveData objects.
- * @param waveDataList  an ArrayList of WaveData objects
- * @param scale    the amount to scale the frequency of each WaveData object
- */
+	/**
+	 * Scales the frequencies of an ArrayList of WaveData objects.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 * @param scale		the amount to scale the frequency of each WaveData object
+	 */
 public void scaleFreqs(ArrayList<WaveData> waveDataList, float scale) {
   int i = 0;
   for (WaveData wd : waveDataList) {
@@ -53,11 +53,11 @@ public void scaleFreqs(ArrayList<WaveData> waveDataList, float scale) {
   }
 }
 
-/**
- * Shifts the phase of an ArrayList of WaveData objects.
- * @param waveDataList  an ArrayList of WaveData objects
- * @param shift      amount to shift the phase of each WaveData object
- */
+	/**
+	 * Shifts the phase of an ArrayList of WaveData objects.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 * @param shift			amount to shift the phase of each WaveData object
+	 */
 public void shiftPhases(ArrayList<WaveData> waveDataList, float shift) {
   for (WaveData wd : waveDataList) {
     if (wd.isMuted)
@@ -69,10 +69,10 @@ public void shiftPhases(ArrayList<WaveData> waveDataList, float shift) {
   if (isVerbose) println("----->>> shiftPhase " + shift);
 }
 
-/**
- * Prints the phase values of an ArrayList of WaveData objects.
- * @param waveDataList  an ArrayList of WaveData objects
- */
+	/**
+	 * Prints the phase values of an ArrayList of WaveData objects.
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 */
 public void showPhaseValues(ArrayList<WaveData> waveDataList) {
   int phaseStep = wavesynth.getStep();
   StringBuffer sb = new StringBuffer("\n----- current phase values scaled over (0, 1) -----\n");
@@ -90,13 +90,13 @@ public void showPhaseValues(ArrayList<WaveData> waveDataList) {
   println(sb);
 }
 
-/**
- * Applies the current phase values to the initial values of the WaveSynth, so that
- * the current state of the image display will appear as the first frame of
- * animation. Save the WaveSynth to a JSON file to keep the new phase values.
- *
- * @param waveDataList  an ArrayList of WaveData objects
- */
+	/**
+	 * Applies the current phase values to the initial values of the WaveSynth, so that
+	 * the current state of the image display will appear as the first frame of
+	 * animation. Save the WaveSynth to a JSON file to keep the new phase values.
+	 *
+	 * @param waveDataList	an ArrayList of WaveData objects
+	 */
 public void capturePhaseValues(ArrayList<WaveData> waveDataList) {
   int phaseStep = wavesynth.getStep();
   for (WaveData wd : waveDataList) {
@@ -105,10 +105,10 @@ public void capturePhaseValues(ArrayList<WaveData> waveDataList) {
   }
 }
 
-/**
- * Mutes or unmutes a WaveData operator (view in the control panel).
- * @param elem  the index number of a WaveData object stored in a WaveSynth's waveDataList field
- */
+	/**
+	 * Mutes or unmutes a WaveData operator (view in the control panel).
+	 * @param elem	the index number of a WaveData object stored in a WaveSynth's waveDataList field
+	 */
 public void toggleWDMute(int elem) {
   if (wavesynth.waveDataList.size() < elem + 1) return;
   WaveData wd = wavesynth.waveDataList.get(elem);
@@ -128,12 +128,12 @@ public void toggleWDMute(int elem) {
  * @param waveDataList  an ArrayList of WaveData objects
  */
 public void printWDStates(ArrayList<WaveData> waveDataList) {
-  StringBuffer sb = new StringBuffer("Audio operators\n");
-  int n = 1;
-  for (WaveData wd : waveDataList) {
-    sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
-  }
-  println(sb.toString());
+	StringBuffer sb = new StringBuffer("Audio operators\n");
+	int n = 1;
+	for (WaveData wd :waveDataList) {
+		sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
+	}
+	println(sb.toString());
 }
 
 /**
@@ -141,13 +141,13 @@ public void printWDStates(ArrayList<WaveData> waveDataList) {
  * @param waveDataList  an ArrayList of WaveData objects
  */
 public void unmuteAllWD(ArrayList<WaveData> waveDataList) {
-  StringBuffer sb = new StringBuffer("Audio operators\n");
-  int n = 1;
-  for (WaveData wd : waveDataList) {
-    wd.setWaveState(WaveState.ACTIVE);
-    sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
-  }
-  println(sb.toString());
+	StringBuffer sb = new StringBuffer("Audio operators\n");
+	int n = 1;
+	for (WaveData wd :waveDataList) {
+		wd.setWaveState(WaveState.ACTIVE);
+		sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
+	}
+	println(sb.toString());
 }
 
 /**
@@ -168,11 +168,11 @@ public class CompareWaveData implements Comparator <WaveData> {
   }
 }
 
-/**
- * Steps through the WaveSynth's list of WaveData, shows the current
- * WaveData operator in the control panel.
- * @param up   if true, increment waveDataIndex, otherwise, decrement it
- */
+	/**
+	 * Steps through the WaveSynth's list of WaveData, shows the current
+	 * WaveData operator in the control panel.
+	 * @param up 	if true, increment waveDataIndex, otherwise, decrement it
+	 */
 public void stepWaveData(boolean up) {
   int dataLen = wavesynth.waveDataList.size();
   if (up) {

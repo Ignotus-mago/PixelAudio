@@ -54,15 +54,15 @@ public void checkBufferState(boolean isStale) {
   }
 }
 
-/**
- * Plays an audio sample with WFSamplerInstrument and custom ADSR.
- *
- * @param samplePos    position of the sample in the audio buffer
- * @param samplelen    length of the sample (will be adjusted)
- * @param amplitude    amplitude of the sample on playback
- * @param defaultEnv         an ADSR envelope for the sample
- * @return the calculated sample length in samples
- */
+	/**
+	 * Plays an audio sample with WFSamplerInstrument and custom ADSR.
+	 *
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param env          an ADSR envelope for the sample
+	 * @return the calculated sample length in samples
+	 */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
   samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
   int durationMS = (int)(samplelen/sampleRate * 1000);
@@ -102,15 +102,14 @@ public int calcSampleLen() {
  * Run the animation for audio events.
  */
 public void runTimeArray() {
-  int currentTime = millis();
-  timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
-    }
-  }
-  );
-  timeLocsArray.removeIf(TimedLocation::isStale);
+    int currentTime = millis();
+    timeLocsArray.forEach(tl -> {
+        tl.setStale(tl.eventTime() < currentTime);
+        if (!tl.isStale()) {
+            drawCircle(tl.getX(), tl.getY());
+        }
+    });
+    timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
 /**
@@ -131,16 +130,15 @@ public void runMusicArray() {
       sampleX = tl.getX();
       sampleY = tl.getY();
       circleColor = tl.getCircleColor();
-      // println("---> music ", tl.getX(), tl.getY(), mapper.lookupSignalPos(tl.getX(), tl.getY()));
+      // println("---> music ", tl.getX(), tl.getY(), mapper.lookupSample(tl.getX(), tl.getY()));
       // println("---> music ", twoPlaces.format(tl.getAmplitude()));
       playSample(mapper.lookupSignalPos(tl.getX(), tl.getY()), len, tl.getAmplitude(), tl.getAdsr());
       tl.setStale(true);
-    } 
+    }
     else {
       return;
     }
-  }
-  );
+  });
   introMusic.removeIf(NoteTimedLocation::isStale);
 }
 

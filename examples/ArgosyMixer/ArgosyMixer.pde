@@ -54,7 +54,7 @@ AffineTransformType     fx90      = AffineTransformType.FX90;
 AffineTransformType     flipy     = AffineTransformType.FLIPY;
 AffineTransformType     nada      = AffineTransformType.NADA;
 // transArray is useful for random selections
-AffineTransformType[]   transArray = {r270, r90, r180, flipx, fx270, fx90, flipy, nada}; 
+AffineTransformType[]   transArray = {r270, r90, r180, flipx, fx270, fx90, flipy, nada};
 Random rand;
 
 /* ------------------------------------------------------------------ */
@@ -88,12 +88,12 @@ int[] blackWhite = {black, white};
 int[] whiteBlack = {white, black};
 int[] blackGrayWhite = {black, gray, white};
 int[] grayRamp = {color(16), color(48), color(80), color(112), color(144), color(176), color(208), color(240)};
-int[] grayTriangle = {color(12), color(41), color(70), color(99), color(128), color(157), color(186), color(215), 
+int[] grayTriangle = {color(12), color(41), color(70), color(99), color(128), color(157), color(186), color(215),
             color(244), color(215), color(186), color(157), color(128), color(99), color(70), color(41)};
 int[] espectroOcho = {roig, roigtar, taronja, groc, vert, blau, violet, grana};
 int[] espectroSeis = {roig, taronja, groc, vert, blau, violet};
 int[] totsElsColors = {roig, roigtar, taronja, groc, vert, blau, blau2, violet, grana, blanc, gris, negre};
-int[] multicolor = {roig, blau, groc, vert, violet}; 
+int[] multicolor = {roig, blau, groc, vert, violet};
 int[] blueCream = {color(144, 157, 186), color(233, 220, 199)};
 int[] creamBlue = {color(233, 220, 199), color(144, 157, 186)};
 int[] fourColor = {color(204, 212, 164), color(81, 121, 127), color(210, 202, 250), color(136, 97, 90)};
@@ -144,14 +144,14 @@ int animRun1;
 int animHold1;
 int animRun2;
 int animHold2;
-int animDuration; 
+int animDuration;
 // animation shift left or right, 'l' and 'r' key commands, usually a power of 4
 int argoStep = 64;
 // animation tracking variables, set here
 boolean isAnimating = false;     // start with animation off
 boolean isLooping = false;       // currently not used
 int animstep1 = 1;               // count steps of animation for argo1
-int runCount1 = 0;               // track animRun1 
+int runCount1 = 0;               // track animRun1
 int holdCount1 = 0;              // track animHold1
 int animstep2 = 1;               // count steps of animation for argo2
 int runCount2 = 0;               // track animRun2
@@ -161,7 +161,7 @@ boolean isArgo2Freeze = false;   // ready to animate argo2
 int argo1PixelCount;             // keep track of pixels shifted by animation of argo1
 int argo2PixelCount;             // keep track of pixels shifted by animation of argo2
 // video output variables
-// video export 
+// video export
 VideoExport videx;         // hamoid library class for video export (requires ffmpeg)
 String videoPath;          // directory for saving video
 String videoFilename = "argosy_demo.mp4";  // default video name
@@ -195,7 +195,7 @@ int sampleY;
 ArrayList<TimedLocation> timeLocsArray;
 ArrayList<TimedLocation> animationLocsArray;
 ArrayList<PVector> aniPoints;
-int count = 0;  
+int count = 0;
 int fileIndex = 0;
 
 // ** LOCAL AUDIO VARIABLES ** Audio variables for ArgosyMixer class
@@ -237,7 +237,7 @@ public void setup() {
 }
 
 // -- SELECTORS FOR MENU ITEMS -- //
-// if you want the initial menus to match your settings for argo1 and argo2, 
+// if you want the initial menus to match your settings for argo1 and argo2,
 // set them here or in initArgosies()
 int argo1GenSelect;
 int argo2GenSelect;
@@ -247,9 +247,9 @@ int argo1PatternSelect;
 int argo2PatternSelect;
 
 /**
- * Initializes argo1 and argo2 Argosy instances, sets some values for GUI, 
- * sets animation variables: your one-stop setup method for the argosies. 
- *  
+ * Initializes argo1 and argo2 Argosy instances, sets some values for GUI,
+ * sets animation variables: your one-stop setup method for the argosies.
+ *
  */
 public void initArgosies() {
   // first Argosy instance
@@ -299,14 +299,14 @@ public void initArgosies() {
   animDuration = 768;   // number of frames
 }
 
-/**
- * Applies alpha channel value <code>alpha</code> to all the RGB colors in <code>colorArray</code> 
- * and returns a new array with the modified colors.
- * 
- * @param colorArray    an array of RGB colors
- * @param alpha         alpha channel value to apply to RGB colors
- * @return              a new array with the modified colors.
- */
+	/**
+	 * Applies alpha channel value {@code alpha} to all the RGB colors in {@code colorArray}
+	 * and returns a new array with the modified colors.
+	 *
+	 * @param colorArray    an array of RGB colors
+	 * @param alpha         alpha channel value to apply to RGB colors
+	 * @return              a new array with the modified colors.
+	 */
 public int[] setArgoColorsAlpha(int[] colorArray, int alpha) {
   int[] arr = new int[colorArray.length];
   int i = 0;
@@ -316,11 +316,11 @@ public int[] setArgoColorsAlpha(int[] colorArray, int alpha) {
   return arr;
 }
 
-/**
- * Initializes Argosy instance <code>argo1</code> and then shifts its pixels by <code>shift</code> pixels.
- * 
- * @param shift    number of pixels to rotate left argo1.argosyArray
- */
+    /**
+     * Initializes Argosy instance {@code argo1} and then shifts its pixels by {@code shift} pixels.
+     *
+     * @param shift    number of pixels to rotate left argo1.argosyArray
+     */
 public void initArgo1(int shift) {
   argo1Mapper = selectMapper(argo1GenSelect, argo1Gen);
   argo1GapColor = PixelAudioMapper.setAlpha(argo1GapColor, argo1GapAlpha);
@@ -333,11 +333,11 @@ public void initArgo1(int shift) {
   argo1Image.updatePixels();
 }
 
-/**
- * Initializes Argosy instance <code>argo2</code> and then shifts its pixels by <code>shift</code> pixels.
- * 
- * @param shift    number of pixels to rotate left argo2.argosyArray
- */
+    /**
+     * Initializes Argosy instance {@code argo2} and then shifts its pixels by {@code shift} pixels.
+     *
+     * @param shift    number of pixels to rotate left argo2.argosyArray
+     */
 public void initArgo2(int shift) {
   argo2Mapper = selectMapper(argo2GenSelect, argo2Gen);
   argo2GapColor = PixelAudioMapper.setAlpha(argo2GapColor, argo2GapAlpha);
@@ -350,24 +350,24 @@ public void initArgo2(int shift) {
   argo2Image.updatePixels();
 }
 
-/**
- * Creates a new Argosy instance using supplied arguments. Display of the Argosy array of color values 
- * is managed through the supplied PixelAudioMapper argument. The array is created by stepping through 
- * the pattern and color values, creating blocks of color of argosyUnitSize, separated by argosyGap 
- * pixels. 
- * 
- * @param mapper            a PixelAudioMapper instance, with width and height appropriate for display window
- * @param argosyPattern     a pattern of ints to step through in creating the argosy array
- * @param argosyUnitSize    number of pixels in each block of same-colored pixels in the Argosy.argosyArray
- * @param argosyReps        number of times to repeat the pattern, 0 for as many as will fit
- * @param isCentered        true if argosy pixel array should be centered
- * @param argosyColors      array of colors to step through
- * @param argosyGap         number of pixels between repeated patterns
- * @param argosyGapColor    color to apply to the argosy gap
- * @param argoStep          the number of pixels to rotate when animating, mostly ignored in this app
- * @return
- */
-public Argosy getArgosy(PixelAudioMapper mapper, int[] argosyPattern, int argosyUnitSize, int argosyReps, boolean isCentered, 
+	/**
+	 * Creates a new Argosy instance using supplied arguments. Display of the Argosy array of color values
+	 * is managed through the supplied PixelAudioMapper argument. The array is created by stepping through
+	 * the pattern and color values, creating blocks of color of argosyUnitSize, separated by argosyGap
+	 * pixels.
+	 *
+	 * @param mapper            a PixelAudioMapper instance, with width and height appropriate for display window
+	 * @param argosyPattern     a pattern of ints to step through in creating the argosy array
+	 * @param argosyUnitSize    number of pixels in each block of same-colored pixels in the Argosy.argosyArray
+	 * @param argosyReps        number of times to repeat the pattern, 0 for as many as will fit
+	 * @param isCentered        true if argosy pixel array should be centered
+	 * @param argosyColors      array of colors to step through
+	 * @param argosyGap         number of pixels between repeated patterns
+	 * @param argosyGapColor    color to apply to the argosy gap
+	 * @param argoStep          the number of pixels to rotate when animating, mostly ignored in this app
+	 * @return a new Argosy instance
+	 */
+public Argosy getArgosy(PixelAudioMapper mapper, int[] argosyPattern, int argosyUnitSize, int argosyReps, boolean isCentered,
             int[] argosyColors, int argosyGap, int argosyGapColor, int argoStep) {
   return new Argosy(mapper, argosyPattern, argosyUnitSize, argosyReps, isCentered, argosyColors, argosyGap, argosyGapColor, argoStep);
 }
@@ -509,7 +509,7 @@ public int clipToHeight(int y) {
 }
 
 /**
- * Detects Caps Lock state. We use Caps Lock state to switch between audio and graphics command sets. 
+ * Detects Caps Lock state. We use Caps Lock state to switch between audio and graphics command sets.
  * @return true if Caps Lock is down, false otherwise.
  */
 public boolean isCapsLockDown() {
@@ -542,12 +542,12 @@ public void keyPressed() {
   }
 }
 
-/**
- * Handles key press events passed on by the built-in keyPressed method. 
- * 
- * @param key
- * @param keyCode
- */
+	/**
+	 * Handles key press events passed on by the built-in keyPressed method.
+	 *
+	 * @param key        the key the user pressed, as a char
+	 * @param keyCode    numeric keycode for the key the user pressed
+	 */
 public void parseKey(char key, int keyCode) {
   argo1PixelCount =  argo1.getArgosySize() * argo1.getUnitSize();
   argo2PixelCount =  argo2.getArgosySize() * argo2.getUnitSize();
@@ -791,16 +791,16 @@ public void showArgosyStats() {
   int gap2 = argo2.getArgosyGap();
   int length1 = maxreps1 * argo1PixelCount;
   int length2 = maxreps2 * argo2PixelCount;
-  println("--->> Argosy 1: maxReps "+ maxreps1 +", pixel count "+ argo1PixelCount +", gap "+ gap1 
+  println("--->> Argosy 1: maxReps "+ maxreps1 +", pixel count "+ argo1PixelCount +", gap "+ gap1
       +", total pixels "+ length1 +", animation step "+ argo1.getArgosyStep() +", pixelShift "+ argo1.getArgosyPixelShift());
-  println("--->> Argosy 2: maxReps "+ maxreps2 +", pixel count "+ argo2PixelCount +", gap "+ gap2 
+  println("--->> Argosy 2: maxReps "+ maxreps2 +", pixel count "+ argo2PixelCount +", gap "+ gap2
       +", total pixels "+ length2 +", animation step "+ argo2.getArgosyStep() +", pixelShift "+ argo2.getArgosyPixelShift());
 }
 
 /**
  * Calls Argosy to get a floating point representation of an argosy array.
- * Values in the returned array are scaled by argosy alpha / 255.0f, 
- * so that opacity corresponds to audio gain. The arrays from Argosy are 
+ * Values in the returned array are scaled by argosy alpha / 255.0f,
+ * so that opacity corresponds to audio gain. The arrays from Argosy are
  * loaded into audio buffers so that we can hear the patterns for argo1 and argo2.
  */
 public void renderSignals() {
@@ -810,8 +810,8 @@ public void renderSignals() {
   System.arraycopy(sig2, 0, argo2Signal, 0, sig2.length);
   argo1Buffer.setBufferSize(argo1Signal.length);
   argo2Buffer.setBufferSize(argo2Signal.length);
-  argo1Buffer.setChannel(0, argo1Signal);            
-  argo2Buffer.setChannel(0, argo2Signal);            
+  argo1Buffer.setChannel(0, argo1Signal);
+  argo2Buffer.setChannel(0, argo2Signal);
   argo1Synth.setBuffer(argo1Buffer);
   argo2Synth.setBuffer(argo2Buffer);
   // println("--->> generated new audio signals");
@@ -819,7 +819,7 @@ public void renderSignals() {
 
 
 /**
- * Run the animation for audio events. 
+ * Run the animation for audio events.
  */
 public void runTimeArray() {
   int currentTime = millis();
@@ -846,9 +846,9 @@ public void runAnimationArray() {
         renderSignals();
         isBufferStale = false;
       }
-      if (this.isShowArgo1) 
+      if (this.isShowArgo1)
         playSample(argo1Synth, argo1SamplePos, calcSampleLen(), 0.6f, adsr1, panning);
-      if (this.isShowArgo2) 
+      if (this.isShowArgo2)
         playSample(argo2Synth, argo2SamplePos, calcSampleLen(), 0.6f, adsr2, panning);
       tl.setStale(true);
     }
@@ -856,11 +856,11 @@ public void runAnimationArray() {
   animationLocsArray.removeIf(TimedLocation::isStale);
 }
 
-/**
- * Draws a circle at the location of an audio trigger (mouseDown event).
- * @param x    x coordinate of circle
- * @param y    y coordinate of circle
- */
+	/**
+	 * Draws a circle at the location of an audio trigger (mouseDown event).
+	 * @param x		x coordinate of circle
+	 * @param y		y coordinate of circle
+	 */
 public void drawCircle(int x, int y) {
   //float size = isRaining? random(10, 30) : 60;
   fill(color(199, 220, 233, 160));

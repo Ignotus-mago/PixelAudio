@@ -96,10 +96,11 @@ public int getSamplePos(int x, int y) {
   return pos;
 }
 
-/**
- * @param pos    an index into the audio signal
- * @return a PVector representing the image pixel mapped to pos
- */
+	/**
+	 * Calculates the display image coordinates corresponding to a specified audio sample index.
+	 * @param pos    an index into an audio signal, must be between 0 and width * height - 1.
+	 * @return       a PVector with the x and y coordinates
+	 */
 public PVector getCoordFromSignalPos(int pos) {
   int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
   return new PVector(xy[0], xy[1]);
@@ -330,12 +331,12 @@ public ADSRParams calculateEnvelopeDb(float gainDb, int totalSamples, float samp
   return calculateEnvelopeLinear(linear, totalSamples * 1000f / sampleRate);
 }
 
-/**
- * Calculate an envelope of length totalSamples.
- * @param linear     desired linear gain, currently ignored
- * @param totalMs    desired duration of the envelope in milliseconds
- * @return an ADSRParams envelope
- */
+	/**
+	 * Calculate an envelope of length totalSamples.
+	 * @param linear     desired gain as a linear ratio, currently ignored
+	 * @param totalMs    desired duration of the envelope in milliseconds
+	 * @return an ADSRParams envelope
+	 */
 public ADSRParams calculateEnvelopeLinear(float linear, float totalMs) {
   float attackMS = Math.min(50, totalMs * 0.1f);
   float releaseMS = Math.min(200, totalMs * 0.3f);
@@ -351,14 +352,15 @@ public ADSRParams calculateEnvelopeLinear(float linear, float totalMs) {
 /*       The ones listed here are the most useful of them.        */
 /*----------------------------------------------------------------*/
 
-/**
- * Plays an audio sample with default envelope and stereo pan.
- *
- * @param samplePos    position of the sample in the audio buffer
- * @param samplelen    length of the sample (will be adjusted)
- * @param amplitude    amplitude of the sample on playback
- * @return the calculated sample length in samples
- */
+	/**
+	 * Plays an audio sample with default envelope and stereo pan.
+	 *
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param pan          stereo pan [-1.0, 1.0] for sample
+	 * @return the calculated sample length in samples
+	 */
 public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
   return playSample(samplePos, samplelen, amplitude, samplerEnv, 1.0f, pan);
 }
@@ -392,9 +394,12 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
   return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
 }
 
-/**
- * @return a length in samples with some Gaussian variation
- */
+	/**
+	 * @param dur         sample duration in milliseconds
+	 * @param mean        multiplier for duration, 1.0 leaves duration as mean value
+	 * @param variance    variance from mean value
+	 * @return a length in samples with some Gaussian variation
+	 */
 public int calcSampleLen(int dur, float mean, float variance) {
   float vary = 0;
   // skip the fairly rare negative numbers

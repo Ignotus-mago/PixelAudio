@@ -75,7 +75,7 @@
  *
  *
  * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
- 
+
  * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
  * Press ' ' (spacebar) to trigger audio playback at the current mouse position.
@@ -119,9 +119,10 @@
  * Press 'V' to record a complete video loop from frame 0 to stop frame.
  * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.
  * Press 'z' to find nearest zero crossing in the audio signal and play from there.
+ * Press 'q' to show animation status on screen (will not be recorded).
  * Press '?' to print window dimensions, video frame rate, and audio settings to the console.
  * press 'h' or 'H' to show this help message in the console.
- 
+
  * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<
  *
  *
@@ -202,7 +203,8 @@ float windowScale = 1.0f;              // scaling ratio, used to calculate scale
 PixelAudio pixelaudio;      // our shiny new library
 HilbertGen hGen;            // a HilbertGen
 DiagonalZigzagGen zGen;     // a PixelMapGen to draw zigzag curves
-BoustropheGen bGen;         // a PixelMapGen with boustrophedon ordering
+BoustropheGen bGenHz;       // a PixelMapGen with boustrophedon ordering, horizontal
+BoustropheGen bGenVt;       // a PixelMapGen with boustrophedon ordering, vertical
 MultiGen mGen;              // a PixelMapGen that blends multiple gens
 PixelMapGen gen;            // any PixelMapGen
 PixelAudioMapper mapper;    // object for reading, writing, and transcoding audio and image data
@@ -323,6 +325,13 @@ boolean isFindZeroCrossing = false;    // default setting for PASamplerVoice
 boolean imageDirty = true;
 boolean audioDirty = true;
 
+/* ------------------------------------------------------------------ */
+/*                        SHOW TEXT ON SCREEN                         */
+/* ------------------------------------------------------------------ */
+
+String screenMsg = "";
+boolean showAnimationStatus = false;
+
 
 
 /* ------------------------------------------------------------------ */
@@ -356,7 +365,7 @@ public void setup() {
   hGen = createHilbertGen(genWidth);
   mGen = hilbertLoop3x2(genWidth, genHeight);
   gen = isDesignMode ? hGen : mGen;
-  bGen = new BoustropheGen(width, height);
+  bGenHz = new BoustropheGen(height, width, PixelMapGen.r90);    // swap width and height, rotate 90
   zGen = new DiagonalZigzagGen(width, height);
   // 3. Initialize a PixelAudioMapper to handle mapping between audio and image
   mapper = new PixelAudioMapper(gen);
@@ -397,10 +406,10 @@ public void stop() {
   super.stop();
 }
 
-/**
- * @param edgeLength  length in pixels of Hilbert curve, must be a power of 2.
- * @return        a HilbertGen with its mapping arrays initialized
- */
+	/**
+	 * @param edgeLength	length in pixels of Hilbert curve, must be a power of 2.
+	 * @return				a HilbertGen with its mapping arrays initialized
+	 */
 public HilbertGen createHilbertGen(int edgeLength) {
   return new HilbertGen(edgeLength, edgeLength);
 }
@@ -422,23 +431,23 @@ public HilbertGen createHilbertGen(int edgeLength) {
  *                a loop (3 * genWidth by 2 * genHeight pixels)
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
-  // list of PixelMapGens that create an image using mapper
-  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
-  // list of x,y coordinates for placing gens from genList
-  ArrayList<int[]> offsetList = new ArrayList<int[]>();
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-  offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
-  offsetList.add(new int[] { genW, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-  offsetList.add(new int[] { 2 * genW, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-  offsetList.add(new int[] { 2 * genW, genH });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
-  offsetList.add(new int[] { genW, genH });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-  offsetList.add(new int[] { 0, genH });
-  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
+	// list of PixelMapGens that create an image using mapper
+	ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
+	// list of x,y coordinates for placing gens from genList
+	ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
+	offsetList.add(new int[] { 0, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
+	offsetList.add(new int[] { genW, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+	offsetList.add(new int[] { 2 * genW, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+	offsetList.add(new int[] { 2 * genW, genH });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
+	offsetList.add(new int[] { genW, genH });
+	genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
+	offsetList.add(new int[] { 0, genH });
+	return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 /**
@@ -464,16 +473,16 @@ public ArrayList<WaveData> initWaveDataList() {
   return list;
 }
 
-/**
- * Sets the initial values of a WaveSynth instance. Note particularly how varying
- * sampleRate can change the appearance of the WaveSynth mapImage. SampleRate should
- * not change the sound of the audio signal -- only the image changes. Some sampling
- * rates are not standard for saving to file, so you may want to use a standard rate
- * such as 48000Hz if you want to save audio to a file.
- *
- * @param synth    a WaveSynth instance
- * @return      the WaveSynth with initial values set
- */
+	/**
+	 * Sets the initial values of a WaveSynth instance. Note particularly how varying
+	 * sampleRate can change the appearance of the WaveSynth mapImage. SampleRate should
+	 * not change the sound of the audio signal -- only the image changes. Some sampling
+	 * rates are not standard for saving to file, so you may want to use a standard rate
+	 * such as 48000Hz if you want to save audio to a file.
+	 *
+	 * @param synth		a WaveSynth instance
+	 * @return			the WaveSynth with initial values set
+	 */
 public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGain(0.8f);
   synth.setGamma(1.0f);
@@ -505,11 +514,41 @@ public void draw() {
     renderVisualFrame();  // calls wavesynth.renderFrame(step)
   }
   image(mapImage, 0, 0, width, height);
-  runTimeArray();
   if (isRecordingVideo && videx != null) {
     videx.saveFrame();
     println("-- video recording frame " + step + " of " + animStop);
   }
+  runTimeArray();           // audio playback animation won't be recorded
+  if (showAnimationStatus) {
+    // String msg = ""+ step +" of "+ animSteps +" at "+ (int) frameRate + " fps, loop: "+ isLooping +", recording "+ isRecordingVideo;
+    screenMsg = (isAnimating ? "running: step " : "paused: step ")
+      + step +" of "+ animSteps +" at "+ (int) frameRate + " fps, loop: "+ isLooping +", recording: "+ isRecordingVideo;
+    writeToScreen(screenMsg, 64, 1000, 24, true);
+  }
+}
+
+/**
+ * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
+ * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
+ *
+ * @param msg     message to write
+ * @param x       x coordinate
+ * @param y       y coordinate
+ * @param weight  font weight
+ * @param isWhite if true, white text, otherwise, black text
+ */
+public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
+  int fill1 = isWhite? 0 : 255;
+  int fill2 = isWhite? 255 : 0;
+  pushStyle();
+  textSize(weight);
+  float tw = textWidth(msg);
+  int pad = 4;
+  fill(fill1);
+  rect(x - pad, y - pad - weight, x + tw + pad, y + weight/2 + pad);
+  fill(fill2);
+  text(msg, x, y);
+  popStyle();
 }
 
 /**
@@ -543,7 +582,7 @@ public void stepAnimation() {
 }
 
 public PImage renderFrame(int frame) {
-  wavesynth.prepareAnimation();
+  // wavesynth.prepareAnimation();
   return wavesynth.renderFrame(frame);
 }
 
@@ -839,6 +878,10 @@ public void parseKey(char theKey, int keyCode) {
     println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
     toggleZeroCrossing(isFindZeroCrossing);
     break;
+  case 'q': // show animation status on screen (will not be recorded)
+    showAnimationStatus = !showAnimationStatus;
+    println("-- showAnimationStatus is "+ showAnimationStatus);
+    break;
   case '?': // print some global information to the console
     println("-- window dimensions = "+ width +" x "+ height);
     println("-- current frame = "+ step);
@@ -900,6 +943,7 @@ public void showHelp() {
   println(" * Press 'V' to record a complete video loop from frame 0 to stop frame.");
   println(" * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.");
   println(" * Press 'z' to find nearest zero crossing in the audio signal and play from there.");
+  println(" * Press 'q' to show animation status on screen (will not be recorded).");
   println(" * Press '?' to print window dimensions, video frame rate, and audio settings to the console.");
   println(" * press 'h' or 'H' to show this help message in the console.");
   println("\n * >>> KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE <<<");
@@ -931,9 +975,9 @@ public void swapGen() {
     gen = isDesignMode ? hGen : mGen;
     swapGen(gen);
   } else if (gen == hGen || gen == mGen) {
-    gen = bGen;
+    gen = bGenHz;
     swapGen(gen);
-  } else if (gen == bGen) {
+  } else if (gen == bGenHz) {
     gen = zGen;
     swapGen(gen);
   }
@@ -1007,9 +1051,9 @@ public void toggleRecording() {
 }
 
 public void toggleZeroCrossing(boolean newFindZero) {
-  for (PASamplerInstrument inst : pool.getInstruments() ) {
-    for (PASamplerVoice voice : ((PASharedBufferSampler) inst.getSampler()).getVoices()) {
-      voice.setFindZeroCrossing(newFindZero);
-    }
-  }
+	for (PASamplerInstrument inst: pool.getInstruments() ) {
+		for (PASamplerVoice voice : ((PASharedBufferSampler) inst.getSampler()).getVoices()) {
+			voice.setFindZeroCrossing(newFindZero);
+		}
+	}
 }

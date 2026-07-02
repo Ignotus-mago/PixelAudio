@@ -95,7 +95,7 @@
  * -- drawing to trigger audio events
  * -- UDP communication with Max and other media applications
  * -- loading a file to memory and traversing it with a windowed buffer
- 
+
  * See also: example sketch LoadImageToAudio, with a complete set of commands for loading
  * images and audio to different color channels.
  *
@@ -361,16 +361,16 @@ public void showHelp() {
   println(" * Press 'h' or 'H' to show help and key commands in console.");
 }
 
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     a target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");

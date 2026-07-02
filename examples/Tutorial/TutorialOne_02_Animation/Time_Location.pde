@@ -14,8 +14,7 @@ public void runTimeArray() {
     if (!tl.isStale()) {
       drawCircle(tl.getX(), tl.getY());
     }
-  }
-  );
+  });
   timeLocsArray.removeIf(TimedLocation::isStale);
 }
 

@@ -109,23 +109,23 @@ public void setup() {
  *         a loop (3 * genWidth by 2 * genHeight pixels)
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
-  // list of PixelMapGens that create an image using mapper
-  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
-  // list of x,y coordinates for placing gens from genList
-  ArrayList<int[]> offsetList = new ArrayList<int[]>();
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-  offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
-  offsetList.add(new int[] { genW, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-  offsetList.add(new int[] { 2 * genW, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-  offsetList.add(new int[] { 2 * genW, genH });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
-  offsetList.add(new int[] { genW, genH });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-  offsetList.add(new int[] { 0, genH });
-  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
+	// list of PixelMapGens that create an image using mapper
+	ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
+	// list of x,y coordinates for placing gens from genList
+	ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
+	offsetList.add(new int[] { 0, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
+	offsetList.add(new int[] { genW, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+	offsetList.add(new int[] { 2 * genW, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+	offsetList.add(new int[] { 2 * genW, genH });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
+	offsetList.add(new int[] { genW, genH });
+	genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
+	offsetList.add(new int[] { 0, genH });
+	return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 /**
@@ -153,13 +153,13 @@ public ArrayList<WaveData> initWaveDataList() {
   return list;
 }
 
-/**
- * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
- * of a WaveSynth object and generates its first frame of animation.
- *
- * @param synth    a WaveSynth object whose attributes will be set
- * @return      the WaveSynth object with attributes set
- */
+	/**
+	 * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
+	 * of a WaveSynth object and generates its first frame of animation.
+	 *
+	 * @param synth		a WaveSynth object whose attributes will be set
+	 * @return			the WaveSynth object with attributes set
+	 */
 public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGain(0.8f);
   synth.setGamma(myGamma);

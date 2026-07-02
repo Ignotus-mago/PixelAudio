@@ -1,8 +1,8 @@
 /**
  * Demo of how to set and save WaveSynth parameters from JSON files.
- * See WaveSynthEditor for the complete set of WaveSynth parameters 
- * you can edit in a GUI, load and save to files, and output as video. 
- * 
+ * See WaveSynthEditor for the complete set of WaveSynth parameters
+ * you can edit in a GUI, load and save to files, and output as video.
+ *
  * Press ' ' (spacebar) to toggle animation.
  * Press 'o' to open a new JSON file containing WaveSynth data.
  * Press 'O' to reload a JSON file, or open a JSON file if none has yet been loaded.
@@ -12,7 +12,7 @@
  * Press 'r' or 'R' to reset animation to step 0.
  * Press 'v' or 'V' to record a video.
  * Press 'h' to show Help Message in the console.
- * 
+ *
  */
 
 import java.io.File;
@@ -105,12 +105,12 @@ public ArrayList<WaveData> initWaveDataList() {
   return list;
 }
 
-/**
- * Sets up a WaveSynth's variables.
- *
- * @param synth    a WaveSynth instance
- * @return
- */
+	/**
+	 * Sets up a WaveSynth's variables.
+	 *
+	 * @param synth    a WaveSynth instances
+	 * @return
+	 */
 public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGain(0.8f);
   synth.setGamma(myGamma);

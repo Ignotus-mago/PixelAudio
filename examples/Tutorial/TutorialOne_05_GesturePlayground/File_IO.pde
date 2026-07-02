@@ -221,6 +221,20 @@ public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, 
   img.updatePixels();
 }
 
+	/**
+	 * Transcodes audio data in sig[] and writes it to color channel chan of mapImage
+	 * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(),
+	 * which will throw an IllegalArgumentException if sig.length != img.pixels.length
+	 * or sig.length != mapper.getSize().
+	 * We typically use PixelAudioMapper.ChannelNames.ALL or PixelAudioMapper.ChannelNames.L
+	 * as the chan value. Both result in gray values, with PixelAudioMapper.ChannelNames.L
+	 * maintaining previous hue and saturation color values in the image.
+	 *
+	 * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
+	 * @param mapper      a PixelAudioMapper
+	 * @param img         a PImage
+	 * @param chan        a color channel
+	 */
 public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
   // If sig.length == mapper.getSize() == mapImage.width * mapImage.height, we can call safely mapper.mapSigToImg()
   img.loadPixels();

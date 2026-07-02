@@ -15,7 +15,7 @@
  *
  * The new features are fit on top of Tutorial_03_Drawing variables and methods.
  * Support for WindowedBuffer is flagged with "// *** WindowedBuffer support *** //".
- * Look for the flag to how TutorialOne_03_Drawing was adapted. 
+ * Look for the flag to see how TutorialOne_03_Drawing was adapted.
  * See Tutorial_03_Drawing for information about drawing, audio synthesis,
  * audio events and animation. Here we'll document just the new features.
  *
@@ -519,7 +519,6 @@ public void settings() {
 
 /// Processing `setup()` method.
 public void setup() {
-  // daPath in the Processing IDE, set relative to sketch directory
   daPath = sketchPath("") + "../../examples_data/";
   surface.setTitle("PixelAudio Tutorial One 06: WindowBuffer");
   // set a standard animation framerate
@@ -673,12 +672,12 @@ public void stepAnimation() {
 }
 
 /**
- * Renders a frame of animation: moving along the signal path, copies baseImage pixels to
- * mapImage pixels, adjusting the index position of the copy using totalShift --
- * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
- *
- * @param step   current animation step
- */
+ 	 * Renders a frame of pixel-shifting animation: moving along the signal path, copies baseImage pixels to
+ 	 * mapImage pixels, adjusting the index position of the copy using totalShift --
+ 	 * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
+ 	 *
+ 	 * @param step   current animation step
+ 	 */
 public void renderFrame(int step) {
   // keep track of how much the pixel array is shifted
   totalShift = PixelAudioMapper.wrap(totalShift + shift, mapSize);
@@ -830,26 +829,32 @@ public void mouseClicked() {
   }
   if (key != CODED) {
     parseKey(key, keyCode);
-  } else {
+  } 
+  else {
     if (keyCode == UP) {
       adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
       println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
-    } else if (keyCode == DOWN) {
+    } 
+    else if (keyCode == DOWN) {
       adjustAudioGain(shiftIsDown ? -3.0f : -1.0f);
       println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
-    } else if (keyCode == RIGHT) {
+    } 
+    else if (keyCode == RIGHT) {
       if (!shiftIsDown) {
         adjustPoolGain(3.0f);
         println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");
-      } else {
+      } 
+      else {
         adjustGranGain(3.0f);
         println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");
       }
-    } else if (keyCode == LEFT) {
+    } 
+    else if (keyCode == LEFT) {
       if (!shiftIsDown) {
         adjustPoolGain(-3.0f);
         println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");
-      } else {
+      } 
+      else {
         adjustGranGain(-3.0f);
         println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");
       }
@@ -882,10 +887,12 @@ public void parseKey(char key, int keyCode) {
     if (hoverBrush != null) {
       if (hoverBrush.output() == BrushOutput.SAMPLER) {
         scheduleSamplerBrushClick(hoverBrush);    // Sampler brush clicked event
-      } else {
+      } 
+      else {
         scheduleGranularBrushClick(hoverBrush);   // Granular brush clicked event
       }
-    } else {
+    } 
+    else {
       handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
     }
     break;
@@ -950,11 +957,14 @@ public void parseKey(char key, int keyCode) {
     pitchScaling = hoverBrush.pitchRatio();
     if (pitchScaling == defaultPitchScaling) {
       pitchScaling = lowPitchScaling;
-    } else if (pitchScaling == lowPitchScaling) {
+    } 
+    else if (pitchScaling == lowPitchScaling) {
       pitchScaling = highPitchScaling;
-    } else if (pitchScaling == highPitchScaling) {
+    } 
+    else if (pitchScaling == highPitchScaling) {
       pitchScaling = defaultPitchScaling;
-    } else {
+    } 
+    else {
       pitchScaling = defaultPitchScaling;
     }
     hoverBrush.setPitchRatio(pitchScaling);
@@ -1077,7 +1087,8 @@ public void parseKey(char key, int keyCode) {
     isMuted = !isMuted;
     if (isMuted) {
       audioOut.mute();
-    } else {
+    } 
+    else {
       audioOut.unmute();
     }
     msg = isMuted ? "muted" : "unmuted";
@@ -1193,9 +1204,9 @@ public void showHelp() {
 }
 
 /**
- * Sets audioOut.gain.
- * @param g   gain value for audioOut, in decibels
- */
+ 	 * Adjusts audioOut.gain.
+ 	 * @param g   value to add to audioOut.gain, in decibels
+ 	 */
 public void adjustAudioGain(float g) {
   float ag = audioOut.getGain();
   ag += g;
@@ -1205,9 +1216,9 @@ public void adjustAudioGain(float g) {
 }
 
 /**
- * Sets Sampler instrument <code>pool</code> gain in dB.
- * @param g   gain increment or decrement, in decibels
- */
+ 	 * Sets Sampler instrument {@code pool} gain in dB.
+ 	 * @param g   gain increment or decrement, in decibels
+ 	 */
 public void adjustPoolGain(float g) {
   float pg = pool.getGainDb();
   pg += g;
@@ -1228,31 +1239,31 @@ public void adjustGranGain(float g) {
 
 
 /**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+ 	 * Utility method for applying hue and saturation values from a source array of RGB values
+ 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+ 	 *
+ 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+ 	 * @param graySource     a target array of RGB data from which to obtain brightness values
+ 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+ 	 * @return the graySource array of RGB values, with hue and saturation values changed
+ 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+ 	 */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   return applyColorShifted(colorSource, graySource, lut, 0);
 }
 
 /**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
- * taking into account any pixels that were shifted.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @param shift          number of pixels/array indices to shift
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+ 	 * Utility method for applying hue and saturation values from a source array of RGB values
+ 	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+ 	 * taking into account any pixels that were shifted.
+ 	 *
+ 	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+ 	 * @param graySource     a target array of RGB data from which to obtain brightness values
+ 	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+ 	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
+ 	 * @return the graySource array of RGB values, with hue and saturation values changed
+ 	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+ 	 */
 public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
@@ -1280,7 +1291,8 @@ public void applyColorMapToDisplay(boolean updateBaseImage) {
     applyColor(spectrum, baseImage.pixels, mapper.getImageToSignalLUT());
     baseImage.updatePixels();
     refreshMapImageFromBase();
-  } else {
+  } 
+  else {
     refreshMapImageFromBase();
     mapImage.loadPixels();
     applyColorShifted(spectrum, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);

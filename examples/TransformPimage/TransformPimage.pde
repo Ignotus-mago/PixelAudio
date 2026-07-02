@@ -2,7 +2,7 @@
  *
  * TransformPImage demonstrates some of the commands available in the BitmapTransform class.
  * The commands rely on PixelAudio's AffineTransformType enum and BitmapTransform class.
- * They are limited to rotation and reflection, but are optimized to do them fast. 
+ * They are limited to rotation and reflection, but are optimized to do them fast.
  *
  * The AffineTransformType enum defines the types of affine transformations that
  * can be applied to bitmaps in the PixelAudio library using only rotation and
@@ -10,7 +10,7 @@
  * of transformation to apply to the gen coordinates and LUTs. The BitmapTransform
  * class applies the transformations defined in AffineTransformType to rotate
  * and reflect bitmaps using lookup tables.
- * 
+ *
  * Naming follows computer graphics conventions where 0 degrees points right and
  * positive rotation is counterclockwise.
  *
@@ -21,12 +21,12 @@
  *   R180     rotate 180 degrees
  *   R90      rotate 90 degrees counterclockwise
  *   FLIPX    reflect on y-axis, y coordinates do not change
- *   FX270    reflect on y-axis, then rotate 90 clockwise 
- *                => reflect on the secondary diagonal, upper left to lower right, 
+ *   FX270    reflect on y-axis, then rotate 90 clockwise
+ *                => reflect on the secondary diagonal, upper left to lower right,
  *                secondary diagonal does not change
  *   FLIPY    reflect on x-axis, x coordinates do not change
- *   FX90     reflect on y-axis, then rotate 90 counterclockwise 
- *                => reflect on the primary diagonal, upper right to lower left, 
+ *   FX90     reflect on y-axis, then rotate 90 counterclockwise
+ *                => reflect on the primary diagonal, upper right to lower left,
  *                primary diagonal does not change
  *
  *
@@ -48,7 +48,7 @@ import net.paulhertz.pixelaudio.*;
 
 PImage img;
 // fShapeSquare.png is an opaque square, fShapeRect.png is a rectangle.
-String imgFilename = "fShapeRect.png";      
+String imgFilename = "fShapeRect.png";
 BitmapTransform bTrans;
 PixelAudio pixelaudio;
 
@@ -80,34 +80,35 @@ public void showHelp() {
 
 public void keyPressed() {
   switch (key) {
-    case 'f': // rotate image 90 degrees clockwise (R270)
+    case 'f':
       img = BitmapTransform.imageTransform(img, AffineTransformType.R270);
       break;
-    case 'b': // rotate image 90 degrees counterclockwise (R90)
+    case 'b':
       img = BitmapTransform.imageTransform(img, AffineTransformType.R90);
       break;
-    case 'r': // rotate image 180 degrees (R180)
+    case 'r':
       img = BitmapTransform.imageTransform(img, AffineTransformType.R180);
       break;
-    case 'x': // flip x coordinates = mirror on y-axis (FLIPX)
+    case 'x':
       img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPX);
       break;
-    case 'y': // flip y coordinates = mirror on x-axis (FLIPY)
+    case 'y':
       img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPY);
       break;
-    case '1': // mirror on primary diagonal (FX90)
+    case '1':
       img = BitmapTransform.imageTransform(img, AffineTransformType.FX90);
       break;
-    case '2': // mirror on secondary diagonal (FX270)
+    case '2':
       img = BitmapTransform.imageTransform(img, AffineTransformType.FX270);
       break;
-    case 'o': // reload the image
+    case 'o':
+      // reload the image
       img = loadImage(imgFilename);
       break;
-    case 's': // save the image
+    case 's':
       img.save("transformed_image.png");
       break;
-    case 'm': // print out the affine map of a small square or rectangle
+    case 'm':
         if (imgFilename.equals("fShapeRect.png")) testAffineMap(4, 3);
         else testAffineMap(4, 4);
         break;

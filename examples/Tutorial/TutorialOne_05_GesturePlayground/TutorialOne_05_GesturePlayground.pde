@@ -488,10 +488,10 @@ boolean isRunWordGame = false;    // load DeadBodyWorkFlow audio at 48KHz sample
 boolean doPlayOnDraw = false;     // play audio when a curve is drawn
 
 // system-specific path to example files data
-// in Processing, for PixelAudio Tutorial examples, use this in setup(): 
+// in Processing, for PixelAudio Tutorial examples, use this in setup():
 // daPath = sketchPath("") + "../../examples_data/";
 String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";
-String daFilename = "audioBlend.wav";
+String daFile = "audioBlend.wav";
 
 
 //------------- APPLICATION CODE -------------//
@@ -501,37 +501,37 @@ public void settings() {
 }
 
 public void setup() {
-  // set daPath relative to the sketchPath
   daPath = sketchPath("") + "../../examples_data/";
-  // Set video framerate, window title, screen location
-  frameRate(24);
-  surface.setTitle("Granular Playground");
-  surface.setLocation(60, 20);
-  // 1) Initialize our library
-  pixelaudio = new PixelAudio(this);
-  // 2) Create a PixelMapGen instance with dimensions equal to the display window.
-  //    We supply two different gens which can be selected by setting isRunWordGame
-  if (isRunWordGame) {
-    sampleRate = 48000;
-    multigen = loadWordGen(genWidth/4, genHeight/4);
-    daFilename = "workflow_48Khz.wav";
-  } else {
-    multigen = HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
-  }
-  // 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
-  mapper = new PixelAudioMapper(multigen);
-  mapSize = mapper.getSize();
-  scheduleBuilder = new GestureScheduleBuilder();
-  colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
-  initImages();                   // load baseImage and mapImage
-  initAudio();                    // set up Minima and our granular and sampling synths
-  initConfig();                   // set up configuration for granular and sampling instruments
-  initDrawing();                  // set up drawing variables
-  initGUI();                      // set up the G4P control window and widgets
-  resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
-  preloadFiles(daPath, daFilename);    // load files - BEWARE system dependent file references!
-  applyColorMap();                // apply spectrum to mapImage and baseImage
-  showHelp();                     // print key commands to console
+	// Set video framerate, window title, screen location
+	frameRate(24);
+	surface.setTitle("Granular Playground");
+	surface.setLocation(60, 20);
+	// 1) Initialize our library
+	pixelaudio = new PixelAudio(this);
+	// 2) Create a PixelMapGen instance with dimensions equal to the display window.
+	//    We supply two different gens which can be selected by setting isRunWordGame
+	if (isRunWordGame) {
+		sampleRate = 48000;
+		multigen = loadWordGen(genWidth/4, genHeight/4);
+		daFile = "workflow_48Khz.wav";
+	}
+	else {
+		multigen = HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
+	}
+	// 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
+	mapper = new PixelAudioMapper(multigen);
+	mapSize = mapper.getSize();
+	scheduleBuilder = new GestureScheduleBuilder();
+	colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
+	initImages();                   // load baseImage and mapImage
+	initAudio();                    // set up Minima and our granular and sampling synths
+	initConfig();                   // set up configuration for granular and sampling instruments
+	initDrawing();                  // set up drawing variables
+	initGUI();                      // set up the G4P control window and widgets
+	resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
+	preloadFiles(daPath, daFile);    // load files - BEWARE system dependent file references!
+	applyColorMap();                // apply spectrum to mapImage and baseImage
+	showHelp();                     // print key commands to console
 }
 
 /**
@@ -543,11 +543,15 @@ public void stop() {
   super.stop();
 }
 
-/**
- * Adds PixelMapGen objects to the local variable genList. The genList
- * initializes a MultiGen, which can be used to map audio and pixel data.
- * This method follows the words in the workFlowPanel.png graphic.
- */
+	/**
+	 * Adds PixelMapGen objects to the local variable genList. The genList
+	 * initializes a MultiGen, which can be used to map audio and pixel data.
+	 * Generation order in {@code offsetList} follows the words in the workFlowPanel.png graphic.
+	 *
+	 * @param wordGenW    width of single gen element
+	 * @param wordGenH    height of single gen element
+	 * @return a MultiGen following the workFlowPanel.png layout
+	 */
 public MultiGen loadWordGen(int wordGenW, int wordGenH) {
   // list of PixelMapGens that create an image using mapper
   ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
@@ -615,11 +619,11 @@ public int[] getColors(int size) {
   return colorWheel;
 }
 
-/**
- * Initializes <code>mapImage</code> with the colors array, copies it to <code>baseImage</code>.
- * MapImage handles the color data for mapper and also serves as our display image.
- * BaseImage is a reference image that typically changes only when you load a new image.
- */
+	/**
+	 * Initializes {@code mapImage} with the colors array, copies it to {@code baseImage}.
+	 * MapImage handles the color data for mapper and also serves as our display image.
+	 * BaseImage is a reference image that typically changes only when you load a new image.
+	 */
 public void initImages() {
   mapImage = createImage(width, height, ARGB);
   mapImage.loadPixels();
@@ -640,10 +644,10 @@ public void initDrawing() {
   activeBrush = null;
 }
 
-/**
- * Initializes default settings for granular synthesis, <code>defaultGranConfig</code>,
- * and for sampler synthesis, <code>defaultSampConfig</code>.
- */
+	/**
+	 * Initializes default settings for granular synthesis, {@code defaultGranConfig},
+	 * and for sampler synthesis, {@code defaultSampConfig}.
+	 */
 public void initConfig() {
   defaultGranConfig.grainLengthSamples = granLength;
   defaultGranConfig.hopLengthSamples = granHop;
@@ -856,126 +860,128 @@ public void mouseClicked() {
  * @param keyCode
  */
 public void parseKey(char key, int keyCode) {
-  String msg;
-  switch(key) {
-  case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
-    if (hoverBrush != null) {
-      if (hoverBrush instanceof SamplerBrush) {
-        SamplerBrush sb = (SamplerBrush) hoverBrush;
-        scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
-      } else if (hoverBrush instanceof GranularBrush) {
-        GranularBrush gb = (GranularBrush) hoverBrush;
-        scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
-      }
-    } else {
-      handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
-    }
-    break;
-  case 'c':
-  case 'C': // print the current configuration status to the console
-    printGConfigStatus();
-    break;
-  case 't': // switch between Granular and Sampler editing and playing
-    if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
-      setMode(DrawingMode.DRAW_EDIT_SAMPLER);
-      controlWindow.setTitle("Sampler Synth");
-    } else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
-      setMode(DrawingMode.PLAY_ONLY);
-      controlWindow.setTitle("Play Only: Both Synths");
-    } else if (drawingMode == DrawingMode.PLAY_ONLY) {
-      setMode(DrawingMode.DRAW_EDIT_GRANULAR);
-      controlWindow.setTitle("Granular Synth");
-    }
-    println("---> mode is "+ drawingMode.toString());
-    break;
-  case 'z': // change the drawing mode of the hover brush
-    AudioBrush changed = null;
-    if (hoverBrush != null) {
-      changed = toggleHoveredBrushType();
-      syncDrawingModeToBrush(changed);
-    } else if (activeBrush != null) {
-      changed = toggleActiveBrushType();
-      syncDrawingModeToBrush(changed);
-    } else {
-      handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
-    }
-    break;
-  case 'd': // toggle doPlayOnDraw to play when a drawing gesture ends or not
-    doPlayOnDraw = !doPlayOnDraw;
-    println("-- play on draw is "+ doPlayOnDraw);
-    break;
-  case 'p': // jitter the pitch of granular gestures
-    usePitchedGrains = !usePitchedGrains;
-    msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
-    println("-- Play granular synth with "+ msg);
-    break;
-  case 'j': // turn audio and image blending on or off
-    isBlending = !isBlending;
-    println("-- isBlending is "+ isBlending +" (images blend only if chan = ChannelNames.ALL)");
-    break;
-  case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
-    refreshMapImageFromBase();
-    mapImage.loadPixels();
-    applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
-    mapImage.updatePixels();
-    break;
-  case 'K': // apply hue and saturation in colors to baseImage and mapImage
-    baseImage.loadPixels();
-    applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
-    baseImage.updatePixels();
-    refreshMapImageFromBase();
-    break;
-  case 'l':
-  case 'L': // toggle loading data to both image and audio buffers when you open either an image or an audio file
-    isLoadToBoth = !isLoadToBoth;
-    println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
-    break;
-  case 'f':
-  case 'F': // toggle verbose output to the console
-    isVerbose = !isVerbose;
-    println("-- isVerbose == "+ isVerbose);
-    break;
-  case 'o': // open an audio file
-    chooseFile();
-    break;
-  case 'r':
-  case 'R': // reset synths to defaults
-    resetToDefaults();
-    break;
-  case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
-    if (activeBrush instanceof SamplerBrush) {
-      println("-- please choose a Granular Brush to adjust resampling and duration values.");
-      return;
-    }
-    printGOptHints(hopScale);
-    if (activeBrush != null) {
-      activeBrush.cfg().resampleCount = optGrainCount;
-      syncGuiFromConfig();
-    }
-    break;
-  case 's': // save display image to a PNG file
-    saveToImage();
-    break;
-  case 'S': // save audio buffer to a .wav file
-    saveToAudio();
-    break;
-  case 'x': // delete the current active brush shape or the oldest brush shape
-    if (hoverBrush != null) {
-      removeHoverBrush();
-    } else {
-      removeOldestBrush();
-    }
-    break;
-  case 'X': // delete the most recent brush shape
-    removeNewestBrush();
-    break;
-  case 'h':
-  case 'H': // show help message
-    showHelp();
-    break;
-  default:
-    break;
-  }
+	String msg;
+	switch(key) {
+		case ' ': // spacebar triggers a brush if we're hovering over a brush, otherwise it triggers a point event
+			if (hoverBrush != null) {
+				if (hoverBrush instanceof SamplerBrush) {
+					SamplerBrush sb = (SamplerBrush) hoverBrush;
+					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY));
+				}
+				else if (hoverBrush instanceof GranularBrush) {
+					GranularBrush gb = (GranularBrush) hoverBrush;
+					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY));
+				}
+			}
+		else {
+			handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+		}
+		break;
+	case 'c': case 'C': // print the current configuration status to the console
+		printGConfigStatus();
+		break;
+	case 't': // switch between Granular and Sampler editing and playing
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+			controlWindow.setTitle("Sampler Synth");
+		}
+		else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			setMode(DrawingMode.PLAY_ONLY);
+			controlWindow.setTitle("Play Only: Both Synths");
+		}
+		else if (drawingMode == DrawingMode.PLAY_ONLY) {
+			setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+			controlWindow.setTitle("Granular Synth");
+		}
+		println("---> mode is "+ drawingMode.toString());
+		break;
+	case 'z': // change the drawing mode of the hover brush
+	    AudioBrush changed = null;
+	    if (hoverBrush != null) {
+	        changed = toggleHoveredBrushType();
+		    syncDrawingModeToBrush(changed);
+	    }
+	    else if (activeBrush != null) {
+	        changed = toggleActiveBrushType();
+		    syncDrawingModeToBrush(changed);
+	    }
+	    else {
+	        handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+	    }
+	    break;
+	case 'd': // toggle doPlayOnDraw to play when a drawing gesture ends or not
+		doPlayOnDraw = !doPlayOnDraw;
+		println("-- play on draw is "+ doPlayOnDraw);
+		break;
+	case 'p': // jitter the pitch of granular gestures
+		usePitchedGrains = !usePitchedGrains;
+		msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
+		println("-- Play granular synth with "+ msg);
+		break;
+	case 'j': // turn audio and image blending on or off
+		isBlending = !isBlending;
+		println("-- isBlending is "+ isBlending +" (images blend only if chan = ChannelNames.ALL)");
+		break;
+	case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
+		refreshMapImageFromBase();
+		mapImage.loadPixels();
+		applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
+		mapImage.updatePixels();
+		break;
+	case 'K': // apply hue and saturation in colors to baseImage and mapImage
+		baseImage.loadPixels();
+		applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
+		baseImage.updatePixels();
+		refreshMapImageFromBase();
+		break;
+	case 'l': case 'L': // toggle loading data to both image and audio buffers when you open either an image or an audio file
+		isLoadToBoth = !isLoadToBoth;
+		println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
+		break;
+	case 'f': case 'F': // toggle verbose output to the console
+		isVerbose = !isVerbose;
+		println("-- isVerbose == "+ isVerbose);
+		break;
+	case 'o': // open an audio file
+		chooseFile();
+		break;
+	case 'r': case 'R': // reset synths to defaults
+		resetToDefaults();
+		break;
+	case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
+		if (activeBrush instanceof SamplerBrush) {
+			println("-- please choose a Granular Brush to adjust resampling and duration values.");
+			return;
+		}
+		printGOptHints(hopScale);
+		if (activeBrush != null) {
+			activeBrush.cfg().resampleCount = optGrainCount;
+			syncGuiFromConfig();
+		}
+		break;
+	case 's': // save display image to a PNG file
+		saveToImage();
+		break;
+	case 'S': // save audio buffer to a .wav file
+		saveToAudio();
+		break;
+	case 'x': // delete the current active brush shape or the oldest brush shape
+		if (hoverBrush != null) {
+			removeHoverBrush();
+		}
+		else {
+			removeOldestBrush();
+		}
+		break;
+	case 'X': // delete the most recent brush shape
+		removeNewestBrush();
+		break;
+	case 'h': case 'H': // show help message
+		showHelp();
+		break;
+	default:
+		break;
+	}
 }
 
 /**
@@ -1007,10 +1013,10 @@ public void showHelp() {
   println(" * Press 'h' or 'H' to show help message.");
 }
 
-/**
- * Sets audioOut.gain.
- * @param g   gain value for audioOut, in decibels
- */
+	/**
+	 * Adjusts audioOut.gain.
+	 * @param g   value to add to audioOut.gain, in decibels
+	 */
 public void adjustAudioGain(float g) {
   float ag = audioOut.getGain();
   ag += g;
@@ -1024,39 +1030,38 @@ public void adjustAudioGain(float g) {
  * @param newMode
  */
 void setMode(DrawingMode newMode) {
-  if (newMode == drawingMode) return;
-  drawingMode = newMode;
-  // Clear hover because the hover rules changed
-  hoverBrush = null;
-  hoverIndex = -1;
-  // Choose what should be "active" in the new mode
-  AudioBrush nextActive = null;
-  switch (drawingMode) {
-  case DRAW_EDIT_GRANULAR:
-    nextActive = activeGranularBrush;
-    gConfig.env = granEnvelope;
-    break;
-  case DRAW_EDIT_SAMPLER:
-    nextActive = activeSamplerBrush;
-    break;
-  case PLAY_ONLY:
-    nextActive = (activeBrush != null) ? activeBrush
-      : (activeGranularBrush != null ? activeGranularBrush : activeSamplerBrush);
-    break;
-  default:
-    {
-    }
-  }
-  if (nextActive != null) {
-    // Keep indices consistent: use stored index for the corresponding type
-    int idx = (nextActive instanceof GranularBrush) ? activeGranularIndex : activeSamplerIndex;
-    setActiveBrush(nextActive, idx);     // this also syncs GUI
-  } else {
-    // No selection for this mode
-    activeBrush = null;
-    resetConfigForMode();    // reset the GUI control palette
-  }
-  setControlsEnabled();        // enable or disable controls, depending on the drawing mode
+	if (newMode == drawingMode) return;
+	drawingMode = newMode;
+	// Clear hover because the hover rules changed
+	hoverBrush = null;
+	hoverIndex = -1;
+	// Choose what should be "active" in the new mode
+	AudioBrush nextActive = null;
+	switch (drawingMode) {
+	case DRAW_EDIT_GRANULAR:
+		nextActive = activeGranularBrush;
+		gConfig.env = granEnvelope;
+		break;
+	case DRAW_EDIT_SAMPLER:
+		nextActive = activeSamplerBrush;
+		break;
+	case PLAY_ONLY:
+		nextActive = (activeBrush != null) ? activeBrush
+				: (activeGranularBrush != null ? activeGranularBrush : activeSamplerBrush);
+		break;
+	default: {}
+	}
+	if (nextActive != null) {
+		// Keep indices consistent: use stored index for the corresponding type
+		int idx = (nextActive instanceof GranularBrush) ? activeGranularIndex : activeSamplerIndex;
+		setActiveBrush(nextActive, idx);     // this also syncs GUI
+	}
+	else {
+		// No selection for this mode
+		activeBrush = null;
+		resetConfigForMode();    // reset the GUI control palette
+	}
+	setControlsEnabled();        // enable or disable controls, depending on the drawing mode
 }
 
 /**

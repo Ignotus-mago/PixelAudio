@@ -60,7 +60,7 @@
  * 6. Draw a few more brushstrokes to experiment with drawing and the Sampler instrument.
  * Draw fast and slow, right to left or left to right (forwards or backwards in time),
  * vertically, horizontally, or diagonally.
- 
+
  * 7. Noise: As with any polyphonic instrument, the number of overlapping audio events affects Sampler
  * clipping and noise level. Instrument gain, envelope shape and duration, and low level noise
  * reduction all influence output. Your audio source also matters: sources with greater RMS energy
@@ -578,7 +578,7 @@ boolean shiftIsDown = false;        // shift key state
 /* ------------------------------------------------------------------ */
 
 // system-specific path to example files data
-// in Processing, for PixelAudio Tutorial examples, use this in setup(): 
+// in Processing, for PixelAudio Tutorial examples, use this in setup():
 // daPath = sketchPath("") + "../../examples_data/";
 String daPath = sketchPath("") + "../../examples_data/";
 String daFile = "Saucer_mixdown.wav";    // _sonic/FullMoonTonight_22050Hz.mp3
@@ -591,40 +591,41 @@ public void settings() {
 
 /// Processing `setup()` method.
 public void setup() {
-  // set daPath relative to the Processing sketch
+	// set a standard animation framerate
+	frameRate(24);
+	// 1. Initialize our library.
+	pixelaudio = new PixelAudio(this);
+	// 2. create a PixelMapGen object with dimensions equal to the display window.
+	//    the call to "hilbertLoop3x2(genWidth, genHeight)" produces a MultiGen that is 3 * genWidth x 2 * genHeight,
+	//    where genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
+	//
+	// multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
+	//
+	//    Here's an alternative multigen that is good for visualizing audio location within the image
+	//    It reads left to right, top to bottom, like a musical score. I've divided it 12 x 8, but 6 x 4 is good, too.
+	//
+	multigen = HilbertGen.hilbertRowOrtho(12, 8, width/12, height/8);
+	// 3. Initialize a PixelAudioMapper with multigen
+	mapper = new PixelAudioMapper(multigen);
+	// area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
+	mapSize = mapper.getSize();
+	// initialize the boundary policy for keeping points and indices in bounds
+	boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
+	// create an array of rainbow colors with mapSize elements
+	spectrum = getColors(mapSize);
+	// 4. create image for display
+	initImages();
+	// 5. set up the audio environment and variables
+	initAudio();
+	// 6. set up the drawing environment and variables
+	initDrawing();
+	// 7. output a help message to the console
+	showHelp();
+	// preload files, parameters will vary with the system where we're running
+  // we need to set daPath in setup()
   daPath = sketchPath("") + "../../examples_data/";
-  // set a standard animation framerate
-  frameRate(24);
-  // 1. Initialize our library.
-  pixelaudio = new PixelAudio(this);
-  // 2. create a PixelMapGen object with dimensions equal to the display window.
-  //    the call to "hilbertLoop3x2(genWidth, genHeight)" produces a MultiGen that is 3 * genWidth x 2 * genHeight,
-  //    where genWidth == genHeight and genWidth is a power of 2 (a restriction on Hilbert curves)
-  //
-  // multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);
-  //
-  //    Here's an alternative multigen that is good for visualizing audio location within the image
-  //    It reads left to right, top to bottom, like a musical score. I've divided it 12 x 8, but 6 x 4 is good, too.
-  //
-  multigen = HilbertGen.hilbertRowOrtho(12, 8, width/12, height/8);
-  // 3. Initialize a PixelAudioMapper with multigen
-  mapper = new PixelAudioMapper(multigen);
-  // area of the PixelAudioMapper == number of pixels in display == number of samples in audio buffer
-  mapSize = mapper.getSize();
-  // initialize the boundary policy for keeping points and indices in bounds
-  boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
-  // create an array of rainbow colors with mapSize elements
-  spectrum = getColors(mapSize);
-  // 4. create image for display
-  initImages();
-  // 5. set up the audio environment and variables
-  initAudio();
-  // 6. set up the drawing environment and variables
-  initDrawing();
-  // 7. output a help message to the console
-  showHelp();
-  // preload files, parameters will vary with the system where we're running
-  preloadFiles(daPath, daFile);    // handy when debugging, too
+  daFile = "Saucer_mixdown.wav";
+	preloadFiles(daPath, daFile);    // handy when debugging, too
 }
 
 /**
@@ -736,13 +737,13 @@ public void stepAnimation() {
   }
 }
 
-/**
- * Renders a frame of animation: moving along the signal path, copies baseImage pixels to
- * mapImage pixels, adjusting the index position of the copy using totalShift --
- * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
- *
- * @param step   current animation step
- */
+	/**
+	 * Renders a frame of pixel-shifting animation: moving along the signal path, copies baseImage pixels to
+	 * mapImage pixels, adjusting the index position of the copy using totalShift --
+	 * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
+	 *
+	 * @param step   current animation step
+	 */
 public void renderFrame(int step) {
   // keep track of how much the pixel array is shifted
   totalShift = PixelAudioMapper.wrap(totalShift + shift, mapSize);
@@ -1204,10 +1205,10 @@ public void showHelp() {
   println(" * Press 'h' or 'H' to show help message in the console.");
 }
 
-/**
- * Sets audioOut.gain.
- * @param g   gain value for audioOut, in decibels
- */
+	/**
+	 * Adjusts audioOut.gain.
+	 * @param g   value to add to audioOut.gain, in decibels
+	 */
 public void adjustAudioGain(float g) {
   float ag = audioOut.getGain();
   ag += g;
@@ -1216,10 +1217,10 @@ public void adjustAudioGain(float g) {
   outputGain = audioOut.getGain();
 }
 
-/**
- * Sets Sampler instrument <code>pool</code> gain in dB.
- * @param g   gain increment or decrement, in decibels
- */
+	/**
+	 * Sets Sampler instrument {@code pool} gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
 public void adjustPoolGain(float g) {
   float pg = pool.getGainDb();
   pg += g;
@@ -1239,32 +1240,32 @@ public void adjustGranGain(float g) {
 }
 
 
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   return applyColorShifted(colorSource, graySource, lut, 0);
 }
 
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
- * taking into account any pixels that were shifted.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @param shift          number of pixels/array indices to shift
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+	 * taking into account any pixels that were shifted.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");

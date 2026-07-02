@@ -50,12 +50,13 @@ public int clipToHeight(int i) {
   return min(max(0, i), height - 1);
 }
 
-/**
- * @param x              x-coordinate
- * @param y              y-coordinate
- * @param deviationPx    distance deviation from mean
- * @return               a PVector with coordinates shifted by a Gaussing variable
- */
+	/**
+	 * Displaces a supplied point by a random Gaussian variable.
+	 * @param x              x-coordinate
+	 * @param y              y-coordinate
+	 * @param deviationPx    average deviation, in pixels
+	 * @return a displaced coordinate point as a PVector
+	 */
 public PVector jitterCoord(int x, int y, int deviationPx) {
   double variance = deviationPx * deviationPx;
   int jx = (int)Math.round(PixelAudio.gauss(0, variance));
@@ -276,26 +277,22 @@ ArrayList<PVector> getPathPoints(AudioBrushLite b) {
  * @return     GestureSchedule for the current pathMode of the brush
  */
 public GestureSchedule getScheduleForBrush(AudioBrushLite b) {
-  GestureSchedule sched;
-  switch (b.cfg().pathMode) {
+    GestureSchedule sched;
+    switch (b.cfg().pathMode) {
     case REDUCED_POINTS: {
-      sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
-      break;
+        sched = b.curve.getReducedSchedule(b.cfg.rdpEpsilon);
+        break;
     }
     case CURVE_POINTS: {
-      sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
-      break;
+        sched = b.curve.getCurveSchedule(b.cfg.rdpEpsilon, b.cfg.curveSteps, isAnimating);
+        break;
     }
-    case ALL_POINTS: {
-      sched = b.curve.getAllPointsSchedule();
-      break;
+    case ALL_POINTS: default: {
+        sched = b.curve.getAllPointsSchedule();
+        break;
     }
-    default: {
-      sched = b.curve.getAllPointsSchedule();
-      break;
     }
-  }
-  return sched;
+    return sched;
 }
 
 /**
@@ -313,6 +310,12 @@ GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
 }
 
 
+	/**
+	 * @param sched         a {@code GestureSchedule} to access for calculating an envelope duration
+	 * @param envName       name of an envelope preset
+	 * @param fallbackMs    default duration in milliseconds
+	 * @return calculated sample length in samples of an envelope
+	 */
 int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
   int n = sched.points.size();
   if (n < 2) return fallbackMs;
@@ -381,24 +384,24 @@ public synchronized void storeSamplerCurveTL(AudioBrushLite b, GestureSchedule s
  * Execute audio / animation events for Sampler brushstrokes.
  */
 public synchronized void runSamplerBrushEvents() {
-  if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
-  int currentTime = millis();
-  int durationMs = 200;
-  samplerTimeLocs.forEach(stl -> {
-    if (stl.eventTimeMs() < currentTime) {
-      // sched points from storeSamplerCurveTL are already in bounds
-      int sampleX = Math.round(stl.getX());
-      int sampleY = Math.round(stl.getY());
-      // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
-      playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
-      pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
-      stl.setStale(true);
-    } else {
-      return;
-    }
-  }
-  );
-  samplerTimeLocs.removeIf(SamplerBrushEvent::isStale);
+    if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
+    int currentTime = millis();
+    int durationMs = 200;
+    samplerTimeLocs.forEach(stl -> {
+        if (stl.eventTimeMs() < currentTime) {
+            // sched points from storeSamplerCurveTL are already in bounds
+            int sampleX = Math.round(stl.getX());
+            int sampleY = Math.round(stl.getY());
+            // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
+            playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
+            pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
+            stl.setStale(true);
+        }
+        else {
+            return;
+        }
+    });
+    samplerTimeLocs.removeIf(SamplerBrushEvent::isStale);
 }
 
 // *** WindowedBuffer support *** //
@@ -445,25 +448,26 @@ public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTi
  * associated with granular synthesis gestures.
  */
 public synchronized void runGrainEvents() {
-  if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;
-  int t = millis();
-  for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext(); ) {
-    TimedLocation tl = iter.next();
-    int low = tl.eventTime();
-    int high = (tl.eventTime() + tl.getDurationMs());
-    if (t >= low && t < high) { // event in the interval between low and high
-      drawCircle(tl.getX(), tl.getY());
-    } else {
-      if (t >= high) {        // event in the past
-        tl.setStale(true);
-        iter.remove();
-      }
-      if (t < low) {          // event in the future
-        break;
-      }
+    if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;
+    int t = millis();
+    for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
+        TimedLocation tl = iter.next();
+        int low = tl.eventTime();
+        int high = (tl.eventTime() + tl.getDurationMs());
+        if (t >= low && t < high) { // event in the interval between low and high
+            drawCircle(tl.getX(), tl.getY());
+        }
+        else {
+            if (t >= high) {        // event in the past
+                tl.setStale(true);
+                iter.remove();
+            }
+            if (t < low) {          // event in the future
+                break;
+            }
+        }
     }
-  }
-  // grainLocsArray.removeIf(TimedLocation::isStale);    // not necessary if we remove in loop
+    // grainLocsArray.removeIf(TimedLocation::isStale);    // not necessary if we remove in loop
 }
 
 /**
@@ -471,15 +475,15 @@ public synchronized void runGrainEvents() {
  * associated with mouse clicks that trigger audio a the click point.
  */
 public synchronized void runPointEvents() {
-  int currentTime = millis();
-  for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext(); ) {
-    TimedLocation tl = iter.next();
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
+    int currentTime = millis();
+    for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
+        TimedLocation tl = iter.next();
+        tl.setStale(tl.eventTime() < currentTime);
+        if (!tl.isStale()) {
+            drawCircle(tl.getX(), tl.getY());
+        }
     }
-  }
-  pointTimeLocs.removeIf(TimedLocation::isStale);
+    pointTimeLocs.removeIf(TimedLocation::isStale);
 }
 
 

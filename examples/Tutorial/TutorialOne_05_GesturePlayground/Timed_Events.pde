@@ -35,25 +35,25 @@ public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTim
   Collections.sort(samplerTimeLocs);
 }
 
-public synchronized void runSamplerBrushEvents() {
-  if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
-  int currentTime = millis();
-  samplerTimeLocs.forEach(tl -> {
-    if (tl.eventTime() < currentTime) {
-      int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
-      int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
-      float panning = map(sampleX, 0, width, -0.8f, 0.8f);
-      int pos = getSamplePos(sampleX, sampleY);
-      playSample(pos, calcSampleLen(), samplerGain, panning);
-      pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
-      tl.setStale(true);
-    } else {
-      return;
-    }
-  }
-  );
-  samplerTimeLocs.removeIf(TimedLocation::isStale);
-}
+	public synchronized void runSamplerBrushEvents() {
+	    if (samplerTimeLocs == null || samplerTimeLocs.isEmpty()) return;
+	    int currentTime = millis();
+	    samplerTimeLocs.forEach(tl -> {
+	        if (tl.eventTime() < currentTime) {
+	            int sampleX = PixelAudio.constrain(Math.round(tl.getX()), 0, width - 1);
+	            int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
+	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
+	            int pos = getSamplePos(sampleX, sampleY);
+                playSample(pos, calcSampleLen(), samplerGain, panning);
+		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
+	            tl.setStale(true);
+	        }
+	        else {
+	            return;
+	        }
+	    });
+	    samplerTimeLocs.removeIf(TimedLocation::isStale);
+	}
 
 void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
   if (gb == null) return;
@@ -108,25 +108,26 @@ public synchronized void storeGranularCurveTL(GestureSchedule sched, int startTi
  * associated with granular synthesis gestures.
  */
 public synchronized void runGrainEvents() {
-  if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;
-  int t = millis();
-  for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext(); ) {
-    TimedLocation tl = iter.next();
-    int low = tl.eventTime();
-    int high = (tl.eventTime() + tl.getDurationMs());
-    if (t >= low && t < high) { // event in the interval between low and high
-      drawCircle(tl.getX(), tl.getY());
-    } else {
-      if (t >= high) {        // event in the past
-        tl.setStale(true);
-        iter.remove();
-      }
-      if (t < low) {          // event in the future
-        break;
-      }
-    }
-  }
-  // grainLocsArray.removeIf(TimedLocation::isStale);    // not necessary if we remove in loop
+    if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;
+    int t = millis();
+	for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
+		TimedLocation tl = iter.next();
+		int low = tl.eventTime();
+		int high = (tl.eventTime() + tl.getDurationMs());
+		if (t >= low && t < high) { // event in the interval between low and high
+			drawCircle(tl.getX(), tl.getY());
+		}
+		else {
+			if (t >= high) {        // event in the past
+				tl.setStale(true);
+				iter.remove();
+			}
+			if (t < low) {          // event in the future
+				break;
+			}
+		}
+	}
+	// grainLocsArray.removeIf(TimedLocation::isStale);		// not necessary if we remove in loop
 }
 
 /**
@@ -134,22 +135,22 @@ public synchronized void runGrainEvents() {
  * associated with mouse clicks that trigger audio a the click point.
  */
 public synchronized void runPointEvents() {
-  int currentTime = millis();
-  for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext(); ) {
-    TimedLocation tl = iter.next();
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
-    }
-  }
-  pointTimeLocs.removeIf(TimedLocation::isStale);
+	int currentTime = millis();
+	for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
+		TimedLocation tl = iter.next();
+		tl.setStale(tl.eventTime() < currentTime);
+		if (!tl.isStale()) {
+			drawCircle(tl.getX(), tl.getY());
+		}
+	}
+	pointTimeLocs.removeIf(TimedLocation::isStale);
 }
 
-/**
- * Draws a circle at the location of an audio trigger (mouseDown event).
- * @param x    x coordinate of circle
- * @param y    y coordinate of circle
- */
+	/**
+	 * Draws a circle at the location of an audio trigger (mouseDown event).
+	 * @param x		x coordinate of circle
+	 * @param y		y coordinate of circle
+	 */
 public void drawCircle(int x, int y) {
   //float size = isRaining? random(10, 30) : 60;
   fill(circleColor);

@@ -6,10 +6,23 @@
 
 // ------------- STANDARD SAMPLER AND GRANULAR BRUSH SCHEDULING ------------- //
 
+	/**
+	 * Schedule a simple animation to mark the activation of Sampler audio events at display locations.
+	 * @param sb       a SamplerBrush instance
+	 * @param clickX   x-coordinate
+	 * @param clickY   y-coordinate
+	 */
 void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
   scheduleSamplerBrushClick(sb, clickX, clickY, null);
 }
 
+	/**
+	 * Schedule a simple animation to mark the activation of Sampler audio events at a display locations.
+	 * @param sb          a SamplerBrush instance
+	 * @param clickX      x-coordinate
+	 * @param clickY      y-coordinate
+	 * @param gainCurve   PAControlCurve for gain dynamics
+	 */
 void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY, PAControlCurve gainCurve) {
   if (sb == null) return;
   ArrayList<PVector> pts = getPathPoints(sb);
@@ -36,59 +49,58 @@ void debugSched(GestureSchedule sched) {
 }
 
 public void storeSamplerBrushEvents(GestureSchedule sched, GestureGranularConfig snap, int startTime, PAControlCurve gainCurve) {
-  if (sched == null || sched.points == null || sched.timesMs == null) return;
-  if (samplerBrushEvents == null) samplerBrushEvents = new ArrayList<>();
-  // check sizes
-  final int pointCount = sched.points.size();
-  final int timeCount = sched.timesMs.length;
-  final int n = Math.min(pointCount, timeCount);
-  if (n == 0) return;
-  if (pointCount != timeCount) {
-    System.err.println("storeSamplerBrushEvents(): point/time mismatch: points="
-      + pointCount + ", times=" + timeCount + ", using n=" + n);
-  }
-  // good to go
-  final float baseGain = snap.gainLinear();
-  final float[] gainPerEvent =
-    (gainCurve != null) ? PAKeyframeControlCurve.expandToSchedule(gainCurve, sched) : null;
-  final float pitch = snap.pitchRatio();
-  final ADSRParams baseEnv = (snap.env != null) ? snap.env.copy() : samplerEnv;
-  synchronized (samplerBrushEventsLock) {
-    for (int i = 0; i < n; i++) {
-      PVector loc = sched.points.get(i);
-      int x = Math.round(loc.x);
-      int y = Math.round(loc.y);
-      int pos = mapper.lookupSignalPos(x, y);
-      envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration ) : noteDuration;
-      int len = calcSampleLen();
-      int t = startTime + Math.round(sched.timesMs[i]);
-      float pan = map(x, 0, width - 1, -0.875f, 0.875f);
-      float gain = baseGain;
-      if (gainPerEvent != null && i < gainPerEvent.length) {
-        gain *= gainPerEvent[i];
-      }
-      samplerBrushEvents.add(
-        new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, baseEnv.copy(), pan)
-        );
-      if (isDebugging) {
-        println("-- sampler evt i=" + i
-          + " dt=" + sched.timesMs[i]
-          + " eventTime=" + t
-          + " pos=" + pos
-          + " len=" + len
-          + " gain=" + gain
-          + " pitch=" + pitch
-          + " pan=" + pan);
-      }
+    if (sched == null || sched.points == null || sched.timesMs == null) return;
+    if (samplerBrushEvents == null) samplerBrushEvents = new ArrayList<>();
+    // check sizes
+    final int pointCount = sched.points.size();
+    final int timeCount = sched.timesMs.length;
+    final int n = Math.min(pointCount, timeCount);
+    if (n == 0) return;
+    if (pointCount != timeCount) {
+        System.err.println("storeSamplerBrushEvents(): point/time mismatch: points="
+                + pointCount + ", times=" + timeCount + ", using n=" + n);
     }
-    samplerBrushEvents.sort((a, b) -> Integer.compare(a.eventTimeMs, b.eventTimeMs));
-  }
+    // good to go
+    final float baseGain = snap.gainLinear();
+    final float[] gainPerEvent =
+            (gainCurve != null) ? PAKeyframeControlCurve.expandToSchedule(gainCurve, sched) : null;
+    final float pitch = snap.pitchRatio();
+    final ADSRParams baseEnv = (snap.env != null) ? snap.env.copy() : samplerEnv;
+    synchronized (samplerBrushEventsLock) {
+        for (int i = 0; i < n; i++) {
+            PVector loc = sched.points.get(i);
+            int x = Math.round(loc.x);
+            int y = Math.round(loc.y);
+            int pos = mapper.lookupSignalPos(x, y);
+            int eventDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration) : noteDuration;
+            int len = calcSampleLen(eventDuration, 1.0f, 0.0625f);
+            int t = startTime + Math.round(sched.timesMs[i]);
+            float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+            float gain = baseGain;
+            if (gainPerEvent != null && i < gainPerEvent.length) {
+                gain *= gainPerEvent[i];
+            }
+            samplerBrushEvents.add(
+                new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, baseEnv.copy(), pan)
+            );
+            if (isDebugging) {
+                println("-- sampler evt i=" + i
+                    + " dt=" + sched.timesMs[i]
+                    + " eventTime=" + t
+                    + " pos=" + pos
+                    + " len=" + len
+                    + " gain=" + gain
+                    + " pitch=" + pitch
+                    + " pan=" + pan);
+            }
+        }
+        samplerBrushEvents.sort((a, b) -> Integer.compare(a.eventTimeMs, b.eventTimeMs));
+    }
 }
 
-/**
- * Runs sampler brush events in the samplerTimeLocs list.
- * TODO move audio events into a sample-accurate (or at least block-accurate) schedule
- */
+	/**
+	 * Runs sampler brush events in the samplerTimeLocs list.
+	 */
 public void runSamplerBrushEvents() {
   if (samplerBrushEvents == null || samplerBrushEvents.isEmpty()) return;
   int currentTime = millis();
@@ -109,18 +121,26 @@ public void runSamplerBrushEvents() {
   }
 }
 
+	/**
+	 * Convenience method when gain dynamics are not applied to a brush.
+	 *
+	 * @param gb        a GranularBrush
+	 * @param clickX    x-coordinate of point of activation
+	 * @param clickY    y-coordinate of point of activation
+	 */
 public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
   scheduleGranularBrushClick(gb, clickX, clickY, null);
 }
 
 
-/**
- * Schedules a response to a mouse click or hover + spacebar on a granular brush.
- *
- * @param gb        a GranularBrush
- * @param clickX    x-coordinate of point of activation
- * @param clickY    y-coordinate of point of activation
- */
+	/**
+	 * Schedules a response to a mouse click or hover + spacebar on a granular brush.
+	 *
+	 * @param gb          a GranularBrush
+	 * @param clickX      x-coordinate of point of activation
+	 * @param clickY      y-coordinate of point of activation
+	 * @param gainCurve   a control curve for gain dynamics
+	 */
 public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY, PAControlCurve gainCurve) {
   if (gb == null) return;
   ArrayList<PVector> pts = getPathPoints(gb);
@@ -198,27 +218,28 @@ public void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean i
  * associated with granular synthesis gestures.
  */
 public void runGrainEvents() {
-  if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;
-  int t = millis();
-  synchronized (grainTimeLocsLock) {
-    for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext(); ) {
-      TimedLocation tl = iter.next();
-      int low = tl.eventTime();
-      int high = (tl.eventTime() + tl.getDurationMs());
-      if (t >= low && t < high) { // event in the interval between low and high
-        drawCircle(tl.getX(), tl.getY());
-      } else {
-        if (t >= high) {        // event in the past
-          tl.setStale(true);
-          iter.remove();
-        }
-        if (t < low) {          // event in the future
-          break;
-        }
-      }
-    }
-  }
-  // grainTimeLocs.removeIf(TimedLocation::isStale);    // necessary on fade-out, otherwise iteration does pruning
+	if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;
+	int t = millis();
+	synchronized (grainTimeLocsLock) {
+		for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
+			TimedLocation tl = iter.next();
+			int low = tl.eventTime();
+			int high = (tl.eventTime() + tl.getDurationMs());
+			if (t >= low && t < high) { // event in the interval between low and high
+				drawCircle(tl.getX(), tl.getY());
+			}
+			else {
+				if (t >= high) {        // event in the past
+					tl.setStale(true);
+					iter.remove();
+				}
+				if (t < low) {          // event in the future
+					break;
+				}
+			}
+		}
+	}
+	// grainTimeLocs.removeIf(TimedLocation::isStale);		// necessary on fade-out, otherwise iteration does pruning
 }
 
 /**
@@ -227,17 +248,17 @@ public void runGrainEvents() {
  * TODO java.util.ConcurrentModificationException BUG
  */
 public void runPointEvents() {
-  int currentTime = millis();
-  synchronized (pointTimeLocsLock) {
-    for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext(); ) {
-      TimedLocation tl = iter.next();
-      tl.setStale(tl.eventTime() < currentTime);
-      if (!tl.isStale()) {
-        drawCircle(tl.getX(), tl.getY());
-      }
-    }
-    pointTimeLocs.removeIf(TimedLocation::isStale);
-  }
+	int currentTime = millis();
+	synchronized (pointTimeLocsLock) {
+		for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
+			TimedLocation tl = iter.next();
+			tl.setStale(tl.eventTime() < currentTime);
+			if (!tl.isStale()) {
+				drawCircle(tl.getX(), tl.getY());
+			}
+		}
+		pointTimeLocs.removeIf(TimedLocation::isStale);
+	}
 }
 
 /**
@@ -251,11 +272,11 @@ public void pointTimeLocsAddPoint(TimedLocation tl) {
   }
 }
 
-/**
- * Draws a circle at the location of an audio trigger (mouseDown event).
- * @param x    x coordinate of circle
- * @param y    y coordinate of circle
- */
+	/**
+	 * Draws a circle at the location of an audio trigger (mouseDown event).
+	 * @param x		x coordinate of circle
+	 * @param y		y coordinate of circle
+	 */
 public void drawCircle(int x, int y) {
   //float size = isRaining? random(10, 30) : 60;
   fill(circleColor);

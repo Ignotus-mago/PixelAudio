@@ -315,19 +315,19 @@ public static int setAlpha(int argb, int alpha) {
   return (argb & 0x00FFFFFF) | (alpha << 24);
 }
 
-/**
- * This method writes a color channel from an image to playBuffer, fulfilling a
- * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
- * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
- * img.width * img.height != mapper.getWidth() * mapper.getHeight().
- * Sets totalShift = 0 on completion: the image and audio are now in sync.
- *
- * @param img       a PImage, a source of data
- * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       an target array of float in audio format
- * @param chan      a color channel
- * @param shift     number of indices to shift
- */
+	/**
+	 * This method writes a color channel from an image to playBuffer, fulfilling a
+	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
+	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
+	 * img.width * img.height != mapper.getWidth() * mapper.getHeight().
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync.
+	 *
+	 * @param img       a PImage, a source of data
+	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
+	 * @param sig       a target array of float in audio format
+	 * @param chan      a color channel
+	 * @param shift     number of indices to shift
+	 */
 public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan, int shift) {
   // If img is the *display* (shifted) image, commit its phase into audio:
   sig = mapper.mapImgToSigShifted(img.pixels, sig, chan, shift);
@@ -411,16 +411,16 @@ public void audioFileSelectedWrite(File selection) {
   }
 }
 
-/**
- * Saves audio data to 16-bit integer PCM format, which Processing can also open.
- * This same method can be called as a static method in AudioUtility.
- *
- * @param samples      an array of floats in the audio range (-1.0f, 1.0f)
- * @param sampleRate    audio sample rate for the file
- * @param fileName      name of the file to save to
- * @throws IOException    an Exception you'll need to handle to call this method
- * @throws UnsupportedAudioFileException    another Exception
- */
+	/**
+	 * Saves audio data to 16-bit integer PCM format, which Processing can also open.
+	 * This same method can be called as a static method in AudioUtility.
+	 *
+	 * @param samples			an array of floats in the audio range (-1.0f, 1.0f)
+	 * @param sampleRate		audio sample rate for the file
+	 * @param fileName			name of the file to save to
+	 * @throws IOException		an Exception you'll need to handle to call this method
+	 * @throws UnsupportedAudioFileException		another Exception
+	 */
 public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
   throws IOException, UnsupportedAudioFileException {
   // Convert samples from float to 16-bit PCM

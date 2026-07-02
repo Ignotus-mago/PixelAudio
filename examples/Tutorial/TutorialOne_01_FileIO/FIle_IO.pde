@@ -214,18 +214,18 @@ public void loadImageFile(File imgFile) {
   commitMapImageToAudio();
 }
 
-/**
- * This method writes a color channel from an image to playBuffer, fulfilling a
- * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
- * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
- * img.width * img.height != mapper.getWidth() * mapper.getHeight().
- * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
- *
- * @param img       a PImage, a source of data
- * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
- * @param sig       a target array of float in audio format
- * @param chan      a color channel
- */
+	/**
+	 * This method writes a color channel from an image to playBuffer, fulfilling a
+	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(),
+	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or
+	 * img.width * img.height != mapper.getWidth() * mapper.getHeight().
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync. TODO
+	 *
+	 * @param img       a PImage, a source of data
+	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
+	 * @param sig       an target array of float in audio format
+	 * @param chan      a color channel
+	 */
 public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
   // If img is the *display* (shifted) image, commit its phase into audio:
   sig = mapper.mapImgToSig(img.pixels, sig, chan);

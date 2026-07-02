@@ -26,13 +26,13 @@
  * an audio file and it gets transcoded into an image, we still use the audio
  * signal with all its resolution to play sounds. When you click in the image,
  * you will be playing a sample from the signal.
- * 
+ *
  * You can write the audio signal to the image with the 'W' key command. This will
  * convert the audioSignal into HSB Brightness values and write them to mapImage.
  * If you open this image in all color channels or in the HSB Brightness channel
  * and then write it to the audio channel, you will get a reasonably good recreation
  * of the audio, at 8-bit resolution.
- * 
+ *
  * An audio signal or image can be loaded to various channels of the image: Red,
  * Green, Blue or all channels in the RGB color space or Hue, Brightness, or
  * Saturation in the HSB color space. HSB Hue operations on grayscale images may
@@ -42,7 +42,7 @@
  * will turn it gray. To work more effectively with HSB, we can load both hue and
  * saturation from a color image to another color image or to a grayscale image,
  * maintaining the brightness channel of the target image, with the 'c' command key.
- * 
+ *
  * You can enhance image contrast by stretching its histogram ('m' key).
  * You can make the image brighter ('=' and '+' keys) or darker ('-' or '_' key)
  * using a gamma function, a non-linear adjustment.
@@ -68,7 +68,7 @@
  * Press 'w' to transcode the image and write it to the audio signal.
  * Press 'W' to transcode the audio signal and write it to the image.
  * Press '?' to show the Help Message in the console.
- * 
+ *
  *
  * PLEASE NOTE: Hue (H) and Saturation (V) operations may have no effect on gray pixels.
  * ALSO: Image brightness determines image audio. Images with uniform brightness will be silent.
@@ -242,15 +242,14 @@ public void stepAnimation() {
 }
 
 public void runTimeArray() {
-  int currentTime = millis();
-  timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
-    }
-  }
-  );
-  timeLocsArray.removeIf(TimedLocation::isStale);
+	int currentTime = millis();
+	timeLocsArray.forEach(tl -> {
+		tl.setStale(tl.eventTime() < currentTime);
+		if (!tl.isStale()) {
+			drawCircle(tl.getX(), tl.getY());
+		}
+	});
+	timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
 public void drawCircle(int x, int y) {
@@ -474,15 +473,15 @@ public int calcSampleLen(int durationMS) {
   return len;
 }
 
-/**
- * Returns a Gaussian variable using a Java library call to
- * <code>Random.nextGaussian</code>.
- *
- * @param mean
- * @param variance
- * @return a Gaussian-distributed random number with mean <code>mean</code> and
- *         variance <code>variance</code>
- */
+	/**
+	 * Returns a Gaussian variable using a Java library call to
+	 * {@code Random.nextGaussian}.
+	 *
+	 * @param mean
+	 * @param variance
+	 * @return a Gaussian-distributed random number with mean {@code mean} and
+	 *         variance {@code variance}
+	 */
 public double gauss(double mean, double variance) {
   return rando.nextGaussian() * Math.sqrt(variance) + mean;
 }

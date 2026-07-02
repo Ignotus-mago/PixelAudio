@@ -232,15 +232,15 @@ public int calcSampleLen() {
  * associated with mouse clicks that trigger audio at the click point.
  */
 public synchronized void runTimeArray() {
-  int currentTime = millis();
-  for (Iterator<TimedLocation> iter = timeLocsArray.iterator(); iter.hasNext(); ) {
-    TimedLocation tl = iter.next();
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
-    }
-  }
-  timeLocsArray.removeIf(TimedLocation::isStale);
+	int currentTime = millis();
+	for (Iterator<TimedLocation> iter = timeLocsArray.iterator(); iter.hasNext();) {
+		TimedLocation tl = iter.next();
+		tl.setStale(tl.eventTime() < currentTime);
+		if (!tl.isStale()) {
+			drawCircle(tl.getX(), tl.getY());
+		}
+	}
+	timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
 

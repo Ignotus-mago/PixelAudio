@@ -57,10 +57,11 @@ public int getSamplePos(int x, int y) {
   return pos;    // just return pos if we don't use pixel shift animation in this sketch
 }
 
-/**
- * @param pos    an index into the audio signal
- * @return a PVector representing the image pixel mapped to pos
- */
+	/**
+	 * Calculates the display image coordinates corresponding to a specified audio sample index.
+	 * @param pos    an index into an audio signal, must be between 0 and width * height - 1.
+	 * @return       a PVector with the x and y coordinates
+	 */
 public PVector getCoordFromSignalPos(int pos) {
   int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
   return new PVector(xy[0], xy[1]);
@@ -242,14 +243,15 @@ public ADSRParams calculateEnvelopeLinear(float linear, float totalMs) {
 /*       The ones listed here are the most useful of them.        */
 /*----------------------------------------------------------------*/
 
-/**
- * Plays an audio sample with default envelope and stereo pan.
- *
- * @param samplePos    position of the sample in the audio buffer
- * @param samplelen    length of the sample (will be adjusted)
- * @param amplitude    amplitude of the sample on playback
- * @return the calculated sample length in samples
- */
+	/**
+	 * Plays an audio sample with default envelope and stereo pan.
+	 *
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param pan          stereo pan [-1.0, 1.0] for sample
+	 * @return the calculated sample length in samples
+	 */
 public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
   return playSample(samplePos, samplelen, amplitude, samplerEnv, 1.0f, pan);
 }
@@ -277,16 +279,36 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @param env          an ADSR envelope for the sample
  * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher
  * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
- * @return
+ * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-  if (isDebugging) println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
-  return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+  int beforeCount = 0;
+  int afterCount = 0;
+  int voiceCount = 0;
+  // tracking Sampler voice count for possible problems, which we discovered and fixed
+  if (isTrackSamplerVoices) {
+    voiceCount = gDir.activeOrReleasingVoiceCount();
+    println("-- gDir voice count = "+ voiceCount);
+    // println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
+    beforeCount = pool.samplerActiveVoiceCount();
+    // println("-- sampler voices BEFORE: "+ beforeCount);
+  }
+  int sampleLen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+  if (isTrackSamplerVoices) {
+    afterCount = pool.samplerActiveVoiceCount();
+    if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
+    if (afterCount > 256) println("-- high sampler voice count "+ afterCount);
+    // println("-- sampler voices AFTER: "+ afterCount);
+  }
+  return sampleLen;
 }
 
-/**
- * @return a length in samples with some Gaussian variation
- */
+	/**
+	 * @param dur         sample duration in milliseconds
+	 * @param mean        multiplier for duration, 1.0 leaves duration as mean value
+	 * @param variance    variance from mean value
+	 * @return a length in samples with some Gaussian variation
+	 */
 public int calcSampleLen(int dur, float mean, float variance) {
   float vary = 0;
   // skip the fairly rare negative numbers
@@ -298,10 +320,20 @@ public int calcSampleLen(int dur, float mean, float variance) {
   return samplelen;
 }
 
+	/**
+	 * Convenience method for calcSampleLen(envDuration, 1.0f, 0.0625f).
+	 * @return calculated sample length in samples of an envelope
+	 */
 public int calcSampleLen() {
   return calcSampleLen(envDuration, 1.0f, 0.0625f);
 }
 
+	/**
+	 * @param sched         a {@code GestureSchedule} to access for calculating an envelope duration
+	 * @param envName       name of an envelope preset
+	 * @param fallbackMs    default duration in milliseconds
+	 * @return calculated sample length in samples of an envelope
+	 */
 int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
   int n = sched.points.size();
   if (n < 2) return fallbackMs;
@@ -449,6 +481,9 @@ void updateAudioChain(float[] sig) {
 
 // ------------- LOOPING ------------- //
 
+	/**
+	 * Updates looping instruments.
+	 */
 public synchronized void updateInstrumentLoops() {
   if (activeLoops.isEmpty()) return;
   long now = millis();
@@ -469,6 +504,9 @@ public synchronized void updateInstrumentLoops() {
   activeLoops.removeIf(loop -> !loop.active);
 }
 
+	/**
+	 * Stops all loops.
+	 */
 public synchronized void stopAllLoops() {
   for (InstrumentLoop loop : activeLoops) {
     loop.stop();
@@ -476,6 +514,10 @@ public synchronized void stopAllLoops() {
   activeLoops.clear();
 }
 
+	/**
+	 * Stop looping for a specified brush
+	 * @param brush    AudioBrush whose looping will end
+	 */
 public synchronized void stopLoopsForBrush(AudioBrush brush) {
   if (brush == null || activeLoops.isEmpty()) return;
   for (InstrumentLoop loop : activeLoops) {
@@ -494,6 +536,12 @@ public synchronized boolean hasLoopForBrush(AudioBrush brush) {
   return false;
 }
 
+	/**
+	 * Estimate loop duration for a Granular instrument.
+	 * @param sched     a GestureSchedule associated with a brush
+	 * @param params    a GestureGranularParams object
+	 * @return expected duration of a loop
+	 */
 public int estimateLoopDurationMs(GestureSchedule sched, GestureGranularParams params) {
   if (sched == null || sched.size() == 0) return 1;
   int schedMs = Math.max(1, Math.round(sched.durationMs()));
@@ -504,6 +552,13 @@ public int estimateLoopDurationMs(GestureSchedule sched, GestureGranularParams p
   return schedMs + grainTailMs;
 }
 
+	/**
+	 * Estimate loop duration for a Sampler instrument.
+	 * @param sched             a GestureSchedule associated with a brush
+	 * @param env               an ADSRParams envelope
+	 * @param noteLenSamples    number of samples in audio event ("note")
+	 * @return expected duration of a loop
+	 */
 public int estimateLoopDurationMs(GestureSchedule sched, ADSRParams env, int noteLenSamples) {
   if (sched == null || sched.size() == 0) return 1;
   int schedMs = Math.max(1, Math.round(sched.durationMs()));
@@ -518,6 +573,17 @@ public int estimateLoopDurationMs(GestureSchedule sched, ADSRParams env, int not
   return schedMs + tailMs;
 }
 
+	/**
+	 * @param gb            a GranularBrush to loop
+	 * @param buf           buffer to play from
+	 * @param sched         a GestureSchedule
+	 * @param params        runtime parameters for gesture playback
+	 * @param eventParams   optional pan, gain, and pitch modifiers per grain
+	 * @param repeats       number of times to loop
+	 * @param gapMs         time between loop events
+	 * @param animate       use TimedLocation animation (not used in method, true by default, TODO clarify)
+	 * @return              an InstrumentLoop object
+	 */
 public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
   float[] buf,
   GestureSchedule sched,
@@ -556,20 +622,30 @@ public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
 }
 
 public InstrumentLoop loopGranularBrush(GranularBrush gb, int repeats, int gapMs) {
-  if (gb == null) return null;
-  ensureGranularReady();
-  GestureGranularConfig.Builder cfg = gb.cfg().copy();
-  CueResult result = applyPresets(cfg, gb.curve());
-  PACurveMaker curve = result.curve;
-  GestureGranularConfig snap = result.cfg.build();
-  GestureSchedule sched = scheduleBuilder.build(curve, snap, audioOut.sampleRate());
-  if (sched == null || sched.size() == 0) return null;
-  GestureGranularParams params = snap.toParams();
-  float[] buf = (granSignal != null) ? granSignal : audioSignal;
-  GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
-  return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
+    if (gb == null) return null;
+    ensureGranularReady();
+    GestureGranularConfig.Builder cfg = gb.cfg().copy();
+    CueResult result = applyPerformancePresets(cfg, gb.curve());
+    PACurveMaker curve = result.curve;
+    GestureGranularConfig snap = result.cfg.build();
+    GestureSchedule sched = scheduleBuilder.build(curve, snap, audioOut.sampleRate());
+    if (sched == null || sched.size() == 0) return null;
+    GestureGranularParams params = snap.toParams();
+    float[] buf = (granSignal != null) ? granSignal : audioSignal;
+    GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
 }
 
+	/**
+	 * @param sb               a SamplerBrush
+	 * @param sched            GestureSchedule for brush events
+	 * @param env              ADSRParams envelope for each Sampler event in schedule
+	 * @param noteLenSamples   length of a note in samples
+	 * @param repeats          number of times to repeat loop
+	 * @param gapMs            time between loop repetitions, ms
+	 * @param animate          use TimedLocation animation (not used in method, true by default, TODO clarify)
+	 * @return                 an InstrumentLoop object
+	 */
 public synchronized InstrumentLoop startSamplerLoop(SamplerBrush sb, GestureSchedule sched,
   ADSRParams env, int noteLenSamples, int repeats, int gapMs, boolean animate) {
   if (sb == null || sched == null || sched.size() == 0) return null;
@@ -606,6 +682,12 @@ public synchronized InstrumentLoop startSamplerLoop(SamplerBrush sb, GestureSche
   return loop;
 }
 
+	/**
+	 * @param sb        a SamplerBrush instance
+	 * @param repeats   number of times to repeat
+	 * @param gapMs     time between loop repetitions, ms
+	 * @return
+	 */
 public InstrumentLoop loopSamplerBrush(SamplerBrush sb, int repeats, int gapMs) {
   if (sb == null) return null;
   ensureSamplerReady();

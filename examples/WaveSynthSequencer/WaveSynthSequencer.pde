@@ -1,6 +1,6 @@
 /**
- * An early example of audio/image sequencing with the WaveSynth color organ, 
- * used for a performance at Experimental Sound Studio, Chicago. 
+ * An early example of audio/image sequencing with the WaveSynth color organ,
+ * used for a performance at Experimental Sound Studio, Chicago.
  *
  * INSTRUCTIONS FOR PERFORMANCE
  *
@@ -211,19 +211,19 @@ public void initDecimalFormats() {
  * The main loop for drawing to the screen.
  */
 public void draw() {
-  image(synthImage, 0, 0, width, height);    // draw the synth image
-  if (isWaveSynthAnimating) stepAnimation();  // animate the image if requested
-  runTimeArray();                // animate audio event markers
-  if (isPlayIntro && introMusic.size() > 0) {
-    runMusicArray();            // play the WaveSynth Sequencer
-  }
-  if (isRaining) {
-    // animation slows the frame rate, so we change the threshold when animating
-    float thresh = (isWaveSynthAnimating) ? 0.25f : 0.05f;
-    if (random(0, 1) < thresh) {
-      raindrops();              // trigger random audio events
-    }
-  }
+	image(synthImage, 0, 0, width, height);		// draw the synth image
+	if (isWaveSynthAnimating) stepAnimation();	// animate the image if requested
+	runTimeArray();								// animate audio event markers
+	if (isPlayIntro && introMusic.size() > 0) {
+		runMusicArray();						// play the WaveSynth Sequencer
+	}
+	if (isRaining) {
+		// animation slows the frame rate, so we change the threshold when animating
+	    float thresh = (isWaveSynthAnimating) ? 0.25f : 0.05f;
+	    if (random(0,1) < thresh) {
+	      raindrops();							// trigger random audio events
+	    }
+	}
 }
 
 /**
@@ -339,9 +339,9 @@ public void showHelp() {
   println(" * Press 'h' to show this help message in the console. ");
 }
 
-/**
- * Save audio buffer to a file called "wavesynth_<wsIndex>.wav".
- */
+	/**
+	 * Save audio buffer to a file called "wavesynth_(wsIndex).wav".
+	 */
 public void saveToAudio() {
   renderSignal();
   try {

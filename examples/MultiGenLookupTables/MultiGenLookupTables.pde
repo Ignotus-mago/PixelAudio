@@ -16,7 +16,7 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * lookup table, connects a 1D audio signal with a 2D bitmap, putting audio
  * samples and RGB pixels in one-to-one correspondence within a single
  * PixelMapGen instance such as a Hilbert, Moore, or DiagonalZigzag.
- * 
+ *
  * MultiGenLookupTables does the same thing for MultiGens, which consist of
  * multiple PixelMapGens. Imagine the audio signal as a path that visits every
  * pixel in a bitmap: the signal's lookup table is simply the list of pixels it
@@ -29,21 +29,21 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * the abstract PixelMapGen class generate the lookup tables. The "gen"
  * objects plug in to PixelAudioMapper, a class that handles mapping of audio
  * signals and RGB data using lookup tables.
- * 
+ *
  * This example also shows basic affine transforms of PixelMapGen objects, such
  * as rotation and reflection, how to change the PixelMapGen a PixelAudioMapper
  * instance is using, and basic animation using array rotation.
- * 
+ *
  * Signal path index numbers are small white numbers, bitmap index numbers are
  * big black numbers. Read the imageToSignalLUT values by following the pixel
  * index order and reading the white numbers. Read the signalToImageLUT values
  * by following the signal path order and reading the black numbers. Read the
  * imageToSignalLUT values by following the black pixel numbers in order and
  * reading the white numbers.
- * 
+ *
  * This example can be a good place to test your own MultiGen creation methods.
- * 
- * 
+ *
+ *
  * KEY COMMANDS
  *
  * Press 'a' or 'A' to rotate the array of colors one step left or right.
@@ -57,7 +57,7 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * Press 'x' to flip x-coordinates (reflect on y-axis).
  * Press 'y' to flip y-coordinates (reflect on x-axis).
  * Press 'h' to show this help text in the console.
- * 
+ *
  *
  * TODO There are some annoying bugs associated with some of the transforms and window resizing.
  * For the moment, I've commented out the key commands for the r90, r270, fx90, and fx270
@@ -304,10 +304,6 @@ public void keyPressed() {
     resizeWindow();
     println("----->>> window width: "+ width +", window height: "+ height);
     break;
-  case 'e':
-    isFitToScreen = !isFitToScreen;
-    resizeWindow();
-    break;
   case 'h':
     showHelp();
     break;
@@ -317,22 +313,24 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println("\n----- HELP -----\n");
-  println(" * Signal path index numbers are small white numbers, bitmap index numbers are big black numbers.");
-  println(" * Read the imageToSignalLUT values by following the pixel index order and reading the white numbers.");
-  println(" * Read the signalToImageLUT values by following the signal path order and reading the black numbers.");
-  println(" * Read the imageToSignalLUT values by following the black pixel numbers in order and reading the white numbers.\n");
-  println(" * Press 'a' or 'A' to rotate the array of colors one step left or right.");
-  println(" * Press 'g' to display a different generator.");
-  println(" * Press 'n' to hide or show numbers.");
-  println(" * Press 'l' to hide or show lines.");
-  println(" * Press 'd' to print a description of the current generator to the console.");
-  if (genW <= 4)
-    println(" * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
-  println(" * Press 'r' to rotate 180 degress.");
-  println(" * Press 'x' to flip x-coordinates (reflect on y-axis).");
-  println(" * Press 'y' to flip y-coordinates (reflect on x-axis).");
-  println(" * Press 'h' to show this help text in the console.");
+	println("\n----- HELP -----\n");
+	println(" * Signal path index numbers are small white numbers, bitmap index numbers are big black numbers.");
+	println(" * Read the imageToSignalLUT values by following the pixel index order and reading the white numbers.");
+	println(" * Read the signalToImageLUT values by following the signal path order and reading the black numbers.");
+	println(" * Read the imageToSignalLUT values by following the black pixel numbers in order and reading the white numbers.\n");
+	println(" * Press 'a' or 'A' to rotate the array of colors one step left or right.");
+	println(" * Press 'g' to display a different generator.");
+	println(" * Press 'n' to hide or show numbers.");
+	println(" * Press 'l' to hide or show lines.");
+	println(" * Press 'd' to print a description of the current generator to the console.");
+	if (genW <= 4)
+		println(" * Press 'k' to print the imageToSignalLUT and the signalToImageLUT to the console.");
+	if (genW <= 4)
+		println(" * Press 't' to print affine maps to the console."); // omit for published version
+	println(" * Press 'r' to rotate 180 degress.");
+	println(" * Press 'x' to flip x-coordinates (reflect on y-axis).");
+	println(" * Press 'y' to flip y-coordinates (reflect on x-axis).");
+	println(" * Press 'h' to show this help text in the console.");
 }
 
 /**

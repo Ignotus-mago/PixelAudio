@@ -54,23 +54,23 @@
  * @return        a MultiGen consisting of 6 HilbertGens linked together by one signal path
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
-  // list of PixelMapGens that create a path through an image using PixelAudioMapper
-  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
-  // list of x,y coordinates for placing gens from genList
-  ArrayList<int[]> offsetList = new ArrayList<int[]>();
-  genList.add(new HilbertGen(genW, genH, fx270));
-  offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(genW, genH, nada));
-  offsetList.add(new int[] { genW, 0 });
-  genList.add(new HilbertGen(genW, genH, fx90));
-  offsetList.add(new int[] { 2 * genW, 0 });
-  genList.add(new HilbertGen(genW, genH, fx90));
-  offsetList.add(new int[] { 2 * genW, genH });
-  genList.add(new HilbertGen(genW, genH, r180));
-  offsetList.add(new int[] { genW, genH });
-  genList.add(new HilbertGen(genW, genH, fx270));
-  offsetList.add(new int[] { 0, genH });
-  return new MultiGen(width, height, offsetList, genList);
+    // list of PixelMapGens that create a path through an image using PixelAudioMapper
+	ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
+	// list of x,y coordinates for placing gens from genList
+	ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	genList.add(new HilbertGen(genW, genH, fx270));
+	offsetList.add(new int[] { 0, 0 });
+	genList.add(new HilbertGen(genW, genH, nada));
+	offsetList.add(new int[] { genW, 0 });
+	genList.add(new HilbertGen(genW, genH, fx90));
+	offsetList.add(new int[] { 2 * genW, 0 });
+	genList.add(new HilbertGen(genW, genH, fx90));
+	offsetList.add(new int[] { 2 * genW, genH });
+	genList.add(new HilbertGen(genW, genH, r180));
+	offsetList.add(new int[] { genW, genH });
+	genList.add(new HilbertGen(genW, genH,fx270));
+	offsetList.add(new int[] { 0, genH });
+	return new MultiGen(width, height, offsetList, genList);
 }
 
 public MultiGen hilbertLoop6x4(int genW) {

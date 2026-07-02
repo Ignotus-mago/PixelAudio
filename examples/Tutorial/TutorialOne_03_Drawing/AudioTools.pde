@@ -165,11 +165,11 @@ public PVector getCoordFromSignalPos(int pos) {
   return new PVector(xy[0], xy[1]);
 }
 
-/**
- * Draws a circle at the location of an audio trigger (mouseDown event).
- * @param x    x coordinate of circle
- * @param y    y coordinate of circle
- */
+	/**
+	 * Draws a circle at the location of an audio trigger (mouseDown event).
+	 * @param x		x coordinate of circle
+	 * @param y		y coordinate of circle
+	 */
 public void drawCircle(int x, int y) {
   //float size = isRaining? random(10, 30) : 60;
   fill(animatedCircleColor);

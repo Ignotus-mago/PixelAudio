@@ -110,24 +110,24 @@ AudioBrush toggleBrushType(AudioBrush brush) {
  * Convert a brush explicitly to SamplerBrush.
  */
 SamplerBrush toSamplerBrush(AudioBrush brush) {
-  if (brush == null) return null;
-  if (brush instanceof SamplerBrush) return (SamplerBrush) brush;
-  PACurveMaker curve = brush.curve();
-  GestureGranularConfig.Builder cfg = brush.cfg();   // reuse same builder intentionally
-  normalizeConfigForSampler(cfg);
-  return new SamplerBrush(curve, cfg);
+    if (brush == null) return null;
+    if (brush instanceof SamplerBrush) return (SamplerBrush) brush;
+    PACurveMaker curve = brush.curve();
+    GestureGranularConfig.Builder cfg = brush.cfg();   // reuse same builder intentionally
+    normalizeConfigForSampler(cfg);
+    return new SamplerBrush(curve, cfg);
 }
 
 /**
  * Convert a brush explicitly to GranularBrush.
  */
 GranularBrush toGranularBrush(AudioBrush brush) {
-  if (brush == null) return null;
-  if (brush instanceof GranularBrush) return (GranularBrush) brush;
-  PACurveMaker curve = brush.curve();
-  GestureGranularConfig.Builder cfg = brush.cfg();   // reuse same builder intentionally
-  normalizeConfigForGranular(cfg);
-  return new GranularBrush(curve, cfg);
+    if (brush == null) return null;
+    if (brush instanceof GranularBrush) return (GranularBrush) brush;
+    PACurveMaker curve = brush.curve();
+    GestureGranularConfig.Builder cfg = brush.cfg();   // reuse same builder intentionally
+    normalizeConfigForGranular(cfg);
+    return new GranularBrush(curve, cfg);
 }
 
 /**
@@ -175,27 +175,33 @@ void replaceBrush(AudioBrush oldBrush, AudioBrush newBrush, int oldIndex) {
   }
 }
 
-/**
- * Append a granular brush and return its new index.
- */
+	/**
+	 * Append a granular brush and return its new index.
+	 * @param gb   a GranularBrush instance
+	 * @return the index of the brush in the {@code granularBrushes} list
+	 */
 int appendGranularBrush(GranularBrush gb) {
   if (gb == null) return -1;
   granularBrushes.add(gb);
   return granularBrushes.size() - 1;
 }
 
-/**
- * Append a sampler brush and return its new index.
- */
+	/**
+	 * Append a sampler brush and return its new index.
+	 * @param sb   a SamplerBrush instance
+	 * @return the index of the brush in the {@code samplerBrushes} list
+	 */
 int appendSamplerBrush(SamplerBrush sb) {
   if (sb == null) return -1;
   samplerBrushes.add(sb);
   return samplerBrushes.size() - 1;
 }
 
-/**
- * Remove a granular brush using index when reliable, else by object.
- */
+	/**
+	 * Remove a granular brush using index when reliable, else by object.
+	 * @param gb    an AudioBrush expected to be a GranularBrush
+	 * @param idx   index in the granular brush list, or a negative value when unknown
+	 */
 void removeGranularBrush(AudioBrush gb, int idx) {
   if (gb instanceof SamplerBrush) return;
   if (gb == null || granularBrushes == null || granularBrushes.isEmpty()) return;
@@ -210,9 +216,11 @@ void removeGranularBrush(AudioBrush gb, int idx) {
   }
 }
 
-/**
- * Remove a sampler brush using index when reliable, else by object.
- */
+	/**
+	 * Remove a sampler brush using index when reliable, else by object.
+	 * @param sb    an AudioBrush expected to be a SamplerBrush
+	 * @param idx   index in the sampler brush list, or a negative value when unknown
+	 */
 void removeSamplerBrush(AudioBrush sb, int idx) {
   if (sb instanceof GranularBrush) return;
   if (sb == null || samplerBrushes == null || samplerBrushes.isEmpty()) return;
@@ -227,10 +235,11 @@ void removeSamplerBrush(AudioBrush sb, int idx) {
   }
 }
 
-/**
- * Normalize config values when converting to SamplerBrush.
- * Keep most gesture/path information intact.
- */
+	/**
+	 * Normalize config values when converting to SamplerBrush.
+	 * Keep most gesture/path information intact.
+	 * @param cfg   a GestureGranularConfig.Builder instance
+	 */
 void normalizeConfigForSampler(GestureGranularConfig.Builder cfg) {
   if (cfg == null) return;
   // Sampler is point-oriented; FIXED hop is not very meaningful there.
@@ -243,10 +252,11 @@ void normalizeConfigForSampler(GestureGranularConfig.Builder cfg) {
   }
 }
 
-/**
- * Normalize config values when converting to GranularBrush.
- * Keep most gesture/path information intact, but make a few granular-friendly adjustments.
- */
+	/**
+	 * Normalize config values when converting to GranularBrush.
+	 * Keep most gesture/path information intact, but make a few granular-friendly adjustments.
+	 * @param cfg   a GestureGranularConfig.Builder instance
+	 */
 void normalizeConfigForGranular(GestureGranularConfig.Builder cfg) {
   if (cfg == null) return;
   // Granular can use either hop mode, so keep current hopMode.

@@ -574,7 +574,7 @@ synchronized public void winDraw(PApplet appc, GWinData data) {
  println("-- continue winKey");
  parseKey(evt.getKey(), evt.getKeyCode());
  }
- 
+
  }
  */
 
@@ -586,14 +586,14 @@ synchronized public void winDraw(PApplet appc, GWinData data) {
  }
  return false;
  }
- 
+
  // respond to key in window (new method)
  public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
  if (evt.getAction() != KeyEvent.RELEASE) return;
  if (isGuiTyping()) return;
  parseKey(evt.getKey(), evt.getKeyCode());
  }
- 
+
  public void globalPanel_hit(GPanel panel, GEvent event) {
  // nothing doing
  }
@@ -620,86 +620,79 @@ public void comments_hit(GTextArea source, GEvent event) {
 }
 
 public void blendField_hit(GTextField source, GEvent event) {
-  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
-    final float g = blendField.getValueF();
-    pendingWaveEdits.add(() -> {
-      wavesynth.setGain(g);
-      imageDirty = true;
-    }
-    );
-  }
+	if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+		final float g = blendField.getValueF();
+		pendingWaveEdits.add(() -> {
+			wavesynth.setGain(g);
+			imageDirty = true;
+		});
+	}
 }
 
 public void gammaField_hit(GTextField source, GEvent event) {
-  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
-    final float gamma = gammaField.getValueF();
-    pendingWaveEdits.add(() -> {
-      wavesynth.setGamma(gamma);
-      imageDirty = true;
-    }
-    );
-  }
+	if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+		final float gamma = gammaField.getValueF();
+		pendingWaveEdits.add(() -> {
+			wavesynth.setGamma(gamma);
+			imageDirty = true;
+		});
+	}
 }
 
 public void stepsSpinner_hit(GSpinner source, GEvent event) {
-  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
-    final int newSteps = stepsSpinner.getValue();
-    pendingWaveEdits.add(() -> {
-      animSteps = Math.max(1, newSteps);
-      wavesynth.setAnimSteps(animSteps);
-      for (WaveData wd : wavesynth.waveDataList) {
-        wd.setAnimationSteps(newSteps);
-        wd.invalidateFrameState();
-      }
-      imageDirty = true;
-    }
-    );
-  }
+	if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+		final int newSteps = stepsSpinner.getValue();
+		pendingWaveEdits.add(() -> {
+			animSteps = Math.max(1,  newSteps);
+			wavesynth.setAnimSteps(animSteps);
+			for (WaveData wd : wavesynth.waveDataList) {
+				wd.setAnimationSteps(newSteps);
+				wd.invalidateFrameState();
+			}
+			imageDirty = true;
+		});
+	}
 }
 
 public void stopSpinner_hit(GSpinner source, GEvent event) {
-  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
-    final int newStop = stopSpinner.getValue();
-    pendingWaveEdits.add(() -> {
-      animStop = Math.max(1, newStop);
-      wavesynth.setStop(newStop);
-    }
-    );
-    // no change to appearance or audio
-  }
+	if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+		final int newStop = stopSpinner.getValue();
+		pendingWaveEdits.add(() -> {
+			animStop = Math.max(1, newStop);
+			wavesynth.setStop(newStop);
+		});
+		// no change to appearance or audio
+	}
 }
 
 public void histoCheck_hit(GCheckbox source, GEvent event) {
-  if (event == GEvent.CHANGED) {
-    final boolean sel = histoCheck.isSelected();
-    pendingWaveEdits.add(() -> {
-      wavesynth.setScaleHisto(sel);
-      imageDirty = true;
-    }
-    );
-  }
+	if (event == GEvent.CHANGED) {
+		final boolean sel = histoCheck.isSelected();
+		pendingWaveEdits.add(() -> {
+			wavesynth.setScaleHisto(sel);
+			imageDirty = true;
+		});
+	}
 }
 
 public void histoHigh_hit(GTextField source, GEvent event) {
-  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
-    final int high = histoHighField.getValueI();
-    pendingWaveEdits.add(() -> {
-      wavesynth.setHistoHigh(high);
-      imageDirty = true;
-    }
-    );
-  }
+	if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+		final int high = histoHighField.getValueI();
+		pendingWaveEdits.add(() -> {
+			wavesynth.setHistoHigh(high);
+			imageDirty = true;
+		});
+	}
 }
 
 public void histoLow_hit(GTextField source, GEvent event) {
-  if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
-    final int low = histoLowField.getValueI();
-    pendingWaveEdits.add(() -> {
-      wavesynth.setHistoLow(low);
-      imageDirty = true;
-    }
-    );
-  }
+	if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
+		final int low = histoLowField.getValueI();
+		pendingWaveEdits.add(() -> {
+			wavesynth.setHistoLow(low);
+			imageDirty = true;
+		});
+	}
 }
 
 public void videoNameField_hit(GTextField source, GEvent event) {
@@ -785,24 +778,23 @@ public void saveAsBtn_hit(GButton source, GEvent event) {
  * Single commit method for all WaveData fields.
  */
 void commitCurrentWaveData() {
-  float freq   = freqField.getValueF();
-  float amp    = ampField.getValueF();
-  float phase  = phaseField.getValueF();
-  float dc     = dcField.getValueF();
-  float cycles = cyclesField.getValueF();
-  // currentWD is selected from wavesynth.waveDataList,
-  // where wavesynth is the (current) WaveSynth instance
-  pendingWaveEdits.add(() -> {
-    currentWD.setFreq(freq);
-    currentWD.setAmp(amp);
-    currentWD.setPhase(phase);
-    currentWD.setDc(dc);
-    currentWD.setCycles(cycles);
-    currentWD.invalidateFrameState();
-    imageDirty = true;
-    audioDirty = true;
-  }
-  );
+    float freq   = freqField.getValueF();
+    float amp    = ampField.getValueF();
+    float phase  = phaseField.getValueF();
+    float dc     = dcField.getValueF();
+    float cycles = cyclesField.getValueF();
+	// currentWD is selected from wavesynth.waveDataList,
+    // where wavesynth is the (current) WaveSynth instance
+    pendingWaveEdits.add(() -> {
+        currentWD.setFreq(freq);
+        currentWD.setAmp(amp);
+        currentWD.setPhase(phase);
+        currentWD.setDc(dc);
+        currentWD.setCycles(cycles);
+        currentWD.invalidateFrameState();
+        imageDirty = true;
+        audioDirty = true;
+    });
 }
 
 // not active
@@ -841,26 +833,25 @@ public void dc_hit(GTextField source, GEvent event) {
  * @param event
  */
 public void handleColorChooser(GButton button, GEvent event) {
-  // println("btnColor - GButton >> GEvent." + event + " @ " + millis());
-  sel_col = G4P.selectColor(currentWD.waveColor);
-  colorTitle.setText("Color: "+ (sel_col >> 16 & 0xFF) +", "+ (sel_col >> 8 & 0xFF) +", "+ (sel_col & 0xFF));
-  colorPG.beginDraw();
-  colorPG.background(sel_col);
-  colorPG.endDraw();
-  currentWD = wavesynth.waveDataList.get(waveDataIndex);
-  if (isVerbose) println("==> selected color: "+ PixelAudioMapper.colorString(sel_col));
-  // be sure to set color value in wavesynth.waveColors array, otherwise the display won't update
-  // avoid dependencies in the lambda by capturing values
-  final int idx = waveDataIndex;
-  final int col = sel_col;
-  pendingWaveEdits.add(() -> {
-    WaveData wd = wavesynth.waveDataList.get(idx);
-    wd.setWaveColor(col);
-    wavesynth.waveColors[idx] = col;
-    imageDirty = true;
-    // audioDirty not needed for color edits
-  }
-  );
+	// println("btnColor - GButton >> GEvent." + event + " @ " + millis());
+	sel_col = G4P.selectColor(currentWD.waveColor);
+	colorTitle.setText("Color: "+ (sel_col >> 16 & 0xFF) +", "+ (sel_col >> 8 & 0xFF) +", "+ (sel_col & 0xFF));
+	colorPG.beginDraw();
+	colorPG.background(sel_col);
+	colorPG.endDraw();
+	currentWD = wavesynth.waveDataList.get(waveDataIndex);
+	if (isVerbose) println("==> selected color: "+ PixelAudioMapper.colorString(sel_col));
+	// be sure to set color value in wavesynth.waveColors array, otherwise the display won't update
+	// avoid dependencies in the lambda by capturing values
+	final int idx = waveDataIndex;
+	final int col = sel_col;
+	pendingWaveEdits.add(() -> {
+		WaveData wd = wavesynth.waveDataList.get(idx);
+		wd.setWaveColor(col);
+		wavesynth.waveColors[idx] = col;
+		imageDirty = true;
+		// audioDirty not needed for color edits
+	});
 }
 
 public void prev_hit(GButton source, GEvent event) {

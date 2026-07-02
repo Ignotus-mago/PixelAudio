@@ -128,6 +128,9 @@ public class NetworkDelegate {
 
 
   /* incoming osc message are forwarded to the oscEvent method. */
+		/** Post address pattern and typetag from incoming osc message to the console.
+		 * @param theOscMessage  forwarded OscMessage
+		 */
   void oscEvent(OscMessage theOscMessage) {
     /* print the address pattern and the typetag of the received OscMessage */
     PApplet.print("### received an osc message.");
@@ -142,6 +145,12 @@ public class NetworkDelegate {
   /*                                                                */
   /*----------------------------------------------------------------*/
 
+		/**
+		 * Sends display coordinates and audio buffer index associated with a mouse click.
+		 * @param sampleX
+		 * @param sampleY
+		 * @param sample
+		 */
   public void oscSendMouseClicked(int sampleX, int sampleY, int sample) {
     OscMessage msg = new OscMessage("/click");
     msg.add(sample);
@@ -151,6 +160,10 @@ public class NetworkDelegate {
     // PApplet.println("---> msg: "+ msg);
   }
 
+		/**
+		 * Sends a list of points as possible Max MultiSlider settings.
+		 * @param drawPoints
+		 */
   public void oscSendMultiSlider(ArrayList<PVector> drawPoints) {
     int y0 = (int) drawPoints.get(0).y;
     int sliders = 12;
@@ -168,6 +181,10 @@ public class NetworkDelegate {
     osc.send(msg, this.remoteTo);
   }
 
+		/**
+		 * Sends a list of points.
+		 * @param drawPoints
+		 */
   public void oscSendDrawPoints(ArrayList<PVector> drawPoints) {
     OscMessage msg = new OscMessage("/draw");
     int i = 0;
@@ -183,6 +200,11 @@ public class NetworkDelegate {
     osc.send(msg, this.remoteTo);
   }
 
+		/**
+		 * Sends a "/time" message with a time stamp and offset.
+		 * @param timeStamp    milliseconds time stamp
+		 * @param timeOffset   milliseconds time offset
+		 */
   public void oscSendTimeStamp(int timeStamp, int timeOffset) {
     OscMessage msg = new OscMessage("/time");
     msg.add(drawCount);
@@ -191,12 +213,21 @@ public class NetworkDelegate {
     osc.send(msg, this.remoteTo);
   }
 
+		/**
+		 * Sends a trigger message, "/trig", with a numerical value.
+		 * @param index   number to send
+		 */
   public void oscSendTrig(int index) {
     OscMessage msg = new OscMessage("/trig");
     msg.add(index);
     osc.send(msg, this.remoteTo);
   }
 
+		/**
+		 * Sends an "/onoff" message with an index and state value.
+		 * @param index
+		 * @param state
+		 */
   public void oscSendOnOff(int index, boolean state) {
     OscMessage msg = new OscMessage("/onoff");
     msg.add(state ? 1 : 0);
@@ -204,6 +235,11 @@ public class NetworkDelegate {
     osc.send(msg, this.remoteTo);
   }
 
+		/**
+		 * Sends a "/setnum" message with an index and value.
+		 * @param index
+		 * @param value
+		 */
   public void oscSendSetnum(int index, float value) {
     OscMessage msg = new OscMessage("/setnum");
     msg.add(value);
@@ -211,17 +247,29 @@ public class NetworkDelegate {
     osc.send(msg, this.remoteTo);
   }
 
+		/**
+		 * Sends a "/del" message with an index.
+		 * @param index
+		 */
   public void oscSendDelete(int index) {
     OscMessage msg = new OscMessage("/del");
     msg.add(index);
     osc.send(msg, this.remoteTo);
   }
 
+		/**
+		 * Sends a "/clear" message.
+		 */
   public void oscSendClear() {
     OscMessage msg = new OscMessage("/clear");
     osc.send(msg, this.remoteTo);
   }
 
+		/** Sends a "/file" message with file path, file name, and file tag.
+		 * @param path
+		 * @param name
+		 * @param tag
+		 */
   public void oscSendFileInfo(String path, String name, String tag) {
     OscMessage msg = new OscMessage("/file");
     msg.add(path);
@@ -252,6 +300,10 @@ public class NetworkDelegate {
     app.playSample(sam);
   }
 
+		/**
+		 * Play audio/animation events using a supplied list of event points.
+		 * @param args
+		 */
   public void drawHit(int... args) {
     ArrayList<PVector> pts = new ArrayList<PVector>();
     PApplet.println("---> drawHit "+ args.length);
@@ -263,6 +315,10 @@ public class NetworkDelegate {
     app.playPoints(pts);
   }
 
+		/**
+		 * Receive Max MultiSlider data.
+		 * @param args   MultiSlider values
+		 */
   public void multislider(int... args) {
     PApplet.print("---> multislider: ");
     for (int pos : args) {
@@ -271,6 +327,10 @@ public class NetworkDelegate {
     PApplet.println();
   }
 
+		/**
+		 * Interprets a received value as a char and uses it as an argument to {@code parseKey()}.
+		 * @param arg
+		 */
   public void parseKey(int arg) {
     char ch = PApplet.parseChar(arg);
     PApplet.println("---> parseKey: "+ ch);

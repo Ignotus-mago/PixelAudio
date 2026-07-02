@@ -3,9 +3,12 @@
  * saving and loading JSON-format files for brushstroke and granular configuration data. Used in performance
  * at the Outside the Box New Music Festival at Southern Illinois University, Carbondale, March 2026.
  * We played Christopher Walczak's composition "Abstract Jailbreak", one of a series of "Bagatelles" we
- * are collaborating on, and my composition "DEADBODYWORKFLOW". The presets in this version of the Bagatelle 
- * sketch are set up for "Abstract Jailbreak". 
+ * are collaborating on, and my composition "DEADBODYWORKFLOW". 
  *
+ * The presets and performance cues in this version of the Bagatelle sketch are set up for
+ * "Abstract Jailbreak". If you change {@code pMode} to {@code PerformanceMode.DEADBODYWORKFLOW}, 
+ * this sketch will run the presets and cues for "DEADBODYWORKFLOW". You can toggle {@code pMode}
+ * at runtime with the '%' key--this is new feature, YMMV.
  *
  * QUICK START
  *
@@ -76,37 +79,43 @@
  *
  * About Bagatelle
  *
- * Bagatelle and its companion performance work DeadBodyWorkFlow use a GUI to provide a tour of
- * the usage and properties of the AudioBrush subclasses GranularBrush and
+ * Bagatelle and its companion performance work DeadBodyWorkFlow use a GUI to provide
+ * a tour of the usage and properties of the AudioBrush subclasses GranularBrush and
  * SamplerBrush, the GestureSchedule class, and the Sampler and Granular audio
  * synthesis instruments PASamplerInstrumentPool and PAGranularInstrumentDirector.
- * An AudioBrush combines a PACurveMaker and a GestureGranularConfig.Builder.
- * PACurveMaker models gestures, one of the core concepts of PixelAudio. In its simplest encoded
- * form, the PAGesture interface, a gesture consists of an array of points and an array of
- * times. The times array and the points array must be the same size, because the times array records the
- * times when something as-yet-unspecified will happen at the corresponding point in the points array. In my
- * demos for PixelAudio, what happens at a point is typically an audio event and an animation event. The
- * sound happens at the point because points in PixelAudio map onto locations in the sound buffer. Mapping
- * of bitmap locations onto audio buffer indices is another core concept of PixelAudio. Gestures over the 2D
- * space of an image become paths through audio buffers. The audio buffer is traversed either by a granular
- * synthesis engine or by a sampling synthesizer. For the granular synth, a gesture corresponds to a
- * non-linear traversal of an audio buffer, potentially as a continuous sequence of overlapping grains with
- * a single envelope. The sampling synthesizer treats each point as a discrete event with its own envelope.
- * Depending on how gestures and schedules are structured, the two synthesizers can sound very similar, but
- * there are possibilities in each that the other cannot realize. As you might expect, GranularBrush
- * implements granular synth events and SamplerBrush implements sampler synth events. Both rely on
- * PACUrveMaker which, in addition to capturing the raw gesture of drawing a line, provides methods to
- * reduce points / times and create Bezier paths. PACurveMaker data can also be modified by changing
- * duration, interpolating samples, or non-linear time warping. DeadBodyWorkFlow uses
- * GestureScheduleBuilder to interpolate and warp time and point lists.
  *
- * The parameters for gesture modeling, granular and sampling synthesis, time and sample interpolation, and
- * audio events are modeled in the GUI, which uses GestureGranularConfig.Builder gConfig to
- * track its current state. A GestureGranularConfig instance is associated with each AudioBrush. When you
- * click on an AudioBrush and activate it, its configuration data is loaded to the GUI and you can edit it.
- * It will be saved to the brush when you select another brush or change the edit mode. When a brush is
- * activated with a click, the schedule is built from its PACurveMaker and GestureGranularConfig.Builder
- * instance variables:
+ * An AudioBrush combines a PACurveMaker and a GestureGranularConfig.Builder. PACurveMaker
+ * models gestures, one of the core concepts of PixelAudio. In its simplest encoded form, the
+ * PAGesture interface, a gesture consists of an array of points and an array of times. The
+ * times array and the points array must be the same size, because the times array records the
+ * times when something as-yet-unspecified will happen at the corresponding point in the points
+ * array. In my demos for PixelAudio, what happens at a point is typically an audio event and an
+ * animation event. The sound happens at the point because points in PixelAudio map onto
+ * locations in the sound buffer. Mapping of bitmap locations onto audio buffer indices is
+ * another core concept of PixelAudio. Gestures over the 2D space of an image become paths
+ * through audio buffers. 
+ *
+ * The audio buffer is traversed either by a granular synthesis engine or by a sampling
+ * synthesizer. For the granular synth, a gesture corresponds to a non-linear traversal of an
+ * audio buffer, potentially as a continuous sequence of overlapping grains with a single
+ * envelope. The sampling synthesizer treats each point as a discrete event with its own
+ * envelope. Depending on how gestures and schedules are structured, the two synthesizers can
+ * sound very similar, but there are possibilities in each that the other cannot realize. As you
+ * might expect, GranularBrush implements granular synth events and SamplerBrush implements
+ * sampler synth events. Both rely on PACUrveMaker which, in addition to capturing the raw
+ * gesture of drawing a line, provides methods to reduce points / times and create Bezier paths.
+ * PACurveMaker data can also be modified by changing duration, interpolating samples, or
+ * non-linear time warping. DeadBodyWorkFlow uses GestureScheduleBuilder to interpolate and warp
+ * time and point lists.
+ *
+ * The parameters for gesture modeling, granular and sampling synthesis, time and sample
+ * interpolation, and audio events are modeled in the GUI, which uses
+ * GestureGranularConfig.Builder gConfig to track its current state. A GestureGranularConfig
+ * instance is associated with each AudioBrush. When you click on an AudioBrush and activate it,
+ * its configuration data is loaded to the GUI and you can edit it. It will be saved to the
+ * brush when you select another brush or change the edit mode. When a brush is activated with a
+ * click, the schedule is built from its PACurveMaker and GestureGranularConfig.Builder instance
+ * variables:
  *     GestureSchedule schedule = scheduleBuilder.build(gb.curve(), cfg.build(), audioOut.sampleRate());
  *
  * The calling chain for a GranularBrush:
@@ -153,55 +162,67 @@
  *
  *
  *
+ * ----- Audio Gain -----
  * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).
  * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).
  * Press RIGHT ARROW to increase current instrument gain by 3.0 dB.
  * Press LEFT ARROW to decrease current instrument gain by 3.0 dB.
+ * Press '`' to fade out all instruments.
+ * ----- Presets and Cues -----
  * Keys 1 through 9 are reserved for triggering Performance Presets 1-9, '0' will clear all presets.
+ * ----- Drawing, Audio Settings, Playback -----
  * Press TAB to set brush to active, if cursor is over a brush.
  * Press ' ' to (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event.
+ * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.
  * Press 'a' to toggle animation.
- * Press 'c' or 'C' to print the current configuration status to the console.
  * Press 't' to switch between Granular, Sampler, and Play Only modes.
  * Press 'z' to change the drawing mode of the hover brush.
+ * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
+ * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.
  * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
- * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open either an image or an audio file.
+ * Press 'r' to reset instrument configuration to defaults in GUI.
+ * Press 'c' or 'C' to print the current configuration status to the console.
+ * ----- File IO and Mapping -----
  * Press 'f' or 'F' to open a folder with JSON brush data and load all files.
  * Press 'j' to save the active brush curve and config to JSON files.
  * Press 'J' to save all brushes curve and config to JSON Session file.
  * Press 'o' to open an audio file, image file, or JSON file.
- * Press 'w' to write the map image to the audio buffer.
+ * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open a file.
+ * Press 'w' to write the display image to the audio buffer.
  * Press 'W' to write the audio buffer to the display image.
- * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.
+ * ----- Audio Mix Dynamics -----
  * Press 'n' to set noise reduction policy for Sampler instrument audio mix.
- * Press 'R' to reset transform of active brush if it has a transform TODO clarify.
- * Press 'r' to reset instrument configuration to defaults in GUI.
- * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.
- * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  * Press 'g' to toggle use of dynamics in gainCurve with gesture .
- * Press 'G' to create a beatBrush.
- * Press 'l' to loop hovered brush 4 times.
- * Press 'L' to run an infinite loop on hovered brush.
- * Press ';' to stop loop for hovered brush.
+ * ----- Special FX -----
+ * Press 'l' to loop the hovered brush 4 times.
+ * Press 'L' to run an infinite loop on the hovered brush.
+ * Press ';' to stop loop for the hovered brush.
  * Press ':' to stop all loops.
  * Press 'y' to toggle transform animation test.
  * Press 'Y' to freeze / unfreeze brush geometric transform animation.
+ * Press 'R' to reset transform of active brush if it has a transform.
+ * Press 'G' to create a beatBrush.
+ * Press '.' to turn random raindrops audio events on or off.
+ * Press '`' to fade out all instruments.
+ * Press '%' to switch performance presets and cue handlers.
+ * Press '&' to clear events in granular and sample synths.
+ * ----- Brush Deletion -----
  * Press 'x' to delete the current active brush shape or the oldest brush shape.
  * Press 'X' to delete the most recent brush shape.
- * Press '.' to turn random raindrops audio events on or off.
  * Press '≈' to option-x on MacOS keyboard, clear all brushes.
- * Press '`' to fade out all instruments.
+ * ----- Network -----
  * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
  * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
  * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.
  * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.
  * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
  * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
+ * ----- Help -----
  * Press 'h' or 'H' to show help message.
  *
  *

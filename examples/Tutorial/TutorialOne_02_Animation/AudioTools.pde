@@ -78,21 +78,22 @@ public void initADSRList() {
  * @param y    y-coordinate within a PixelAudioMapper's height
  */
 public void audioMouseClick(int x, int y) {
-  ensureSamplerReady();
-  int samplePos = getSamplePos(x, y);
-  float panning = map(x, 0, width, -0.875f, 0.875f);
-  if (isRandomADSR) {
-    ADSRParams env = adsrList.get((int)random(adsrList.size()));
-    int len = calcSampleLen();
-    // don't output envelope information for automated events
-    if (!isPlayMusicBox || isRaining) {
-      print("-- envelope: "+ env.toString());
-      println("; pos = "+ samplePos +", length = "+ len);
-    }
-    playSample(samplePos, len, 0.8f, env, panning);
-  } else {
-    playSample(samplePos, calcSampleLen(), 0.8f, panning);
-  }
+	ensureSamplerReady();
+	int samplePos = getSamplePos(x,y);
+	float panning = map(x, 0, width, -0.875f, 0.875f);
+	if (isRandomADSR) {
+		ADSRParams env = adsrList.get((int)random(adsrList.size()));
+		int len = calcSampleLen();
+		// don't output envelope information for automated events
+		if (!isPlayMusicBox || isRaining) {
+			print("-- envelope: "+ env.toString());
+			println("; pos = "+ samplePos +", length = "+ len);
+		}
+		playSample(samplePos, len, 0.8f, env, panning);
+	}
+	else {
+		playSample(samplePos, calcSampleLen(), 0.8f, panning);
+	}
 }
 
 /**

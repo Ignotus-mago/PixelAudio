@@ -4,16 +4,16 @@
 /*                                                                */
 /*----------------------------------------------------------------*/
 
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
@@ -27,14 +27,18 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   return graySource;
 }
 
-/**
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @param shift          pixel shift from array rotation, windowed buffer, etc.
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+	 * taking into account any pixels that were shifted.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
@@ -138,6 +142,13 @@ public int clipToHeight(int y) {
   return min(max(0, y), height - 1);
 }
 
+	/**
+	 * Displaces a supplied point by a random Gaussian variable.
+	 * @param x              x-coordinate
+	 * @param y              y-coordinate
+	 * @param deviationPx    average deviation, in pixels
+	 * @return a displaced coordinate point as a PVector
+	 */
 public PVector jitterCoord(int x, int y, int deviationPx) {
   double variance = deviationPx * deviationPx;
   int jx = (int)Math.round(PixelAudio.gauss(0, variance));
@@ -156,6 +167,12 @@ float[] generateJitterPitch(int length, float deviationPitch) {
   return pitch;
 }
 
+	/**
+	 * Builds a {@code GestureSchedule} for a {@code PACurveMaker} brush and a snapshot of a {@code GestureGranularConfig}
+	 * @param brush    a {@code PACurveMaker} brush
+	 * @param snap     a snapshot of a {@code GestureGranularConfig}
+	 * @return a {@code GestureSchedule}
+	 */
 public GestureSchedule loadGestureSchedule(PACurveMaker brush, GestureGranularConfig snap) {
   if (brush == null || snap == null) return null;
   GestureSchedule schedule = scheduleBuilder.build(brush, snap, audioOut.sampleRate());
@@ -206,6 +223,10 @@ public AudioBrush initCurveMakerAndAddBrush() {
   }
 }
 
+	/**
+	 * @param b   an AudioBrush instance
+	 * @return    return true if brush aligns with current drawingMode
+	 */
 boolean isBrushInteractable(AudioBrush b) {
   switch (drawingMode) {
   case DRAW_EDIT_SAMPLER:
@@ -219,32 +240,40 @@ boolean isBrushInteractable(AudioBrush b) {
   }
 }
 
+	/**
+	 * Assigns a brush to be the current active brush, accessible for editing and other options.
+	 * @param brush   an AudioBrush to assign
+	 */
 void setActiveBrush(AudioBrush brush) {
   setActiveBrush(brush, hoverIndex);
 }
 
 void setActiveBrush(AudioBrush brush, int idx) {
-  if (brush == null) return;
-  if (brush instanceof GranularBrush) {
-    GranularBrush gb = (GranularBrush) brush;
-    activeBrush = gb;
-    activeGranularBrush = gb;
-    activeGranularIndex = idx;
-    activeSamplerBrush = null;
-    activeSamplerIndex = -1;
-  } else if (brush instanceof SamplerBrush) {
-    SamplerBrush sb = (SamplerBrush) brush;
-    activeBrush = sb;
-    activeSamplerBrush = sb;
-    activeSamplerIndex = idx;
-    activeGranularBrush = null;
-    activeGranularIndex = -1;
-  }
-  gConfig = brush.cfg();
-  recomputeUIBaselinesFromActiveBrush();
-  syncGuiFromConfig();
+	if (brush == null) return;
+	if (brush instanceof GranularBrush) {
+		GranularBrush gb = (GranularBrush) brush;
+		activeBrush = gb;
+		activeGranularBrush = gb;
+		activeGranularIndex = idx;
+		activeSamplerBrush = null;
+		activeSamplerIndex = -1;
+	}
+	else if (brush instanceof SamplerBrush) {
+		SamplerBrush sb = (SamplerBrush) brush;
+		activeBrush = sb;
+		activeSamplerBrush = sb;
+		activeSamplerIndex = idx;
+		activeGranularBrush = null;
+		activeGranularIndex = -1;
+	}
+	gConfig = brush.cfg();
+	recomputeUIBaselinesFromActiveBrush();
+	syncGuiFromConfig();
 }
 
+	/**
+	 * Caching for UI settings, may be superfluous.
+	 */
 void recomputeUIBaselinesFromActiveBrush() {
   if (activeBrush == null) {
     baselineCount = 0;
@@ -297,6 +326,13 @@ public void drawBrushShapes() {
   drawBrushes(samplerBrushes, readyBrushColor2, hoverBrushColor2, selectedBrushColor2);
 }
 
+	/**
+	 * Iterates over a brush list and draws the brushstrokes stored in each PACurveMaker in the list.
+	 * @param brushes
+	 * @param readyColor
+	 * @param hoverColor
+	 * @param selectedColor
+	 */
 public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int hoverColor, int selectedColor) {
   if (brushes.isEmpty()) return;
   for (int i = 0; i < brushes.size(); i++) {
@@ -342,6 +378,11 @@ public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int 
   }
 }
 
+	/**
+	 * Provides the list of points for a brush in its assigned PathMode representation.
+	 * @param b   an AudioBrush
+	 * @return points in the path associated with the brush, as a list of PVector
+	 */
 ArrayList<PVector> getPathPoints(AudioBrush b) {
   PACurveMaker cm = b.curve();
   switch (b.cfg().pathMode) {
@@ -361,15 +402,11 @@ ArrayList<PVector> getPathPoints(AudioBrush b) {
  * @return     GestureSchedule for the current pathMode of the brush
  */
 public GestureSchedule getScheduleForBrush(AudioBrush b) {
-  switch (b.cfg().pathMode) {
-  case REDUCED_POINTS:
-    return b.curve().getReducedSchedule(b.cfg().rdpEpsilon);
-  case CURVE_POINTS:
-    return b.curve().getCurveSchedule(b.cfg().rdpEpsilon, curveSteps, isAnimating);
-  case ALL_POINTS:
-  default:
-    return b.curve().getAllPointsSchedule();
-  }
+	switch (b.cfg().pathMode) {
+		case REDUCED_POINTS: return b.curve().getReducedSchedule(b.cfg().rdpEpsilon);
+		case CURVE_POINTS: return b.curve().getCurveSchedule(b.cfg().rdpEpsilon, curveSteps, false);
+		case ALL_POINTS: default: return b.curve().getAllPointsSchedule();
+	}
 }
 
 

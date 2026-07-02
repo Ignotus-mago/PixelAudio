@@ -10,19 +10,18 @@ public void loadWaveData() {
 }
 
 public void fileSelectedOpen(File selection) {
-    if (selection == null) {
-        println("Window was closed or the user hit cancel.");
-        isAnimating = oldIsAnimating;
-        return;
-    }
-    currentDataFile = selection;
-    println("User selected " + selection.getAbsolutePath());
-    currentFileName = selection.getAbsolutePath();
-    json = loadJSONObject(currentFileName);
-    setWaveSynthFromJSON(json, wavesynth);
-    isBufferStale = true;
-    surface.setTitle(currentFileName);
-    isAnimating = oldIsAnimating;
+	if (selection == null) {
+		println("Window was closed or the user hit cancel.");
+		isAnimating = oldIsAnimating;
+		return;
+	}
+	currentDataFile = selection;
+	println("User selected " + selection.getAbsolutePath());
+	currentFileName = selection.getAbsolutePath();
+	json = loadJSONObject(currentFileName);
+	setWaveSynthFromJSON(json, wavesynth);
+	surface.setTitle(currentFileName);
+	isAnimating = oldIsAnimating;
 }
 
 public void setWaveSynthFromJSON(JSONObject json, WaveSynth synth) {
@@ -150,7 +149,7 @@ public void fileSelectedWrite(File selection) {
         stateData.setString("comments", "---");
     else
         stateData.setString("comments", synth.comments);
-    // String videoName = selection.getName(); 
+    // String videoName = selection.getName();
     String videoName = synth.videoFilename;
     if (videoName == null || videoName.equals("")) {
         videoName = selection.getName();

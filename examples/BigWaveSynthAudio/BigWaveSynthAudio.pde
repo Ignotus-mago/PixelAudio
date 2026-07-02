@@ -1,5 +1,5 @@
-// TODO revise for more recent UI formats. This is an early sketch, 
-// but it has some useful features even if it needs revision. 
+// TODO revise for more recent UI formats. This is an early sketch,
+// but it has some useful features even if it needs revision.
 
 /**
  * BigWaveSynthAudio shows how you can load the color output of WaveSynth into the pixel
@@ -215,23 +215,23 @@ public void setup() {
  *         a loop (3 * genWidth by 2 * genHeight pixels)
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
-  // list of PixelMapGens that create an image using mapper
-  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
-  // list of x,y coordinates for placing gens from genList
-  ArrayList<int[]> offsetList = new ArrayList<int[]>();
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-  offsetList.add(new int[] { 0, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
-  offsetList.add(new int[] { genW, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-  offsetList.add(new int[] { 2 * genW, 0 });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-  offsetList.add(new int[] { 2 * genW, genH });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
-  offsetList.add(new int[] { genW, genH });
-  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-  offsetList.add(new int[] { 0, genH });
-  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
+	// list of PixelMapGens that create an image using mapper
+	ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
+	// list of x,y coordinates for placing gens from genList
+	ArrayList<int[]> offsetList = new ArrayList<int[]>();
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
+	offsetList.add(new int[] { 0, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
+	offsetList.add(new int[] { genW, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+	offsetList.add(new int[] { 2 * genW, 0 });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+	offsetList.add(new int[] { 2 * genW, genH });
+	genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
+	offsetList.add(new int[] { genW, genH });
+	genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
+	offsetList.add(new int[] { 0, genH });
+	return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 public ArrayList<WaveData> initWaveDataList() {
@@ -254,13 +254,13 @@ public ArrayList<WaveData> initWaveDataList() {
   return list;
 }
 
-/**
- * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
- * of a WaveSynth object and generates its first frame of animation.
- *
- * @param synth    a WaveSynth object whose attributes will be set
- * @return      the WaveSynth object with attributes set
- */
+	/**
+	 * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
+	 * of a WaveSynth object and generates its first frame of animation.
+	 *
+	 * @param synth		a WaveSynth object whose attributes will be set
+	 * @return			the WaveSynth object with attributes set
+	 */
 public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGain(0.8f);
   synth.setGamma(myGamma);
@@ -275,60 +275,57 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
 
 
 public void initAudio() {
-  minim = new Minim(this);
-  // use the getLineOut method of the Minim object to get an AudioOutput object
-  // PixelAudio instruments require a STEREO AudioOutput
-  this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
-  this.audioBuffer = new MultiChannelBuffer(1024, 1);
-  renderSignal();
-  println("----->> initialized audio buffer, length is "+ audioBuffer.getBufferSize() +(" samples."));
-  // ADSR envelope slow attack and decay, fast release, good for moderately short audio events
-  shortAdsr = new ADSRParams(0.875f, 0.7f, 0.1f, 0.3f, 0.1f);
-  // ADSR envelope with fast attack, slow decay, very long release, good for long audio events
-  longAdsr = new ADSRParams(0.875f, 0.001f, 0.2f, 0.6f, 5.0f);
-  // create a pool with 24 instruments, each with 4 polyphonic voices
-  synth = new PASamplerInstrumentPool(audioBuffer, audioOut.sampleRate(), poolSize, 4, audioOut, shortAdsr);
+	minim = new Minim(this);
+	// use the getLineOut method of the Minim object to get an AudioOutput object
+	// PixelAudio instruments require a STEREO AudioOutput
+	this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
+	this.audioBuffer = new MultiChannelBuffer(1024, 1);
+	renderSignal();
+	println("----->> initialized audio buffer, length is "+ audioBuffer.getBufferSize() +(" samples."));
+	// ADSR envelope slow attack and decay, fast release, good for moderately short audio events
+	shortAdsr = new ADSRParams(1.0f, 0.7f, 0.01f, 0.3f, 0.1f);
+	// ADSR envelope with fast attack, slow decay, very long release, good for long audio events
+	longAdsr = new ADSRParams(1.0f, 0.001f, 0.2f, 0.8f, 5.0f);
+	// create a pool with 24 instruments, each with 4 polyphonic voices
+	synth = new PASamplerInstrumentPool(audioBuffer, audioOut.sampleRate(), poolSize, 4, audioOut, shortAdsr);
 }
 
 public void draw() {
-  image(synthImage, 0, 0, width, height);
-  if (isAnimating) stepAnimation();
-  runTimeArray();                // animate audio event markers
-  if (isRaining) {
-    // animation slows the frame rate, so we change the threshold when animating
-    float thresh = (isAnimating) ? 0.25f : 0.05f;
-    if (random(0, 1) < thresh) {
-      raindrops();              // trigger random audio events
-    }
-  }
-  if (isBufferStale) {
-    renderSignal();
-    synth.setBuffer(audioBuffer);
-    wavesynth.renderFrame(step);
-    isBufferStale = false;
-  }
+	image(synthImage, 0, 0, width, height);
+	if (isAnimating) stepAnimation();
+	runTimeArray();								// animate audio event markers
+	if (isRaining) {
+		// animation slows the frame rate, so we change the threshold when animating
+	    float thresh = (isAnimating) ? 0.25f : 0.05f;
+	    if (random(0,1) < thresh) {
+	      raindrops();							// trigger random audio events
+	    }
+	}
+	if (isBufferStale) {
+		renderSignal();
+		wavesynth.renderFrame(step);
+	}
 }
 
 /**
  * Run the animation for audio events.
  */
 public void runTimeArray() {
-  int currentTime = millis();
-  timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      drawCircle(tl.getX(), tl.getY());
-    }
-  }
-  );
-  timeLocsArray.removeIf(TimedLocation::isStale);
+	int currentTime = millis();
+	timeLocsArray.forEach(tl -> {
+		tl.setStale(tl.eventTime() < currentTime);
+		if (!tl.isStale()) {
+			drawCircle(tl.getX(), tl.getY());
+		}
+	});
+	timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
-/**
- * Draws a circle at the location of an audio trigger (mouseDown event).
- * @param x    x coordinate of circle
- * @param y    y coordinate of circle
- */
+	/**
+	 * Draws a circle at the location of an audio trigger (mouseDown event).
+	 * @param x		x coordinate of circle
+	 * @param y		y coordinate of circle
+	 */
 public void drawCircle(int x, int y) {
   float size = isRaining? random(10, 30) : 60;
   fill(circleColor);
@@ -498,7 +495,7 @@ public void stepAnimation() {
   wavesynth.renderFrame(step);
 }
 
-public void mousePressed() {
+public void mouseClicked() {
   sampleX = mouseX;
   sampleY = mouseY;
   samplePos = mapper.lookupSignalPos(sampleX, sampleY);

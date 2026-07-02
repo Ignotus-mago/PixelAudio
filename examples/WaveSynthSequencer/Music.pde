@@ -145,13 +145,13 @@ public ArrayList<WaveData> buildWaveDataList(float fundamental, int howManyParti
   return list;
 }
 
-/**
- * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
- * of a WaveSynth object and generates its first frame of animation.
- *
- * @param synth    a WaveSynth object whose attributes will be set
- * @return      the WaveSynth object with attributes set
- */
+	/**
+	 * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
+	 * of a WaveSynth object and generates its first frame of animation.
+	 *
+	 * @param synth		a WaveSynth object whose attributes will be set
+	 * @return			the WaveSynth object with attributes set
+	 */
 public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGain(0.44f);
   synth.setGamma(myGamma);
@@ -203,18 +203,18 @@ public void loadMusic() {
   }
 }
 
-/**
- * @param keyNumber    key number on a piano, where A is key 49
- * @return        frequency of the key (A = 440)
- */
+	/**
+	 * @param keyNumber		key number on a piano, where A is key 49
+	 * @return				frequency of the key (A = 440)
+	 */
 public float pianoKeyFrequency(int keyNumber) {
   return (float) (440 * Math.pow(2, (keyNumber - 49) / 12.0));
 }
 
-/**
- * @param funda   the starting frequency
- * @return      a chromatic scale starting with funda
- */
+	/**
+	 * @param funda 	the starting frequency
+	 * @return			a chromatic scale starting with funda
+	 */
 public float[] chromaticScale(float funda) {
   float[] chromaScale = new float[12];
   for (int i = 0; i < chromaScale.length; i++) {
@@ -237,11 +237,11 @@ public void initWaveSynthList() {
   }
 }
 
-/**
- * @param c      an RGB color
- * @param shift  the shift [0..1] of the hue in the HSB representation of color c
- * @return the RGB representation of the shifted color
- */
+	/**
+	 * @param c			an RGB color
+	 * @param shift		the shift [0..1] of the hue in the HSB representation of color c
+	 * @return			the RGB representation of the shifted color
+	 */
 public int colorShift(int c, float shift) {
   float[] hsb = new float[3];
   float h = PixelAudioMapper.hue(c, hsb);

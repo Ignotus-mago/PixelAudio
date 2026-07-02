@@ -21,7 +21,7 @@
  *      file. The "audioBlend.wav" file is good for experimenting. The audio
  *      data in it will be transcoded to gray scale pixel data and displayed in
  *      the window. Click on the display image or press the spacebar to trigger
- *      an audio event at the mouse location. To see the signal path as a color 
+ *      an audio event at the mouse location. To see the signal path as a color
  *      overlay, press the 'K' key.
  *
  *   2. Press 'm' to run the "Music Box" routine, which triggers an audio event
@@ -462,16 +462,16 @@ public void mouseReleased() {
   }
 }
 
-/**
- * Handles key press events passed on by the built-in keyPressed method.
- * By moving key event handling outside the built-in keyPressed method,
- * we make it possible to post key commands without an actual key event.
- * Methods and interfaces and even other threads can call parseKey().
- * This opens up many possibilities and some dangers, too.
- *
- * @param key
- * @param keyCode
- */
+	/**
+	 * Handles key press events passed on by the built-in keyPressed method.
+	 * By moving key event handling outside the built-in keyPressed method,
+	 * we make it possible to post key commands without an actual key event.
+	 * Methods and interfaces and even other threads can call parseKey().
+	 * This opens up many possibilities and a some dangers, too.
+	 *
+	 * @param key
+	 * @param keyCode
+	 */
 public void parseKey(char key, int keyCode) {
   switch(key) {
   case ' ': // spacebar, play sample at current mouse position
@@ -599,31 +599,31 @@ public void showHelp() {
   println(" * Press 'h' or 'H' to show help message.");
 }
 
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     a target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   return applyColorShifted(colorSource, graySource, lut, 0);
 }
 
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     a target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @param pixelShift     total amount of pixel shifting in the image
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     an target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param pixelShift     total amount of pixel shifting in the image
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int pixelShift) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");

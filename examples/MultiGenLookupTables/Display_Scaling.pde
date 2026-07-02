@@ -31,17 +31,18 @@ void listDisplays() {
   }
 }
 
-/**
- * Calculates window sizes for displaying mapImage at actual size and at full screen.
- * Press the 'r' key to resize the display window.
- * This method will result in display on a second screen, if one is available.
- * If mapImage is smaller than the screen, mapImage is displayed at size on startup
- * and resizing zooms the image.
- * If mapImage is bigger than the display, mapImage is fit to the screen on startup
- * and resizing shows it at full size, partially filling the window.
- * 
- * @param isVerbose    if true, post comments to the console
- */
+	/**
+	 * Calculates window sizes for displaying mapImage at actual size and at full screen.
+	 * Press the 'r' key to resize the display window.
+	 * This method will result in display on a second screen, if one is available.
+	 * If mapImage is smaller than the screen, mapImage is displayed at size on startup
+	 * and resizing zooms the image.
+	 * If mapImage is bigger than the display, mapImage is fit to the screen on startup
+	 * and resizing shows it at full size, partially filling the window.
+	 *
+	 *
+	 * @param isVerbose    if true, post comments to the console
+	 */
 public void setScaling(boolean isVerbose) {
   // max window width is a little less than the screen width of the screen
   maxWindowWidth = displayWidth - 80;

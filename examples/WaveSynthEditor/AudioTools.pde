@@ -155,17 +155,16 @@ public int calcSampleLen() {
  * Run the animation for audio events.
  */
 public void runTimeArray() {
-  int currentTime = millis();
-  timeLocsArray.forEach(tl -> {
-    tl.setStale(tl.eventTime() < currentTime);
-    if (!tl.isStale()) {
-      int x = isFitToScreen ? sampleToScreenX(tl.getX()) : tl.getX();
-      int y = isFitToScreen ? sampleToScreenY(tl.getY()) : tl.getY();
-      drawCircle(x, y);
-    }
-  }
-  );
-  timeLocsArray.removeIf(TimedLocation::isStale);
+    int currentTime = millis();
+    timeLocsArray.forEach(tl -> {
+        tl.setStale(tl.eventTime() < currentTime);
+        if (!tl.isStale()) {
+	int x = isFitToScreen ? sampleToScreenX(tl.getX()) : tl.getX();
+	int y = isFitToScreen ? sampleToScreenY(tl.getY()) : tl.getY();
+	drawCircle(x, y);
+        }
+    });
+    timeLocsArray.removeIf(TimedLocation::isStale);
 }
 
 /**

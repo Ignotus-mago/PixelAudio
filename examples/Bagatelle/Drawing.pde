@@ -4,16 +4,16 @@
 /*                                                                */
 /*----------------------------------------------------------------*/
 
-/**
- * Utility method for applying hue and saturation values from a source array of RGB values
- * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
- *
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
@@ -27,14 +27,18 @@ public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
   return graySource;
 }
 
-/**
- * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
- * @param graySource     an target array of RGB data from which to obtain brightness values
- * @param lut            a lookup table, must be the same size as colorSource and graySource
- * @param shift          pixel shift from array rotation, windowed buffer, etc.
- * @return the graySource array of RGB values, with hue and saturation values changed
- * @throws IllegalArgumentException if array arguments are null or if they are not the same length
- */
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+	 * taking into account any pixels that were shifted.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
 public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
   if (colorSource == null || graySource == null || lut == null)
     throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
@@ -244,11 +248,14 @@ boolean isOverAnyBrush(int x, int y) {
   return false;
 }
 
-/**
- * While user is dragging the mouse and mode == Mode.DRAW_EDIT_GRANULAR or DRAW_EDIT_SAMPLER,
- * accumulates new points to allPoints and event times to allTimes. Coordinates should be
- * constrained to display window bounds.
- */
+	/**
+	 * While user is dragging the mouse and mode == Mode.DRAW_EDIT_GRANULAR or DRAW_EDIT_SAMPLER,
+	 * accumulates new points to allPoints and event times to allTimes. Coordinates should be
+	 * constrained to display window bounds.
+	 *
+	 * @param x    x-coordinate
+	 * @param y    y-coordinate
+	 */
 public void addDrawingPoint(int x, int y) {
   if (allPoints == null || allTimes == null) return;
   // basic point thinning: skip duplicate successive points
@@ -285,6 +292,13 @@ public int clipToHeight(int y) {
   return min(max(0, y), height - 1);
 }
 
+	/**
+	 * Displaces a supplied point by a random Gaussian variable.
+	 * @param x              x-coordinate
+	 * @param y              y-coordinate
+	 * @param deviationPx    average deviation, in pixels
+	 * @return a displaced coordinate point as a PVector
+	 */
 public PVector jitterCoord(int x, int y, int deviationPx) {
   double variance = deviationPx * deviationPx;
   int jx = (int)Math.round(PixelAudio.gauss(0, variance));
@@ -294,6 +308,12 @@ public PVector jitterCoord(int x, int y, int deviationPx) {
   return new PVector(nx, ny);
 }
 
+	/**
+	 * Builds a {@code GestureSchedule} for a {@code PACurveMaker} brush and a snapshot of a {@code GestureGranularConfig}
+	 * @param brush    a {@code PACurveMaker} brush
+	 * @param snap     a snapshot of a {@code GestureGranularConfig}
+	 * @return a {@code GestureSchedule}
+	 */
 public GestureSchedule loadGestureSchedule(PACurveMaker brush, GestureGranularConfig snap) {
   if (brush == null || snap == null) return null;
   GestureSchedule schedule = scheduleBuilder.build(brush, snap, audioOut.sampleRate());
@@ -307,39 +327,39 @@ public GestureSchedule loadGestureSchedule(PACurveMaker brush, GestureGranularCo
  * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables.
  */
 public AudioBrush initCurveMakerAndAddBrush() {
-  if (gConfig == null) {
-    throw new IllegalStateException("gConfig is null: you probably need to initialize it.");
-  }
-  curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
-  curveMaker.setBrushColor(readyGranColor);
-  curveMaker.setActiveBrushColor(hoverGranColor);
-  curveMaker.setEpsilon(epsilon);                   // control resolution of reduced points
-  curveMaker.setTimeOffset(millis() - startTime);   // time between first point and last point
-  curveMaker.calculateDerivedPoints();              // initialize all the useful structures up front
-  AudioBrush brush = makeBrushFromCurveMaker();
-  PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
-  if (doPlayOnNewBrush && brush instanceof SamplerBrush) {
-    SamplerBrush sb = (SamplerBrush) brush;
-    scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
-  }
-  if (doPlayOnNewBrush && brush instanceof GranularBrush) {
-    GranularBrush gb = (GranularBrush) brush;
-    scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
-  }
-  // *****]]] NETWORKING [[[***** //
-  if (nd != null && isNetSendGestures) {
-    int x = clipToWidth(mouseX);
-    int y = clipToHeight(mouseY);
-    nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
-    nd.oscSendDrawPoints(curveMaker.getRdpPoints());
-    nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
-  }
-  return brush;
+	if (gConfig == null) {
+	    throw new IllegalStateException("gConfig is null: you probably need to initialize it.");
+	}
+	curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
+	curveMaker.setBrushColor(readyGranColor);
+	curveMaker.setActiveBrushColor(hoverGranColor);
+	curveMaker.setEpsilon(epsilon);                   // control resolution of reduced points
+	curveMaker.setTimeOffset(millis() - startTime);   // time between first point and last point
+	curveMaker.calculateDerivedPoints();              // initialize all the useful structures up front
+	AudioBrush brush = makeBrushFromCurveMaker();
+	PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
+	if (doPlayOnNewBrush && brush instanceof SamplerBrush) {
+		SamplerBrush sb = (SamplerBrush) brush;
+		scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
+	}
+	if (doPlayOnNewBrush && brush instanceof GranularBrush) {
+		GranularBrush gb = (GranularBrush) brush;
+		scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
+	}
+	// *****]]] NETWORKING [[[***** //
+	if (nd != null && isNetSendGestures) {
+		int x = clipToWidth(mouseX);
+		int y = clipToHeight(mouseY);
+		nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
+		nd.oscSendDrawPoints(curveMaker.getRdpPoints());
+		nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
+	}
+	return brush;
 }
 
-/**
- * @return
- */
+	/**
+	 * @return an AudioBrush generated from the current GUI configuration and {@code PACurveMaker} object {@code curveMaker}.
+	 */
 public AudioBrush makeBrushFromCurveMaker() {
   // reset some fields in gConfig
   GestureGranularConfig.Builder cfg = gConfig.copy();
@@ -349,6 +369,11 @@ public AudioBrush makeBrushFromCurveMaker() {
   return makeBrush(curveMaker, cfg);
 }
 
+	/**
+	 * @param curve     a PACurveMaker instance
+	 * @param config    a GestureGranularConfig.Builder
+	 * @return an AudioBrush generated from the supplied {@code GestureGranularConfig} and {@code PACurveMaker}
+	 */
 public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config) {
   if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
     return makeBrush(curve, config, GestureGranularConfigIO.InstrumentType.SAMPLER);
@@ -365,58 +390,108 @@ public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder co
  * @param instrumentType
  * @return
  */
-public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config,
-  GestureGranularConfigIO.InstrumentType instrumentType) {
-  // prepare
-  GestureGranularConfig.Builder cfg = config.copy();
-  PACurveMaker useCurve = curve;
-  // handle cues
-  CueResult r = applyPresets(cfg, curve);
-  cfg = r.cfg;
-  useCurve = r.curve;
-  // now make brushes
-  if (instrumentType == GestureGranularConfigIO.InstrumentType.SAMPLER) {
-    SamplerBrush sb = new SamplerBrush(useCurve, cfg);
-    samplerBrushes.add(sb);
-    setActiveBrush(sb, samplerBrushes.size() - 1);
-    if (this.isAutoOptimize) optimizeActiveBrush();
-    syncEnvelopeMenu(cfg.env);
-    if (isVerbose) println("----- new sampler brush created");
-    return sb;
-  } else {
-    cfg.curveSteps = Math.min(cfg.curveSteps, 32);
-    // Granular events use a stable envelope profile.
-    // We do not fit ADSR to gesture duration; onset shape matters more than total span.
-    cfg.env = granularEnv;
-    GranularBrush gb = new GranularBrush(useCurve, cfg);
-    granularBrushes.add(gb);
-    setActiveBrush(gb, granularBrushes.size() - 1);
-    if (this.isAutoOptimize) optimizeActiveBrush();
-    if (isVerbose) println("----- new granular brush created, framerate = "+ frameRate);
-    return gb;
-  }
-}
+	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config,
+	        GestureGranularConfigIO.InstrumentType instrumentType) {
+		// prepare
+        GestureGranularConfig.Builder cfg = config.copy();
+		PACurveMaker useCurve = curve;
+		// handle cues
+	    CueResult result = applyPerformancePresets(cfg, curve);
+		cfg = result.cfg;
+		useCurve = result.curve;
+		// now make brushes
+	    if (instrumentType == GestureGranularConfigIO.InstrumentType.SAMPLER) {
+	        SamplerBrush sb = new SamplerBrush(useCurve, cfg);
+	        samplerBrushes.add(sb);
+	        setActiveBrush(sb, samplerBrushes.size() - 1);
+	        if (this.isAutoOptimize) optimizeActiveBrush();
+	        syncEnvelopeMenu(cfg.env);
+	        if (isVerbose) println("----- new sampler brush created");
+	        return sb;
+	    } else {
+	        cfg.curveSteps = Math.min(cfg.curveSteps, 32);
+	        // Granular events use a stable envelope profile.
+	        // We do not fit ADSR to gesture duration; onset shape matters more than total span.
+	        cfg.env = granularEnv;
+	        GranularBrush gb = new GranularBrush(useCurve, cfg);
+	        granularBrushes.add(gb);
+	        setActiveBrush(gb, granularBrushes.size() - 1);
+	        if (this.isAutoOptimize) optimizeActiveBrush();
+	        if (isVerbose) println("----- new granular brush created, framerate = "+ frameRate);
+	        return gb;
+	    }
+	}
 
 //  public void applyCue(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
 //      if (dbCue != null) dbCue.apply(cfg, curve, this);
 //  }
 
-public CueResult applyPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
-  if (presetStack == null || presetStack.isEmpty()) {
-    return new CueResult(curve, cfg);
-  }
-  PACurveMaker curCurve = curve;
-  GestureGranularConfig.Builder curCfg = cfg;
-  for (PerformancePreset cue : presetStack) {
-    CueResult r = cue.apply(curCfg, curCurve, this);
-    if (r != null) {
-      if (r.cfg != null) curCfg = r.cfg;
-      if (r.curve != null) curCurve = r.curve;
-    }
-  }
-  return new CueResult(curCurve, curCfg);
+/**
+ * Apply performance presets from the stack associated with the current performance mode.
+ * @param cfg     audio and curve configuration
+ * @param curve   PACurveMaker instance for brush
+ * @return gesture and audio configuration determined by preset
+ */
+public CueResult applyPerformancePresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+	switch (pMode) {
+	case DEADBODYWORKFLOW:
+		return applyDBWFPresets(cfg, curve);
+	case ABSTRACT_JAILBREAK:
+		return applyAJPresets(cfg, curve);
+	default:
+		throw new IllegalStateException("Unhandled performance mode: " + pMode);
+	}
 }
 
+/**
+ * Apply a performance preset from aj_presetStack, for "Abstract Jailbreak" performance.
+ * @param cfg     audio and curve configuration
+ * @param curve   PACurveMaker instance for brush
+ * @return gesture and audio configuration determined by preset
+ */
+public CueResult applyAJPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+    if (aj_presetStack == null || aj_presetStack.isEmpty()) {
+        return new CueResult(curve, cfg);
+    }
+    PACurveMaker curCurve = curve;
+    GestureGranularConfig.Builder curCfg = cfg;
+    for (AJ_PerformancePreset cue : aj_presetStack) {
+        CueResult r = cue.apply(curCfg, curCurve, this);
+        if (r != null) {
+            if (r.cfg != null) curCfg = r.cfg;
+            if (r.curve != null) curCurve = r.curve;
+        }
+    }
+    return new CueResult(curCurve, curCfg);
+}
+
+/**
+ * Apply a performance preset from dbwf_presetStack, for "DEADBODYWORKFLOW" performance.
+ * @param cfg     audio and curve configuration
+ * @param curve   PACurveMaker instance for brush
+ * @return gesture and audio configuration determined by preset
+ */
+public CueResult applyDBWFPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+    if (dbwf_presetStack == null || dbwf_presetStack.isEmpty()) {
+        return new CueResult(curve, cfg);
+    }
+    PACurveMaker curCurve = curve;
+    GestureGranularConfig.Builder curCfg = cfg;
+    for (DBWF_PerformancePreset cue : dbwf_presetStack) {
+        CueResult r = cue.apply(curCfg, curCurve, this);
+        if (r != null) {
+            if (r.cfg != null) curCfg = r.cfg;
+            if (r.curve != null) curCurve = r.curve;
+        }
+    }
+    return new CueResult(curCurve, curCfg);
+}
+
+/**
+
+	 * @param b   an AudioBrush instance
+	 * @return    return true if brush aligns with current drawingMode
+	 */
 boolean isBrushInteractable(AudioBrush b) {
   switch (drawingMode) {
   case DRAW_EDIT_SAMPLER:
@@ -430,33 +505,41 @@ boolean isBrushInteractable(AudioBrush b) {
   }
 }
 
+	/**
+	 * Assigns a brush to be the current active brush, accessible for editing and other options.
+	 * @param brush   an AudioBrush to assign
+	 */
 void setActiveBrush(AudioBrush brush) {
   setActiveBrush(brush, hoverIndex);
 }
 
 void setActiveBrush(AudioBrush brush, int idx) {
-  if (brush == null) return;
-  activeBrush = brush;
-  gConfig = brush.cfg();
-  if (brush instanceof GranularBrush) {
-    GranularBrush gb = (GranularBrush) brush;
-    activeGranularBrush = gb;
-    activeGranularIndex = idx;
-    activeSamplerBrush = null;
-    activeSamplerIndex = -1;
-  } else if (brush instanceof SamplerBrush) {
-    SamplerBrush sb = (SamplerBrush) brush;
-    activeSamplerBrush = sb;
-    activeSamplerIndex = idx;
-    // samplerEnv = (gConfig.env != null) ? gConfig.env : defaultSampConfig.env;
-    samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Soft");
-    activeGranularBrush = null;
-    activeGranularIndex = -1;
-  }
-  recomputeUIBaselinesFromActiveBrush();
-  syncGuiFromConfig();
+	if (brush == null) return;
+	activeBrush = brush;
+	gConfig = brush.cfg();
+	if (brush instanceof GranularBrush) {
+		GranularBrush gb = (GranularBrush) brush;
+		activeGranularBrush = gb;
+		activeGranularIndex = idx;
+		activeSamplerBrush = null;
+		activeSamplerIndex = -1;
+	}
+	else if (brush instanceof SamplerBrush) {
+		SamplerBrush sb = (SamplerBrush) brush;
+		activeSamplerBrush = sb;
+		activeSamplerIndex = idx;
+		// samplerEnv = (gConfig.env != null) ? gConfig.env : defaultSampConfig.env;
+		samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Soft");
+		activeGranularBrush = null;
+		activeGranularIndex = -1;
+	}
+	recomputeUIBaselinesFromActiveBrush();
+	syncGuiFromConfig();
 }
 
+	/**
+	 * Caching for UI settings, may be superfluous.
+	 */
 void recomputeUIBaselinesFromActiveBrush() {
   if (activeBrush == null) {
     baselineCount = 0;
@@ -500,15 +583,22 @@ void recomputeUIBaselinesFromActiveBrush() {
 }
 
 
-/**
- * Iterates over brushShapesList and draws the brushstrokes stored in
- * each PACurveMaker in the list.
- */
+	/**
+	 * Draws brushes in available brush lists, calls {@code drawBrushes(List<? extends AudioBrush>, int, int, int)},
+	 * passing each list and colors for flagging its UI status.
+	 */
 public void drawBrushShapes() {
   drawBrushes(granularBrushes, readyGranColor, hoverGranColor, activeGranColor);
   drawBrushes(samplerBrushes, readySamplerColor, hoverSamplerColor, activeSamplerColor);
 }
 
+	/**
+	 * Iterates over a brush list and draws the brushstrokes stored in each PACurveMaker in the list.
+	 * @param brushes
+	 * @param readyColor
+	 * @param hoverColor
+	 * @param selectedColor
+	 */
 public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int hoverColor, int selectedColor) {
   if (brushes.isEmpty()) return;
   for (int i = 0; i < brushes.size(); i++) {
@@ -554,6 +644,11 @@ public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int 
   }
 }
 
+	/**
+	 * Provides the list of points for a brush in its assigned PathMode representation.
+	 * @param b   an AudioBrush
+	 * @return points in the path associated with the brush, as a list of PVector
+	 */
 ArrayList<PVector> getPathPoints(AudioBrush b) {
   PACurveMaker cm = b.curve();
   switch (b.cfg().pathMode) {
@@ -568,10 +663,11 @@ ArrayList<PVector> getPathPoints(AudioBrush b) {
   }
 }
 
-/**
- * @param b    an AudioBrush instance
- * @return     GestureSchedule for the current pathMode of the brush
- */
+	/**
+	 * Provides the times associated with a brush in its assigned PathMode representation.
+	 * @param b    an AudioBrush instance
+	 * @return     GestureSchedule for the current pathMode of the brush
+	 */
 public GestureSchedule getScheduleForBrush(AudioBrush b) {
   switch (b.cfg().pathMode) {
   case REDUCED_POINTS:
@@ -584,10 +680,12 @@ public GestureSchedule getScheduleForBrush(AudioBrush b) {
   }
 }
 
-/**
- * @param b    an AudioBrushLIte instance
- * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
- */
+	/**
+	 * Provides a GestureSchedule associated with a brush, applying the {@code boundsPolicy}
+	 * to bring all points in bounds.
+	 * @param b    an AudioBrushLIte instance
+	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
+	 */
 GestureSchedule getPlaybackScheduleForBrush(AudioBrush b) {
   GestureSchedule sched = getScheduleForBrush(b);
   return boundsPolicy.applySchedule(sched);
@@ -596,6 +694,10 @@ GestureSchedule getPlaybackScheduleForBrush(AudioBrush b) {
 
 // ------------- TRANSFORMS ------------- //
 
+	/**
+	 * Initializes a brush to apply a geometric transform.
+	 * @param b   an AudioBrush instance
+	 */
 void initBrushTransform(AudioBrush b) {
   if (b == null) return;
   GestureTransformState st = b.ensureTransform();
@@ -604,6 +706,10 @@ void initBrushTransform(AudioBrush b) {
   st.resetTransform();
 }
 
+	/**
+	 * Test code to apply a geometric transform to the active brush, a form of animation
+	 * when repeatedly applied over time.
+	 */
 void updateAnimatedBrushes() {
   if (!isBrushTransformTest) return;
   if (isBrushTransformFrozen) return;
