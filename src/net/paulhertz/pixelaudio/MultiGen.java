@@ -113,11 +113,13 @@ public class MultiGen extends PixelMapGen {
 		return MultiGen.description;
 	}
 
+	/**
+	 * @throws IllegalArgumentException if width and height of MultiGen are not both equal to or greater than 4. 
+	 */
 	@Override
-	public boolean validate(int width, int height) {
-		if (width >= 4  && height >= 4) return true;
-		System.out.println("Width and height of MultiGen must equal to or greater than 4.");
-		return false;
+	public boolean requireValidDimensions(int width, int height) {
+		if (!(width >= 4 && height >= 4)) throw new IllegalArgumentException("Width and height of MultiGen must equal to or greater than 4.");
+		return true;
 	}
 
 	/**

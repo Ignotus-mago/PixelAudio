@@ -167,7 +167,7 @@ public class PAGranularVoice {
     	this.released = false;
     	this.finished = false;
     	this.active = true;
-    	this.endTriggered = false;    // bug fix, 1 July 2026
+    	this.endTriggered = false;    // bug fix, 1 July 2026, release 0.9.8.5-beta. See issue #44.
 
     	// Reset block state
     	this.cursor = 0;

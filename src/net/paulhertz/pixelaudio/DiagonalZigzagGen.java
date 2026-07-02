@@ -61,13 +61,13 @@ public class DiagonalZigzagGen extends PixelMapGen {
 
 	/**
 	 * Always returns true for width and height greater than 1.
+	 * @throws IllegalArgumentException if width and height are not greater than 1.
 	 */
 	@Override
-	public boolean validate(int width, int height) {
+	public boolean requireValidDimensions(int width, int height) {
 		// any width and height > 2 will work
 		if (width < 1 || height < 1) {
-			System.out.println("width and height must be greater than 0.");
-			return false;
+			throw new IllegalArgumentException("DiagonalZigzagGen width and height must be greater than 1.");
 		}
 		return true;
 	}

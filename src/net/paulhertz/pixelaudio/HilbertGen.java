@@ -87,9 +87,23 @@ public class HilbertGen extends PixelMapGen {
 		return HilbertGen.description;
 	}
 
+	/**
+	 * @throws IllegalArgumentException if width or height are less than 2 or depth is less than 1.
+	 * @throws IllegalArgumentException if width or height are not equal.
+	 * @throws IllegalArgumentException if width or height are not equal powers of 2.
+	 */
 	@Override
-	public boolean validate(int width, int height) {
-		return HilbertGen.prevalidate(width, height);
+	public boolean requireValidDimensions(int width, int height) {
+		if (width < 2) {
+			throw new IllegalArgumentException("HilbertGen Error: 2 is the minimum value for width and height, 1 is the minimum value for depth.");
+		}
+		if (width != height) {
+			throw new IllegalArgumentException("HilbertGen Error: Width and height must be equal.");
+		}
+		if (! PixelMapGen.isPowerOfTwo(width)) {
+			throw new IllegalArgumentException("HilbertGen Error: Width and height must be equal to a power of 2.");
+		}
+		return true;
 	}
 	
 	/**

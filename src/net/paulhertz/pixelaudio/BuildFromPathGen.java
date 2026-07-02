@@ -60,20 +60,22 @@ public class BuildFromPathGen extends PixelMapGen {
 	}
 
 	@Override
-	public boolean validate(int width, int height) {
+	public boolean requireValidDimensions(int width, int height) {
 		if (width < 1 || height < 1) {
-			System.out.println("AssembleFromPathGen: width and height must be greater than 0.");
-			return false;
+			throw new IllegalArgumentException("BuildFromPathGen: width and height must be greater than 0.");
 		}
 		return true;
 	}
 
+	/**
+	 * @throws IllegalArgumentException if {@code this.pixelMap == null && this.coords == null}.
+	 * You need to call setPixelMap(int[] newPixelMap) or setCoords(ArrayList<int[]> newCoords) before calling generate().
+	 */
 	@Override
 	public int[] generate() {
 		if (this.pixelMap == null && this.coords == null) {
-			System.out.println("AssembleFromPathGen: You need to call setPixelMap(int[] newPixelMap) or "
+			throw new IllegalArgumentException("BuildFromPathGen: You need to call setPixelMap(int[] newPixelMap) or "
 					+ "setCoords(ArrayList<int[]> newCoords) before calling generate().");
-			return null;
 		}
 		if (this.pixelMap != null && this.coords == null) {
 			this.coords = new ArrayList<int[]>(pixelMap.length);

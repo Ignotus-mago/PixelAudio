@@ -54,7 +54,7 @@ public class RandomContinousGen extends PixelMapGen {
 	}
 
 	@Override
-	public boolean validate(int width, int height) {
+	public boolean requireValidDimensions(int width, int height) {
 		if (width < 2 || height < 2) {
 			System.out.println("Width and height for BoustropheGen must be greater than 1.");
 			return false;

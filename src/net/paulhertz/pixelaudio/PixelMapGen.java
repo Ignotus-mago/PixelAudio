@@ -178,7 +178,7 @@ public abstract class PixelMapGen {
 	 *                   the index maps {@code pixelMap} and {@code sampleMap} 
 	 */
 	public PixelMapGen(int width, int height, AffineTransformType type) {
-		if (!this.validate(width, height)) {
+		if (!this.requireValidDimensions(width, height)) {
 			throw new IllegalArgumentException("Error: Validation failed, probably due to a bad width or height argument");
 		}
 		this.w = width;
@@ -220,10 +220,10 @@ public abstract class PixelMapGen {
 	 * @return	true if the width and height parameters are valid for creating a mapping with this generator,
 	 * 			otherwise, false.
 	 */
-	public abstract boolean validate(int width, int height);
+	public abstract boolean requireValidDimensions(int width, int height);
 
 	/**
-	 * <p>Initialization method that sets {@code this.coords}, and then  {@code this.pixelMap} and
+	 * <p>Initialization method that first sets {@code this.coords}, and then sets {@code this.pixelMap} and
 	 * {@code this.sampleMap}: {@code this.coords} is a list of coordinate pairs representing the signal path,
 	 * the (x,y) pixel locations along a path that visits every pixel in a bitmap exactly once. Once you have created it,
 	 * you can call {@code setMapsFromCoords()} to set {@code this.pixelMap} and {@code this.sampleMap} automatically.</p> 
