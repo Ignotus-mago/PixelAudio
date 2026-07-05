@@ -1,0 +1,47 @@
+{
+  "waves": [
+    {
+      "phase": 0,
+      "color": {
+        "r": 159,
+        "b": 251,
+        "g": 190
+      },
+      "amp": 0.800000011920929,
+      "phaseInc": 0.01745329238474369,
+      "freq": 432,
+      "index": 0,
+      "cycles": 2,
+      "dc": 0
+    },
+    {
+      "phase": 0.25,
+      "color": {
+        "r": 209,
+        "b": 117,
+        "g": 178
+      },
+      "amp": 0.4000000059604645,
+      "phaseInc": 0.02617993950843811,
+      "freq": 864,
+      "index": 1,
+      "cycles": 3,
+      "dc": 0
+    }
+  ],
+  "blendFactor": 0.8999999761581421,
+  "comments": "--- Fundamental and first overtone, like a flute --- ",
+  "filename": "wavesynth_003.mp4",
+  "stop": 1440,
+  "dataFormat": 2,
+  "header": {
+    "PXAU": "WSYN",
+    "description": "WaveSynthEditor data created with the PixelAudio library by Paul Hertz.",
+    "PixelAudioURL": "https://github.com/Ignotus-mago/PixelAudio"
+  },
+  "scaleHisto": false,
+  "histoHigh": 254,
+  "histoLow": 1,
+  "steps": 720,
+  "gamma": 1
+}
