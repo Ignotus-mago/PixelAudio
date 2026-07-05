@@ -12,7 +12,11 @@
  * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.
  * Press 'j' or 'J' to save WaveSynth data to a JSON file.
  * Press 'f' to print the frameRate to the console.
- * Press 'r' to reset animation step to 0.
+ * Press 'r' to step through different settings of wavesynth.sampleRate.
+ * Press 'R' to reset WaveSynth sample rate to genWidth * genHeight.
+ * Press 'i' to reset animation step to 0.
+ * Press 'p' to toggle playback rate mode.
+ * Press 'S' to save WaveSynth audio to a WAV file.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'h' to show help and key commands.
  *
@@ -26,9 +30,22 @@ import processing.core.*;
 import processing.data.JSONArray;
 import processing.data.JSONObject;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
+
+import ddf.minim.AudioOutput;
+import ddf.minim.Minim;
+import ddf.minim.MultiChannelBuffer;
 import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.sampler.*;
+import net.paulhertz.pixelaudio.schedule.TimedLocation;
 
 import com.hamoid.*;
 
@@ -54,6 +71,36 @@ int animSteps = 240;      // number of steps in the animation
 int animStop = animSteps;    // The step at which the animation should stop (not used here)
 int step = 0;          // the current step in the animation
 String comments;        // a JSON field that provides information about the WaveSynth effects it produces
+
+// audio
+Minim minim;
+AudioOutput audioOut;
+MultiChannelBuffer audioBuffer;
+PASamplerInstrumentPool pool;
+ADSRParams samplerEnv;
+float sampleRate = 48000;
+float outputGain = -9;
+float samplerGain = 0.8f;
+float maxAmplitude = 1.0f;
+float attackTime = 0.005f;
+float decayTime = 0.05f;
+float sustainLevel = 0.8f;
+float releaseTime = 0.4f;
+int poolSize = 8;
+int samplerMaxVoices = 4;
+int noteDuration = 900;
+int samplelen;
+float[] audioSignal;
+int audioLength;
+boolean playAtAssignedFrequency = true;
+
+// audio event markers
+int sampleX;
+int sampleY;
+int samplePos;
+ArrayList<TimedLocation> timeLocsArray;
+int circleColor = color(233, 220, 199, 160);
+int wsIndex = 1;
 
 // file i/o
 String jsonFolder = "/JSON_data/";
@@ -89,6 +136,7 @@ public void setup() {
   wavesynth = new WaveSynth(mapper, wdList);
   initWaveSynth(wavesynth);
   synthImage = wavesynth.mapImage;
+  initAudio();
   showHelp();
 }
 
@@ -165,7 +213,7 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGamma(myGamma);
   synth.setScaleHisto(false);
   synth.setAnimSteps(this.animSteps);
-  synth.setSampleRate(genWidth * genWidth);
+  synth.setSampleRate(genWidth * genHeight);
   println("--- mapImage size = " + synth.mapImage.pixels.length);
   synth.prepareAnimation();
   synth.renderFrame(0);
@@ -175,6 +223,7 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
 public void draw() {
   image(synthImage, 0, 0, width, height);
   if (isAnimating) stepAnimation();
+  runTimeArray();
 }
 
 /**
@@ -232,10 +281,47 @@ public void keyPressed() {
   case 'f': // print the frameRate to the console
     println("--->> frame rate: "+ frameRate);
     break;
-  case 'r':
-  case 'R': // reset animation step to 0
+  case 'r': // step through different settings of wavesynth.sampleRate
+    float rate = wavesynth.getSampleRate();
+    if (rate == genWidth * genHeight) {
+      rate = rate / 4;
+    }
+    else if (rate == (genWidth * genHeight) / 4) {
+      rate = 48000;
+    }
+    else if (rate == 48000) {
+      rate = 44100;
+    }
+    else if (rate == 44100) {
+      rate = genWidth * genHeight;
+    }
+    wavesynth.setSampleRate(rate);
+    wavesynth.renderFrame(step);
+    renderSignal();
+    println("----- WaveSynth sample rate is set to "+ wavesynth.getSampleRate());
+    break;
+  case 'R': // set the internal sample rate of the WaveSynth to genWidth * genHeight
+    wavesynth.setSampleRate(genWidth * genHeight);
+    wavesynth.renderFrame(step);
+    renderSignal();
+    println("----- WaveSynth sample rate is set to "+ wavesynth.getSampleRate());
+    break;
+  case 'i':
+  case 'I': // reset animation step to 0
     step = 0;
     wavesynth.renderFrame(step);
+    renderSignal();
+    break;
+  case 'p':
+  case 'P': // toggle playback rate interpretation
+    playAtAssignedFrequency = !playAtAssignedFrequency;
+    renderSignal();
+    println(playAtAssignedFrequency
+      ? "----- playback uses WaveSynth sample rate: WaveData frequencies are preserved."
+      : "----- playback uses audio output sample rate: pitch changes with WaveSynth sample rate.");
+    break;
+  case 'S': // save WaveSynth audio to a WAV file
+    saveToAudio();
     break;
   case 'v':
   case 'V': // toggle video recording
@@ -262,7 +348,11 @@ public void showHelp() {
   println(" * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.");
   println(" * Press 'j' or 'J' to save WaveSynth data to a JSON file.");
   println(" * Press 'f' to print the frameRate to the console.");
-  println(" * Press 'r' to reset animation step to 0.");
+  println(" * Press 'r' to step through different settings of wavesynth.sampleRate.");
+  println(" * Press 'R' to reset WaveSynth sample rate to genWidth * genHeight.");
+  println(" * Press 'i' to reset animation step to 0.");
+  println(" * Press 'p' to toggle playback rate mode.");
+  println(" * Press 'S' to save WaveSynth audio to a WAV file.");
   println(" * Press 'v' or 'V' to toggle video recording.");
   println(" * Press 'h' to show help and key commands.");
 }
@@ -290,4 +380,153 @@ public void stepAnimation() {
     }
   }
   wavesynth.renderFrame(step);
+}
+
+public void initAudio() {
+  minim = new Minim(this);
+  audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
+  audioOut.setGain(outputGain);
+  audioBuffer = new MultiChannelBuffer(mapper.getSize(), 1);
+  samplerEnv = new ADSRParams(maxAmplitude, attackTime, decayTime, sustainLevel, releaseTime);
+  ensureSamplerReady();
+  renderSignal();
+  timeLocsArray = new ArrayList<TimedLocation>();
+}
+
+void ensureSamplerReady() {
+  if (pool != null) pool.setBuffer(audioBuffer, currentPlaybackBufferRate());
+  else pool = new PASamplerInstrumentPool(audioBuffer, currentPlaybackBufferRate(), poolSize, samplerMaxVoices, audioOut, samplerEnv);
+  pool.setGain(samplerGain);
+}
+
+float currentPlaybackBufferRate() {
+  return playAtAssignedFrequency ? wavesynth.getSampleRate() : audioOut.sampleRate();
+}
+
+void updateAudioChain(float[] sig, float bufferSampleRate) {
+  int targetSize = mapper.getSize();
+  if (targetSize <= 0) return;
+  float[] canonical = new float[targetSize];
+  if (sig != null) {
+    System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
+  }
+  audioSignal = canonical;
+  audioLength = targetSize;
+  if (audioBuffer == null || audioBuffer.getBufferSize() != targetSize) {
+    audioBuffer = new MultiChannelBuffer(targetSize, 1);
+  }
+  audioBuffer.setChannel(0, canonical);
+  if (pool != null) {
+    pool.setBuffer(audioBuffer, bufferSampleRate);
+  }
+}
+
+void updateAudioChain(float[] sig) {
+  updateAudioChain(sig, currentPlaybackBufferRate());
+}
+
+public void renderSignal() {
+  if (wavesynth == null || mapper == null) return;
+  float[] sig = wavesynth.renderAudioRaw(step);
+  sig = WaveSynth.normalize(sig, 0.9f);
+  updateAudioChain(sig);
+}
+
+public void mouseClicked() {
+  sampleX = screenToSampleX(mouseX);
+  sampleY = screenToSampleY(mouseY);
+  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
+  renderSignal();
+  float panning = map(mouseX, 0, width, -0.875f, 0.875f);
+  playSample(samplePos, calcSampleLen(), 0.8f, samplerEnv, 1.0f, panning);
+}
+
+public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
+  if (pool == null) return 0;
+  samplelen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+  int durationMS = (int)(samplelen / currentPlaybackBufferRate() * 1000);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
+  return samplelen;
+}
+
+public int calcSampleLen() {
+  float vary = 0;
+  while (vary <= 0) {
+    vary = (float) PixelAudio.gauss(1.0, 0.0625);
+  }
+  samplelen = (int)(abs((vary * noteDuration) * currentPlaybackBufferRate() / 1000.0f));
+  return samplelen;
+}
+
+public void runTimeArray() {
+  if (timeLocsArray == null) return;
+  int currentTime = millis();
+  timeLocsArray.forEach(tl -> {
+    tl.setStale(tl.eventTime() < currentTime);
+    if (!tl.isStale()) {
+      drawCircle(sampleToScreenX(tl.getX()), sampleToScreenY(tl.getY()));
+    }
+  });
+  timeLocsArray.removeIf(TimedLocation::isStale);
+}
+
+public void drawCircle(int x, int y) {
+  fill(circleColor);
+  noStroke();
+  circle(x, y, 36);
+}
+
+int screenToSampleX(int x) {
+  return min(max(0, (int) map(x, 0, width, 0, mapper.getWidth())), mapper.getWidth() - 1);
+}
+
+int screenToSampleY(int y) {
+  return min(max(0, (int) map(y, 0, height, 0, mapper.getHeight())), mapper.getHeight() - 1);
+}
+
+int sampleToScreenX(int x) {
+  return (int) map(x, 0, mapper.getWidth(), 0, width);
+}
+
+int sampleToScreenY(int y) {
+  return (int) map(y, 0, mapper.getHeight(), 0, height);
+}
+
+public void saveToAudio() {
+  float oldRate = wavesynth.getSampleRate();
+  try {
+    wavesynth.setSampleRate(sampleRate);
+    float[] exportSig = wavesynth.renderAudioRaw(step);
+    exportSig = WaveSynth.normalize(exportSig, 0.9f);
+    saveAudioToFile(exportSig, sampleRate, "wavesynth_"+ wsIndex +".wav");
+    wsIndex++;
+  }
+  catch (IOException e) {
+    println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());
+  }
+  catch (UnsupportedAudioFileException e) {
+    println("--->> The file format is unsupported "+ e.getMessage());
+  }
+  finally {
+    wavesynth.setSampleRate(oldRate);
+    wavesynth.renderFrame(step);
+    renderSignal();
+  }
+}
+
+public void saveAudioToFile(float[] samples, float sampleRate, String fileName)
+  throws IOException, UnsupportedAudioFileException {
+  byte[] audioBytes = new byte[samples.length * 2];
+  int index = 0;
+  for (float sample : samples) {
+    int intSample = (int) (sample * 32767);
+    audioBytes[index++] = (byte) (intSample & 0xFF);
+    audioBytes[index++] = (byte) ((intSample >> 8) & 0xFF);
+  }
+  ByteArrayInputStream byteStream = new ByteArrayInputStream(audioBytes);
+  AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+  AudioInputStream audioInputStream = new AudioInputStream(byteStream, format, samples.length);
+  File outFile = new File(fileName);
+  AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outFile);
+  println("----- saved WaveSynth data as an audio file: "+ outFile.getAbsolutePath());
 }
