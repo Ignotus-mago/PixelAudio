@@ -184,6 +184,7 @@ public class WaveSynthSequencer extends PApplet {
 		multigen = loadLoopGen(genWidth, genHeight);      // See the MultiGenDemo example for details on how MultiGen works
 		mapper = new PixelAudioMapper(multigen);	// initialize a PixelAudioMapper
 		float drone = sampleRate/1024.0f;			// a frequency that generates visual symmetries
+		println("-- drone frequency is "+ drone +" Hz");
 		wdList = buildWaveDataList(drone, 8, 10);	// generate a WaveData list for the WaveSynth
 		wavesynth = new WaveSynth(mapper, wdList);	// initialize a WaveSynth object
 		initWaveSynth(wavesynth);					// fill in some parameters of the WaveSynth
@@ -711,6 +712,7 @@ public class WaveSynthSequencer extends PApplet {
 		synth.setGamma(myGamma);
 		synth.setScaleHisto(false);
 		synth.setAnimSteps(this.animSteps);
+		// we use the audio sampling rate 
 		synth.setSampleRate(sampleRate);
 		// synth.setNoiseiness(0.5f);
 		// println("--- mapImage size = " + synth.mapImage.pixels.length);

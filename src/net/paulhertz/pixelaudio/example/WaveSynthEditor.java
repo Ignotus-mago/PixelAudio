@@ -22,7 +22,6 @@ import java.util.Collections;
 
 import processing.core.*;
 import processing.data.*;
-import processing.event.KeyEvent;
 // Mama's ever-lovin' blue-eyed baby library
 import net.paulhertz.pixelaudio.*;
 import net.paulhertz.pixelaudio.WaveData.WaveState;
@@ -468,7 +467,7 @@ public class WaveSynthEditor extends PApplet {
 		offsetList.add(new int[] { 0, genH });
 		return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 	}
-		
+
 	/**
 	 * @return an ArrayList of WaveData objects used to initialize a WaveSynth
 	 */
@@ -507,12 +506,14 @@ public class WaveSynthEditor extends PApplet {
 		synth.setGamma(1.0f);
 		synth.setScaleHisto(false);
 		synth.setAnimSteps(this.animSteps);
+		// we use a sampling rate that fits nicely with the dimensions of a HilbertGen
 		synth.setSampleRate(genWidth * genWidth);
 		// some other possible sampling rates
 		// synth.setSampleRate(genWidth / 2 * genWidth / 2);
 		// synth.setSampleRate(genWidth / 4 * genWidth / 4);
 		// synth.setSampleRate(gen.getWidth() * gen.getHeight());
 		// synth.setSampleRate(48000);
+		// synth.setSampleRate(this.sampleRate);
 		println("\n====================================================");
 		println("--- mapImage size = " + synth.mapImage.pixels.length);
 		println("--- WaveSynth sample rate = " + synth.getSampleRate());
@@ -1597,23 +1598,31 @@ public class WaveSynthEditor extends PApplet {
 	}
 	
 	void updateAudioChain(float[] sig) {
-		updateAudioChain(sig, audioOut.sampleRate());
+		// updateAudioChain(sig, audioOut.sampleRate());
+		updateAudioChain(sig, wavesynth.getSampleRate());
 	}
 
 	/**
 	 * Save audio buffer to a file called "wavesynth_(wsIndex).wav".
 	 */
 	public void saveToAudio() {
-		audioDirty = true;
-		refreshAudioIfDirty();
+		float oldRate = wavesynth.getSampleRate();
+		wavesynth.setSampleRate(this.sampleRate);
+		float[] exportSig = wavesynth.renderAudioRaw(step);
+		exportSig = WaveSynth.normalize(exportSig, 0.9f);
 		try {
-			saveAudioToFile(audioSignal, sampleRate, "wavesynth_"+ wsIndex +".wav");
+			saveAudioToFile(exportSig, sampleRate, "wavesynth_"+ wsIndex +".wav");
 		}
 		catch (IOException e) {
 			println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());
 		}
 		catch (UnsupportedAudioFileException e) {
 			println("--->> The file format is unsupported "+ e.getMessage());
+		}
+		finally {
+			wavesynth.setSampleRate(oldRate);
+			audioDirty = true;
+			refreshAudioIfDirty();
 		}
 	}
 

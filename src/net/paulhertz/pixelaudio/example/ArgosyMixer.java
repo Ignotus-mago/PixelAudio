@@ -1033,6 +1033,7 @@ public class ArgosyMixer extends PApplet {
 	/** 
 	 * hilbertLoop3x2() returns a looping fractal signal path consisting of 
 	 * 6 Hilbert gens, 3 wide by 2 tall, to fit a 3 * genW by 2 * genH image. 
+	 * This method is available as a static method of HilbertGen.
 	 * 
 	 * Note that genH must equal genW and both must be powers of 2. For the 
 	 * image size we're using in this example, genW = image width / 3 and 
@@ -1062,8 +1063,13 @@ public class ArgosyMixer extends PApplet {
 		return new MultiGen(width, height, offsetList, genList);
 	}
 	
+	/**
+	 * Generates a MultiGen with 6 * 4 HilbertGen components and a continuous signal path.
+	 * @param genW   width of a single PixelMapGen
+	 * @return a MultiGen with 6 * 4 HilbertGen components
+	 */
 	public MultiGen hilbertLoop6x4(int genW) {
-		// get a HIlbert curve generator
+		// call on Hilbert hilbertMultigenLoop generator
 		return HilbertGen.hilbertMultigenLoop(6, 4, genW);
 	}
 	
@@ -1071,9 +1077,9 @@ public class ArgosyMixer extends PApplet {
 	 * This method creates a MultiGen consisting of a mix of zigzag and Hilbert curves
 	 * in 6 columns and 4 rows arranged to provide a continuous loop.
 	 * 
-	 * @param genW
-	 * @param genH
-	 * @return
+	 * @param genW   width of a single PixelMapGen composing the MultiGen
+	 * @param genH   height of a single PixelMapGen composing the MultiGen
+	 * @return a MultiGen with a signal path composed of HilbertGens and DiagonalZigzagGens. 
 	 */
 	public MultiGen hilbertZigzagLoop6x4(int genW, int genH) {
 	    // list of PixelMapGens that create a path through an image using PixelAudioMapper
