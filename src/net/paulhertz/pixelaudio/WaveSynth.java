@@ -636,12 +636,15 @@ public class WaveSynth {
 	 *  <pre>{@code float val = (float) (Math.sin(wd.phaseTwoPi - frame * wd.phaseInc + wd.freq * freqShift * pos * mapInc) + woff) * wscale + wd.dc;}</pre>
 	 *  Instead of incrementing phase at each step, we subtract (frame * phase increment)
 	 *  from the initial phase: instead of adding, we subtract so that animation data files 
-	 *  give the same result in previous implementations. And yes, I have forgotten the original reasons for subtracting.
+	 *  give the same result in previous implementations. And yes, I have forgotten the 
+	 *  original reasons for subtracting.
 	 *  <p>
-	 *  We now let the WaveData object calculate the signal: this is much more flexible and barely affects the time.
-	 *  For the latest version (2026-06), the WaveData class has been refactored to have a prepareFrame() method that 
-	 *  calculates the current phase for the frame, and a nextValue() method that uses recurrence relations to calculate 
-	 *  the next sample value without trig functions. This should be much more efficient, especially for large numbers of waves.:
+	 *  We now let the WaveData object calculate the signal: this is much more flexible and
+	 *  barely affects the time. For the latest version (2026-06), the WaveData class has been
+	 *  refactored to have a prepareFrame() method that calculates the current phase for the
+	 *  frame, and a nextValue() method that uses recurrence relations to calculate the next
+	 *  sample value without trig functions. This should be much more efficient, especially for
+	 *  large numbers of waves.
 	 *  </p>
 	 * 
 	 * @param frame     number of the frame to render

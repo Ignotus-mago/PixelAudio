@@ -27,7 +27,8 @@ import java.util.Random;
  * because of bad input. Errors in LUT formation might throw an IllegalStateException. 
  * the validate() method then becomes private and called in the constructor. Where there's some 
  * nuance about arguments, a prevalidate() method, as in HilbertGen, might be useful. Also, 
- * we may want to rename validate to requireValidDimensions. 
+ * we may want to rename validate to requireValidDimensions. DONE
+ * TODO a clone() method...?
  */
 
 /**
