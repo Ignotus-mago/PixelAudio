@@ -134,6 +134,7 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  * For a wealth of methods to create MultiGens, see ArgosyMixer.
  * 
  */
+@Deprecated(since = "0.9.8.5-beta", forRemoval = true)
 public class BigWaveSynthAudio extends PApplet {
 	PixelAudio pixelaudio;			// our shiny new library
 	MultiGen multigen;				// a PixelMapGen that handles multiple gens

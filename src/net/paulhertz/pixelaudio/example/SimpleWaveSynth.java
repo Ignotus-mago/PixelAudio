@@ -27,7 +27,7 @@ import net.paulhertz.pixelaudio.*;
  * and javadoc.
  * </p>
  * <pre>
- * Press ' ' (spacebar) to toggle animation.
+ * Press '\t' (tab) to toggle animation.
  * Press '1' to set WaveSynth gamma to 1.0.
  * Press '2' to set WaveSynth gamma to 1.4.
  * Press '3' to set WaveSynth gamma to 1.8.
@@ -175,7 +175,7 @@ public class SimpleWaveSynth extends PApplet {
 
 	public void keyPressed() {
 		switch (key) {
-		case ' ': // toggle animation
+		case '\t': // toggle animation
 			isAnimating = !isAnimating;
 			break;
 		case '1': // set WaveSynth gamma to 1.0
@@ -266,7 +266,7 @@ public class SimpleWaveSynth extends PApplet {
 	}
 
 	public void showHelp() {
-		println(" * Press ' ' (spacebar) to toggle animation.");
+		println(" * Press '\t' (tab) to toggle animation.");
 		println(" * Press '1' to set WaveSynth gamma to 1.0.");
 		println(" * Press '2' to set WaveSynth gamma to 1.4.");
 		println(" * Press '3' to set WaveSynth gamma to 1.8.");

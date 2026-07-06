@@ -745,15 +745,10 @@ public class WaveSynthEditor extends PApplet {
 	    if (sampleX < 0 || sampleX >= mapImage.width ||
 	        sampleY < 0 || sampleY >= mapImage.height) return;
 	    samplePos = mapper.lookupSignalPosShifted(sampleX, sampleY, 0);
-	    //
-	    // For WindowBuffer version:
-	    // int backingPos = posInVisibleWindow + windowBuff.getIndex();
-	    //
-	    // use sampleX/sampleY for logical event storage
-	    // use backingPos for sampler/granular source position
-	    //
 	    refreshAudioIfDirty();
-		playSample(samplePos, calcSampleLen(), 0.9f, samplerEnv);
+		samplelen = playSample(samplePos, calcSampleLen(), 0.9f, samplerEnv);
+		int durationMS = (int)(samplelen/sampleRate * 1000);
+		timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));		
 	}
 	
     /**
@@ -1648,11 +1643,9 @@ public class WaveSynthEditor extends PApplet {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-	  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
-	  int durationMS = (int)(samplelen/sampleRate * 1000);
-	  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-	  // return the length of the sample
-	  return samplelen;
+		samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
+		// return the length of the sample
+		return samplelen;
 	}
 
 	/**
@@ -1664,11 +1657,7 @@ public class WaveSynthEditor extends PApplet {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude) {
-	  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
-	  int durationMS = (int)(samplelen/sampleRate * 1000);
-	  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-	  // return the length of the sample
-	  return samplelen;
+		return playSample(samplePos, samplelen, amplitude, samplerEnv);
 	}
 
 	public int calcSampleLen() {
