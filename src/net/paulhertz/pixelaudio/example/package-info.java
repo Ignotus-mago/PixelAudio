@@ -22,6 +22,9 @@
  * <li>{@link net.paulhertz.pixelaudio.example.MultiGenLookupTables MultiGenLookupTables} generates and displays lookup
  * tables for different curve generators, useful for understanding spatial mapping.</li>
  *
+ * <li>{@link net.paulhertz.pixelaudio.example.MultiGenZoo MultiGenZoo} shows a compact collection of MultiGen
+ * construction methods adapted from ArgosyMixer.</li>
+ *
  * <li>{@link net.paulhertz.pixelaudio.example.SimpleWaveSynth SimpleWaveSynth} demonstrates setting up a WaveSynth
  * as an animated visual display with gamma adjustment and multiple curve generators (Hilbert, Moore, DiagonalZigzag).</li>
  *
