@@ -1102,7 +1102,7 @@ public class PixelAudioMapper {
 	    if (sig == null) throw new IllegalArgumentException("sig array cannot be null");
 	    if (signalPos < 0 || signalPos >= sig.length) throw new IndexOutOfBoundsException("signalPos out of bounds");
 	    if (length < 0 || signalPos + length > sig.length) throw new IllegalArgumentException("Invalid length: out of bounds");
-		float[] samples = new float[mapSize];
+		float[] samples = new float[length];
 		for (int j = 0; j < length; j++) {
 			samples[j] = sig[signalPos + j];
 		}
@@ -1448,7 +1448,8 @@ public class PixelAudioMapper {
 		for (int dy = y; dy < y + h; dy++) {
 			for (int dx = x; dx < x + w; dx++) {
 				int rowStart = dy * this.width;
-				rgbPixels[j++] =  Math.round(rgbFloatToAudio(sig[this.imageToSignalLUT[rowStart + dx]]));
+				int v = audioToRGBChan(sig[this.imageToSignalLUT[rowStart + dx]]);
+				rgbPixels[j++] =  255 << 24 | v << 16 | v << 8 | v;
 			}
 		}
 		return rgbPixels;
@@ -1617,7 +1618,7 @@ public class PixelAudioMapper {
 		for (int dy = y; dy < y + h; dy++) {
 			int rowStart = dy * this.width;
 			for (int dx = x; dx < x + w; dx++) {
-				sig[this.imageToSignalLUT[rowStart + dx]] = rgbChanToAudio(stamp[j++]);
+				sig[this.imageToSignalLUT[rowStart + dx]] = rgbChanToAudio(PixelAudioMapper.getLuminosity(stamp[j++]));
 			}
 		}
 	}
@@ -2546,7 +2547,6 @@ public class PixelAudioMapper {
 	}
 	
 }
-
 
 
 

@@ -5,7 +5,7 @@ import java.util.Arrays;
 import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 
 /**
- * Lightweight unit tests for PixelAudioMapper.
+ * Lightweight unit tests for PixelAudioMapper core lookup and mapping behavior.
  *
  * Run from the project root with:
  * javac -cp "libs/*:src" -d test-bin test/net/paulhertz/pixelaudio/PixelAudioMapperTest.java
@@ -20,6 +20,7 @@ public final class PixelAudioMapperTest {
     };
 
     private int testsRun = 0;
+    private int testsFailed = 0;
 
     public static void main(String[] args) {
         PixelAudioMapperTest suite = new PixelAudioMapperTest();
@@ -27,15 +28,29 @@ public final class PixelAudioMapperTest {
     }
 
     private void run() {
-        testConstructorCopiesHilbertDimensionsAndLuts();
-        testLookupTablesAreInverses();
-        testReturnedLutsAreCopies();
-        testMapSignalToImageFollowsHilbertPath();
-        testMapImageToSignalFollowsHilbertPath();
-        testShiftedLookupsAreConsistentInverses();
-        testArrayLengthMismatchThrows();
+        runTest("constructor copies Hilbert dimensions and LUTs", this::testConstructorCopiesHilbertDimensionsAndLuts);
+        runTest("lookup tables are inverses", this::testLookupTablesAreInverses);
+        runTest("returned LUTs are copies", this::testReturnedLutsAreCopies);
+        runTest("mapSigToImg follows Hilbert path", this::testMapSignalToImageFollowsHilbertPath);
+        runTest("mapImgToSig follows Hilbert path", this::testMapImageToSignalFollowsHilbertPath);
+        runTest("shifted lookups are consistent inverses", this::testShiftedLookupsAreConsistentInverses);
+        runTest("array length mismatch throws", this::testArrayLengthMismatchThrows);
 
-        System.out.println("PixelAudioMapperTest: " + testsRun + " tests passed.");
+        if (testsFailed > 0) {
+            throw new AssertionError("PixelAudioMapperTest: " + testsFailed + " test groups failed, "
+                    + testsRun + " assertions passed.");
+        }
+        System.out.println("PixelAudioMapperTest: " + testsRun + " assertions passed.");
+    }
+
+    private void runTest(String name, Runnable test) {
+        try {
+            test.run();
+        }
+        catch (Throwable throwable) {
+            testsFailed++;
+            System.err.println("FAIL " + name + ": " + throwable.getMessage());
+        }
     }
 
     private void testConstructorCopiesHilbertDimensionsAndLuts() {
