@@ -1,14 +1,33 @@
 /**
- * SimpleWaveSynth demonstrates the basics of setting up a WaveSynth as an animated visual display.
+ * SimpleWaveSynth demonstrates the basics of setting up a WaveSynth as an animated
+ * visual display. We'll work with WaveSynth audio in other sketches.
  *
- * Press ' ' (spacebar) to toggle animation.
+ * A WaveSynth uses additive audio synthesis of sine wave "operators" to generate both an audio
+ * signal array and an RGB "color signal" array. The color signal serves as the pixel array of a
+ * PImage instance variable of the WaveSynth, WaveSynth.mapImage. In this sketch, the
+ * dimensions of the image are the same as the display image, this.mapImage.
+ *
+ * The appearance of a WaveSynth is governed by the PixelMapGen we use and by the internal
+ * sampling rate of the WaveSynth. By default, WaveSynth.sampleRate = WaveSynth.mapSize,
+ * the dimensions of the PImage the WaveSynth uses for its derived image. The sine wave
+ * operators are stored as WaveData objects. Each WaveData object has fields for
+ * frequency, amplitude, phase, number of cycles per animation sequence, etc. When the internal
+ * sampling rate of the WaveSynth equals the width * height of its mapImage, this means that one
+ * cycle of a 1.0 Hz sine wave will fill its signal array. Similarly, the color controlled by
+ * that WaveData object in the color array will change its brightness over one cycle of a sine
+ * wave. When a WaveSynth is animated, it sums the operator sine waves to create an audio signal
+ * and it sums the operator colors to create a color array that it writes to its mapImage,
+ * moving through the operator values frame by frame. For more details, see the WaveSynth code
+ * and javadoc.
+ *
+ * Press '\t' (tab) to toggle animation.
  * Press '1' to set WaveSynth gamma to 1.0.
  * Press '2' to set WaveSynth gamma to 1.4.
  * Press '3' to set WaveSynth gamma to 1.8.
  * Press '4' to set WaveSynth gamma to 0.5.
  * Press 'g' to swap in a different PixelMapGen for the WaveSynth.
  * Press 'f' to set the WaveSynth to output an image rotated 90 degrees clockwise.
- * Press 'r' to set the internal sample rate of the WaveSynth to 44100.
+ * Press 'r' to step though different values for the internal sample rate of the WaveSynth.
  * Press 'R' to set the internal sample rate of the WaveSynth to mapSize.
  * Press 't' to output the gamma table for the current gamma value myGamma.
  * Press 'i' to output display frame rate to the console.
@@ -23,6 +42,7 @@ PixelAudio pixelaudio;
 HilbertGen hGen;
 MooreGen mGen;
 DiagonalZigzagGen zGen;
+BoustropheGen bGenHz;
 PixelMapGen gen;
 PixelAudioMapper mapper;
 ArrayList<WaveData> wdList;
@@ -48,6 +68,7 @@ public void setup() {
   hGen = new HilbertGen(1024, 1024);
   mGen = new MooreGen(1024, 1024);
   zGen = new DiagonalZigzagGen(1024, 1024, AffineTransformType.FLIPY);
+  bGenHz = new BoustropheGen(height, width, PixelMapGen.r90);
   gen = hGen;
   mapper = new PixelAudioMapper(gen);
   wdList = initWaveDataList();
@@ -82,7 +103,8 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGamma(myGamma);
   synth.setScaleHisto(false);
   synth.setAnimSteps(this.animSteps);
-  println("--- mapImage size = " + synth.mapImage.pixels.length);
+  println("--- synth mapImage size = " + synth.mapImage.pixels.length);
+  println("--- synth sampleRate = " + synth.getSampleRate());
   synth.prepareAnimation();
   synth.renderFrame(0);
   return synth;
@@ -129,7 +151,7 @@ public void stepAnimation() {
 
 public void keyPressed() {
   switch (key) {
-  case ' ': // toggle animation
+  case '\t': // toggle animation
     isAnimating = !isAnimating;
     break;
   case '1': // set WaveSynth gamma to 1.0
@@ -167,11 +189,17 @@ public void keyPressed() {
       break;
     }
     if (gen == mGen) {
+      gen = bGenHz;
+      swapGen(gen);
+      println("----- using BoustropheGen generator: " + gen.describe());
+      break;
+    }
+    if (gen == bGenHz) {
       gen = zGen;
       swapGen(gen);
       println("----- using diagonal zigzag generator: " + gen.describe());
+      break;
     }
-    break;
   case 'f': // set the WaveSynth to output an image rotated 90 degrees clockwise
     // rotate gen 90 degrees clockwise
     gen.setTransformType(AffineTransformType.R270);
@@ -181,8 +209,21 @@ public void keyPressed() {
   case 'i': // output framerate info
     println(" ----- frame rate is "+ frameRate);
     break;
-  case 'r': // set the internal sample rate of the WaveSynth to 44100
-    wavesynth.setSampleRate(44100);
+  case 'r': // step through different settings of wavesynth.sampleRate
+    float rate = wavesynth.getSampleRate();
+    if (rate == wavesynth.getWidth() * wavesynth.getHeight()) {
+      rate = rate / 4;
+    }
+    else if (rate == (wavesynth.getWidth() * wavesynth.getHeight()) / 4) {
+      rate = 48000;
+    }
+    else if (rate == 48000) {
+      rate = 44100;
+    }
+    else if (rate == 44100) {
+      rate = wavesynth.getWidth() * wavesynth.getHeight();
+    }
+    wavesynth.setSampleRate(rate);
     println("----- WaveSynth sample rate is set to "+ wavesynth.getSampleRate());
     break;
   case 'R': // set the internal sample rate of the WaveSynth to mapSize
@@ -201,14 +242,14 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press ' ' (spacebar) to toggle animation.");
+  println(" * Press '\t' (tab) to toggle animation.");
   println(" * Press '1' to set WaveSynth gamma to 1.0.");
   println(" * Press '2' to set WaveSynth gamma to 1.4.");
   println(" * Press '3' to set WaveSynth gamma to 1.8.");
   println(" * Press '4' to set WaveSynth gamma to 0.5.");
   println(" * Press 'g' to swap in a different PixelMapGen for the WaveSynth.");
   println(" * Press 'f' to set the WaveSynth to output an image rotated 90 degrees clockwise.");
-  println(" * Press 'r' to set the internal sample rate of the WaveSynth to 44100.");
+  println(" * Press 'r' to step though different values for the internal sample rate of the WaveSynth.");
   println(" * Press 'R' to set the internal sample rate of the WaveSynth to mapSize.");
   println(" * Press 't' to output the gamma table for the current gamma value myGamma.");
   println(" * Press 'i' to output display frame rate to the console.");

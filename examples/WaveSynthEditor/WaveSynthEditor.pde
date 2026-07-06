@@ -10,13 +10,14 @@
  *
  * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
- * some of what you can do with the HilbertGen for making patterns with the WaveSynth. There
- * are lots of other possibilities. Patterns can be loaded from and saved to JSON files.
+ * some of what you can do with the HilbertGen, BoustropheGen and DiagonalZigzzgGen for
+ * making patterns with the WaveSynth. There are lots of other possibilities. Patterns
+ * can be loaded from and saved to JSON files.
  *
  * For audio signals, a WaveSynth behaves like an audio synthesizer that adds together
  * sine waves at different frequencies. The BigWaveSynthAudio and WaveSynthSequencer
  * example sketches also produce audio with a WaveSynth. This example provides a graphical
- * user interface for editing the colors and other properties of a WaveSynth.
+ * user interface for editing frequencies, colors and other properties of a WaveSynth.
  *
  * Click on the WaveSynth image or press spacebar to hear the audio version of the image. Note
  * that the appearance of the image is determined by the current sampling frequency, set in the
@@ -26,16 +27,17 @@
  * vary, as its frequency is governed by the sampling rate. If you want to save the audio to a
  * file, you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
  *
- * A WaveSynth is organized around attributes, such as gain (i.e. loudness or brightness)
- * and gamma (a sort of contrast setting), and data objects. The data objects include a
+ * A WaveSynth depends on global attributes, such as gain (i.e. loudness or brightness) and
+ * gamma (a sort of contrast setting), and on data objects. The data objects include
  * a bitmap, mapImage, that is a Processing PImage instance for the image representation
  * of the WaveSynth, a PixelAudioMapper that allows the WaveSynth to mediate between audio
- * data and image data using arrays for the audio signal and the image data ordered along the
- * PixelAudioMapper signal path, and an array of WaveData objects that define the individual
- * sine wave components of the WaveSynth.
+ * data and image data, and an array of WaveData objects that define the individual
+ * sine wave components of the WaveSynth. The PixelAudioMapper arranges colors controlled
+ * by the WaveSynth audio functions along the PixelAudioMapper signal path. The WaveData
+ * objects control individual "operators" (sine waves) that combine to make the image.
  *
- * NOTE: Changes to data fields in the Control Panel will not be applied immediately to the
- * WaveSynth image and audio. Click the Refresh button to force an update. Stepping to the
+ * NOTE: Changes to data fields in the Control Panel may not be applied immediately to the
+ * WaveSynth image and audio. Click the Refresh button or hit return to force an update. Stepping to the
  * next or previous operator will also refresh audio and image. If the display window is
  * active, stepping to another frame 'y', 'u', or 'e' key commands) will also force an update.
  *
@@ -625,15 +627,10 @@ void audioMouseClick(int mx, int my) {
   if (sampleX < 0 || sampleX >= mapImage.width ||
     sampleY < 0 || sampleY >= mapImage.height) return;
   samplePos = mapper.lookupSignalPosShifted(sampleX, sampleY, 0);
-  //
-  // For WindowBuffer version:
-  // int backingPos = posInVisibleWindow + windowBuff.getIndex();
-  //
-  // use sampleX/sampleY for logical event storage
-  // use backingPos for sampler/granular source position
-  //
   refreshAudioIfDirty();
-  playSample(samplePos, calcSampleLen(), 0.9f, samplerEnv);
+  samplelen = playSample(samplePos, calcSampleLen(), 0.9f, samplerEnv);
+  int durationMS = (int)(samplelen/sampleRate * 1000);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
 }
 
 /**

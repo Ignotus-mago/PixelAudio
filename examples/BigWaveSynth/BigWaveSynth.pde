@@ -1,12 +1,26 @@
 /**
- * BigWaveSynth shows how you can load a WaveSynth into the pixel array of a
+ * BigWaveSynth shows how to load a WaveSynth into the pixel array of a
  * MultiGen. MultiGen is a child class of PixelMapGen that allows you to use
- * multiple PixelMapGens to cover a single image with a single signal
- * path through them. This example also allows you to load JSON files in
- * this example's data folder to reconfigure the WaveSynth. Initially, we
- * call initWaveDataList() to create a WaveData array with two operators.
+ * multiple PixelMapGens to cover a single image with a single signal path
+ * through them.
  *
- * Press ' ' to turn animation on or off.
+ * Initially, we call initWaveDataList() to create a WaveData array with two
+ * operators for the WaveSynth, but you can open one of the JSON files in the
+ * "examples_data/JSON" folder to reconfigure the WaveSynth with a different
+ * pattern. The appearance of a WaveSynth image is governed by the PixelMapGen
+ * we use and by the internal sampling rate of the WaveSynth. You can change
+ * the PixelMapGen we're using with the 'g' key command. You can change the
+ * internal sample rate of the WaveSynth with the 'r' key command. The sound
+ * the WaveSynth can be determined by the internal sampling rate of the
+ * WaveSynth or by the audioOut.sampleRate(). Press the 'p' key to toggle the
+ * playback rate flag, playAtAssignedFrequency. When playAtAssignedFrequency is
+ * true, changing the internal rate of the WaveSynth will not change the audio
+ * frequency. When it's false, the pitch of the audio will change as the
+ * sampling rate changes. See the renderSignal() and updateAudioChain(sig)
+ * methods for details of how sample rates are used.
+ *
+ * Press (tab) to turn animation on or off.
+ * Press ' ' (spacebar) to play audio for the point the mouse is currently over
  * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.
  * Press 'o' to open a JSON file that defines a WaveSynth.
  * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.
@@ -22,7 +36,7 @@
  *
  * See WaveSynthEditor for the complete set of WaveSynth parameters
  * you can edit in a GUI, load and save to files, and output as video.
- * See also: BigWaveSynthAudio, WaveSynthSequencer.
+ * See also: SimpleWaveSynth, WaveSynthSequencer.
  *
  */
 
@@ -239,10 +253,13 @@ public void swapGen(PixelMapGen gen) {
 
 public void keyPressed() {
   switch (key) {
-  case ' ': // turn animation on or off
+  case '\t': // turn animation on or off
     isAnimating = !isAnimating;
     println(isAnimating ? "Starting animation at frame " + step + " of " + animSteps
       : "Stopping animation at frame " + step + " of " + animSteps);
+    break;
+  case ' ': // play audio at the current mouse position
+    audioMouseClick(mouseX, mouseY);
     break;
   case 'g': // swap in a new gen to replace the one in use for mapper
     if (gen == zGen) {
@@ -342,7 +359,8 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press ' ' to turn animation on or off.");
+  println(" * Press '\t' to turn animation on or off.");
+  println(" * Press ' ' to play audio for the point the mouse is currently over.");
   println(" * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.");
   println(" * Press 'o' to open a JSON file that defines a WaveSynth.");
   println(" * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.");
@@ -433,19 +451,28 @@ public void renderSignal() {
 }
 
 public void mouseClicked() {
-  sampleX = screenToSampleX(mouseX);
-  sampleY = screenToSampleY(mouseY);
-  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
+  audioMouseClick(mouseX, mouseY);
+}
+
+/**
+ * Bottleneck method for triggering an audio event at display/mouse coordinates (mx, my).
+ * @param mx
+ * @param my
+ */
+void audioMouseClick(int mx, int my) {
+  sampleX = screenToSampleX(mx);
+  sampleY = screenToSampleY(my);
+  samplePos = mapper.lookupSignalPosShifted(sampleX, sampleY, 0);
   renderSignal();
-  float panning = map(mouseX, 0, width, -0.875f, 0.875f);
-  playSample(samplePos, calcSampleLen(), 0.8f, samplerEnv, 1.0f, panning);
+  float pan = map(sampleX, 0, width - 1, -1.0f, 1.0f);
+  samplelen = playSample(samplePos, calcSampleLen(), 0.9f, samplerEnv, 1.0f, pan);
+  int durationMS = (int)(samplelen/sampleRate * 1000);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
 }
 
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
   if (pool == null) return 0;
   samplelen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-  int durationMS = (int)(samplelen / currentPlaybackBufferRate() * 1000);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   return samplelen;
 }
 

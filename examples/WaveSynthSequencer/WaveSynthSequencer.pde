@@ -1,4 +1,5 @@
 /**
+ * Example sketch shows how to create an audio synth sequencer with the WaveSynth.
  * An early example of audio/image sequencing with the WaveSynth color organ,
  * used for a performance at Experimental Sound Studio, Chicago.
  *
@@ -29,8 +30,8 @@
  * Press 'o' to open a JSON WaveSynth configuration file.
  * Press 'O' to reload the most recent JSON WaveSynth configuration file.
  * Press 'j' or 'J' to save current WaveSynth configuration to a JSON file.
- * Press 's' to save the display to an image file named wavesynth_<wsIndex>.png.
- * Press 'S' to save WaveSynth audio to an audio file named wavesynth_<wsIndex>.wave.
+ * Press 's' to save the display to an image file named wavesynth_(wsIndex).png.
+ * Press 'S' to save WaveSynth audio to an audio file named wavesynth_(wsIndex).wave.
  * Press 'f' to display the current frameRate.
  * Press 'w' to step the WaveSynth Sequencer without playing a musical note.
  * Press 'W' to step the WaveSynth Sequencer and play the corresponding a musical note.
@@ -39,7 +40,7 @@
  * Press 'c' to reset the image and sound to the opening state.
  * Press 'h' to show this help message in the console.
  *
- * See also: BigWaveSynth, BigWaveSynthAudio, WaveSynthEditor.
+ * See also: BigWaveSynth, BigWaveSynthAudio.
  *
  */
 

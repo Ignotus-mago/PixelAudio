@@ -75,23 +75,31 @@ void updateAudioChain(float[] sig, float bufferSampleRate) {
 }
 
 void updateAudioChain(float[] sig) {
-  updateAudioChain(sig, audioOut.sampleRate());
+  // updateAudioChain(sig, audioOut.sampleRate());
+  updateAudioChain(sig, wavesynth.getSampleRate());
 }
 
 /**
  * Save audio buffer to a file called "wavesynth_(wsIndex).wav".
  */
 public void saveToAudio() {
-  audioDirty = true;
-  refreshAudioIfDirty();
+  float oldRate = wavesynth.getSampleRate();
+  wavesynth.setSampleRate(this.sampleRate);
+  float[] exportSig = wavesynth.renderAudioRaw(step);
+  exportSig = WaveSynth.normalize(exportSig, 0.9f);
   try {
-    saveAudioToFile(audioSignal, sampleRate, "wavesynth_"+ wsIndex +".wav");
+    saveAudioToFile(exportSig, sampleRate, "wavesynth_"+ wsIndex +".wav");
   }
   catch (IOException e) {
     println("--->> There was an error outputting the audio file wavesynth.wav "+ e.getMessage());
   }
   catch (UnsupportedAudioFileException e) {
     println("--->> The file format is unsupported "+ e.getMessage());
+  }
+  finally {
+    wavesynth.setSampleRate(oldRate);
+    audioDirty = true;
+    refreshAudioIfDirty();
   }
 }
 
@@ -118,8 +126,6 @@ public void renderSignal() {
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
   samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
-  int durationMS = (int)(samplelen/sampleRate * 1000);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
   return samplelen;
 }
@@ -133,11 +139,7 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
-  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
-  int durationMS = (int)(samplelen/sampleRate * 1000);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
-  // return the length of the sample
-  return samplelen;
+  return playSample(samplePos, samplelen, amplitude, samplerEnv);
 }
 
 public int calcSampleLen() {

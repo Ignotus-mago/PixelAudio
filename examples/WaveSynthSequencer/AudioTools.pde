@@ -22,12 +22,14 @@ public void initAudio() {
 }
 
 // Called by mouseClicked(), this should be a bottleneck method for all playSample() calls.
-public void audioMouseClick(int sampleX, int sampleY) {
-  this.sampleX = sampleX;
-  this.sampleY = sampleY;
-  samplePos = mapper.lookupSignalPos(sampleX, sampleY);
+public void audioMouseClick(int mx, int my) {
+  this.sampleX = mx;
+  this.sampleY = my;
+  samplePos = mapper.lookupSignalPos(mx, my);
   checkBufferState(isBufferStale);
-  playSample(samplePos, calcSampleLen(), 0.6f, adsr);
+  samplelen = playSample(samplePos, calcSampleLen(), 0.6f, adsr);
+  int durationMS = (int)(samplelen/sampleRate * 1000);
+  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
 }
 
 /**
@@ -65,8 +67,6 @@ public void checkBufferState(boolean isStale) {
 	 */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
   samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
-  int durationMS = (int)(samplelen/sampleRate * 1000);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
   return samplelen;
 }
@@ -81,8 +81,6 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  */
 public int playSample(int samplePos, int samplelen, float amplitude) {
   samplelen = pool.playSample(samplePos, (int) samplelen, amplitude);
-  int durationMS = (int)(samplelen/sampleRate * 1000);
-  timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
   return samplelen;
 }
