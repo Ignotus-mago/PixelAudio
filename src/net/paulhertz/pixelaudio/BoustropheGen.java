@@ -55,11 +55,10 @@ public class BoustropheGen extends PixelMapGen {
 	 * @throws IllegalArgumentException if width and height are not greater than 1.
 	 */
 	@Override
-	public boolean requireValidDimensions(int width, int height) {
+	protected void requireValidDimensions(int width, int height) {
 		if (width < 2 || height < 2) {
 			throw new IllegalArgumentException("Width and height for BoustropheGen must be greater than 1.");
 		}
-		return true;
 	}
 
 	/**

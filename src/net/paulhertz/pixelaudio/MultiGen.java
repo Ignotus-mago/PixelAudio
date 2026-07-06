@@ -117,9 +117,8 @@ public class MultiGen extends PixelMapGen {
 	 * @throws IllegalArgumentException if width and height of MultiGen are not both equal to or greater than 4. 
 	 */
 	@Override
-	public boolean requireValidDimensions(int width, int height) {
+	protected void requireValidDimensions(int width, int height) {
 		if (!(width >= 4 && height >= 4)) throw new IllegalArgumentException("Width and height of MultiGen must equal to or greater than 4.");
-		return true;
 	}
 
 	/**

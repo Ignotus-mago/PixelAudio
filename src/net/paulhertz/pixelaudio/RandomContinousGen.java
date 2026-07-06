@@ -32,7 +32,7 @@ import java.util.Random;
  * a computationally complex problem, a random continuous path that visits every point in a grid. 
  * It went off in some interesting directions, but never really worked.
  */
-@Deprecated 
+@Deprecated (since = "0.9.8.0", forRemoval = true)
 public class RandomContinousGen extends PixelMapGen {
 	// an experiment, not ready for prime time
 	public final static String description = "RandomContinousGen starts at (0,0) makes random choices of the next pixels until it creates a continous path.";
@@ -54,12 +54,10 @@ public class RandomContinousGen extends PixelMapGen {
 	}
 
 	@Override
-	public boolean requireValidDimensions(int width, int height) {
+	protected void requireValidDimensions(int width, int height) {
 		if (width < 2 || height < 2) {
-			System.out.println("Width and height for BoustropheGen must be greater than 1.");
-			return false;
+			throw new IllegalArgumentException("Width and height for RandomContinousGen must be greater than 1.");
 		}
-		return true;
 	}
 
 	/**

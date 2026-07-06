@@ -60,11 +60,10 @@ public class BuildFromPathGen extends PixelMapGen {
 	}
 
 	@Override
-	public boolean requireValidDimensions(int width, int height) {
-		if (width < 1 || height < 1) {
-			throw new IllegalArgumentException("BuildFromPathGen: width and height must be greater than 0.");
+	protected void requireValidDimensions(int width, int height) {
+		if (width < 2 || height < 2) {
+			throw new IllegalArgumentException("BuildFromPathGen: width and height must be greater than 1.");
 		}
-		return true;
 	}
 
 	/**

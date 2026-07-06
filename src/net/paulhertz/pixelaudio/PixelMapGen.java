@@ -23,11 +23,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 /*
- * TODO all PixelMapGen classes should throw an IllegalArgumentException when validation fails
- * because of bad input. Errors in LUT formation might throw an IllegalStateException. 
- * the validate() method then becomes private and called in the constructor. Where there's some 
- * nuance about arguments, a prevalidate() method, as in HilbertGen, might be useful. Also, 
- * we may want to rename validate to requireValidDimensions. DONE
  * TODO a clone() method...?
  */
 
@@ -93,7 +88,7 @@ import java.util.Random;
  * To create your own PixelMapGen subclass, all you need to do is supply a list of 
  * non-repeating coordinate pairs that cover a grid where {@code width >= 2; height >= 2;}.
  * Of course, your subclass may impose other restrictions on width and height, or include
- * constructors that require additional arguments. Your {@code describe()} and {@code validate()} 
+ * constructors that require additional arguments. Your {@code describe()} and {@code requireValidDimensions()} 
  * methods can provide users with information on the requirements of your subclass.
  * PixelMapGen will generate the LUTs for signal and image path from the coordinates.
  * When you initialize a {@code PixelAudioMapper} with a {@code PixelMapGen},  
@@ -179,9 +174,7 @@ public abstract class PixelMapGen {
 	 *                   the index maps {@code pixelMap} and {@code sampleMap} 
 	 */
 	public PixelMapGen(int width, int height, AffineTransformType type) {
-		if (!this.requireValidDimensions(width, height)) {
-			throw new IllegalArgumentException("Error: Validation failed, probably due to a bad width or height argument");
-		}
+		this.requireValidDimensions(width, height);
 		this.w = width;
 		this.h = height;
 		this.size = h * w;
@@ -204,7 +197,7 @@ public abstract class PixelMapGen {
 
 
 	/* ---------------- USER MUST SUPPLY THESE METHODS ---------------- */
-	/* describe(), validate(width, height), generate() */
+	/* describe(), requireValidDimensions(width, height), generate() */
 
 
 	/**
@@ -215,13 +208,12 @@ public abstract class PixelMapGen {
 
 	
 	/**
-	 * Validates parameters to a constructor.
+	 * Validates width and height parameters to a constructor and throws an error 
+	 * if they are incompatible with a PixelMapGen subclass.
 	 * @param 	width
 	 * @param 	height
-	 * @return	true if the width and height parameters are valid for creating a mapping with this generator,
-	 * 			otherwise, false.
 	 */
-	public abstract boolean requireValidDimensions(int width, int height);
+	protected abstract void requireValidDimensions(int width, int height);
 
 	/**
 	 * <p>Initialization method that first sets {@code this.coords}, and then sets {@code this.pixelMap} and

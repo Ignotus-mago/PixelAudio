@@ -69,7 +69,7 @@ public class MooreGen extends PixelMapGen {
 	 * @throws IllegalArgumentException if width or height are not equal powers of 2.
 	 */
 	@Override
-	public boolean requireValidDimensions(int width, int height) {
+	protected void requireValidDimensions(int width, int height) {
 		if (width < 2) {
 			throw new IllegalArgumentException("MooreGen Error: 2 is the minimum value for width and height, 1 is the minimum value for depth.");
 		}
@@ -79,7 +79,6 @@ public class MooreGen extends PixelMapGen {
 		if (! PixelMapGen.isPowerOfTwo(width)) {
 			throw new IllegalArgumentException("MooreGen Error: Width and height must be equal to a power of 2.");
 		}
-		return true;
 	}
 
 	@Override
