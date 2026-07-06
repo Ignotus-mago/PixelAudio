@@ -31,9 +31,6 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
 
-// TODO add mix protection methods: level management, dynamic range control
-// soft limiting, overload protection, output conditioning, maybe DC removal
-
 /** 
  * Utility conversions for audio. 
  * 
@@ -202,6 +199,308 @@ public final class AudioUtility {
             sumSq += (double) v * v;
         }
         return (float) Math.sqrt(sumSq / signal.length);
+    }
+
+    /**
+     * Computes the peak absolute sample value across all channels in a Minim buffer.
+     *
+     * @param buffer   audio buffer
+     * @return maximum absolute sample value across all channels
+     */
+    public static float computePeak(MultiChannelBuffer buffer) {
+        if (buffer == null || buffer.getBufferSize() == 0 || buffer.getChannelCount() == 0) return 0f;
+        float peak = 0f;
+        for (int ch = 0; ch < buffer.getChannelCount(); ch++) {
+            float channelPeak = computePeak(buffer.getChannel(ch));
+            if (channelPeak > peak) peak = channelPeak;
+        }
+        return peak;
+    }
+
+    /**
+     * Computes RMS across all channels in a Minim buffer.
+     *
+     * @param buffer   audio buffer
+     * @return RMS value across all samples in all channels
+     */
+    public static float computeRMS(MultiChannelBuffer buffer) {
+        if (buffer == null || buffer.getBufferSize() == 0 || buffer.getChannelCount() == 0) return 0f;
+        double sumSq = 0.0;
+        long count = 0;
+        for (int ch = 0; ch < buffer.getChannelCount(); ch++) {
+            float[] signal = buffer.getChannel(ch);
+            for (float v : signal) {
+                sumSq += (double) v * v;
+            }
+            count += signal.length;
+        }
+        return count == 0 ? 0f : (float) Math.sqrt(sumSq / count);
+    }
+
+
+    // ------------- MIX PROTECTION -------------
+    
+    /*
+     * For a signal known to be wildly outside expected values, possibly with extreme peaks:
+     * 
+     * float peak = AudioUtility.computePeak(signal);
+	 * int overloads = AudioUtility.countOverloads(signal, 1.0f);
+	 * 
+	 * AudioUtility.removeDCOffset(signal);
+	 * AudioUtility.protectPeak(signal, 0.95f);
+	 * 
+	 * AudioUtility.normalizeRmsWithCeiling(signal, -12.0f, -1.0f);
+	 * AudioUtility.softLimitSoftsign(signal, 1.25f);
+	 * AudioUtility.hardClip(signal, AudioUtility.dbToLinear(-1.0f));
+	 * 
+     */
+
+    /**
+     * Computes the average sample value, useful for detecting DC offset.
+     *
+     * @param signal   audio samples
+     * @return mean sample value
+     */
+    public static float computeDCOffset(float[] signal) {
+        if (signal == null || signal.length == 0) return 0f;
+        double sum = 0.0;
+        for (float v : signal) {
+            sum += v;
+        }
+        return (float) (sum / signal.length);
+    }
+
+    /**
+     * Removes DC offset from a signal by subtracting its average sample value.
+     *
+     * @param signal   audio samples to modify in place
+     * @return offset that was subtracted
+     */
+    public static float removeDCOffset(float[] signal) {
+        if (signal == null || signal.length == 0) return 0f;
+        float offset = computeDCOffset(signal);
+        if (Math.abs(offset) < 1e-12f) return 0f;
+        for (int i = 0; i < signal.length; i++) {
+            signal[i] -= offset;
+        }
+        return offset;
+    }
+
+    /**
+     * Removes DC offset independently from each channel in a Minim buffer.
+     *
+     * @param buffer   audio buffer to modify in place
+     */
+    public static void removeDCOffset(MultiChannelBuffer buffer) {
+        if (buffer == null) return;
+        for (int ch = 0; ch < buffer.getChannelCount(); ch++) {
+            removeDCOffset(buffer.getChannel(ch));
+        }
+    }
+
+    /**
+     * Counts samples whose absolute value exceeds a ceiling.
+     *
+     * @param signal    audio samples
+     * @param ceiling   positive absolute ceiling
+     * @return number of samples above the ceiling
+     */
+    public static int countOverloads(float[] signal, float ceiling) {
+        if (signal == null || signal.length == 0) return 0;
+        float c = Math.abs(ceiling);
+        int count = 0;
+        for (float v : signal) {
+            if (Math.abs(v) > c) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Counts samples whose absolute value exceeds a ceiling across all channels.
+     *
+     * @param buffer    audio buffer
+     * @param ceiling   positive absolute ceiling
+     * @return number of samples above the ceiling
+     */
+    public static int countOverloads(MultiChannelBuffer buffer, float ceiling) {
+        if (buffer == null) return 0;
+        int count = 0;
+        for (int ch = 0; ch < buffer.getChannelCount(); ch++) {
+            count += countOverloads(buffer.getChannel(ch), ceiling);
+        }
+        return count;
+    }
+
+    /**
+     * Hard-clips a signal to an absolute ceiling.
+     *
+     * @param signal    audio samples to modify in place
+     * @param ceiling   positive absolute ceiling
+     * @return number of samples that were clipped
+     */
+    public static int hardClip(float[] signal, float ceiling) {
+        if (signal == null || signal.length == 0) return 0;
+        float c = Math.abs(ceiling);
+        int clipped = 0;
+        for (int i = 0; i < signal.length; i++) {
+            float v = signal[i];
+            if (v > c) {
+                signal[i] = c;
+                clipped++;
+            }
+            else if (v < -c) {
+                signal[i] = -c;
+                clipped++;
+            }
+        }
+        return clipped;
+    }
+
+    /**
+     * Hard-clips every channel in a Minim buffer to an absolute ceiling.
+     *
+     * @param buffer    audio buffer to modify in place
+     * @param ceiling   positive absolute ceiling
+     * @return number of samples that were clipped
+     */
+    public static int hardClip(MultiChannelBuffer buffer, float ceiling) {
+        if (buffer == null) return 0;
+        int clipped = 0;
+        for (int ch = 0; ch < buffer.getChannelCount(); ch++) {
+            clipped += hardClip(buffer.getChannel(ch), ceiling);
+        }
+        return clipped;
+    }
+
+    /**
+     * Softsign limiting curve used by the sampler mix protection path.
+     *
+     * @param sample   input sample
+     * @param drive    positive pre-limiter drive; values <= 0 return the input sample unchanged
+     * @return softly limited sample in the interval (-1, 1)
+     */
+    public static float softClipSoftsign(float sample, float drive) {
+        if (drive <= 0f) return sample;
+        float y = drive * sample;
+        return y / (1f + Math.abs(y));
+    }
+
+    /**
+     * Applies softsign limiting to a signal in place.
+     *
+     * @param signal   audio samples to modify in place
+     * @param drive    positive pre-limiter drive
+     */
+    public static void softLimitSoftsign(float[] signal, float drive) {
+        if (signal == null || signal.length == 0 || drive <= 0f) return;
+        for (int i = 0; i < signal.length; i++) {
+            signal[i] = softClipSoftsign(signal[i], drive);
+        }
+    }
+
+    /**
+     * Applies softsign limiting independently to every channel in a Minim buffer.
+     *
+     * @param buffer   audio buffer to modify in place
+     * @param drive    positive pre-limiter drive
+     */
+    public static void softLimitSoftsign(MultiChannelBuffer buffer, float drive) {
+        if (buffer == null) return;
+        for (int ch = 0; ch < buffer.getChannelCount(); ch++) {
+            softLimitSoftsign(buffer.getChannel(ch), drive);
+        }
+    }
+
+    /**
+     * Reduces gain only when a signal peak exceeds the requested ceiling.
+     *
+     * @param signal    audio samples to modify in place
+     * @param ceiling   positive absolute ceiling
+     * @return gain applied to the signal, or 1.0 when no reduction was needed
+     */
+    public static float protectPeak(float[] signal, float ceiling) {
+        if (signal == null || signal.length == 0) return 1f;
+        float c = Math.abs(ceiling);
+        if (c <= 0f) return 1f;
+        float peak = computePeak(signal);
+        if (peak <= c || peak < 1e-12f) return 1f;
+        float gain = c / peak;
+        for (int i = 0; i < signal.length; i++) {
+            signal[i] *= gain;
+        }
+        return gain;
+    }
+
+    /**
+     * Reduces gain across all channels only when a buffer peak exceeds the requested ceiling.
+     *
+     * @param buffer    audio buffer to modify in place
+     * @param ceiling   positive absolute ceiling
+     * @return gain applied to every channel, or 1.0 when no reduction was needed
+     */
+    public static float protectPeak(MultiChannelBuffer buffer, float ceiling) {
+        if (buffer == null || buffer.getBufferSize() == 0 || buffer.getChannelCount() == 0) return 1f;
+        float c = Math.abs(ceiling);
+        if (c <= 0f) return 1f;
+        float peak = computePeak(buffer);
+        if (peak <= c || peak < 1e-12f) return 1f;
+        float gain = c / peak;
+        for (int ch = 0; ch < buffer.getChannelCount(); ch++) {
+            float[] signal = buffer.getChannel(ch);
+            for (int i = 0; i < signal.length; i++) {
+                signal[i] *= gain;
+            }
+        }
+        return gain;
+    }
+
+    /**
+     * Applies a conservative output-conditioning chain: optional DC removal,
+     * peak protection, optional soft limiting, and a final hard safety clip.
+     * <p>
+     * Calling {@code AudioUtility.conditionForOutput(signal, -1.0f, 1.5f, true)}
+     * will 1) remove DC offset, 2) reduce overal gain if the peak is above -1 dBFS,
+     * 3) apply softsign limiting with moderate drive, 4) hard-clip as a final 
+     * safety guard.
+     * </p>
+     * @param signal       audio samples to modify in place
+     * @param ceilingDB    peak ceiling in dBFS
+     * @param drive        soft limiter drive; values <= 0 skip soft limiting
+     * @param removeDC     true to remove DC offset before limiting
+     * @return gain applied during peak protection
+     */
+    public static float conditionForOutput(float[] signal, float ceilingDB, float drive, boolean removeDC) {
+        if (signal == null || signal.length == 0) return 1f;
+        float ceiling = dbToLinear(ceilingDB);
+        if (removeDC) removeDCOffset(signal);
+        float gain = protectPeak(signal, ceiling);
+        if (drive > 0f) softLimitSoftsign(signal, drive);
+        hardClip(signal, ceiling);
+        return gain;
+    }
+
+    /**
+     * Applies a conservative output-conditioning chain to every channel in a Minim buffer.
+     * <p>
+     * Calling {@code AudioUtility.conditionForOutput(buffer, -1.0f, 1.5f, true)}
+     * will 1) remove DC offset, 2) reduce overal gain if the peak is above -1 dBFS,
+     * 3) apply softsign limiting with moderate drive, 4) hard-clip as a final 
+     * safety guard.
+     * </p>
+     * @param buffer       audio buffer to modify in place
+     * @param ceilingDB    peak ceiling in dBFS
+     * @param drive        soft limiter drive; values <= 0 skip soft limiting
+     * @param removeDC     true to remove DC offset before limiting
+     * @return gain applied during peak protection
+     */
+    public static float conditionForOutput(MultiChannelBuffer buffer, float ceilingDB, float drive, boolean removeDC) {
+        if (buffer == null || buffer.getBufferSize() == 0 || buffer.getChannelCount() == 0) return 1f;
+        float ceiling = dbToLinear(ceilingDB);
+        if (removeDC) removeDCOffset(buffer);
+        float gain = protectPeak(buffer, ceiling);
+        if (drive > 0f) softLimitSoftsign(buffer, drive);
+        hardClip(buffer, ceiling);
+        return gain;
     }
     
     
