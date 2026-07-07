@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
+import net.paulhertz.pixelaudio.schedule.AudioSampleClock;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 /**
@@ -33,12 +34,6 @@ import net.paulhertz.pixelaudio.schedule.AudioUtility;
  *     is a useful consideration for the future. 
  *     DONE We are sticking with MultiChannelBuffer but may provide a future abstraction that 
  *     works with float[] arrays and provide the desired sample format for each synth. 
- * </p><p>
- * TODO sample accurate start for sampler events to unify timing API with PAGranularInstrument.
- * Currently sampler play() is block-time accurate only.
- * In the future, add sample-time scheduling (startAtSampleTime / startAfterDelaySamples)
- * using AudioScheduler so sampler and granular share a transport model. This should go into
- * a small demo sketch, SampleAccurateTriggers. 
  * </p>
  *
  * <p>Supports:</p>
@@ -53,7 +48,7 @@ import net.paulhertz.pixelaudio.schedule.AudioUtility;
  *
  * Implements both PAPlayable and PASamplerPlayable for full compatibility.
  */
-public class PASamplerInstrument implements PASamplerPlayable {
+public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock {
 
 	// ------------------------------------------------------------------------
 	// Core fields
@@ -184,6 +179,67 @@ public class PASamplerInstrument implements PASamplerPlayable {
 		float finalPan = clampPan(globalPan + pan);
 		ADSRParams useEnv = (env != null) ? env : defaultEnv;
 		return sampler.play(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan);
+	}
+
+	// ------------------------------------------------------------------------
+	// Scheduled Playback API
+	// ------------------------------------------------------------------------
+
+	/**
+	 * Schedules playback of a buffer region at an absolute sample time on this sampler's clock.
+	 *
+	 * @param samplePos    buffer index to start playback
+	 * @param sampleLen    requested duration in samples
+	 * @param amplitude    gain multiplier
+	 * @param env          ADSR envelope parameters, or null to use the default
+	 * @param pitch        pitch or playback-rate multiplier
+	 * @param pan          stereo pan
+	 * @param startSample  absolute sample index at which playback should start
+	 */
+	public synchronized void startAtSampleTime(int samplePos, int sampleLen, float amplitude,
+			ADSRParams env, float pitch, float pan, long startSample) {
+		if (sampler == null || bufferSize <= 0) return;
+		float scaledPitch = pitch * globalPitch * sampleRateRatio;
+		float finalPan = clampPan(globalPan + pan);
+		ADSRParams useEnv = (env != null) ? env : defaultEnv;
+		sampler.startAtSampleTime(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan, startSample);
+	}
+
+	/**
+	 * Schedules playback after a delay in samples relative to this sampler's current clock.
+	 *
+	 * @param samplePos      buffer index to start playback
+	 * @param sampleLen      requested duration in samples
+	 * @param amplitude      gain multiplier
+	 * @param env            ADSR envelope parameters, or null to use the default
+	 * @param pitch          pitch or playback-rate multiplier
+	 * @param pan            stereo pan
+	 * @param delaySamples   delay from the current sample time
+	 */
+	public synchronized void startAfterDelaySamples(int samplePos, int sampleLen, float amplitude,
+			ADSRParams env, float pitch, float pan, long delaySamples) {
+		if (sampler == null || bufferSize <= 0) return;
+		float scaledPitch = pitch * globalPitch * sampleRateRatio;
+		float finalPan = clampPan(globalPan + pan);
+		ADSRParams useEnv = (env != null) ? env : defaultEnv;
+		sampler.startAfterDelaySamples(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan, delaySamples);
+	}
+
+	/** Schedules playback at the current sampler clock. */
+	public synchronized void startNow(int samplePos, int sampleLen, float amplitude,
+			ADSRParams env, float pitch, float pan) {
+		startAfterDelaySamples(samplePos, sampleLen, amplitude, env, pitch, pan, 0L);
+	}
+
+	/** @return this sampler's current audio-thread sample clock */
+	@Override
+	public synchronized long getCurrentSampleTime() {
+		return (sampler != null) ? sampler.getCurrentSampleTime() : 0L;
+	}
+
+	/** Clears scheduled starts that have not fired yet. */
+	public synchronized void clearScheduled() {
+		if (sampler != null) sampler.clearScheduled();
 	}
 
 	/** Stop playback (stop all active voices). */
@@ -549,6 +605,9 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	public float getBufferSampleRate() { return bufferSampleRate; }
 	/** @return output sample rate in Hz */
 	public float getOutputSampleRate() { return outputSampleRate; }
+	/** @return sample rate used by this instrument's audio clock */
+	@Override
+	public float getSampleRate() { return outputSampleRate; }
 	/** @return buffer-to-output sample-rate ratio */
 	public float getSampleRateRatio() { return sampleRateRatio; }
 	
@@ -564,7 +623,7 @@ public class PASamplerInstrument implements PASamplerPlayable {
 	            ? bufferSampleRate / outputSampleRate
 	            : 1f;
 	        // propagate to sampler if relevant
-	        if (sampler != null) sampler.setSampleRate(newRate);
+	        if (sampler != null) sampler.setPlaybackSampleRate(newRate);
 	    }
 	}
 

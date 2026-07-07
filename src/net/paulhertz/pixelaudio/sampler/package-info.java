@@ -12,6 +12,21 @@
  * ADSR envelope support, pitch and pan controls, gain staging, and event objects used by
  * gesture-driven sampler workflows. It is built on the Minim library for Processing.</p>
  *
+ * <p>Immediate playback and scheduled playback both follow the same hierarchy. Calls made
+ * on {@code PASamplerInstrumentPoolMulti}, {@code PASamplerInstrumentPool}, or
+ * {@code PASamplerInstrument} are forwarded to the level below, ending in
+ * {@link net.paulhertz.pixelaudio.sampler.PASharedBufferSampler PASharedBufferSampler},
+ * where voices are allocated and mixed. The scheduled playback API mirrors the granular
+ * synthesis API with {@code startAtSampleTime(...)} and {@code startAfterDelaySamples(...)}
+ * methods. These methods schedule against the sampler's local audio-thread sample clock,
+ * exposed by {@code getCurrentSampleTime()}.</p>
+ *
+ * <p>For cross-engine alignment, such as playing sampler and granular instruments from the
+ * same generated beat brush, application code should choose a shared transport clock and
+ * convert gesture or beat times to absolute sample times before calling either synth. The
+ * sampler-local clock is the timing mechanism for one sampler backend; it is not, by itself,
+ * a global application transport.</p>
+ *
  * <p><b>Sampler playback processing chain</b></p>
  * <ol>
  *   <li>{@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPoolMulti PASamplerInstrumentPoolMulti}
@@ -51,8 +66,8 @@
  *   <li>{@link net.paulhertz.pixelaudio.sampler.PAPlayable PAPlayable}
  *   defines the minimal playable audio API used by sampler instruments and pools.</li>
  *   <li>{@link net.paulhertz.pixelaudio.sampler.PASampler PASampler}
- *   defines the backend sampler contract, including play, looping, stop, sample-rate, and
- *   buffer update methods.</li>
+ *   defines the backend sampler contract, including immediate playback, scheduled playback,
+ *   looping, stop, source-buffer playback sample rate, and buffer update methods.</li>
  *   <li>{@link net.paulhertz.pixelaudio.sampler.PASamplerPlayable PASamplerPlayable}
  *   extends PAPlayable for sample-based playback with buffer position, duration, gain, pitch,
  *   pan, and envelope parameters.</li>

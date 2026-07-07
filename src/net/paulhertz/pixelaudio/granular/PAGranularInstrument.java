@@ -22,6 +22,7 @@ import ddf.minim.AudioOutput;
 import ddf.minim.analysis.WindowFunction;
 
 import net.paulhertz.pixelaudio.sampler.ADSRParams;
+import net.paulhertz.pixelaudio.schedule.AudioSampleClock;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 /**
@@ -44,7 +45,7 @@ import net.paulhertz.pixelaudio.schedule.AudioUtility;
  * @see PAGranularVoice
  * @see PASource
  */
-public class PAGranularInstrument {
+public class PAGranularInstrument implements AudioSampleClock {
 
     // ------------------------------------------------------------------------
     // Core components
@@ -284,12 +285,18 @@ public class PAGranularInstrument {
 
     public float getGlobalGainDb() { return AudioUtility.linearToDb(globalGain); }
     
+    @Override
     public float getSampleRate() { return this.out.sampleRate(); }
 
     public PAGranularSampler getSampler() { return sampler; }
     
-    public long getSampleCursor() {
+    @Override
+    public long getCurrentSampleTime() {
         return sampler.getCurrentSampleTime();
+    }
+
+    public long getSampleCursor() {
+        return getCurrentSampleTime();
     }
 
     // ------------------------------------------------------------------------

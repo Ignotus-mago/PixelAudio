@@ -20,6 +20,7 @@ package net.paulhertz.pixelaudio.sampler;
 
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
+import net.paulhertz.pixelaudio.schedule.AudioSampleClock;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -43,7 +44,7 @@ import java.util.Map;
  * <br>
  * TODO example sketches.
  */
-public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayable {
+public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayable, AudioSampleClock {
 	private final AudioOutput out;
 	private final Map<String, PASamplerInstrumentPool> pools = new LinkedHashMap<>();
 	private String activeKey = null; // default route
@@ -175,6 +176,73 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayab
 	public int play(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch, float pan) {
 		PASamplerInstrumentPool p = current();
 		return (p != null) ? p.play(samplePos, sampleLen, amplitude, env, pitch, pan) : 0;
+	}
+
+    // ------------------------------------------------------------------------
+    // Scheduled Playback API
+    // ------------------------------------------------------------------------
+
+	/**
+	 * Schedules playback on the active pool at an absolute sample time.
+	 *
+	 * @param samplePos    buffer index to start playback
+	 * @param sampleLen    requested duration in samples
+	 * @param amplitude    gain multiplier
+	 * @param env          ADSR envelope parameters, or null to use the default
+	 * @param pitch        pitch or playback-rate multiplier
+	 * @param pan          stereo pan
+	 * @param startSample  absolute sample index at which playback should start
+	 */
+	public void startAtSampleTime(int samplePos, int sampleLen, float amplitude,
+			ADSRParams env, float pitch, float pan, long startSample) {
+		PASamplerInstrumentPool p = current();
+		if (p != null) p.startAtSampleTime(samplePos, sampleLen, amplitude, env, pitch, pan, startSample);
+	}
+
+	/**
+	 * Schedules playback on the active pool after a delay in samples.
+	 *
+	 * @param samplePos      buffer index to start playback
+	 * @param sampleLen      requested duration in samples
+	 * @param amplitude      gain multiplier
+	 * @param env            ADSR envelope parameters, or null to use the default
+	 * @param pitch          pitch or playback-rate multiplier
+	 * @param pan            stereo pan
+	 * @param delaySamples   delay from the current sample time
+	 */
+	public void startAfterDelaySamples(int samplePos, int sampleLen, float amplitude,
+			ADSRParams env, float pitch, float pan, long delaySamples) {
+		PASamplerInstrumentPool p = current();
+		if (p != null) p.startAfterDelaySamples(samplePos, sampleLen, amplitude, env, pitch, pan, delaySamples);
+	}
+
+	/** Schedules playback on the active pool at its current sampler clock. */
+	public void startNow(int samplePos, int sampleLen, float amplitude,
+			ADSRParams env, float pitch, float pan) {
+		startAfterDelaySamples(samplePos, sampleLen, amplitude, env, pitch, pan, 0L);
+	}
+
+	/**
+	 * Returns a representative sample clock from the active pool.
+	 *
+	 * @return current sample clock, or 0 if no active pool is available
+	 */
+	@Override
+	public long getCurrentSampleTime() {
+		PASamplerInstrumentPool p = current();
+		return (p != null) ? p.getCurrentSampleTime() : 0L;
+	}
+
+	/** @return sample rate used by the active pool's representative audio clock */
+	@Override
+	public float getSampleRate() {
+		PASamplerInstrumentPool p = current();
+		return (p != null) ? p.getSampleRate() : (out != null ? out.sampleRate() : 0f);
+	}
+
+	/** Clears scheduled starts across all sub-pools. */
+	public void clearScheduled() {
+		for (PASamplerInstrumentPool p : pools.values()) p.clearScheduled();
 	}
 	
 	// @Override

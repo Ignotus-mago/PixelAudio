@@ -20,6 +20,7 @@ package net.paulhertz.pixelaudio.sampler;
 
 import ddf.minim.AudioOutput;
 import ddf.minim.MultiChannelBuffer;
+import net.paulhertz.pixelaudio.schedule.AudioSampleClock;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 
 import java.util.*;
@@ -42,7 +43,7 @@ import java.util.*;
  *  <li>Thread-safe access</li>
  * </ul>
  */
-public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
+public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, AudioSampleClock {
     // ------------------------------------------------------------------------
     // Core state
     // ------------------------------------------------------------------------
@@ -238,6 +239,73 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
         PASamplerInstrument inst = getAvailableInstrument();
         if (inst == null) return 0;
         return inst.play(samplePos, sampleLen, amplitude, env, pitch, pan);
+    }
+
+    // ------------------------------------------------------------------------
+    // Scheduled Playback API
+    // ------------------------------------------------------------------------
+
+    /**
+     * Schedules playback on an available pooled instrument at an absolute sample time.
+     *
+     * @param samplePos    buffer index to start playback
+     * @param sampleLen    requested duration in samples
+     * @param amplitude    gain multiplier
+     * @param env          ADSR envelope parameters, or null to use the default
+     * @param pitch        pitch or playback-rate multiplier
+     * @param pan          stereo pan
+     * @param startSample  absolute sample index at which playback should start
+     */
+    public synchronized void startAtSampleTime(int samplePos, int sampleLen, float amplitude,
+            ADSRParams env, float pitch, float pan, long startSample) {
+        PASamplerInstrument inst = getAvailableInstrument();
+        if (inst == null) return;
+        inst.startAtSampleTime(samplePos, sampleLen, amplitude, env, pitch, pan, startSample);
+    }
+
+    /**
+     * Schedules playback after a delay in samples relative to the selected instrument clock.
+     *
+     * @param samplePos      buffer index to start playback
+     * @param sampleLen      requested duration in samples
+     * @param amplitude      gain multiplier
+     * @param env            ADSR envelope parameters, or null to use the default
+     * @param pitch          pitch or playback-rate multiplier
+     * @param pan            stereo pan
+     * @param delaySamples   delay from the current sample time
+     */
+    public synchronized void startAfterDelaySamples(int samplePos, int sampleLen, float amplitude,
+            ADSRParams env, float pitch, float pan, long delaySamples) {
+        PASamplerInstrument inst = getAvailableInstrument();
+        if (inst == null) return;
+        inst.startAfterDelaySamples(samplePos, sampleLen, amplitude, env, pitch, pan, delaySamples);
+    }
+
+    /** Schedules playback at the selected instrument's current sampler clock. */
+    public synchronized void startNow(int samplePos, int sampleLen, float amplitude,
+            ADSRParams env, float pitch, float pan) {
+        startAfterDelaySamples(samplePos, sampleLen, amplitude, env, pitch, pan, 0L);
+    }
+
+    /**
+     * Returns a representative sample clock from the first pooled instrument.
+     *
+     * <p>All instruments are patched to the same output when the pool is constructed, but
+     * callers that need cross-engine alignment should still choose one transport clock and
+     * pass absolute sample times to every instrument.</p>
+     *
+     * @return current sample clock, or 0 if the pool is empty
+     */
+    @Override
+    public synchronized long getCurrentSampleTime() {
+        return pool.isEmpty() ? 0L : pool.get(0).getCurrentSampleTime();
+    }
+
+    /** Clears scheduled starts across all pooled instruments. */
+    public synchronized void clearScheduled() {
+        for (PASamplerInstrument inst : pool) {
+            if (inst != null) inst.clearScheduled();
+        }
     }
 
     /** @return true if any pooled instrument has a looping sampler */
@@ -591,6 +659,9 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable {
 
     /** @return output sample rate in Hz */
     public synchronized float getOutputSampleRate() { return outputSampleRate; }
+    /** @return sample rate used by this pool's representative audio clock */
+    @Override
+    public synchronized float getSampleRate() { return outputSampleRate; }
     /** @return output buffer size in samples */
     public synchronized int getOutputBufferSize() { return outputBufferSize; }
     /** @return source buffer sample rate in Hz */

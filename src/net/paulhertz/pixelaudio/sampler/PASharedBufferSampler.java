@@ -22,6 +22,7 @@ import ddf.minim.MultiChannelBuffer;
 import ddf.minim.AudioOutput;
 import ddf.minim.UGen;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
+import net.paulhertz.pixelaudio.schedule.AudioScheduler;
 
 import java.util.*;
 
@@ -45,6 +46,28 @@ import java.util.*;
  * 
  */
 public class PASharedBufferSampler extends UGen implements PASampler {
+    // ------------------------------------------------------------------------
+    // Internal scheduled-play payload
+    // ------------------------------------------------------------------------
+    private static final class ScheduledPlay {
+        final int samplePos;
+        final int sampleLen;
+        final float amplitude;
+        final ADSRParams env;
+        final float pitch;
+        final float pan;
+
+        ScheduledPlay(int samplePos, int sampleLen, float amplitude,
+                ADSRParams env, float pitch, float pan) {
+            this.samplePos = samplePos;
+            this.sampleLen = sampleLen;
+            this.amplitude = amplitude;
+            this.env = env;
+            this.pitch = pitch;
+            this.pan = pan;
+        }
+    }
+
     /** Mono source buffer, typically channel 0 from a MultiChannelBuffer. */
     private float[] buffer;
     /** Cached source buffer length in samples. */
@@ -71,6 +94,12 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     
     /** Enables diagnostic voice-trigger logging when true. */
     protected boolean DEBUG = false;
+
+    /** Sample-accurate scheduler for launching sampler voices. */
+    private final AudioScheduler<ScheduledPlay> scheduler = new AudioScheduler<>();
+
+    /** Absolute sample counter advanced by the audio callback. */
+    private long sampleCursor = 0L;
  
     /**
      * Mix-density normalization profiles for polyphonic sampler output,
@@ -161,29 +190,33 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     }
 
     /**
-     * Play command with all the useful arguments in standard order, overrides PASampler.play().
+     * Plays a buffer region immediately.
+     *
+     * <p>The requested {@code samplePos} and {@code sampleLen} are normalized against the
+     * current source buffer before a voice is activated. This method starts playback from the
+     * calling thread's request as soon as the audio callback next renders this sampler; use
+     * {@link #startAtSampleTime(int, int, float, ADSRParams, float, float, long)} when the
+     * launch must align to a specific sampler-clock sample.</p>
+     *
+     * @param samplePos   source-buffer index to start playback
+     * @param sampleLen   requested source-buffer duration in samples
+     * @param amplitude   per-voice gain multiplier
+     * @param env         ADSR envelope parameters, or null for no voice envelope
+     * @param pitch       playback-rate multiplier
+     * @param pan         stereo pan position
+     * @return computed voice duration in output samples, or 0 if playback could not start
      */
      @Override
     public synchronized int play(int samplePos, int sampleLen, float amplitude,
                                  ADSRParams env, float pitch, float pan) {
-        if (sampleLen <= 0 || samplePos >= bufferLen) return 0;
-        if (samplePos < 0) samplePos = 0;
-        if (samplePos + sampleLen > bufferLen) sampleLen = bufferLen - samplePos;
+        int[] range = normalizeRange(samplePos, sampleLen);
+        if (range == null) return 0;
         PASamplerVoice v = getAvailableVoice();
         if (v == null) return 0;
-        v.activate(samplePos, sampleLen, amplitude, env, pitch, pan, globalLooping);
-        int eventSamples = PlaybackInfo.computeVoiceDuration(
-                samplePos,
-                sampleLen,
-                bufferLen,
-                pitch,
-                env,
-                globalLooping,
-                playbackSampleRate
-            );
-        float bufferReadSamples = sampleLen * Math.abs(pitch);
+        v.activate(range[0], range[1], amplitude, env, pitch, pan, globalLooping);
+        int eventSamples = computeEventSamples(range[0], range[1], env, pitch);
+        float bufferReadSamples = range[1] * Math.abs(pitch);
         float durationMS = eventSamples / playbackSampleRate * 1000f;
-        long startSample = 0; // later replace with an actual sample clock
         // information to be shared later
         PlaybackInfo info = new PlaybackInfo(
             v.getVoiceId(),
@@ -191,7 +224,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             bufferReadSamples,
             durationMS,
             globalLooping,
-            startSample,
+            sampleCursor,
             playbackSampleRate
         );
         // debugging
@@ -200,6 +233,109 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             v.getVoiceId(), eventSamples,
             eventSamples / playbackSampleRate * 1000f);        
         return eventSamples;
+    }
+
+    /**
+     * Schedules a sampler voice to start at an absolute sample time.
+     *
+     * <p>{@code startSample} is measured on this sampler's local audio-thread clock, returned
+     * by {@link #getCurrentSampleTime()}. The event is enqueued through {@link AudioScheduler}
+     * and activated inside {@link #uGenerate(float[])} when the clock reaches that sample.</p>
+     *
+     * @param samplePos     source-buffer index to start playback
+     * @param sampleLen     requested source-buffer duration in samples
+     * @param amplitude     per-voice gain multiplier
+     * @param env           ADSR envelope parameters, or null for no voice envelope
+     * @param pitch         playback-rate multiplier
+     * @param pan           stereo pan position
+     * @param startSample   absolute sample time on this sampler's local clock
+     */
+    @Override
+    public synchronized void startAtSampleTime(int samplePos, int sampleLen, float amplitude,
+            ADSRParams env, float pitch, float pan, long startSample) {
+        int[] range = normalizeRange(samplePos, sampleLen);
+        if (range == null) return;
+        scheduler.schedulePoint(startSample,
+                new ScheduledPlay(range[0], range[1], amplitude, env, pitch, pan));
+    }
+
+    /**
+     * Schedules a sampler voice to start after a sample delay from the current sampler clock.
+     *
+     * @param samplePos      source-buffer index to start playback
+     * @param sampleLen      requested source-buffer duration in samples
+     * @param amplitude      per-voice gain multiplier
+     * @param env            ADSR envelope parameters, or null for no voice envelope
+     * @param pitch          playback-rate multiplier
+     * @param pan            stereo pan position
+     * @param delaySamples   delay from the current sampler clock, clamped to 0 or greater
+     */
+    @Override
+    public synchronized void startAfterDelaySamples(int samplePos, int sampleLen, float amplitude,
+            ADSRParams env, float pitch, float pan, long delaySamples) {
+        long startSample = sampleCursor + Math.max(0L, delaySamples);
+        startAtSampleTime(samplePos, sampleLen, amplitude, env, pitch, pan, startSample);
+    }
+
+    /**
+     * Returns the sampler-local audio-thread sample clock.
+     *
+     * <p>The clock advances once for each {@link #uGenerate(float[])} call. It is suitable
+     * for scheduling future events on this sampler; applications that need multiple engines
+     * to align should choose one shared transport clock and convert all event times to that
+     * same absolute sample domain.</p>
+     *
+     * @return current sampler-local sample cursor
+     */
+    @Override
+    public synchronized long getCurrentSampleTime() {
+        return sampleCursor;
+    }
+
+    /**
+     * Clears pending scheduled starts without stopping active voices.
+     */
+    @Override
+    public synchronized void clearScheduled() {
+        scheduler.clear();
+    }
+
+    /**
+     * Validates and clamps a source-buffer playback range.
+     *
+     * @param samplePos   requested start position in the source buffer
+     * @param sampleLen   requested playback length in source-buffer samples
+     * @return a two-element array where index 0 is the clamped start position and index 1
+     *         is the clamped length, or null when the request cannot produce playback
+     */
+    private int[] normalizeRange(int samplePos, int sampleLen) {
+        if (buffer == null || bufferLen <= 0 || sampleLen <= 0 || samplePos >= bufferLen) return null;
+        int pos = Math.max(0, samplePos);
+        int len = sampleLen;
+        if (pos + len > bufferLen) len = bufferLen - pos;
+        if (len <= 0) return null;
+        return new int[] { pos, len };
+    }
+
+    /**
+     * Computes the expected rendered duration of a voice in samples.
+     *
+     * @param samplePos   normalized source-buffer start position
+     * @param sampleLen   normalized source-buffer playback length
+     * @param env         ADSR envelope parameters
+     * @param pitch       playback-rate multiplier
+     * @return expected voice duration in samples, including release where applicable
+     */
+    private int computeEventSamples(int samplePos, int sampleLen, ADSRParams env, float pitch) {
+        return PlaybackInfo.computeVoiceDuration(
+                samplePos,
+                sampleLen,
+                bufferLen,
+                pitch,
+                env,
+                globalLooping,
+                playbackSampleRate
+            );
     }
 
     /**
@@ -235,11 +371,28 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     }
 
     /**
-     * Required by Minim.UGen, core method for audio synthesis called by Minim. 
-     * Constant-power panning and soft limiter added to support polyphonic voices. 
+     * Required by Minim.UGen, core method for audio synthesis called by Minim.
+     *
+     * <p>Scheduled point events are processed first so voices that start at the current
+     * {@code sampleCursor} contribute to this output sample. The method then mixes active
+     * voices, applies constant-power panning, density normalization, and soft limiting, and
+     * finally advances the sampler-local clock by one sample.</p>
      */
     @Override
     protected synchronized void uGenerate(float[] channels) {
+        scheduler.processBlock(
+                sampleCursor,
+                1,
+                (ScheduledPlay sp, int offsetInBlock) -> {
+                    PASamplerVoice v = getAvailableVoice();
+                    if (v != null) {
+                        v.activate(sp.samplePos, sp.sampleLen, sp.amplitude,
+                                sp.env, sp.pitch, sp.pan, globalLooping);
+                    }
+                },
+                null
+        );
+
         Arrays.fill(channels, 0f);
 
         final MixProfile profile = this.mixProfile;
@@ -312,6 +465,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         if (channels.length > 1) {
             channels[1] = softClipSoftsign(channels[1], profile.drive);
         }
+
+        sampleCursor++;
     }
     
     
@@ -446,6 +601,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      */
     public synchronized void setBuffer(float[] buffer) {
     	this.buffer = buffer;
+    	this.bufferLen = (buffer != null) ? buffer.length : 0;
     	for (PASamplerVoice v : this.voices) {
     		v.stop();
     		v.setBuffer(buffer);
@@ -461,6 +617,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      */
     public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
     	this.buffer = buffer;
+    	this.bufferLen = (buffer != null) ? buffer.length : 0;
     	this.playbackSampleRate = playbackSampleRate;
     	for (PASamplerVoice v : this.voices) {
     		v.stop();
