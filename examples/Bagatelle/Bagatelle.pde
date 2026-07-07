@@ -880,6 +880,7 @@ public void initConfig() {
   defaultGranConfig.hopLengthSamples = granHop;
   defaultGranConfig.curveSteps = curveSteps;
   defaultGranConfig.granularEnvelope(granularEnv);
+  defaultGranConfig.wrapAround(true);
   samplerEnv = envPreset("Soft");
   defaultSampConfig.samplerEnvelope(samplerEnv);
   defaultSampConfig.rdpEpsilon = 8.0f;

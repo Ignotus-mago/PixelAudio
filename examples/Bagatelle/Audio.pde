@@ -366,6 +366,7 @@ int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) 
 void ensureSamplerReady() {
   if (pool == null) {
     pool = new PASamplerInstrumentPool(playBuffer, sampleRate, poolSize, sMaxVoices, audioOut, samplerEnv);
+    pool.setWrapAround(true);
     println("-- initilialized pool sampler synth");
     pool.setGain(samplerGain);
   }
