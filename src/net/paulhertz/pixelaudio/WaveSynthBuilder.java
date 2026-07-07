@@ -523,10 +523,9 @@ public class WaveSynthBuilder {
 	
 	/**
 	 * @param selection    a file containing JSON data
-	 * @param json         a JSONObject that will be initialized with data from the file
 	 * @param synth        a WaveSynth object whose fields will be filled out from the JSON data
 	 * @param isStrict     if true, return false if no WaveSynth header is found in the JSON file
-	 * @return             true if the File 
+	 * @return true if selection is a JSON file and if (isStrict == true) properly formatted as WaveSynth data 
 	 */
 	public static boolean getJSONFromFile(File selection, WaveSynth synth, boolean isStrict) {
 		if (selection == null) {
