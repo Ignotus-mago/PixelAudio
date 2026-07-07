@@ -2438,6 +2438,7 @@ public class ArgosyMixer extends PApplet {
 
 	/**
 	 * Save audio buffer to a file
+	 * @param isStereo   if true, save in stereo audio format, otherwise in mono
 	 */
 	public void saveToAudio(boolean isStereo) {
 		renderSignals();
@@ -2516,6 +2517,7 @@ public class ArgosyMixer extends PApplet {
 	/**
 	 * Plays an audio sample with a custom envelope and stereo pan.
 	 * 
+	 * @param synth        PASamplerInstrument instance to play audio sample
 	 * @param samplePos    position of the sample in the audio buffer
 	 * @param samplelen    length of the sample (will be adjusted)
 	 * @param amplitude    amplitude of the sample on playback
@@ -2547,6 +2549,12 @@ public class ArgosyMixer extends PApplet {
 	 * Calculate position of the image pixel within the signal path,
 	 * taking the shifting of pixels and audioSignal into account.
 	 * See MusicBoxBuffer for use of a windowed buffer in this calculation. 
+	 *
+	 * @param argo    an Argosy object
+	 * @param x       x-coordinate
+	 * @param y       y-coordinate
+	 * @param shift   number of pixel to shift lookup position
+	 * @return position of the image pixel within the signal path
 	 */
 	public int getSamplePos(Argosy argo, int x, int y, int shift) {
 		int pos = argo.getMapper().lookupSignalPos(x, y);

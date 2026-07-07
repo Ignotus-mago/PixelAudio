@@ -68,7 +68,8 @@ public class BuildFromPathGen extends PixelMapGen {
 
 	/**
 	 * @throws IllegalArgumentException if {@code this.pixelMap == null && this.coords == null}.
-	 * You need to call setPixelMap(int[] newPixelMap) or setCoords(ArrayList<int[]> newCoords) before calling generate().
+	 * You need to call {@code setPixelMap(int[] newPixelMap)} 
+	 * or {@code setCoords(ArrayList<int[]> newCoords)} before calling generate().
 	 */
 	@Override
 	public int[] generate() {

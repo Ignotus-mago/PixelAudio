@@ -1155,6 +1155,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		defaultGranConfig.hopLengthSamples = granHop;
 		defaultGranConfig.curveSteps = curveSteps;
 		defaultGranConfig.granularEnvelope(granularEnv);
+		defaultGranConfig.wrapAround(true);
 		samplerEnv = envPreset("Soft");
 		defaultSampConfig.samplerEnvelope(samplerEnv);
 		defaultSampConfig.rdpEpsilon = 8.0f;
@@ -3402,6 +3403,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	void ensureSamplerReady() {
 		if (pool == null) { 
 	    	pool = new PASamplerInstrumentPool(playBuffer, sampleRate, poolSize, sMaxVoices, audioOut, samplerEnv); 
+	    	pool.setWrapAround(true);
 	    	println("-- initilialized pool sampler synth");
 	    	pool.setGain(samplerGain);
 	    }
