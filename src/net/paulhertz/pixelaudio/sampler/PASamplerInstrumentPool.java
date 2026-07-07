@@ -82,6 +82,9 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
 	/** Pool-wide sampler mix profile propagated to pooled instruments. */
 	private volatile PASharedBufferSampler.MixProfile mixProfile =
 	        PASharedBufferSampler.MixProfile.BALANCED;
+	
+	/** True to wrap finite sampler events across the source-buffer boundary. */
+	private volatile boolean wrapAround = false;
 
     // ------------------------------------------------------------------------
     // Constructors
@@ -164,6 +167,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
             inst.setGlobalPan(globalPan);
             inst.setParentGain(poolGain);
             inst.setMixProfile(mixProfile);
+            inst.setWrapAround(wrapAround);
             pool.add(inst);
         }
     }
@@ -306,6 +310,23 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
         for (PASamplerInstrument inst : pool) {
             if (inst != null) inst.clearScheduled();
         }
+    }
+
+    /**
+     * Sets whether finite sampler events wrap source-buffer reads at the buffer end.
+     *
+     * @param wrapAround true to wrap source-buffer reads for newly triggered events
+     */
+    public synchronized void setWrapAround(boolean wrapAround) {
+        this.wrapAround = wrapAround;
+        for (PASamplerInstrument inst : pool) {
+            if (inst != null) inst.setWrapAround(wrapAround);
+        }
+    }
+
+    /** @return true when finite sampler events wrap source-buffer reads */
+    public synchronized boolean isWrapAround() {
+        return wrapAround;
     }
 
     /** @return true if any pooled instrument has a looping sampler */
@@ -681,6 +702,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
                 inst.setGlobalPan(globalPan);
                 inst.setParentGain(poolGain);
                 inst.setMixProfile(mixProfile);
+                inst.setWrapAround(wrapAround);
                 pool.add(inst);
             }
         }
@@ -704,6 +726,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
             inst.setGlobalPan(globalPan);
             inst.setParentGain(poolGain);
             inst.setMixProfile(mixProfile);
+            inst.setWrapAround(wrapAround);
         }
     }
 

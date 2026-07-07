@@ -51,6 +51,7 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayab
 	private boolean isClosed = false;
 	
 	private volatile float masterGain = 1f;
+	private volatile boolean wrapAround = false;
 
     // ------------------------------------------------------------------------
     // Constructors
@@ -108,6 +109,7 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayab
 		if (key == null || buffer == null) return;
 		if (isClosed) return;
 		PASamplerInstrumentPool p = new PASamplerInstrumentPool(buffer, bufferSampleRate, poolSize, perInstrumentVoices, out, env);
+		p.setWrapAround(wrapAround);
 		pools.put(key, p);
 		if (activeKey == null) activeKey = key;
 	}
@@ -243,6 +245,21 @@ public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayab
 	/** Clears scheduled starts across all sub-pools. */
 	public void clearScheduled() {
 		for (PASamplerInstrumentPool p : pools.values()) p.clearScheduled();
+	}
+
+	/**
+	 * Sets whether finite sampler events wrap source-buffer reads at the buffer end.
+	 *
+	 * @param wrapAround true to wrap source-buffer reads for newly triggered events
+	 */
+	public synchronized void setWrapAround(boolean wrapAround) {
+		this.wrapAround = wrapAround;
+		for (PASamplerInstrumentPool p : pools.values()) p.setWrapAround(wrapAround);
+	}
+
+	/** @return true when finite sampler events wrap source-buffer reads */
+	public synchronized boolean isWrapAround() {
+		return wrapAround;
 	}
 	
 	// @Override

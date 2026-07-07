@@ -25,6 +25,7 @@ package net.paulhertz.pixelaudio.sampler;
  *   - playback position and pitch
  *   - per-voice amplitude and pan
  *   - one independent SimpleADSR envelope (sample-accurate)
+ *   - optional wrap-around reads for finite events near the buffer end
  *   - optional zero-crossing start and micro-fade-in
  *
  * Voices can be smoothly released and are recycled once the envelope finishes.
@@ -44,6 +45,7 @@ public class PASamplerVoice {
     private boolean released;
     private boolean finished;
     private boolean looping;
+    private boolean wrapAround;
 
     private int start;
     private int end;
@@ -102,14 +104,35 @@ public class PASamplerVoice {
      */
     public void activate(int start, int length, float gain,
                          ADSRParams envParams, float pitch, float pan, boolean looping) {
+        activate(start, length, gain, envParams, pitch, pan, looping, false);
+    }
+
+    /**
+     * Activates the voice over a buffer region.
+     *
+     * @param start buffer index to start playback
+     * @param length playback length in samples
+     * @param gain linear gain multiplier
+     * @param envParams optional ADSR envelope parameters
+     * @param pitch pitch or playback-rate multiplier
+     * @param pan stereo pan position
+     * @param looping true to loop this voice
+     * @param wrapAround true to wrap finite source-buffer reads at buffer boundaries
+     */
+    public void activate(int start, int length, float gain,
+                         ADSRParams envParams, float pitch, float pan, boolean looping,
+                         boolean wrapAround) {
         this.active = false;
         this.released = false;
         this.finished = false;
         this.looping = looping;
+        this.wrapAround = wrapAround;
 
         this.voiceId = NEXT_VOICE_ID++;
         this.start = Math.max(0, start);
-        this.end = Math.min(buffer.length, start + Math.max(0, length));
+        this.end = wrapAround
+                ? this.start + Math.max(0, length)
+                : Math.min(buffer.length, start + Math.max(0, length));
         this.position = this.start;
         this.rate = pitch;
         this.gain = gain;
@@ -158,13 +181,13 @@ public class PASamplerVoice {
         int idx = (int) position;
 
         // --- 1. Trigger release once we pass the "note" window ---
-        if (idx >= end && !released) {
+        if (position >= end && !released) {
             released = true;
             if (envelope != null) envelope.noteOff();
         }
 
         // --- 2. Read sample safely ---
-        float base = (idx >= 0 && idx < buffer.length) ? buffer[idx] : 0f;
+        float base = readBufferSample(idx);
 
         // --- 3. Advance ---
         position += rate;
@@ -257,6 +280,11 @@ public class PASamplerVoice {
     /** @param looping true to loop this voice */
     public void setLooping(boolean looping) { this.looping = looping; }
 
+    /** @return true when this voice wraps finite source-buffer reads */
+    public boolean isWrapAround() { return wrapAround; }
+    /** @param wrapAround true to wrap finite source-buffer reads */
+    public void setWrapAround(boolean wrapAround) { this.wrapAround = wrapAround; }
+
     /** @return stereo pan position */
     public float getPan()         { return pan; }
     /** @return unique voice identifier */
@@ -275,6 +303,16 @@ public class PASamplerVoice {
             buffer[start + i] *= fadeAmp;
             fadeAmp += fadeStep;
         }
+    }
+
+    private float readBufferSample(int idx) {
+        if (buffer == null || buffer.length == 0) return 0f;
+        if (wrapAround) {
+            int wrapped = idx % buffer.length;
+            if (wrapped < 0) wrapped += buffer.length;
+            return buffer[wrapped];
+        }
+        return (idx >= 0 && idx < buffer.length) ? buffer[idx] : 0f;
     }
 
     private int findZeroCrossing(int index, int direction) {

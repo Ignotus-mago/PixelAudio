@@ -102,12 +102,37 @@ public class PlaybackInfo {
     		ADSRParams env,
     		boolean looping,
     		float sampleRate) {
+    	return computeVoiceDuration(samplePos, sampleLen, bufferLen, pitch, env, looping, sampleRate, false);
+    }
+    
+    /**
+     * Computes total playback duration (in output samples) with optional source-buffer wrapping.
+     *
+     * @param samplePos    buffer index to start playback
+     * @param sampleLen    requested duration in samples
+     * @param bufferLen    source buffer length in samples
+     * @param pitch        pitch or playback-rate multiplier
+     * @param env          optional ADSR envelope
+     * @param looping      true when playback loops indefinitely
+     * @param sampleRate   output sample rate in Hz
+     * @param wrapAround   true to preserve requested duration across source-buffer boundaries
+     * @return duration in output samples (int), or Integer.MAX_VALUE if looping.
+     */
+    public static int computeVoiceDuration(
+    		int samplePos,
+    		int sampleLen,
+    		int bufferLen,
+    		float pitch,
+    		ADSRParams env,
+    		boolean looping,
+    		float sampleRate,
+    		boolean wrapAround) {
     	if (looping) return Integer.MAX_VALUE;
 
     	// Clamp to buffer bounds
     	samplePos = Math.max(0, samplePos);
     	if (sampleLen < 0) sampleLen = 0;
-    	if (samplePos + sampleLen > bufferLen) {
+    	if (!wrapAround && samplePos + sampleLen > bufferLen) {
     		sampleLen = Math.max(0, bufferLen - samplePos);
     	}
 

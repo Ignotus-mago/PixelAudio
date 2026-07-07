@@ -144,6 +144,8 @@ public final class GestureGranularConfig {
   public final int burstGrains;
   /** True to compensate gain automatically when one event produces multiple burst grains. */
   public final boolean autoBurstGainComp;
+  /** True to wrap finite source-buffer reads across the buffer boundary. */
+  public final boolean wrapAround;
 
   // Path timing calculation
   /** True to derive curve timing from arc length rather than point index.
@@ -172,6 +174,7 @@ public final class GestureGranularConfig {
 
     this.burstGrains = b.burstGrains;
     this.autoBurstGainComp = b.autoBurstGainComp;
+    this.wrapAround = b.wrapAround;
     this.useArcLengthTime = b.useArcLengthTime;
   }
   
@@ -234,6 +237,8 @@ public final class GestureGranularConfig {
     public int burstGrains = 1;
     /** True to compensate gain automatically when one event produces multiple burst grains. */
     public boolean autoBurstGainComp = false;
+    /** True to wrap finite source-buffer reads across the buffer boundary. */
+    public boolean wrapAround = false;
 
     // Timing from geometry
     /** True to derive curve timing from arc length rather than point index. */
@@ -271,6 +276,17 @@ public final class GestureGranularConfig {
     public Builder samplerEnvelope(ADSRParams env) {
     	this.env = env;
     	return this;
+    }
+
+    /**
+     * Enables or disables source-buffer wrapping for finite sampler or granular events.
+     *
+     * @param wrapAround true to wrap reads across the source-buffer boundary
+     * @return this builder
+     */
+    public Builder wrapAround(boolean wrapAround) {
+        this.wrapAround = wrapAround;
+        return this;
     }
 
     /**
@@ -356,6 +372,7 @@ public final class GestureGranularConfig {
     	b.pitchSemitones = this.pitchSemitones;
     	b.burstGrains = this.burstGrains;
     	b.autoBurstGainComp = this.autoBurstGainComp;
+    	b.wrapAround = this.wrapAround;
     	b.useArcLengthTime = this.useArcLengthTime;
     	return b;
     }
@@ -392,6 +409,7 @@ public final class GestureGranularConfig {
 
     	this.burstGrains = src.burstGrains;
     	this.autoBurstGainComp = src.autoBurstGainComp;
+    	this.wrapAround = src.wrapAround;
     	this.useArcLengthTime = src.useArcLengthTime;
     }
 
@@ -457,6 +475,7 @@ public final class GestureGranularConfig {
 			  .hopLengthSamples(hopLengthSamples)
 			  .burstGrains(burstGrains)
 			  .autoBurstGainComp(autoBurstGainComp)
+			  .wrapAround(wrapAround)
 
 			  // -------------------------
 			  // Gain / pitch
@@ -583,6 +602,7 @@ public final class GestureGranularConfig {
     if (autoBurstGainComp) sb.append(" (autoGainComp)");
     sb.append("\n");
 
+    sb.append("  Wrap around: ").append(wrapAround).append("\n");
     sb.append("  useArcLengthTime: ").append(useArcLengthTime).append("\n");
     sb.append("}");
 

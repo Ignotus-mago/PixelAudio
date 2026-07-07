@@ -242,6 +242,20 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 		if (sampler != null) sampler.clearScheduled();
 	}
 
+	/**
+	 * Sets whether sampler voices wrap source-buffer reads at the buffer end.
+	 *
+	 * @param wrapAround true to wrap finite events across the source-buffer boundary
+	 */
+	public synchronized void setWrapAround(boolean wrapAround) {
+		if (sampler != null) sampler.setWrapAround(wrapAround);
+	}
+
+	/** @return true when finite sampler events wrap source-buffer reads */
+	public synchronized boolean isWrapAround() {
+		return sampler != null && sampler.isWrapAround();
+	}
+
 	/** Stop playback (stop all active voices). */
 	@Override
 	public void stop() {

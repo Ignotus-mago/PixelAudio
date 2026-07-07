@@ -334,7 +334,8 @@ public final class PAGranularInstrumentDirector {
                     burstGrains,
                     timeHop,
                     indexHop,
-                    pitchRatio
+                    pitchRatio,
+                    params.wrapAround
             );
 
             instrument.startAtSampleTime(

@@ -56,15 +56,19 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         final ADSRParams env;
         final float pitch;
         final float pan;
+        final boolean looping;
+        final boolean wrapAround;
 
         ScheduledPlay(int samplePos, int sampleLen, float amplitude,
-                ADSRParams env, float pitch, float pan) {
+                ADSRParams env, float pitch, float pan, boolean looping, boolean wrapAround) {
             this.samplePos = samplePos;
             this.sampleLen = sampleLen;
             this.amplitude = amplitude;
             this.env = env;
             this.pitch = pitch;
             this.pan = pan;
+            this.looping = looping;
+            this.wrapAround = wrapAround;
         }
     }
 
@@ -83,6 +87,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     private int maxVoices = 32;
     /** Default looping state for newly triggered voices. */
     private boolean globalLooping = false;
+    /** True to wrap source-buffer reads for newly triggered voices. */
+    private boolean wrapAround = false;
     /** True to release stolen voices smoothly instead of stopping them immediately. */
     private boolean smoothSteal = true;
     
@@ -213,7 +219,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         if (range == null) return 0;
         PASamplerVoice v = getAvailableVoice();
         if (v == null) return 0;
-        v.activate(range[0], range[1], amplitude, env, pitch, pan, globalLooping);
+        v.activate(range[0], range[1], amplitude, env, pitch, pan, globalLooping, wrapAround);
         int eventSamples = computeEventSamples(range[0], range[1], env, pitch);
         float bufferReadSamples = range[1] * Math.abs(pitch);
         float durationMS = eventSamples / playbackSampleRate * 1000f;
@@ -256,7 +262,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         int[] range = normalizeRange(samplePos, sampleLen);
         if (range == null) return;
         scheduler.schedulePoint(startSample,
-                new ScheduledPlay(range[0], range[1], amplitude, env, pitch, pan));
+                new ScheduledPlay(range[0], range[1], amplitude, env, pitch, pan,
+                        globalLooping, wrapAround));
     }
 
     /**
@@ -312,7 +319,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         if (buffer == null || bufferLen <= 0 || sampleLen <= 0 || samplePos >= bufferLen) return null;
         int pos = Math.max(0, samplePos);
         int len = sampleLen;
-        if (pos + len > bufferLen) len = bufferLen - pos;
+        if (!wrapAround && pos + len > bufferLen) len = bufferLen - pos;
         if (len <= 0) return null;
         return new int[] { pos, len };
     }
@@ -334,7 +341,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
                 pitch,
                 env,
                 globalLooping,
-                playbackSampleRate
+                playbackSampleRate,
+                wrapAround
             );
     }
 
@@ -387,7 +395,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
                     PASamplerVoice v = getAvailableVoice();
                     if (v != null) {
                         v.activate(sp.samplePos, sp.sampleLen, sp.amplitude,
-                                sp.env, sp.pitch, sp.pan, globalLooping);
+                                sp.env, sp.pitch, sp.pan, sp.looping, sp.wrapAround);
                     }
                 },
                 null
@@ -529,6 +537,22 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     /** @return true when newly triggered voices loop by default */
     public boolean isGlobalLooping() { return globalLooping; }
+
+    /**
+     * Sets whether newly triggered voices wrap source-buffer reads.
+     *
+     * @param wrapAround true to wrap reads that pass the end of the source buffer
+     */
+    @Override
+    public void setWrapAround(boolean wrapAround) {
+        this.wrapAround = wrapAround;
+    }
+
+    /** @return true when newly triggered voices wrap source-buffer reads */
+    @Override
+    public boolean isWrapAround() {
+        return wrapAround;
+    }
 
     /**
      * Enable/disable smooth stealing (release envelope) on voice recycle.

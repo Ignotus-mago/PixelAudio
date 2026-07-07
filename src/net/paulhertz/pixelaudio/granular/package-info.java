@@ -7,6 +7,11 @@
  * exclusive use of {@link net.paulhertz.pixelaudio.granular.PABurstGranularSource
  * PABurstGranularSource} as the primary granular {@code PASource}.</p>
  *
+ * <p>Gesture-driven granular playback can optionally wrap finite source-buffer reads across
+ * the buffer boundary. This is distinct from looping: a wrapped grain or burst still ends
+ * according to its scheduled duration and envelope, but reads that pass the end of the buffer
+ * continue from the beginning.</p>
+ *
  * <p><b>Granular synthesis processing chain</b></p>
  * <ol>
  *   <li>{@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector}
@@ -47,7 +52,8 @@
  *   <li>{@link net.paulhertz.pixelaudio.granular.PASource PASource}
  *   extends PAFloatSource with pitch-policy and buffer-access support.</li>
  *   <li>{@link net.paulhertz.pixelaudio.granular.PABurstGranularSource PABurstGranularSource}
- *   provides windowed granular synthesis with normalization and powers the granular synthesis engine.</li>
+ *   provides windowed granular synthesis with normalization, optional wrap-around source reads,
+ *   and powers the granular synthesis engine.</li>
  * </ul>
  *
  * <p><b>Gesture configuration and event data</b></p>

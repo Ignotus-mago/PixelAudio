@@ -27,6 +27,11 @@
  * sampler-local clock is the timing mechanism for one sampler backend; it is not, by itself,
  * a global application transport.</p>
  *
+ * <p>Sampler playback can optionally wrap finite source-buffer reads across the buffer
+ * boundary. This is distinct from looping: a wrapped event still ends according to its
+ * requested duration and envelope, but reads that pass the end of the buffer continue from
+ * the beginning.</p>
+ *
  * <p><b>Sampler playback processing chain</b></p>
  * <ol>
  *   <li>{@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPoolMulti PASamplerInstrumentPoolMulti}
@@ -56,7 +61,7 @@
  *   manages multiple sampler pools for multi-buffer or multi-sample playback.</li>
  *   <li>{@link net.paulhertz.pixelaudio.sampler.PASharedBufferSampler PASharedBufferSampler}
  *   manages sampler voices, voice pooling, looping defaults, panning, gain, smooth voice
- *   stealing, and mix profiles.</li>
+ *   stealing, finite-event wrap-around, and mix profiles.</li>
  *   <li>{@link net.paulhertz.pixelaudio.sampler.PASamplerVoice PASamplerVoice}
  *   renders individual sampler voices with gain, pitch, pan, and optional ADSR envelope.</li>
  * </ul>

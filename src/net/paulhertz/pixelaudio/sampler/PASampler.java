@@ -76,6 +76,24 @@ public interface PASampler {
     void clearScheduled();
 
     /**
+     * Sets whether new sampler voices wrap source-buffer reads at the buffer end.
+     *
+     * <p>Wrapping is distinct from looping: a wrapped one-shot still plays for its requested
+     * duration and envelope, but sample reads that pass the end of the source buffer continue
+     * from the beginning.</p>
+     *
+     * @param wrapAround true to wrap source-buffer reads for newly triggered voices
+     */
+    void setWrapAround(boolean wrapAround);
+
+    /**
+     * Reports whether new sampler voices wrap source-buffer reads at the buffer end.
+     *
+     * @return true when source-buffer wrapping is enabled
+     */
+    boolean isWrapAround();
+
+    /**
      * Returns true if any currently active voice is looping.
      *
      * @return true if one or more voices are looping

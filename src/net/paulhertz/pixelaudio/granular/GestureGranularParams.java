@@ -124,6 +124,8 @@ public final class GestureGranularParams {
     public final ADSRParams env;           // nullable => instrument default
     /** True to loop the granular source path when the lower-level voice supports looping. */
     public final boolean looping;          // for future uses
+    /** True to wrap finite grain source-buffer reads at the buffer end. */
+    public final boolean wrapAround;
 
     // --- timing transform
     /** Primary timing transform label supplied by the builder. */
@@ -152,6 +154,7 @@ public final class GestureGranularParams {
         this.pitchRatio = Math.max(1e-6f, b.pitchRatio);
         this.env        = b.env;
         this.looping    = b.looping;
+        this.wrapAround = b.wrapAround;
 
         this.timingMode       = TimeTransform.RAW_GESTURE;
         this.timeTransform    = b.timeTransform;
@@ -192,6 +195,7 @@ public final class GestureGranularParams {
         private float pitchRatio = 1.0f;
         private ADSRParams env = null;
         private boolean looping = false;
+        private boolean wrapAround = false;
 
         private HopMode hopMode = HopMode.GESTURE;
 
@@ -274,6 +278,14 @@ public final class GestureGranularParams {
          * @return this builder
          */
         public Builder looping(boolean v)  { this.looping = v; return this; }
+
+        /**
+         * Enables or disables source-buffer wrapping for finite granular events.
+         *
+         * @param v true to wrap grain reads across the source-buffer boundary
+         * @return this builder
+         */
+        public Builder wrapAround(boolean v) { this.wrapAround = v; return this; }
 
         /**
          * Sets the hop mode.

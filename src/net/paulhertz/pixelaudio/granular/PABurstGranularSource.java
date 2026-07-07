@@ -31,8 +31,9 @@ import net.paulhertz.pixelaudio.sampler.PitchPolicy;
  *
  * <p>The source reads from a mono {@code float[]} buffer, applies an optional grain window,
  * performs linear interpolation for fractional pitch-ratio playback, and adds its samples to
- * the output block. When overlapping grains contribute to the same block sample, the source
- * performs in-place overlap-add normalization.</p>
+ * the output block. When wrap-around is enabled, finite grains that pass the source-buffer end
+ * continue reading from the beginning rather than becoming silent. When overlapping grains
+ * contribute to the same block sample, the source performs in-place overlap-add normalization.</p>
  *
  * <p>This source reports {@link PitchPolicy#SOURCE_GRANULAR} because pitch is already handled
  * internally by {@code pitchRatio}; the instrument should not apply a second playback-rate
@@ -50,6 +51,7 @@ public final class PABurstGranularSource implements PASource {
     private final int timeHopSamples;     // >= 1 (intra-burst spacing in time)
     private final int indexHopSamples;    // >= 0 (intra-burst scan in source index)
     private final float pitchRatio;       // > 0
+    private boolean wrapAround = false;
 
     // Optional per-source gain (multiplicative). Default unity.
     // If you already apply gain outside this PASource, leave at 1.
@@ -89,10 +91,37 @@ public final class PABurstGranularSource implements PASource {
             int indexHopSamples,
             float pitchRatio
     ) {
+        this(source, baseIndex, grainLengthSamples, burstGrains, timeHopSamples,
+                indexHopSamples, pitchRatio, false);
+    }
+
+    /**
+     * Creates a burst granular source.
+     *
+     * @param source                mono source buffer to read from
+     * @param baseIndex             start index in {@code source} for the first grain
+     * @param grainLengthSamples    grain length in samples; values below 1 are clamped to 1
+     * @param burstGrains           number of grains in this event; values below 1 are clamped to 1
+     * @param timeHopSamples        spacing, in output samples, between grains in the burst
+     * @param indexHopSamples       spacing, in source-buffer samples, between grain start positions
+     * @param pitchRatio            playback pitch ratio for each grain; non-positive values use 1.0
+     * @param wrapAround            true to wrap finite source-buffer reads at the buffer end
+     * @throws IllegalArgumentException if {@code source} is null
+     */
+    public PABurstGranularSource(
+            float[] source,
+            int baseIndex,
+            int grainLengthSamples,
+            int burstGrains,
+            int timeHopSamples,
+            int indexHopSamples,
+            float pitchRatio,
+            boolean wrapAround
+    ) {
         if (source == null) throw new IllegalArgumentException("source must not be null");
         this.source = source;
 
-        this.baseIndex = Math.max(0, baseIndex);
+        this.baseIndex = wrapAround ? wrapIndex(baseIndex, source.length) : Math.max(0, baseIndex);
         this.grainLength = Math.max(1, grainLengthSamples);
 
         this.burstGrains = Math.max(1, burstGrains);
@@ -100,6 +129,7 @@ public final class PABurstGranularSource implements PASource {
         this.indexHopSamples = Math.max(0, indexHopSamples);
 
         this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
+        this.wrapAround = wrapAround;
     }
 
     /**
@@ -190,10 +220,10 @@ public final class PABurstGranularSource implements PASource {
                         (float) grainSourceStart +
                         (float) offsetInGrain * pitchRatio;
 
-                if (srcPos < 0f || srcPos >= (source.length - 1)) continue;
+                if (!wrapAround && (srcPos < 0f || srcPos >= (source.length - 1))) continue;
 
                 final float w = (window != null) ? window[offsetInGrain] : 1.0f;
-                final float s = readLinear(source, srcPos) * w;
+                final float s = readLinear(source, srcPos, wrapAround) * w;
 
                 outL[i] += s;
                 if (doR) outR[i] += s;
@@ -254,6 +284,20 @@ public final class PABurstGranularSource implements PASource {
         }
     }
 
+    /**
+     * Sets whether finite source-buffer reads wrap at the buffer end.
+     *
+     * @param wrapAround true to wrap finite grains across the source-buffer boundary
+     */
+    public synchronized void setWrapAround(boolean wrapAround) {
+        this.wrapAround = wrapAround;
+    }
+
+    /** @return true when finite source-buffer reads wrap at the buffer end */
+    public synchronized boolean isWrapAround() {
+        return wrapAround;
+    }
+
     private void ensureWSum(int blockSize) {
         if (wsum.length != blockSize) {
             wsum = new float[blockSize];
@@ -268,9 +312,20 @@ public final class PABurstGranularSource implements PASource {
      * @param pos fractional position in the buffer
      * @return interpolated sample value at {@code pos}
      */
-    private static float readLinear(float[] buf, float pos) {
+    private static float readLinear(float[] buf, float pos, boolean wrapAround) {
+        if (buf.length == 0) return 0f;
+        if (buf.length == 1) return buf[0];
+
         int i0 = (int) pos;
         float frac = pos - i0;
+
+        if (wrapAround) {
+            int aIndex = wrapIndex(i0, buf.length);
+            int bIndex = wrapIndex(i0 + 1, buf.length);
+            float a = buf[aIndex];
+            float b = buf[bIndex];
+            return a + frac * (b - a);
+        }
 
         if (i0 < 0) return buf[0];
         if (i0 >= buf.length - 1) return buf[buf.length - 1];
@@ -278,5 +333,11 @@ public final class PABurstGranularSource implements PASource {
         float a = buf[i0];
         float b = buf[i0 + 1];
         return a + frac * (b - a);
+    }
+
+    private static int wrapIndex(int index, int length) {
+        if (length <= 0) return 0;
+        int wrapped = index % length;
+        return (wrapped < 0) ? wrapped + length : wrapped;
     }
 }
