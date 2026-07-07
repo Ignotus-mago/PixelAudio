@@ -8,6 +8,12 @@
  *
  * <ul>
  *
+ * <li>{@link net.paulhertz.pixelaudio.schedule.AudioSampleClock AudioSampleClock} defines
+ * a minimal interface for objects that expose an audio-rate sample cursor and sample rate.
+ * Sampler and granular instruments can use this contract as a shared timing source for
+ * sample-aligned scheduling, and future transport or external-sync implementations can
+ * provide the same API.</li>
+ *
  * <li>{@link net.paulhertz.pixelaudio.schedule.AudioScheduler AudioScheduler} provides a sample-accurate scheduler for one-shot
  * point events and duration-based span events, with support for late event policies, block-wise processing, and thread-safe scheduling.</li>
  *
