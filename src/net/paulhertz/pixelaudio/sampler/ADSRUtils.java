@@ -42,7 +42,10 @@ public final class ADSRUtils {
         float totalEnv = adsr.getAttack() + adsr.getDecay() + adsr.getRelease();
 
         if (totalEnv <= 0.0f) {
-            return new ADSRParams(adsr.getMaxAmp(), 0, 0, adsr.getSustain(), 0);
+            return new ADSRParams(
+                adsr.getMaxAmp(), 0, 0, adsr.getSustain(), 0,
+                adsr.getAttackCurve(), adsr.getDecayCurve(), adsr.getReleaseCurve()
+            );
         }
 
         float scale = totalSeconds / totalEnv;
@@ -51,7 +54,10 @@ public final class ADSRUtils {
             adsr.getAttack()  * scale,
             adsr.getDecay()   * scale,
             adsr.getSustain(),
-            adsr.getRelease() * scale
+            adsr.getRelease() * scale,
+            adsr.getAttackCurve(),
+            adsr.getDecayCurve(),
+            adsr.getReleaseCurve()
         );
     }
 }

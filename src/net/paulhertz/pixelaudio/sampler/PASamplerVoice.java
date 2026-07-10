@@ -47,12 +47,12 @@ public class PASamplerVoice {
     private boolean looping;
     private boolean wrapAround;
 
-    private int start;
-    private int end;
-    private float position;
-    private float rate;
-    private float gain;
-    private float pan;
+    private int start;        // start sample index
+    private int end;          // end sample index
+    private float position;   // current sample index as float
+    private float rate;       // pitch ratio
+    private float gain;       // amplitude factor
+    private float pan;        // stereo location (-1.0f...1.0f)
 
     
     // ------------------------------------------------------------------------
@@ -146,13 +146,7 @@ public class PASamplerVoice {
 
         // Envelope setup
         if (envParams != null) {
-            envelope = new SimpleADSR(
-                    envParams.getAttack(),
-                    envParams.getDecay(),
-                    envParams.getSustain(),
-                    envParams.getRelease()
-            );
-            envelope.setSampleRate(playbackSampleRate);
+            envelope = envParams.toSimpleADSR(playbackSampleRate);
             envelope.noteOn();
         } else {
             envelope = null;
@@ -178,7 +172,7 @@ public class PASamplerVoice {
     public float nextSample() {
         if (finished || buffer == null) return 0f;
 
-        int idx = (int) position;
+        int idx = (int) position;   // truncate position to get sample index
 
         // --- 1. Trigger release once we pass the "note" window ---
         if (position >= end && !released) {
@@ -190,7 +184,7 @@ public class PASamplerVoice {
         float base = readBufferSample(idx);
 
         // --- 3. Advance ---
-        position += rate;
+        position += rate;   // rate as pitch determines how fast or slow we advance position
 
         // --- 4. Envelope always ticks ---
         float envValue = (envelope != null) ? envelope.tick() : 1f;

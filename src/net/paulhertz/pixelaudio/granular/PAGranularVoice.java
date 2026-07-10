@@ -188,13 +188,7 @@ public class PAGranularVoice {
     	ADSRParams useEnv = (envParams != null) ? envParams : defaultEnvParams;
 
     	// Envelope setup (macro envelope over a gesture)
-    	envelope = new SimpleADSR(
-    			useEnv.getAttack(),
-    			useEnv.getDecay(),
-    			useEnv.getSustain(),
-    			useEnv.getRelease()
-    			);
-    	envelope.setSampleRate(playbackSampleRate);
+        envelope = useEnv.toSimpleADSR(playbackSampleRate);
     	envelope.noteOn();
     }
 
