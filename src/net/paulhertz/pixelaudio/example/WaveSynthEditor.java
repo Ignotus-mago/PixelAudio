@@ -122,7 +122,7 @@ import g4p_controls.*;
  * </p>
  * <pre>
  * ::: KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE :::
- *
+
  * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
  * Press ' ' (spacebar) to trigger audio playback at the current mouse position.
@@ -139,6 +139,7 @@ import g4p_controls.*;
  * Press 'P' to shift all active WaveSynth phases by -phaseFac.
  * Press 'k' to show all current phase values in the console.
  * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.
+ * Press 'w' or 'W' to toggle audio buffer wrap around.
  * Press '+' or '=' to make the image brighter.
  * Press '-' or '_' to make the image darker.
 // ------------- COMMANDS FOR ANIMATION STEPPING ------------- //
@@ -305,8 +306,9 @@ public class WaveSynthEditor extends PApplet {
 	int noteDuration = 2000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
 	PASamplerInstrumentPool pool;   // pool of instruments
-	int poolSize = 4;               // number of instruments
+	int poolSize = 8;               // number of instruments
 	int samplerMaxVoices = 8;       // number of voices per instrument
+	boolean isWrapAround = true;    // buffer wraps end around to beginning
 	float samplerGain = 0.875f;     // instrument gain
 	
 
@@ -907,6 +909,11 @@ public class WaveSynthEditor extends PApplet {
     	case 'L':
     		toggleLooping();
     		break;
+    	case 'w': case 'W':
+    		isWrapAround = !isWrapAround;
+    		pool.setWrapAround(isWrapAround);
+    		println("-- audio buffer wrap around is "+ isWrapAround);
+    		break;
     		// ------------- END COMMANDS FOR ANIMATION STEPPING ------------- //
     		// ------------- BEGIN MUTING COMMANDS ------------- //
     	case '1':
@@ -1038,6 +1045,7 @@ public class WaveSynthEditor extends PApplet {
 		println(" * Press 'P' to shift all active WaveSynth phases by -phaseFac.");
 		println(" * Press 'k' to show all current phase values in the console.");
 		println(" * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.");
+		println(" * Press 'w' or 'W' to toggle audio buffer wrap around.");
 		println(" * Press '+' or '=' to make the image brighter.");
 		println(" * Press '-' or '_' to make the image darker.");
 		println("// ------------- COMMANDS FOR ANIMATION STEPPING ------------- //");
@@ -1542,8 +1550,13 @@ public class WaveSynthEditor extends PApplet {
 	 * Prepares Sampler instruments and assets
 	 */
 	void ensureSamplerReady() {
-	    if (pool != null) pool.setBuffer(audioBuffer);
-	    else pool = new PASamplerInstrumentPool(audioBuffer, sampleRate, poolSize, samplerMaxVoices, audioOut, samplerEnv);
+	    if (pool != null) {
+	    	pool.setBuffer(audioBuffer);
+	    }
+	    else {
+	    	pool = new PASamplerInstrumentPool(audioBuffer, sampleRate, poolSize, samplerMaxVoices, audioOut, samplerEnv);
+	    }
+	    pool.setWrapAround(isWrapAround);
 	    pool.setGain(samplerGain);
 	}
 	
