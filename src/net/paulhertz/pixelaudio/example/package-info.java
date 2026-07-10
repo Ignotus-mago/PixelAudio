@@ -79,9 +79,6 @@
  * <li>{@link net.paulhertz.pixelaudio.example.BigWaveSynth BigWaveSynth} demonstrates basic features of a color organ 
  * that uses additive sine wave synthesis.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.BigWaveSynthAudio BigWaveSynthAudio} extends BigWaveSynth with audio output
- * capabilities, enabling real-time sonification of visual patterns.</li>
- *
  * <li>{@link net.paulhertz.pixelaudio.example.JSONWaveSynth JSONWaveSynth} demonstrates JSON-based serialization and
  * loading of waveform parameters for configuration management.</li>
  *

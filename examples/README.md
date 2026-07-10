@@ -1,4 +1,4 @@
-As of June 24, 2026, we have these examples, in the suggested order for learning about PixelAudio:
+As of July 10, 2026, we have these examples, in the suggested order for learning about PixelAudio:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
@@ -19,11 +19,11 @@ As of June 24, 2026, we have these examples, in the suggested order for learning
 - **SimpleWaveSynth**: basics of creating a WaveSynth animation. 
 - **JSONWaveSynth**: read and write JSON data to configure a WaveSynth.
 - **BigWaveSynth** use a WaveSynth with a large bitmap mapped to a MultiGen. 
-- **BigWaveSynthAudio** use a WaveSynth as an additive audio synthesizer, with droning and detuning.
 - **WaveSynthEditor** use a GUI to load, edit, listen to, save and output WaveSynth data to video.
 - **WaveSynthSequencer** use WaveSynth as an audio synthesizer to play sequences of notes.
 - **ArgosyMixer**: create Argosy patterns with a GUI, play them as audio, export animations to video.
 - **AudioCapture**: capture streaming or live audio and turn it into a bitmap.
+- **SampleAccurateDemo**: compare sample-accurate sampler and granular scheduling.
 - **Bagatelle**: a live performance application with a GUI, presets, JSON i/o, UDP networking, etc.
 
 The tutorial is designed to get you up and running with creating your own sampling audio synth, where you draw on an image to generate non-linear samples from an audio file. You can load your own audio and image files instead of the ones in the examples. Outside the tutorial sequence, the ArgosyMixer and WaveSynthEditor can also be used without digging into the code. Each provides a GUI for exploring additive audio synthesis that also acts as a color organ (WaveSynth) and pattern generation that can produce both control pulses and audio (Argosy). ArgosyMixer and WaveSynthEditor can also output video animation files. 

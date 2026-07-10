@@ -15,8 +15,8 @@
  * can be loaded from and saved to JSON files.
  *
  * For audio signals, a WaveSynth behaves like an audio synthesizer that adds together
- * sine waves at different frequencies. The BigWaveSynthAudio and WaveSynthSequencer
- * example sketches also produce audio with a WaveSynth. This example provides a graphical
+ * sine waves at different frequencies. The WaveSynthSequencer example sketch also
+ * produces audio with a WaveSynth. This example provides a graphical
  * user interface for editing frequencies, colors and other properties of a WaveSynth.
  *
  * Click on the WaveSynth image or press spacebar to hear the audio version of the image. Note

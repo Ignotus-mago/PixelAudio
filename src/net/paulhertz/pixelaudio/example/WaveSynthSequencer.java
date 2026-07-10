@@ -60,7 +60,7 @@ import net.paulhertz.pixelaudio.schedule.*;
  * Press 'c' to reset the image and sound to the opening state. 
  * Press 'h' to show this help message in the console. 
  * 
- * See also: BigWaveSynth, BigWaveSynthAudio.
+ * See also: BigWaveSynth, WaveSynthEditor.
  * </pre>
  */
 public class WaveSynthSequencer extends PApplet {
