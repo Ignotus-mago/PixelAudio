@@ -52,9 +52,9 @@ Release 0.9.6-beta was created for a workshop in Chicago. It provided gesture ca
 
 Release 0.9.8.0-beta: nearly ready for publication, ready for user-testing. Obsolete and `@Deprecated` classes were dropped. Tutorials have new material, included a real-time performance app, `Bagatelle`. Javadocs are substantial and worth reading for an overview of PixelAudio and PixelAudio packages.
 
-Release 0.9.8.5-beta fixed an [elusive bug](https://github.com/Ignotus-mago/PixelAudio/issues/44) in the Granular synth. It also provided the [Bagatelle](https://github.com/Ignotus-mago/PixelAudio/blob/master/src/net/paulhertz/pixelaudio/example/Bagatelle.java) example sketch with a more robust preset structure and improved [WaveSynthEditor](https://github.com/Ignotus-mago/PixelAudio/blob/master/src/net/paulhertz/pixelaudio/example/WaveSynthEditor.java).
+Release 0.9.8.5-beta fixed an [elusive bug](https://github.com/Ignotus-mago/PixelAudio/issues/44) in the Granular synth. It also provided the `Bagatelle` example sketch with a more robust preset structure and improved `WaveSynthEditor`.
 
-Release 0.9.9.0-beta, July 12, 2026: includes a light-weight [test suite](https://github.com/Ignotus-mago/PixelAudio/tree/master/test/net/paulhertz/pixelaudio). A new example sketch, [SampleAccurateDemo](https://github.com/Ignotus-mago/PixelAudio/blob/master/examples/SampleAccurateDemo/SampleAccurateDemo.pde), presents methods for sample-accurate audio scheduling. I've also implemented wrap-around audio buffers for both synths and updated example sketches to toggle wrap-around on and off. 
+Release 0.9.9.0-beta, July 12, 2026: includes a light-weight [test suite](https://github.com/Ignotus-mago/PixelAudio/tree/master/test/net/paulhertz/pixelaudio). A new example sketch, `SampleAccurateDemo`, presents methods for sample-accurate audio scheduling. I've also implemented wrap-around audio buffers for both synths and updated example sketches to toggle wrap-around on and off. 
 
 See [Issue #42 ](https://github.com/Ignotus-mago/PixelAudio/issues/42#issue-4736996032) for my checklist of tasks to complete before publication. Some ideas for the next release beyond 1.0 are listed in [issue #43](https://github.com/Ignotus-mago/PixelAudio/issues/43).  
 
