@@ -7,6 +7,11 @@ import net.paulhertz.pixelaudio.*;
 /**
  * SimpleWaveSynth demonstrates the basics of setting up a {@code WaveSynth} as an animated 
  * visual display. We'll work with WaveSynth audio in other sketches. 
+ * <figure>
+ * <img src="doc-files/simplewavesynth.jpg
+ * " alt="SimpleWaveSynth Screen" width="1024" height="1024"/>
+ * <figcaption>WaveSynth screen for a with a BoustropheGen PixelMapGen and WaveSynth.sampleRate == 48000.</figcaption>
+ * </figure>
  * <p>
  * A WaveSynth uses additive audio synthesis of sine wave "operators" to generate both an audio
  * signal array and an RGB "color signal" array. The color signal serves as the pixel array of a
@@ -248,6 +253,7 @@ public class SimpleWaveSynth extends PApplet {
 				rate = wavesynth.getWidth() * wavesynth.getHeight();
 			}
 			wavesynth.setSampleRate(rate);
+			wavesynth.renderFrame(step);
 			println("----- WaveSynth sample rate is set to "+ wavesynth.getSampleRate());
 			break;
 		case 'R': // set the internal sample rate of the WaveSynth to mapSize

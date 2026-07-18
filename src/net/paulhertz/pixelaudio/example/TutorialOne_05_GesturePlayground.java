@@ -57,6 +57,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  * two audio synthesis engines available in PixelAudio: the Sampler synth and the Granular synth.
  * 
  * <h2>QUICK START</h2>
+ * <figure>
+ * <img src="doc-files/tutorialone_05_gestureplayground.jpg" alt="TutorialOne_05_GesturePlayground Screen" width="768" height="512"/>
+ * <figcaption>TutorialOne_05_GesturePlayground sketch in background with control panel. Open image in a new tab to see full size.</figcaption>
+ * </figure>
  * <ol>
  * <li>Launch the sketch. A display window and a palette of Graphical User Interface (GUI) controls appears.
  * The display window has an audio file preloaded. The grayscale values in the image are transcoded audio

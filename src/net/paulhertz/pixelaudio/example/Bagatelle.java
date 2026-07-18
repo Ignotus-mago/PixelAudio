@@ -76,7 +76,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * </p>
  * <figure>
  * <img src="doc-files/bagatelle.png" alt="DeadBodyWorkFlow Screen" width="768" height="526"/>
- * <figcaption>DeadBodyWorkFlow screen with custom image and preset brushstrokes.</figcaption>
+ * <figcaption>Bagatelle screen for DEADBODYWORKFLOW performance, with brush presets loaded.</figcaption>
  * </figure>
  * <p>
  * Bagatelle is an experiment. I have tried to document it reasonably well, but some features are bound to

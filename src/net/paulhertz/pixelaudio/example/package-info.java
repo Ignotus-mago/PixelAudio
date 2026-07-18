@@ -1,10 +1,12 @@
 /**
- * Example Processing sketches and demonstrations of PixelAudio library functionality. The sketches 
- * are available as .java files in the PixelAudio library {@code net.paulhertz.pixelaudio.example} package and as Processing 
- * sketches in the library release. Both formats share data in the {@code /PixelAudio/examples/examples_data} 
- * directory. If PixelAudio is new to you, I recommend starting with the <b>Basic PixelAudio Features</b>,
- * followed by the <b>Intermediate to Advanced: Tutorial Series</b>. After that, feel free
- * to check out the other examples and the <b>Performance and Production Examples</b>. 
+ * Example Processing sketches and demonstrations of PixelAudio library functionality. Most of
+ * the Javadocs for the example sketches include a screen capture. The sketches are available as
+ * .java files in the PixelAudio library {@code net.paulhertz.pixelaudio.example} package and as
+ * Processing sketches in the Processing library release. Both formats share data in the 
+ * {@code /PixelAudio/examples/examples_data} directory. If PixelAudio is new to you, I recommend
+ * starting with the <b>Basic PixelAudio Features</b>, followed by the <b>Intermediate to
+ * Advanced: Tutorial Series</b>. After that, feel free to check out the other examples and the
+ * <b>Performance and Production Examples</b>.  
  *
  * <p><b>Basic PixelAudio Features</b></p>
  *

@@ -41,9 +41,14 @@ import com.hamoid.*;
  * 
  * <p>
  * TutorialOne_04_Network is a copy of {@link TutorialOne_03_Drawing} with networking features added. 
- * Refer to the notes for TutorialOne_03_Drawing for information about drawing and audio synthesis
+ * Refer to the notes for {@link TutorialOne_03_Drawing} for information about drawing and audio synthesis
  * in TutorialOne_04_Network. Here, we're going to explain just the networking features.
- * </p><p>
+ * </p>
+ * <figure>
+ * <img src="doc-files/tutorialone_04_network.png" alt="TutorialOne_04_Network Screen" width="768" height="512"/>
+ * <figcaption>TutorialOne_04_Network sketch in background, Max app in foreground. Open image in a new tab to see full size.</figcaption>
+ * </figure>
+ * <p>
  * TutorialOne_04_Network is designed to work with a Max patch, {@code simpleAudioIO.maxpat}, which is 
  * included in the example code for PixelAudio. The simpleAudioIO patch is designed to process 
  * audio output from TutorialOne_04_Network and to respond to UDP messages from TutorialOne_04_Network. 
@@ -65,8 +70,8 @@ import com.hamoid.*;
  *   <li>Open MacOS System Settings control panel and select the Sound tab.</li>
  *   <li>In the Input and Output section, select BlackHole 16ch as the Output.</li>
  *   <li>In the Max Audio Status control panel, set Input Device to BlackHole 16ch.</li>
- *   <li>If you have external audio hardware, set that to your output.</li> 
- *   <li>Open simpleAudioIO.maxpat in Max and turn on audio processing.</li>
+ *   <li>In Max, if you have external audio hardware, set that to your output.</li> 
+ *   <li>In simpleAudioIO.maxpat in Max, turn on audio processing.</li>
  *   <li>Run TutorialOne_04_Network and play some sounds.</li>
  * </ol>
  * <h2>UDP: User Datagram Protocol</h2>
