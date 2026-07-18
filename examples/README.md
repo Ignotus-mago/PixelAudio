@@ -1,4 +1,4 @@
-As of July 10, 2026, we have these examples, in the suggested order for learning about PixelAudio:
+As of July 18, 2026, we have these examples, in the suggested order for learning about PixelAudio:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
 - **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
@@ -26,9 +26,9 @@ As of July 10, 2026, we have these examples, in the suggested order for learning
 - **SampleAccurateDemo**: compare sample-accurate sampler and granular scheduling.
 - **Bagatelle**: a live performance application with a GUI, presets, JSON i/o, UDP networking, etc.
 
-The tutorial is designed to get you up and running with creating your own sampling audio synth, where you draw on an image to generate non-linear samples from an audio file. You can load your own audio and image files instead of the ones in the examples. Outside the tutorial sequence, the ArgosyMixer and WaveSynthEditor can also be used without digging into the code. Each provides a GUI for exploring additive audio synthesis that also acts as a color organ (WaveSynth) and pattern generation that can produce both control pulses and audio (Argosy). ArgosyMixer and WaveSynthEditor can also output video animation files. 
+The [Javadocs reference](https://paulhertz.net/PixelAudio/reference/net/paulhertz/pixelaudio/example/package-summary.html) for the example sketches will guide you through each sketch. Most sketch javadocs are illustrated. The TutorialOne sequence is designed to get you up and running with creating your own sampling and granular audio synths, where you draw on an image to generate non-linear samples from an audio file. You can load your own audio and image files instead of the ones in the examples. Outside the tutorial sequence, the ArgosyMixer and WaveSynthEditor can also be used without digging into the code. Each provides a GUI for exploring additive audio synthesis that also acts as a color organ (WaveSynth) and pattern generation that can produce both control pulses and audio (Argosy). ArgosyMixer and WaveSynthEditor can also output video animation files. 
 
-**Bagatelle** is a live performance application with a GUI, presets, JSON i/o  for brushstroke and audio synthesis settings, UDP communications and wide range of options. Offered as an experimental sketch, it shows some of the capabilities of PixelAudio for performance. 
+**Bagatelle** is a live performance application with a GUI, presets, JSON i/o  for brushstroke and audio synthesis settings, UDP communications and wide range of options. Offered as an experimental sketch, it shows some of the capabilities of PixelAudio for performance. You can adapt it to work with your own files. 
 
 If you are interested in combining PixelAudio output with other applications, the AudioCapture sketch provides information about audio signal routing for MacOS, and TutorialOne_04_Networking provides some clues about communicating with other applications using UDP. If you want to capture audio and video from PixelAudio examples, I suggest OBS (Open Broadcast System) as one way to do this.
 
