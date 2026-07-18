@@ -114,9 +114,9 @@ public void toggleWDMute(int elem) {
   WaveData wd = wavesynth.waveDataList.get(elem);
   wd.isMuted = !wd.isMuted;
   if (wd.isMuted) {
-    wd.waveState = WaveState.MUTE;
+    wd.waveState = WaveData.WaveState.MUTE;
   } else {
-    wd.waveState = WaveState.ACTIVE;
+    wd.waveState = WaveData.WaveState.ACTIVE;
   }
   if (!isAnimating) {
     mapImage = renderFrame(step);
@@ -144,7 +144,7 @@ public void unmuteAllWD(ArrayList<WaveData> waveDataList) {
 	StringBuffer sb = new StringBuffer("Audio operators\n");
 	int n = 1;
 	for (WaveData wd :waveDataList) {
-		wd.setWaveState(WaveState.ACTIVE);
+		wd.setWaveState(WaveData.WaveState.ACTIVE);
 		sb.append("wave "+ (n++) +" "+ wd.waveState.toString() +", ");
 	}
 	println(sb.toString());

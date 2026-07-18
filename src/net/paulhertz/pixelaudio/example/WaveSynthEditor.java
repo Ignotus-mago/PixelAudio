@@ -36,10 +36,7 @@ import com.hamoid.*;
 // GUI library for Processing
 import g4p_controls.*;
 
-// TODO error on recording a second video: FIXED
-// TODO error on editing a GUI field while animating: FIXED
 // TODO goofy output to console when editing text fields: PENDING, solution is to replace Spinner with TextField
-// TODO different results for each press of 'i', 'e', some field entries -- FIXED, in WaveData.prepareFrame(...)
 // TODO if possible, enable key commands when the control window has focus, not just when the display window has focus.
 
 
@@ -52,7 +49,12 @@ import g4p_controls.*;
  * that can be saved to video or played as an additive synthesis audio source. It 
  * provides an introduction to the {@code WaveSynth} class and the {@code WaveData} objects 
  * that WaveSynths use to generate visual patterns and audio signals. 
- * </p><p>
+ * </p>
+ * <figure>
+ * <img src="doc-files/wavesyntheditor.png" alt="WaveSynthEditor Screen" width="800" height="640"/>
+ * <figcaption>WaveSynthEditor screen with Graphical User Interface.</figcaption>
+ * </figure>
+ * <p>
  * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
  * some of what you can do with the HilbertGen, BoustropheGen and DiagonalZigzzgGen for 
@@ -1656,7 +1658,9 @@ public class WaveSynthEditor extends PApplet {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-		samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
+		int[] coords = mapper.lookupImageCoordShifted(samplePos, 0);
+		float pan = PApplet.map(coords[0], 0, width-1, -1.0f, 1.0f);
+		samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env, 1.0f, pan);
 		// return the length of the sample
 		return samplelen;
 	}

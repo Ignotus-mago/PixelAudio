@@ -16,14 +16,14 @@
  * <li>{@link net.paulhertz.pixelaudio.example.Starter Starter} is a minimal example that demonstrates
  * initializing PixelAudio with a PixelMapGen, mapping colors to the signal path, and displaying the result.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.MultiGenDemo MultiGenDemo} demonstrates switching between multiple
- * PixelMapGen implementations (Hilbert, Moore, DiagonalZigzag) to explore different spatial patterns.</li>
+ * <li>{@link net.paulhertz.pixelaudio.example.MultiGenDemo MultiGenDemo} demonstrates how to combine multiple PixelMapGens 
+ * into a MultiGen with a single signal path.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.MultiGenLookupTables MultiGenLookupTables} generates and displays lookup
- * tables for different curve generators, useful for understanding spatial mapping.</li>
+ * <li>{@link net.paulhertz.pixelaudio.example.MultiGenLookupTables MultiGenLookupTables} visualizes lookup
+ * tables for various different Multigens.</li>
  *
- * <li>{@link net.paulhertz.pixelaudio.example.MultiGenZoo MultiGenZoo} shows a compact collection of MultiGen
- * construction methods adapted from ArgosyMixer.</li>
+ * <li>{@link net.paulhertz.pixelaudio.example.MultiGenZoo MultiGenZoo} builds on MultiGenLookupTables to show a 
+ * collection of MultiGen construction methods adapted from ArgosyMixer.</li>
  *
  * <li>{@link net.paulhertz.pixelaudio.example.SimpleWaveSynth SimpleWaveSynth} demonstrates setting up a WaveSynth
  * as an animated visual display with gamma adjustment and multiple curve generators (Hilbert, Moore, DiagonalZigzag).</li>

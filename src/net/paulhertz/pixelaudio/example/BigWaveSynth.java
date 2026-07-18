@@ -28,6 +28,10 @@ import com.hamoid.*;
  * MultiGen. MultiGen is a child class of PixelMapGen that allows you to use
  * multiple PixelMapGens to cover a single image with a single signal path
  * through them. 
+ * <figure>
+ * <img src="doc-files/bigwavesynthaudio.png" alt="LoadAudioToImage Screen" width="768" height="526"/>
+ * <figcaption>A WaveSynth pattern loaded from a JSON file, "test182_low.json".</figcaption>
+ * </figure>
  * <p>
  * Initially, we call initWaveDataList() to create a WaveData array with two
  * operators for the WaveSynth, but you can open one of the JSON files in the
@@ -58,6 +62,7 @@ import com.hamoid.*;
  * Press 'i' to reset animation step to 0.
  * Press 'p' to toggle playback rate mode.
  * Press 'S' to save WaveSynth audio to a WAV file.
+ * Press 'w' or 'W' to toggle audio buffer wrap around.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'h' to show help and key commands.
  * </pre>
@@ -104,7 +109,8 @@ public class BigWaveSynth extends PApplet {
 	float sustainLevel = 0.8f;
 	float releaseTime = 0.4f;
 	int poolSize = 8;
-	int samplerMaxVoices = 4;
+	int samplerMaxVoices = 8;
+	boolean isWrapAround = true;
 	int noteDuration = 900;
 	int samplelen;
 	float[] audioSignal;
@@ -345,6 +351,11 @@ public class BigWaveSynth extends PApplet {
 		case 'S': // save WaveSynth audio to a WAV file
 			saveToAudio();
 			break;
+		case 'w': case 'W': // toggle audio buffer wrap around
+			isWrapAround = !isWrapAround;
+			println("-- audio buffer wrap around is "+ isWrapAround);
+			pool.setWrapAround(isWrapAround);
+			break;
 		case 'v': case 'V': // toggle video recording
 			isRecordingVideo = !isRecordingVideo;
 			println("isRecordingVideo is "+ isRecordingVideo);
@@ -375,6 +386,7 @@ public class BigWaveSynth extends PApplet {
 		println(" * Press 'i' to reset animation step to 0.");
 		println(" * Press 'p' to toggle playback rate mode.");
 		println(" * Press 'S' to save WaveSynth audio to a WAV file.");
+		println(" * Press 'w' or 'W' to toggle audio buffer wrap around.");
 		println(" * Press 'v' or 'V' to toggle video recording.");
 		println(" * Press 'h' to show help and key commands.");
 	}
@@ -417,8 +429,13 @@ public class BigWaveSynth extends PApplet {
 	}
 
 	void ensureSamplerReady() {
-		if (pool != null) pool.setBuffer(audioBuffer, currentPlaybackBufferRate());
-		else pool = new PASamplerInstrumentPool(audioBuffer, currentPlaybackBufferRate(), poolSize, samplerMaxVoices, audioOut, samplerEnv);
+		if (pool != null) {
+			pool.setBuffer(audioBuffer, currentPlaybackBufferRate());
+		}
+		else {
+			pool = new PASamplerInstrumentPool(audioBuffer, currentPlaybackBufferRate(), poolSize, samplerMaxVoices, audioOut, samplerEnv);
+		}
+		pool.setWrapAround(isWrapAround);
 		pool.setGain(samplerGain);
 	}
 

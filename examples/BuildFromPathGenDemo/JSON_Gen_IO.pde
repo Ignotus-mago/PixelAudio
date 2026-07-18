@@ -17,7 +17,8 @@ public void fileSelectedWrite(File selection) {
   if (selection.getName().length() < 5 || selection.getName().indexOf(".json") != selection.getName().length() - 5) {
     // missing ".json"
     currentFileName = selection.getAbsolutePath() + ".json";
-  } else {
+  } 
+  else {
     currentFileName = selection.getAbsolutePath();
   }
   JSONObject genJSON = new JSONObject();
@@ -63,7 +64,8 @@ public void fileSelectedOpen(File selection) {
   boolean goodHeader = checkJSONHeader(json, "PXAU", "BGEN");
   if (goodHeader) {
     println("--->> JSON file contains BuildFromPathGen data. It should load correctly.");
-  } else {
+  } 
+  else {
     println("--->> JSON file apparently does not contain BuildFromPathGen data. Will try to load,anyhow.");
   }
   PixelMapGen myGen = importGenDataJSON(json);
@@ -84,7 +86,8 @@ boolean checkJSONHeader(JSONObject json, String key, String val) {
   String pxau;
   if (header != null) {
     pxau = (header.isNull(key)) ? "" : header.getString(key);
-  } else {
+  } 
+  else {
     pxau = (json.isNull(key)) ? "" : json.getString(key);
   }
   if (pxau.equals(val)) {
@@ -106,7 +109,8 @@ public PixelMapGen importGenDataJSON(JSONObject json) {
     myGen.setPixelMap(pixelMap);
     myGen.generate();
     return myGen;
-  } else {
+  } 
+  else {
     return null;
   }
 }

@@ -32,6 +32,10 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
  *   channels. Press '?' to see the available key commands ('h' is reserved for
  *   the Hue channel).</li>
  * </ol>
+ * <figure>
+ * <img src="doc-files/loadimagetoaudio.png" alt="LoadAudioToImage Screen" width="768" height="527"/>
+ * <figcaption>Blending image and audio data in different image color channels.</figcaption>
+ * </figure>
  * <p>
  * You can write the current image to the audio signal with the 'w' key command. 
  * The sound of an image will probably be noisy since it is not designed with cyclic 

@@ -275,6 +275,9 @@ public class SampleAccurateDemo extends PApplet {
         case 'b': case 'B':
             playBothBeatBrushes();
             break;
+        case 'd': case 'D':
+        	playDoubleSamplerBeatBrush(64);
+        	break;
         case 'w': case 'W':
             toggleWrapAround();
             break;
@@ -505,7 +508,22 @@ public class SampleAccurateDemo extends PApplet {
         actionStatus = "Sampler brush: " + nf(samplerIntervalMs, 0, 3) + " ms";
     }
 
-    void playGranularBeatBrush() {
+    void playDoubleSamplerBeatBrush(int offsetSamples) {
+        ensureReadyForPlayback();
+        activeBrushKind = BrushKind.SAMPLER;
+        long startSample = samplerPool.getCurrentSampleTime() + SCHEDULE_LEAD_SAMPLES;
+        scheduleSamplerBrush(samplerBeatBrush, samplerBeatData.schedule,
+                startSample);
+        storeTimedLocations(samplerTimeLocs, samplerBeatData.schedule, visualStartMillis(startSample,
+                samplerPool.getCurrentSampleTime(), samplerPool.getSampleRate()));
+        startSample += offsetSamples;
+        scheduleSamplerBrush(samplerBeatBrush, samplerBeatData.schedule,
+                startSample);
+        storeTimedLocations(samplerTimeLocs, samplerBeatData.schedule, visualStartMillis(startSample,
+                samplerPool.getCurrentSampleTime(), samplerPool.getSampleRate()));
+        actionStatus = "Sampler brush: " + nf(samplerIntervalMs, 0, 3) + " ms";
+    }
+   void playGranularBeatBrush() {
         ensureReadyForPlayback();
         activeBrushKind = BrushKind.GRANULAR;
         long startSample = granularSynth.getCurrentSampleTime() + SCHEDULE_LEAD_SAMPLES;

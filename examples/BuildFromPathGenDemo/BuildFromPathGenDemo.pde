@@ -20,7 +20,7 @@
  * work gets done by calling importGenDataJSON(JSONObject json) with the data loaded from the
  * JSON file. The type of PixelMapGen created in importGenDataJSON() is a BuildFromPathGen.
  * The BuildFromPathGen constructor requires width and height. To complete initialization,
- * you must call BuildFromPathGen.setPixelMap() with the integer array derived from the JOSN
+ * you must call BuildFromPathGen.setPixelMap() with the integer array derived from the JSON
  * data. Then call BuildFromPathGen.generate() to initialize all remaining variables.
  *
  *     BuildFromPathGen myGen = new BuildFromPathGen(w, h);
@@ -58,10 +58,6 @@ boolean oldIsAnimating;
 // for JSON file I/O
 String currentFileName;
 PixelMapGen currentGen;
-
-public static void main(String[] args) {
-  PApplet.main(new String[] { BuildFromPathGenDemo.class.getName() });
-}
 
 public void settings() {
   size(rows * genWidth, columns * genHeight);

@@ -35,6 +35,10 @@ import ddf.minim.*;
  * Opens audio or image files and loads either file type to both the image
  * display and the audio buffer. The images or audio can be "played" with a mouse click or 
  * spacebar press to play the audio mapped to the mouse location.
+ * <figure>
+ * <img src="doc-files/tutorialone_01_fileio.png" alt="TutorialOne_01_FileIO Screen" width="768" height="526"/>
+ * <figcaption>Audio data written as grayscale values along the signal path of mapImage, overlaid with a color spectrum.</figcaption>
+ * </figure>
  * <p>
  * If you are just starting to work with PixelAudio coding, I suggest looking through these
  * sketches before doing the TutorialOne sequence:
@@ -143,6 +147,7 @@ import ddf.minim.*;
  * Press 'k' to apply the hue and saturation in the colors array to mapImage.
  * Press 'o' or 'O' to open an audio or image file.
  * Press 'r' or 'R' to use the default envelope or a random envelope from a list.
+ * Press 'w' or 'W' to toggle audio buffer wrap around.
  * Press 'h' or 'H' to show help and key commands in console.
  * </pre>
  * 
@@ -209,6 +214,7 @@ import ddf.minim.*;
 	 int noteDuration = 1500;        // average sample synth note duration, milliseconds
 	 PASamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
 	 float samplerGain = -3.0f;      // synth gain in dB
+	 boolean isWrapAround = true;    // use wrap around audio buffer for Sampler when true
 	 
 	 // ADSR and its parameters
 	 // Typically, we want to set ADSR maxAmplitude to 1.0 and then change sampleGain 
@@ -357,6 +363,11 @@ import ddf.minim.*;
 			doResample = !doResample;
 			println("---- doResample = "+ doResample);
 			break;
+		case 'w': case 'W': // toggle audio buffer wrap around
+			isWrapAround = !isWrapAround;
+			println("-- audio buffer wrap around is "+ isWrapAround);
+			synth.setWrapAround(isWrapAround);
+			break;
 		case 'h': case 'H': // show help and key commands in console
 			showHelp();
 			break;
@@ -376,6 +387,7 @@ import ddf.minim.*;
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage.");
 		println(" * Press 'o' or 'O' to open an audio or image file.");
 		println(" * Press 'r' or 'R' to use the default envelope or a random envelope from a list.");
+		println(" * Press 'w' or 'W' to toggle audio buffer wrap around.");
 		println(" * Press 'd' to toggle doResample: if true, resample audio when fileSampleRate != audioOut.sampleRate()");
 		println(" * Press 'h' or 'H' to show help and key commands in console.");
 	}
@@ -783,6 +795,7 @@ import ddf.minim.*;
 	    	println("-- initilialized audio sampler synth");
 	    	// set the synth gain with a linear value derived from a dB value
 	    	synth.setGain(AudioUtility.dbToLinear(samplerGain));
+	    	synth.setWrapAround(isWrapAround);
 	    }
 	}
 

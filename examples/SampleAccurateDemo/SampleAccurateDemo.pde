@@ -27,8 +27,6 @@ import net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool;
 import net.paulhertz.pixelaudio.schedule.AudioUtility;
 import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 import net.paulhertz.pixelaudio.schedule.TimedLocation;
-import processing.core.PImage;
-import processing.core.PVector;
 
 /**
  * Sample-accurate Sampler/Granular timing demo.

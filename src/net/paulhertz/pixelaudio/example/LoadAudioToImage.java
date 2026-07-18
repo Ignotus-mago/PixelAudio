@@ -20,6 +20,10 @@ import ddf.minim.*;
  * You can also load audio to individual RGB or HSB Hue and Brightness channels. To hear the 
  * results of loading to different channels, write the image to the audio signal ('w' key) and 
  * click in the image. 
+ * <figure>
+ * <img src="doc-files/loadaudiotoimage.png" alt="LoadAudioToImage Screen" width="512" height="527"/>
+ * <figcaption>Audio selections with corresponding pixels overwritten with a pattern.</figcaption>
+ * </figure>
  * <p>
  * This sketch also includes some common methods for adjusting the brightness and contrast of 
  * an image: gamma adjustment changes contrast up of down and histogram equalization stretches

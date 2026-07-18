@@ -5,14 +5,47 @@ import processing.core.PImage;
 import net.paulhertz.pixelaudio.*;
 
 /**
- * Basics of setting up a PixelAudio sketch.
+ * Basics of setting up a PixelAudio sketch with an image. 
+ * <figure>
+ * <img src="doc-files/starter.png" alt="Starter Screen" width="256" height="271"/>
+ * <figcaption>Starter screen with spectrum mapped to a Hilbert Curve.</figcaption>
+ * </figure>
+ * <p>
+ * It goes something like this:
+ * </p>
+ * <pre>
+ *  PixelAudio pixelaudio;        // the library that we need to load in setup()
+ *  HilbertGen hGen;              // a PixelMapGen for making Hilbert curves, generates the signal path
+ *  PixelAudioMapper mapper;      // a class initialized with a PixelMapGen, for mapping and transcoding audio samples and RGB pixels
+ *  PImage mapImage;              // a bitmap image for display
+ *  int[] spectrum;               // an array of colors that will be written along the "signal path" in mapImage
+ *  
+ *	public void setup() {
+ *	  pixelaudio = new PixelAudio(this);           // 1. initialize PixelAudio library
+ *	  hGen = new HilbertGen(width, height);        // 2. create a PixelMapGen: here it's the Hilbert curve generator
+ *	  mapper = new PixelAudioMapper(hGen);         // 3. initialize a PixelAudioMapper object with the gen
+ *	  // at this point, we could initialize audio and load an audio file
+ *	  mapImage = createImage(width, height, RGB);  // 4. create an image for display 
+ *	  mapImage.loadPixels();                       //    prepare to set its pixel array
+ *	  spectrum = getColors(mapper.getSize());      // 5. generate a pixel array (could have been transcoded audio)
+ *	  // 6. mapper.plantPixels writes the spectrum RGB values to mapImage along the signal path
+ *	  mapper.plantPixels(spectrum, mapImage.pixels, 0, mapper.getSize());
+ *	  mapImage.updatePixels();
+ *	}
+ * </pre>
+ * 
  */
 public class Starter extends PApplet {
-	PixelAudio pixelaudio;        // the library that we need to load in setup()
-	HilbertGen hGen;              // a PixelMapGen child class for making Hilbert curves
-	PixelAudioMapper mapper;      // a class that uses a PixelMapGen ("gen", for short) to map audio samples to RGB pixels
-	PImage mapImage;              // a bitmap image for display
-	int[] spectrum;               // an array of colors that will be written along the "signal path" in mapImage
+	/** the library that we need to load in setup() */
+ 	PixelAudio pixelaudio;
+	/** a PixelMapGen child class for making Hilbert curves, generates the signal path */
+	HilbertGen hGen;
+	/** a class that uses a PixelMapGen ("gen", for short) to map audio samples to RGB pixels */
+	PixelAudioMapper mapper;
+	/** a bitmap image for display */
+	PImage mapImage;
+	/** an array of colors that will be written along the "signal path" in mapImage */
+	int[] spectrum;
 	
 
 	public static void main(String[] args) {

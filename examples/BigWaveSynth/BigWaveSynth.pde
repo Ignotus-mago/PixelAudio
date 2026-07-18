@@ -12,15 +12,16 @@
  * the PixelMapGen we're using with the 'g' key command. You can change the
  * internal sample rate of the WaveSynth with the 'r' key command. The sound
  * the WaveSynth can be determined by the internal sampling rate of the
- * WaveSynth or by the audioOut.sampleRate(). Press the 'p' key to toggle the
- * playback rate flag, playAtAssignedFrequency. When playAtAssignedFrequency is
- * true, changing the internal rate of the WaveSynth will not change the audio
- * frequency. When it's false, the pitch of the audio will change as the
- * sampling rate changes. See the renderSignal() and updateAudioChain(sig)
- * methods for details of how sample rates are used.
+ * WaveSynth or by the {@code audioOut.sampleRate()}. Press the 'p' key to
+ * toggle the playback rate flag, {@code playAtAssignedFrequency}. When
+ * playAtAssignedFrequency is true, changing the internal rate of the
+ * WaveSynth will not change the audio frequency. When it's false, the
+ * pitch of the audio will change as the sampling rate changes. See the
+ * {@code renderSignal()} and {@code updatAudioChain(sig)} methods for
+ * details of how sample rates are used.
  *
- * Press (tab) to turn animation on or off.
- * Press ' ' (spacebar) to play audio for the point the mouse is currently over
+ * Press TAB to turn animation on or off.
+ * Press ' ' (SPACEBAR) to play audio for the point the mouse is currently over.
  * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.
  * Press 'o' to open a JSON file that defines a WaveSynth.
  * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.
@@ -31,6 +32,7 @@
  * Press 'i' to reset animation step to 0.
  * Press 'p' to toggle playback rate mode.
  * Press 'S' to save WaveSynth audio to a WAV file.
+ * Press 'w' or 'W' to toggle audio buffer wrap around.
  * Press 'v' or 'V' to toggle video recording.
  * Press 'h' to show help and key commands.
  *
@@ -39,6 +41,7 @@
  * See also: SimpleWaveSynth, WaveSynthSequencer.
  *
  */
+
 
 import processing.core.*;
 import processing.data.JSONArray;
@@ -101,7 +104,8 @@ float decayTime = 0.05f;
 float sustainLevel = 0.8f;
 float releaseTime = 0.4f;
 int poolSize = 8;
-int samplerMaxVoices = 4;
+int samplerMaxVoices = 8;
+boolean isWrapAround = true;
 int noteDuration = 900;
 int samplelen;
 float[] audioSignal;
@@ -171,23 +175,23 @@ public void setup() {
  *         a loop (3 * genWidth by 2 * genHeight pixels)
  */
 public MultiGen hilbertLoop3x2(int genW, int genH) {
-	// list of PixelMapGens that create an image using mapper
-	ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
-	// list of x,y coordinates for placing gens from genList
-	ArrayList<int[]> offsetList = new ArrayList<int[]>();
-	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
-	offsetList.add(new int[] { 0, 0 });
-	genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
-	offsetList.add(new int[] { genW, 0 });
-	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-	offsetList.add(new int[] { 2 * genW, 0 });
-	genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
-	offsetList.add(new int[] { 2 * genW, genH });
-	genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
-	offsetList.add(new int[] { genW, genH });
-	genList.add(new HilbertGen(genW, genH,PixelMapGen.fx270));
-	offsetList.add(new int[] { 0, genH });
-	return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
+  // list of PixelMapGens that create an image using mapper
+  ArrayList<PixelMapGen> genList = new ArrayList<PixelMapGen>();
+  // list of x,y coordinates for placing gens from genList
+  ArrayList<int[]> offsetList = new ArrayList<int[]>();
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
+  offsetList.add(new int[] { 0, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.nada));
+  offsetList.add(new int[] { genW, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+  offsetList.add(new int[] { 2 * genW, 0 });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx90));
+  offsetList.add(new int[] { 2 * genW, genH });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.r180));
+  offsetList.add(new int[] { genW, genH });
+  genList.add(new HilbertGen(genW, genH, PixelMapGen.fx270));
+  offsetList.add(new int[] { 0, genH });
+  return new MultiGen(3 * genW, 2 * genH, offsetList, genList);
 }
 
 /**
@@ -215,13 +219,13 @@ public ArrayList<WaveData> initWaveDataList() {
   return list;
 }
 
-	/**
-	 * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
-	 * of a WaveSynth object and generates its first frame of animation.
-	 *
-	 * @param synth		a WaveSynth object whose attributes will be set
-	 * @return			the WaveSynth object with attributes set
-	 */
+/**
+ 	 * Sets gain, gamma, isScaleHisto, animSteps, and sampleRate instance variables
+ 	 * of a WaveSynth object and generates its first frame of animation.
+ 	 *
+ 	 * @param synth		a WaveSynth object whose attributes will be set
+ 	 * @return			the WaveSynth object with attributes set
+ 	 */
 public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGain(0.8f);
   synth.setGamma(myGamma);
@@ -302,14 +306,11 @@ public void keyPressed() {
     float rate = wavesynth.getSampleRate();
     if (rate == genWidth * genHeight) {
       rate = rate / 4;
-    }
-    else if (rate == (genWidth * genHeight) / 4) {
+    } else if (rate == (genWidth * genHeight) / 4) {
       rate = 48000;
-    }
-    else if (rate == 48000) {
+    } else if (rate == 48000) {
       rate = 44100;
-    }
-    else if (rate == 44100) {
+    } else if (rate == 44100) {
       rate = genWidth * genHeight;
     }
     wavesynth.setSampleRate(rate);
@@ -340,6 +341,12 @@ public void keyPressed() {
   case 'S': // save WaveSynth audio to a WAV file
     saveToAudio();
     break;
+  case 'w':
+  case 'W': // toggle audio buffer wrap around
+    isWrapAround = !isWrapAround;
+    println("-- audio buffer wrap around is "+ isWrapAround);
+    pool.setWrapAround(isWrapAround);
+    break;
   case 'v':
   case 'V': // toggle video recording
     isRecordingVideo = !isRecordingVideo;
@@ -359,8 +366,8 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press '\t' to turn animation on or off.");
-  println(" * Press ' ' to play audio for the point the mouse is currently over.");
+  println(" * Press TAB to turn animation on or off.");
+  println(" * Press ' ' (SPACEBAR) to play audio for the point the mouse is currently over.");
   println(" * Press 'g' to step through PixelMapGen instances hilb3x2Gen, bGen, and zGen.");
   println(" * Press 'o' to open a JSON file that defines a WaveSynth.");
   println(" * Press 'O' to reopen JSON file, if one is already open, or open a new JSON file.");
@@ -371,6 +378,7 @@ public void showHelp() {
   println(" * Press 'i' to reset animation step to 0.");
   println(" * Press 'p' to toggle playback rate mode.");
   println(" * Press 'S' to save WaveSynth audio to a WAV file.");
+  println(" * Press 'w' or 'W' to toggle audio buffer wrap around.");
   println(" * Press 'v' or 'V' to toggle video recording.");
   println(" * Press 'h' to show help and key commands.");
 }
@@ -412,8 +420,13 @@ public void initAudio() {
 }
 
 void ensureSamplerReady() {
-  if (pool != null) pool.setBuffer(audioBuffer, currentPlaybackBufferRate());
-  else pool = new PASamplerInstrumentPool(audioBuffer, currentPlaybackBufferRate(), poolSize, samplerMaxVoices, audioOut, samplerEnv);
+  if (pool != null) {
+    pool.setBuffer(audioBuffer, currentPlaybackBufferRate());
+  } 
+  else {
+    pool = new PASamplerInstrumentPool(audioBuffer, currentPlaybackBufferRate(), poolSize, samplerMaxVoices, audioOut, samplerEnv);
+  }
+  pool.setWrapAround(isWrapAround);
   pool.setGain(samplerGain);
 }
 
@@ -493,7 +506,8 @@ public void runTimeArray() {
     if (!tl.isStale()) {
       drawCircle(sampleToScreenX(tl.getX()), sampleToScreenY(tl.getY()));
     }
-  });
+  }
+  );
   timeLocsArray.removeIf(TimedLocation::isStale);
 }
 

@@ -20,6 +20,10 @@ import net.paulhertz.pixelaudio.AffineTransformType;
  * A lookup table connects a 1D audio signal with a 2D bitmap, putting audio
  * samples and RGB pixels in one-to-one correspondence. This sketch shows how 
  * a lookup table functions for MultiGens, which consist of multiple PixelMapGens. 
+ * <figure>
+ * <img src="doc-files/multigenlookuptables_02.png" alt="MultiGenLookupTables Screen" width="768" height="526"/>
+ * <figcaption>MultiGenLookupTables screen for a mix of connected DiagonalZigzagGen and HilbertGen paths.</figcaption>
+ * </figure>
  * <p>
  * Because they are in one-to-one correspondence, the audio signal and image
  * pixel arrays have the same number of entries. Imagine the audio signal as path
@@ -428,7 +432,7 @@ public class MultiGenLookupTables extends PApplet {
 		int pos = 0;
 		offscreen.beginDraw();
 		offscreen.pushStyle();
-		offscreen.strokeWeight(1.5f);
+		offscreen.strokeWeight(2.5f);
 		offscreen.stroke(255, 160);
 		for (int[] coordinate : coords) {
 			if (pos == 0) {

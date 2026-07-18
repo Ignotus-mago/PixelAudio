@@ -26,6 +26,7 @@ public void initAudio() {
 void ensureSamplerReady() {
   if (pool != null) pool.setBuffer(audioBuffer);
   else pool = new PASamplerInstrumentPool(audioBuffer, sampleRate, poolSize, samplerMaxVoices, audioOut, samplerEnv);
+  pool.setWrapAround(isWrapAround);
   pool.setGain(samplerGain);
 }
 
@@ -71,6 +72,7 @@ void updateAudioChain(float[] sig, float bufferSampleRate) {
   // 5) Propagate into synths (adjust to your actual API)
   if (pool != null) {
     pool.setBuffer(audioBuffer, bufferSampleRate);
+    pool.setWrapAround(isWrapAround);
   }
 }
 
@@ -125,7 +127,9 @@ public void renderSignal() {
  * @return the calculated sample length in samples
  */
 public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env) {
-  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env);
+  int[] coords = mapper.lookupImageCoordShifted(samplePos, 0);
+  float pan = PApplet.map(coords[0], 0, width-1, -1.0f, 1.0f);
+  samplelen = pool.playSample(samplePos, (int) samplelen, amplitude, env, 1.0f, pan);
   // return the length of the sample
   return samplelen;
 }

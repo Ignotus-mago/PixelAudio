@@ -12,7 +12,7 @@ import com.hamoid.*;
 /**
  * Demo of how to set and save WaveSynth parameters from JSON files.
  * See WaveSynthEditor for the complete set of WaveSynth parameters 
- * you can edit in a GUI, load and save to files, and output as video. 
+ * that you can edit in a GUI, load and save to files, and output as video. 
  * <pre>
  * Press ' ' (spacebar) to toggle animation.
  * Press 'o' to open a new JSON file containing WaveSynth data.

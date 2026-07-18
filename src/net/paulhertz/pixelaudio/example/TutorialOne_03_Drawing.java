@@ -70,7 +70,12 @@ import com.hamoid.*;
  * and audio tools. The WaveSynth and Argosy classes experiment with pattern and audio generation.
  * The example files eventually lead to live performance oriented applications that you can 
  * adapt for your own purposes. 
- * </p><p>
+ * </p>
+ * <figure>
+ * <img src="doc-files/tutorialone_03_drawing.png" alt="TutorialOne_03_Drawing Screen" width="768" height="526"/>
+ * <figcaption>Playable brushstrokes for Sampler and Granular synths overlaid on visualization of audio data.</figcaption>
+ * </figure>
+ * <p>
  * PixelAudio provides two types of audio synthesis: Sampler intruments, introduced in
  * previous sketches, and Granular instruments. This sketch introduces PixelAudio's granular 
  * synthesis engine with the {@link PAGranularInstrumentDirector} class and provides
@@ -383,6 +388,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
 	int poolSize = 8;               // number of sampler instruments for polyphony
 	int samplerMaxVoices = 128;     // number of voices for each sampler instrument
+	boolean isWrapAround = true;    // toggle for wrap around audio buffer, wrap tail to head if true
 
 	// ADSR and its parameters
 	float maxAmplitude = 1.0f;          // set envelopes to 1.0f amplitude, then scale later with audio instrument gain
@@ -1840,6 +1846,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	    if (pool != null) pool.setBuffer(playBuffer);
 	    else pool = new PASamplerInstrumentPool(playBuffer, sampleRate, poolSize, samplerMaxVoices, audioOut, defaultEnv);
 	    pool.setGain(samplerGain);
+	    pool.setWrapAround(isWrapAround);
 	}
 	
 	/**

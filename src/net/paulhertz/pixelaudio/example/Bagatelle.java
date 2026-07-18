@@ -73,7 +73,12 @@ import net.paulhertz.pixelaudio.sampler.*;
  * "Abstract Jailbreak". If you change {@code pMode} to {@code PerformanceMode.DEADBODYWORKFLOW}, 
  * this sketch will run the presets and cues for "DEADBODYWORKFLOW". You can toggle {@code pMode}
  * at runtime with the '%' key--this is new feature, YMMV.
- * </p><p>
+ * </p>
+ * <figure>
+ * <img src="doc-files/bagatelle.png" alt="DeadBodyWorkFlow Screen" width="768" height="526"/>
+ * <figcaption>DeadBodyWorkFlow screen with custom image and preset brushstrokes.</figcaption>
+ * </figure>
+ * <p>
  * Bagatelle is an experiment. I have tried to document it reasonably well, but some features are bound to
  * appear opaque or mysterious. I think most of the features will reveal themselves with experimentation.
  * You may even find that you can write your own presets and use them for your performances. That

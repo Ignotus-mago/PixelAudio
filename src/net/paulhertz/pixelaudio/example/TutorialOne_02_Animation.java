@@ -68,6 +68,10 @@ import com.hamoid.*;
  *      keys to change the pitch of the audio. Press 'r' to turn random ADSR 
  *      envelope selection on and off. See below for more information.</li>
  * </ol>
+ * <figure>
+ * <img src="doc-files/tutorialone_02_animation.png" alt="TutorialOne_02_Animation Screen" width="768" height="526"/>
+ * <figcaption>Still frame from animation: audio data written as grayscale values along the signal path, overlaid with a color spectrum, shifting at 1086 pixels/frame.</figcaption>
+ * </figure>
  * <p>
  * We add a simple form of animation in this sketch, which consists of shifting
  * the pixels in the display image along the "signal path". This is a simple way
@@ -145,12 +149,12 @@ import com.hamoid.*;
  *   Press ' ' (spacebar) to play sample at current mouse position.
  *   Press 'a' to turn animation on or off.
  *   Press 'A' to change animation direction.
- *   Press 'f' to rotate pixels by shift value .
- *   Press 'F' to rotate pixels by shift value .
+ *   Press 'f' to rotate pixels by shift value.
+ *   Press 'F' to rotate pixels by shift value.
  *   Press 'm' to play audio events synced to audio sample rate and video frame rate.
  *   Press 'c' to apply color from image file to display image (mapImage) only.
  *   Press 'C' to apply color from image file to base image and map image.
- *   Press 'k' to apply hue and saturation in the spectrum array to mapImage .
+ *   Press 'k' to apply hue and saturation in the spectrum array to mapImage.
  *   Press 'K' to apply hue and saturation in the spectrum array to baseImage.
  *   Press 'o' or 'O' to open an audio or image file.
  *   Press 'p' to select low pitch scaling or default pitch scaling.
@@ -226,6 +230,7 @@ public class TutorialOne_02_Animation extends PApplet {
 	int noteDuration = 1500;        // average sample synth note duration, milliseconds
 	PASamplerInstrument synth;      // instance of class that wraps a Minim Sampler and implements an ADSR envelope
 	float samplerGain = -3.0f;      // synth gain in dB
+	boolean isWrapAround = true;    // use wrap around audio buffer for Sampler when true
 
 	// ADSR and its parameters
 	ADSRParams defaultEnv;          // wrapper for ADSR that keeps its values visible
@@ -1118,6 +1123,7 @@ public class TutorialOne_02_Animation extends PApplet {
 	    	println("-- initilialized audio sampler synth");
 	    	// set the synth gain with a linear value derived from a dB value
 	    	synth.setGain(AudioUtility.dbToLinear(samplerGain));
+	    	synth.setWrapAround(isWrapAround);
 	    }
 	}
 

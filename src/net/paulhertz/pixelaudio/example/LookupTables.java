@@ -11,6 +11,10 @@ import net.paulhertz.pixelaudio.*;
  * Demo of a PixelAudio core concept: how to map a 1D audio signal onto a  
  * 2D bitmap, using lookup tables (LUTs) to create a one-to-one correspondence
  * between audio samples and RGB pixels.
+ * <figure>
+ * <img src="doc-files/lookuptables.png" alt="LookupTables Screen" width="512" height="512"/>
+ * <figcaption>LookupTables screen for a HilbertGen.</figcaption>
+ * </figure>
  * <p>
  * Because they are in one-to-one correspondence, the audio signal and image
  * pixel arrays have the same number of entries. Imagine the audio signal as path

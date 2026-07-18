@@ -15,10 +15,14 @@ import processing.core.PApplet;
 import processing.core.PGraphics;
 
 /**
- * MultiGenZoo: a small sketch showing different ways to create MultiGens.
+ * MultiGenZoo: a small sketch showing different ways to create MultiGens, copied and condensed from 
+ * {@link ArgosyMixer}.
+ * <figure>
+ * <img src="doc-files/multigenzoo.png" alt="MultiGenZoo Screen" width="768" height="526"/>
+ * <figcaption>MultiGen composed of row-wise connected HilbertGen objects.</figcaption>
+ * </figure>
  * <p>
- * The pattern-making methods are copied and condensed from ArgosyMixer. The
- * display framework borrows the useful parts of MultiGenLookupTables: each
+ * The display framework borrows the useful parts of MultiGenLookupTables: each
  * MultiGen is drawn as a colored signal path, with optional path lines, so the
  * orientation of the component PixelMapGens is easy to inspect.
  * </p><p>
@@ -677,7 +681,7 @@ public class MultiGenZoo extends PApplet {
         int pos = 0;
         offscreen.beginDraw();
         offscreen.pushStyle();
-        offscreen.strokeWeight(1.5f);
+        offscreen.strokeWeight(2.5f);
         offscreen.stroke(255, 160);
         for (int[] coordinate : coords) {
             if (pos == 0) {

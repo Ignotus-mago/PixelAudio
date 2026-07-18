@@ -9,6 +9,10 @@ import net.paulhertz.pixelaudio.*;
 
 /**
  * How to combine multiple PixelMapGens into a MultiGen with a single signal path.
+ * <figure>
+ * <img src="doc-files/multigendemo.png" alt="MultiGenDemo Screen" width="386" height="273"/>
+ * <figcaption>MultiGenDemo screen showing a MultiGen made of two DiagonalZigzagGen objects.</figcaption>
+ * </figure>
  * <p>
  * MultiGen is child class of PixelMapGen that allows you to combine multiple PixelMapGens 
  * into a single PixelMapGen, with a single signal path through all the gens. There are four  
