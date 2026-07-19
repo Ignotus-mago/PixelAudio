@@ -45,7 +45,7 @@ import com.hamoid.*;
  * in TutorialOne_04_Network. Here, we're going to explain just the networking features.
  * </p>
  * <figure>
- * <img src="doc-files/tutorialone_04_network.png" alt="TutorialOne_04_Network Screen" width="768" height="512"/>
+ * <img src="doc-files/tutorialone_04_network.jpg" alt="TutorialOne_04_Network Screen" width="768" height="512"/>
  * <figcaption>TutorialOne_04_Network sketch in background, Max app in foreground. Open image in a new tab to see full size.</figcaption>
  * </figure>
  * <p>
