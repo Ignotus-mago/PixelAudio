@@ -438,7 +438,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     // This example concentrates on audio synthesis, we don't do pixel-shift 
     // animation, but the hooks for handling it are all here
     
-    int shift = 1;                    // number of pixels to shift the animation
+    int shift = 1;                       // number of pixels to shift the animation
     int leap = 65536;                    // a big shift 
     int totalShift = 0;                  // cumulative shift
     boolean isAnimating = false;         // do we run animation or not?
@@ -3358,7 +3358,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			vary = (float) PixelAudio.gauss(mean, variance);
 		}
 		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
-		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 	
@@ -4943,6 +4943,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            (gainCurve != null) ? PAKeyframeControlCurve.expandToSchedule(gainCurve, sched) : null;
 	    final float pitch = snap.pitchRatio();
 	    final ADSRParams baseEnv = (snap.env != null) ? snap.env.copy() : samplerEnv;
+        float lenSum = 0;
+        isDebugging = true;
 	    synchronized (samplerBrushEventsLock) {
 	        for (int i = 0; i < n; i++) {
 	            PVector loc = sched.points.get(i);
@@ -4961,6 +4963,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	                new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, baseEnv.copy(), pan)
 	            );
 	            if (isDebugging) {
+	            	/*
 	                println("-- sampler evt i=" + i
 	                    + " dt=" + sched.timesMs[i]
 	                    + " eventTime=" + t
@@ -4969,8 +4972,15 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	                    + " gain=" + gain
 	                    + " pitch=" + pitch
 	                    + " pan=" + pan);
+	            	*/
+	            	lenSum += len;
 	            }
 	        }
+	        if (isDebugging) {
+	        	double durMs = AudioUtility.samplesToMillis((Math.round(lenSum)/n), sampleRate);
+	        	println("average length = "+ durMs +" mS for "+ (n) +" events, gain = "+ baseGain);
+	        }
+	        isDebugging = false;
 	        samplerBrushEvents.sort((a, b) -> Integer.compare(a.eventTimeMs, b.eventTimeMs));
 	    }
 	}
@@ -4989,7 +4999,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	                // list is sorted, so we can stop early
 	                break;
 	            }
-	            playSample(evt.samplePos, evt.durationMs, evt.gain, evt.env, evt.pitchRatio, evt.pan);
+	            playSample(evt.samplePos, evt.durationSamples, evt.gain, evt.env, evt.pitchRatio, evt.pan);
 	            int sampleX = PixelAudio.constrain(evt.x, 0, width - 1);
 	            int sampleY = PixelAudio.constrain(evt.y, 0, height - 1);
 	            pointTimeLocsAddPoint(new TimedLocation(sampleX, sampleY, 200 + millis()));

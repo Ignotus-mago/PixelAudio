@@ -46,8 +46,8 @@ public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
     // playback
     /** audio buffer index, typically derived from event coordinates */
     public final int samplePos;
-    /** event duration */
-    public final int durationMs;
+    /** event duration in samples */
+    public final int durationSamples;
 
     /** Linear gain multiplier for playback. */
     public final float gain;
@@ -70,7 +70,7 @@ public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
      * @param y             y-coordinate associated with the event
      * @param eventTimeMs   event time in milliseconds
      * @param samplePos     audio buffer index to start playback
-     * @param sampleLen     event duration in milliseconds
+     * @param sampleLen     event duration in samples
      * @param gain          linear gain multiplier
      * @param pitchRatio    pitch ratio, where 1.0 leaves pitch unchanged
      * @param env           ADSR envelope for the event
@@ -82,7 +82,7 @@ public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
         this.y = y;
         this.eventTimeMs = eventTimeMs;
         this.samplePos = samplePos;
-        this.durationMs = sampleLen;
+        this.durationSamples = sampleLen;
         this.gain = gain;
         this.pitchRatio = pitchRatio;
         this.env = env;
@@ -116,8 +116,8 @@ public class SamplerBrushEvent implements Comparable<SamplerBrushEvent> {
 	}
 		
 	/** @return event duration in milliseconds */
-	public int getDurationMs() {
-		return durationMs;
+	public int getDurationSamples() {
+		return durationSamples;
 	}
 
 

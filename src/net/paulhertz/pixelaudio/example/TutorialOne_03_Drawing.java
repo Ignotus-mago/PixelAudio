@@ -2579,7 +2579,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	            int sampleX = Math.round(stl.getX());
 	            int sampleY = Math.round(stl.getY());
 	            // playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
-                playSample(stl.samplePos, stl.durationMs, stl.gain, stl.env, stl.pitchRatio, stl.pan);
+                playSample(stl.samplePos, stl.durationSamples, stl.gain, stl.env, stl.pitchRatio, stl.pan);
         		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, durationMs + millis()));
 	            stl.setStale(true);
 	        } 
