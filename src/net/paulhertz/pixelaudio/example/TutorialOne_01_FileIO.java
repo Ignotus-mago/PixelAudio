@@ -767,7 +767,7 @@ import ddf.minim.*;
 		// Use the getLineOut method of the Minim object to get an AudioOutput object.
 		// PixelAudio instruments require a STEREO output. 1024 is a standard number
 		// of samples for the output buffer to process at one time. You should usually
-		// set the output sampleRate to either 41500 or 48000, standards for digital 
+		// set the output sampleRate to either 44100 or 48000, standards for digital 
 		// audio recordings.
 		this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
 		// set the output level in dB

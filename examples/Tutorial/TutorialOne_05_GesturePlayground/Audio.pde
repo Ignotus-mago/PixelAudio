@@ -14,7 +14,7 @@ public void initAudio() {
   // use the getLineOut method of the Minim object to get an AudioOutput object
   // PixelAudio instruments require a STEREO output. 1024 is a standard number of
   // samples for the output buffer to process at one time. You should usually set
-  // the output sampleRate to either 41500 or 48000, standards for digital audio.
+  // the output sampleRate to either 44100 or 48000, standards for digital audio.
   this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
   // set the gain lower to avoid clipping from multiple voices (UP and DOWN arrow keys adjust)
   // See TutorialOne_03_Drawing for information about audio processing and noise in PixelAudio.
