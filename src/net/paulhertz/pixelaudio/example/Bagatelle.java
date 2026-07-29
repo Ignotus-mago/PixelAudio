@@ -397,11 +397,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	int samplelen;                    // calculated sample synth note length, samples
 	float samplerGain = 0.5f;         // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
-	float outputGain = 0.0f;          // gain setting for audio output, decibels
+	float outputGain = -6.0f;          // gain setting for audio output, decibels
 	boolean isMuted = false;          // global muting
 	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
-	int poolSize = 16;                 // number of sampler instruments for polyphony
-	int sMaxVoices = 256;             // number of voices to allocate to pool or synth
+	int poolSize = 8;                 // number of sampler instruments for polyphony
+	int sMaxVoices = 64;             // number of voices to allocate to pool or synth
 
     // ====== Granular Synth ====== //
 
@@ -1031,8 +1031,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
 		colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
 		initImages();                   // load baseImage and mapImage
-		initAudio();                    // set up Minima and our granular and sampling synths
-		// initListener();              // PLACEHOLDER: sample-accurate audio timer -- TODO future implementation
+		initAudio();                    // set up Minim and our granular and sampling synths
 		initConfig();                   // set up configuration for granular and sampling instruments
 		initDrawing();                  // set up drawing variables
 		initGUI();                      // set up the G4P control window and widgets
@@ -2064,6 +2063,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 					this.nd.oscSendOnOff(1, true);
 					println("-- trig 1 -- reverb ON");
 				}
+				this.setAudioGain(0.0f);    // adjust gain from Bagatelle initial default of -6.0 dB
+				pool.setPoolSize(16);       // testing
+				pool.setMaxVoices(256);     // testing
 				loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
 				this.doPlayOnNewBrush = true;
 				this.doPlayWhileDrawing = false;
@@ -3064,6 +3066,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
 		granSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
 		this.audioLength = audioSignal.length;
+		// precautionary measure
+		samplerEnv = envPreset("Soft");
 		// initialize event animation tracking arrays
 		initTimedEventLists();
 		ensureGranularReady();
@@ -3358,7 +3362,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			vary = (float) PixelAudio.gauss(mean, variance);
 		}
 		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
-		if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 	
