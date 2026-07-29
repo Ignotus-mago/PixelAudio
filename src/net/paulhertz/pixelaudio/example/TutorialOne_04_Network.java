@@ -191,6 +191,10 @@ import com.hamoid.*;
  * </pre>
  * </div>
  * 
+ * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
+ * 
  * 
  */
 public class TutorialOne_04_Network extends PApplet implements PANetworkClientINF {
@@ -287,7 +291,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
 	int poolSize = 8;               // number of sampler instruments for polyphony
-	int samplerMaxVoices = 256;     // number of voices for each sampler instrument
+	int samplerMaxVoices = 64;      // number of voices for each sampler instrument
 
 	// ADSR and its parameters
 	float maxAmplitude = 1.0f;          // set envelopes to 1.0f amplitude, then scale later with audio instrument gain

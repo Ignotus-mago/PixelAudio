@@ -42,7 +42,8 @@ import java.util.Map;
  *
  * Thread-safe and compatible with both PAPlayable and PASamplerPlayable.
  * <br>
- * TODO example sketches.
+ * TODO example sketches. Work-in-progress.
+ * 
  */
 public class PASamplerInstrumentPoolMulti implements PASamplerPlayable, PAPlayable, AudioSampleClock {
 	private final AudioOutput out;

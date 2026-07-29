@@ -494,12 +494,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 */
 	public boolean hasAvailableVoice() {
 	    if (sampler == null) return false;
-	    for (PASamplerVoice v : ((PASharedBufferSampler) sampler).getVoices()) {
-	        if (v.isFinished() || (!v.isActive() && !v.isReleasing())) {
-	            return true;
-	        }
-	    }
-	    return false;
+	    return ((PASharedBufferSampler) sampler).hasAvailableVoice();
 	}
 
 	// --- Helpers for pool orchestration (non-invasive; read-only) ---
@@ -510,10 +505,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 */
 	public boolean hasActiveOrReleasingVoices() {
 	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
-	    for (PASamplerVoice v : s.getVoices()) {
-	        if (v.isActive() || v.isReleasing()) return true;
-	    }
-	    return false;
+	    return s.activeOrReleasingVoiceCount() > 0;
 	}
 
 	/**
@@ -523,11 +515,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 */
 	public int activeOrReleasingVoiceCount() {
 	    PASharedBufferSampler s = (PASharedBufferSampler) getSampler();
-	    int c = 0;
-	    for (PASamplerVoice v : s.getVoices()) {
-	        if (v.isActive() || v.isReleasing()) c++;
-	    }
-	    return c;
+	    return s.activeOrReleasingVoiceCount();
 	}
 
 	/** Smoothly release all active voices (used only if we must recycle an instrument). */

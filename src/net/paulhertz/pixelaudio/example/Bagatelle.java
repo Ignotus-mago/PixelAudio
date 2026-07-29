@@ -58,7 +58,7 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 
 /* 
- * TODO a release version where two different preset lists and performance cues can be swapped. DONE
+ * DONE a release version where two different preset lists and performance cues can be swapped.
  * 
  */
 
@@ -237,8 +237,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  * timing is a topic for another as-yet-unreleased example sketch. <br>
  * 
  * The {@code runSamplerBrushEvents()} method executes the UI brushstroke animation and the Sampler audio events. 
- * Sampler events all pass through {@code pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan)}.
+ * Sampler events all pass through {@code pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan)}.</p>
  * 
+ * <p>See Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with Sampler synth.</p>
  * 
  * <pre>
  * ----- Audio Gain -----
@@ -397,11 +399,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	int samplelen;                    // calculated sample synth note length, samples
 	float samplerGain = 0.5f;         // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
-	float outputGain = -6.0f;          // gain setting for audio output, decibels
+	float outputGain = -6.0f;         // gain setting for audio output, decibels
 	boolean isMuted = false;          // global muting
 	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
-	int poolSize = 8;                 // number of sampler instruments for polyphony
-	int sMaxVoices = 64;             // number of voices to allocate to pool or synth
+	// see https://github.com/Ignotus-mago/PixelAudio/issues/45 for information about suggested poolSize and sMaxVoices usage
+	int poolSize = 4;                 // number of sampler instruments for polyphony
+	int sMaxVoices = 128;             // number of voices to allocate to pool or synth
 
     // ====== Granular Synth ====== //
 
@@ -414,7 +417,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	
 	String currentGranStatus = "";
 	
-	// TODO -- ADD FOR REFACTOR  
+	// anything to do?
     public PAGranularInstrumentDirector gDir;   // director of granular events
     public float granularGain = 1.0f;           // linear gain for a granular gesture event
     public float granularPointGain = 0.9f;      // linear gain for a granular point event ("granular burst")
@@ -448,7 +451,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     int animSteps = 720;                 // how many steps in an animation loop
     boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
     int videoFrameRate = 120;             // fps, frames per second
-    int videoSteps = 720;                // TODO seems redundant
+    int videoSteps = 720;                // number of frames in video output file
     int step;                            // number of current step in animation loop
     VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
     
@@ -1715,7 +1718,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			pool.cycleMixProfile();
 			println("-- mix profile is "+ pool.getMixProfile().name());
 			break;
-		case 'R': // reset transform of active brush if it has a transform TODO clarify
+		case 'R': // reset active AudioBrush's transformState to unity, or fall through to reset instrument config
 		    if (activeBrush != null && activeBrush.hasTransform()) {
 		        activeBrush.restoreTransform();
 		        activeBrush.transform().resetTransform();
@@ -1956,7 +1959,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println(" * Press ':' to stop all loops.");
 		println(" * Press 'y' to toggle transform animation test.");
 		println(" * Press 'Y' to freeze / unfreeze brush geometric transform animation.");
-		println(" * Press 'R' to reset transform of active brush if it has a transform.");    // TODO clarify
+		println(" * Press 'R' to reset geometric transform of active brush, if it has a transform.");    
 		println(" * Press 'G' to create a beatBrush.");
 		println(" * Press '.' to turn random raindrops audio events on or off.");
 		println(" * Press '`' to fade out all instruments.");
@@ -2063,9 +2066,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 					this.nd.oscSendOnOff(1, true);
 					println("-- trig 1 -- reverb ON");
 				}
-				this.setAudioGain(0.0f);    // adjust gain from Bagatelle initial default of -6.0 dB
-				pool.setPoolSize(16);       // testing
-				pool.setMaxVoices(256);     // testing
+				this.setAudioGain(0.0f);                  // change gain from initial default of -6.0 dB
+				setPoolAttributes(poolSize, sMaxVoices);  // in case you want to change pool size / max voices
 				loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
 				this.doPlayOnNewBrush = true;
 				this.doPlayWhileDrawing = false;
@@ -2175,6 +2177,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		
 		}  // switch (pMode)
+	}
+
+	/**
+	 * 
+	 */
+	public void setPoolAttributes(int size, int maxVoices) {
+		pool.setPoolSize(size);           // testing
+		pool.setMaxVoices(maxVoices);     // testing
 	}
 	
 	/**

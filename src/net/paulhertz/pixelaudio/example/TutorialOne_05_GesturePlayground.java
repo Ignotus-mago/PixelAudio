@@ -211,6 +211,9 @@ import net.paulhertz.pixelaudio.sampler.*;
  * samplelen, amplitude, env, pitch, pan)}.</li>
  * </ul>
  * 
+ * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
  * 
  * <pre>
  * KEY COMMANDS
@@ -329,6 +332,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	float outputGain = -6.0f;       // gain setting for audio output, decibels
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
+	// See Issue #45 https://github.com/Ignotus-mago/PixelAudio/issues/45, for suggested poolSize and sMaxVoices settings
 	int poolSize = 8;               // number of instruments in the pool
 	int sMaxVoices = 64;            // number of voices to allocate to pool or synth
 

@@ -81,8 +81,12 @@ public class PASharedBufferSampler extends UGen implements PASampler {
 
     /** Audio output this sampler is patched to. */
     private final AudioOutput out;
-    /** Voice pool used for polyphonic sample playback. */
+    /** All voices allocated by this sampler, retained for controls and inspection. */
     private final List<PASamplerVoice> voices = new ArrayList<>();
+    /** Voices currently contributing to, or releasing through, the audio render path. */
+    private final List<PASamplerVoice> activeVoices = new ArrayList<>();
+    /** Allocated inactive voices ready for reuse without allocation on the audio thread. */
+    private final Deque<PASamplerVoice> freeVoices = new ArrayDeque<>();
     /** Maximum number of simultaneous voices. */
     private int maxVoices = 32;
     /** Default looping state for newly triggered voices. */
@@ -166,6 +170,9 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     
     /**
      * Constructs a sampler over a shared buffer with explicit polyphony.
+     * Voices are allocated lazily as playback demand grows, up to
+     * {@code maxVoices}, so the configured ceiling does not impose its full
+     * per-sample rendering cost before those voices have actually been needed.
      *
      * @param multiBuffer          shared source buffer
      * @param playbackSampleRate   sample rate of the source buffer in Hz
@@ -178,9 +185,6 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     	this.playbackSampleRate = playbackSampleRate;
     	this.out = out;
     	this.maxVoices = Math.max(1, maxVoices);
-       	for (int i = 0; i < this.maxVoices; i++) {
-    		voices.add(new PASamplerVoice(buffer, playbackSampleRate));
-    	}
     	this.patch(out);   	
     }
     
@@ -350,21 +354,22 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      * Get a free voice, or recycle the oldest active one if at the polyphony limit.
      */
     private PASamplerVoice getAvailableVoice() {
-        // 1) Free voice first
-        for (PASamplerVoice v : voices) {
-            if (!v.isActive() && !v.isReleasing()) {
-                return v;
-            }
+        // 1) Reuse an allocated inactive voice.
+        PASamplerVoice free = freeVoices.pollFirst();
+        if (free != null) {
+            activeVoices.add(free);
+            return free;
         }
-        // 2) Allocate if under limit
+        // 2) Allocate lazily if under the configured limit.
         if (voices.size() < maxVoices) {
             PASamplerVoice v = new PASamplerVoice(buffer, playbackSampleRate);
             voices.add(v);
+            activeVoices.add(v);
             return v;
         }
-        // 3) Recycle oldest
+        // 3) Recycle the oldest active voice.
         PASamplerVoice oldest = null;
-        for (PASamplerVoice v : voices) {
+        for (PASamplerVoice v : activeVoices) {
             if (v.isActive() && (oldest == null || v.getVoiceId() < oldest.getVoiceId())) {
                 oldest = v;
             }
@@ -376,6 +381,28 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             return oldest;
         }
         return null; // shouldn't happen
+    }
+
+    /**
+     * Removes a finished voice from the render path and makes it available for reuse.
+     * If the maximum voice count was lowered while the voice was active, discard the
+     * excess allocation instead.
+     */
+    private void recycleFinishedVoice(PASamplerVoice voice) {
+        voice.resetPosition();
+        if (voices.size() > maxVoices) {
+            voices.remove(voice);
+        } else {
+            freeVoices.addLast(voice);
+        }
+    }
+
+    /** Discards inactive allocations above the configured maximum. */
+    private void trimExcessFreeVoices() {
+        while (voices.size() > maxVoices && !freeVoices.isEmpty()) {
+            PASamplerVoice excess = freeVoices.removeLast();
+            voices.remove(excess);
+        }
     }
 
     /**
@@ -406,16 +433,15 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         final MixProfile profile = this.mixProfile;
         float activeWeight = 0f;
 
-        Iterator<PASamplerVoice> it = voices.iterator();
+        Iterator<PASamplerVoice> it = activeVoices.iterator();
         while (it.hasNext()) {
             PASamplerVoice v = it.next();
 
-            float sample;
+            float sample = 0f;
             try {
                 sample = v.nextSample();
             } catch (ArrayIndexOutOfBoundsException e) {
                 v.stop();
-                continue;
             }
 
             boolean isActive = v.isActive();
@@ -438,7 +464,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             }
 
             if (v.isFinished()) {
-                v.resetPosition();
+                it.remove();
+                recycleFinishedVoice(v);
             }
         }
 
@@ -503,22 +530,26 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     @Override
     public void stopAll() {
         synchronized (this) {
-            for (PASamplerVoice v : voices) v.stop();
+            Iterator<PASamplerVoice> it = activeVoices.iterator();
+            while (it.hasNext()) {
+                PASamplerVoice v = it.next();
+                v.stop();
+                it.remove();
+                recycleFinishedVoice(v);
+            }
         }
     }
     
     @Override
     public void releaseAll() {
         synchronized (this) {
-            for (PASamplerVoice v : voices) {
-                if (v.isActive() || v.isReleasing()) v.release();
-            }
+            for (PASamplerVoice v : activeVoices) v.release();
         }
     }
 
     @Override
-    public boolean isLooping() {
-        for (PASamplerVoice v : voices) {
+    public synchronized boolean isLooping() {
+        for (PASamplerVoice v : activeVoices) {
             if (v.isActive() && v.isLooping()) return true;
         }
         return false;
@@ -573,10 +604,21 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      */
     public synchronized void setMaxVoices(int maxVoices) {
         this.maxVoices = Math.max(1, maxVoices);
+        trimExcessFreeVoices();
     }
 
     /** @return maximum simultaneous voices */
     public int getMaxVoices() { return maxVoices; }
+
+    /** @return number of voices currently in the render path */
+    public synchronized int activeOrReleasingVoiceCount() {
+        return activeVoices.size();
+    }
+
+    /** @return true when a free voice exists or another voice may be allocated */
+    public synchronized boolean hasAvailableVoice() {
+        return !freeVoices.isEmpty() || voices.size() < maxVoices;
+    }
 
     /**
      * Read-only list of voices for GUI or debugging.
@@ -629,8 +671,11 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     	for (PASamplerVoice v : this.voices) {
     		v.stop();
     		v.setBuffer(buffer);
-    		v.resetPosition();
     	}
+        activeVoices.clear();
+        freeVoices.clear();
+        freeVoices.addAll(voices);
+        trimExcessFreeVoices();
     }
  
     /**
@@ -645,9 +690,12 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     	this.playbackSampleRate = playbackSampleRate;
     	for (PASamplerVoice v : this.voices) {
     		v.stop();
-    		v.setBuffer(buffer);
-    		v.resetPosition();
+            v.setBuffer(buffer, playbackSampleRate);
     	}
+        activeVoices.clear();
+        freeVoices.clear();
+        freeVoices.addAll(voices);
+        trimExcessFreeVoices();
     }
         
     /**
@@ -655,10 +703,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      *
      * @return available voice count
      */
-    public int countAvailableVoices() {
-        int n = 0;
-        for (PASamplerVoice v : voices) if (!v.isActive() && !v.isReleasing()) n++;
-        return n;
+    public synchronized int countAvailableVoices() {
+        return freeVoices.size();
     }
 
     /**

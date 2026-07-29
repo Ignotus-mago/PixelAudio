@@ -176,6 +176,9 @@ import g4p_controls.*;
  * ::: KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE :::
  * </pre>
  * 
+ * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
  * 
  * 
  */

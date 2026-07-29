@@ -132,6 +132,11 @@ import com.hamoid.*;
  * </ul>
  * </li>
  * </ol>
+ * 
+ * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
+ * 
  * <h3>Granular Instrument</h3>
  * <ol>
  * <li>To switch a brushstroke to use the Granular instrument, hover over it and press 't'. 
@@ -385,9 +390,10 @@ public class TutorialOne_03_Drawing extends PApplet {
 	float samplerGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for Sampler gesture event
 	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
 	boolean isMuted = false;
+	// see https://github.com/Ignotus-mago/PixelAudio/issues/45 for information about poolSize and maxVoices} usage with PASamplerInstrumentPool
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
 	int poolSize = 8;               // number of sampler instruments for polyphony
-	int samplerMaxVoices = 128;     // number of voices for each sampler instrument
+	int samplerMaxVoices = 64;      // number of voices for each sampler instrument
 	boolean isWrapAround = true;    // toggle for wrap around audio buffer, wrap tail to head if true
 
 	// ADSR and its parameters

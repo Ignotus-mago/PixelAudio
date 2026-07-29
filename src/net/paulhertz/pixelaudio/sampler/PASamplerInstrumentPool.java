@@ -42,6 +42,28 @@ import java.util.*;
  *  <li>Looping detection</li>
  *  <li>Thread-safe access</li>
  * </ul>
+ * <p>
+ * A pool handles one or more {@code PASamplerInstrument} instances. Each instrument
+ * manages a list of voices. {@code PASamplerInstrumentPool} is initialized with a
+ * {@code poolSize} and a {@code maxVoices} value, for the number of instruments and the
+ * number of voices per instrument. The total number of voices maxes out at
+ * {@code poolSize * maxVoices}. When there are no more voices to allocate,
+ * voice-stealing takes over. New lazy allocation and active/free voice lists in
+ * {@code PASharedBufferSampler} have improved voices allocation, as of version 0.9.9.2. 
+ * </p>
+ * <p>My suggestions for `pool size` x `max voices` settings:</p>
+ * <ul>
+ *   <li>General interactive use: 8 × 64 or 4 x 128</li>
+ *   <li>Dense curve triggering with cleaner overload behavior: 1 × 512 or 2 × 256:
+ *   overload noise is fluttery, windowed</li>
+ *   <li>Greater dynamic independence: 4 × 64 or 8 × 64: overload noise is crunchy, clipped</li>
+ *   <li>Very high limits such as 16 × 256: specialized use only, with careful gain staging</li>
+ * </ul>
+ * YMMV, you can probably reduce these numbers without any problems. 
+ * 
+ * <p>See Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
+ * 
  */
 public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, AudioSampleClock {
     // ------------------------------------------------------------------------

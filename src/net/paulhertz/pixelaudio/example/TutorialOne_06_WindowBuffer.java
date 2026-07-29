@@ -166,6 +166,9 @@ import com.hamoid.*;
  * Press 'Y' to toggle raindrop point events while windowing.
  * </pre>
  * 
+ * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
  * 
  * 
  */
