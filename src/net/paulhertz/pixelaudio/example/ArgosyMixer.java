@@ -44,12 +44,6 @@ import net.paulhertz.pixelaudio.schedule.TimedLocation;
 //audio library
 import ddf.minim.*;
 
-/*
- * TODO the pattern-making methods section, with all its different MultiGens, should be
- * ported to a demo sketch just to show off the different sorts of MultiGens one can create.
- * Such a sketch would probably need a minimalist GUI, with a menu of available MultiGens.
- */
-
 /**
  * 
  * ArgosyMixer demonstrates how the Argosy class can create and animate patterns 
