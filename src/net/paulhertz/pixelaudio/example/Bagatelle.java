@@ -242,7 +242,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <p>See Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
  * for information about suggested {@code poolSize} and {@code maxVoices} usage with Sampler synth.</p>
  * 
- * <pre>
+ * <pre>{@code 
  * ----- Audio Gain -----
  * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).
  * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).
@@ -305,7 +305,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * ----- Help -----
  * Press 'h' or 'H' to show help message.
- * </pre>
+ * }</pre>
  * 
  * 
  * <h2>MacOS AUDIO TO MAX SETUP</h2>

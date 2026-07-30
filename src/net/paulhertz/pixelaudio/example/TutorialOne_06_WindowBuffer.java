@@ -111,7 +111,7 @@ import com.hamoid.*;
  *    <li>Experiment with drawing brushstrokes and triggering audio events while moving through 
  *    the buffer.</li>
  * </ol>
- * <pre>
+ * <pre>{@code 
  * Here are the key commands for this sketch:
  * 
  * Press UP ARROW to increase audio gain by 3 dB.
@@ -164,9 +164,10 @@ import com.hamoid.*;
  * Press '(' or ')' to jump back/forward one half window.
  * Press 'R' to rewind the WindowBuffer.
  * Press 'Y' to toggle raindrop point events while windowing.
+ * }
  * </pre>
  * 
- * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * <p>See {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool PASamplerInstrumentPool} or
  * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
  * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
  * 

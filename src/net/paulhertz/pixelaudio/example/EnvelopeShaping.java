@@ -32,9 +32,8 @@ import ddf.minim.*;
 
 
 /**
- * Demonstrates how to design ADSR envelopes with PixelAudio's {@link net.palhertz.pixelaudio.sampler.ADSRParams}
- * and {@link net.palhertz.pixelaudio.sampler.SimpleADSR} classes. WORK IN PROGRESS.
- * <p>
+ * Demonstrates how to design ADSR envelopes with PixelAudio's {@link net.paulhertz.pixelaudio.sampler.ADSRParams}
+ * and {@link net.paulhertz.pixelaudio.sampler.SimpleADSR} classes. This is a work in progress: TODO, complete for next version.
  * <p>
  * Audio events in this sketch are generated with a {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrument PASamplerInstrument}. 
  * PASamplerInstrument lets us add an ADSR (attack, decay, sustain, release) envelope to
@@ -57,8 +56,9 @@ import ddf.minim.*;
  * envelope controls how the audio fades away. Calls to the instruments playSample() methods
  * return the amount of time the envelope will actually take, which is greater than or equal
  * to the requested duration. 
- * </p><p>
- * Setting Curve arguments in ADSRParams
+ * </p>
+ * <pre>{@code 
+ * Setting Curve arguments in ADSRParams 
  * Attack:
  * curve < 1.0   fast start, easing into target
  * curve = 1.0   linear
@@ -68,7 +68,8 @@ import ddf.minim.*;
  * curve = 1.0   steady linear fade
  * curve > 1.0   drops slowly at first, then falls quickly near the end
  * Decay: 0.5 or 1.0
- * </p>
+ * }</pre>
+ * 
  * <pre>
  * KEY COMMANDS 
  * 

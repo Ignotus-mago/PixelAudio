@@ -19,12 +19,12 @@ import net.paulhertz.pixelaudio.*;
  * The JSON file should contain a "header" with fields "PXAU", "Description" and "PixelAudioURL".
  * The value of the PXAU field is set to "BGEN" to identify the JSON data as encoding a PixelMapGen.
  * The PXAU field is repeated in the body of the JSON file, which must contain the following fields:
- *
+ * {@code 
  *   "PXAU": "BGEN"
  *   "width": <PixelMapGen width>
  *   "height": <PixelMapGen height>
  *   "pixelMap": [...]
- *
+ * }
  * "pixelMap" flags an array of integers that are the values of the indices of the signal path,
  * signalToImageLUT, from a PixelMapGen. The signalToImageLUT values can be decoded to (x, y)
  * coordinates and used to initialize the remaining fields of a BuildFromPathGen. Most of the

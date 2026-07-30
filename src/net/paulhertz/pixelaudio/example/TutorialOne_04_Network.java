@@ -136,7 +136,7 @@ import com.hamoid.*;
  * I chance to develop them. 
  * </p>
  * <div>
- * <pre>
+ * <pre>{@code 
  * Here are the key commands for this sketch:
  * 
  * Press UP ARROW to increase audio gain by 3 dB.
@@ -188,10 +188,10 @@ import com.hamoid.*;
  * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
  * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * Press 'h' or 'H' to show help message in the console.
- * </pre>
+ * }</pre>
  * </div>
  * 
- * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * <p>See {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool PASamplerInstrumentPool} or
  * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
  * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
  * 

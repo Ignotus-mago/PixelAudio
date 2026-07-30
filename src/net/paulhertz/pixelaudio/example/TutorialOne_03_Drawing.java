@@ -133,7 +133,7 @@ import com.hamoid.*;
  * </li>
  * </ol>
  * 
- * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * <p>See {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool PASamplerInstrumentPool} or
  * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
  * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
  * 
@@ -249,7 +249,7 @@ import com.hamoid.*;
  * performance, reading and writing brushstroke data as JSON files, implementing a cue-based
  * Performance Preset model, and communicating with Max over UDP. 
  * </p> 
- * <pre>
+ * <pre>{@code 
  * Here are the key commands for this sketch:
  * 
  * Press UP ARROW to increase audio gain by 3 dB.
@@ -295,7 +295,7 @@ import com.hamoid.*;
  * Press 'u' to mute audio.
  * Press 'V' to record a video.
  * Press 'h' or 'H' to show help message in the console.
- * </pre>
+ * }</pre>
  * </div>
  * 
  * REVISIONS <br>

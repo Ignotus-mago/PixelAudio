@@ -72,7 +72,7 @@ import com.hamoid.*;
  * you can edit in a GUI, load and save to files, and output as video.<br>
  * See also: SimpleWaveSynth, WaveSynthSequencer.</p>
  * 
- * <p>See {@link net.paulhertz.pixelaudio.granular.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * <p>See {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool PASamplerInstrumentPool} or
  * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
  * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
  * 
