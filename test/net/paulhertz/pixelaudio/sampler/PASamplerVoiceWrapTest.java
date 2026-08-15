@@ -19,7 +19,9 @@ public final class PASamplerVoiceWrapTest {
 
     private static void finiteVoiceWrapsAtBufferEnd() {
         float[] buffer = new float[] { 1f, 2f, 3f };
-        PASamplerVoice voice = new PASamplerVoice(buffer, 48000f);
+        // Both rates are explicit: length is in source samples, while nextSample()
+        // advances on the output clock. Equal rates preserve the legacy step of 1.
+        PASamplerVoice voice = new PASamplerVoice(buffer, 48000f, 48000f);
 
         voice.activate(2, 4, 1f, null, 1f, 0f, false, true);
 

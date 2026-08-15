@@ -77,7 +77,9 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     /** Cached source buffer length in samples. */
     private int bufferLen;
     /** Sample rate of the source buffer in Hz. */
-    private float playbackSampleRate;
+    private float bufferSampleRate;
+    /** Sample rate of the audio output and sampler clock in Hz. */
+    private float outputSampleRate;
 
     /** Audio output this sampler is patched to. */
     private final AudioOutput out;
@@ -156,14 +158,15 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      * Construct a sampler over a shared MultiChannelBuffer.
      * Automatically patches to the provided AudioOutput.
      *
-     * @param multiBuffer   shared source buffer (mono or stereo)
-     * @param sampleRate    sample rate of the buffer
-     * @param out           target AudioOutput for playback
+     * @param multiBuffer        shared source buffer (mono or stereo)
+     * @param bufferSampleRate   sample rate of the buffer
+     * @param out                target AudioOutput for playback
      */
-    public PASharedBufferSampler(MultiChannelBuffer multiBuffer, float sampleRate, AudioOutput out) {
+    public PASharedBufferSampler(MultiChannelBuffer multiBuffer, float bufferSampleRate, AudioOutput out) {
         this.buffer = Arrays.copyOf(multiBuffer.getChannel(0), multiBuffer.getBufferSize());
         this.bufferLen = buffer.length;
-        this.playbackSampleRate = sampleRate;
+        this.bufferSampleRate = bufferSampleRate;
+        this.outputSampleRate = (out != null) ? out.sampleRate() : bufferSampleRate;
         this.out = out;
         this.patch(out);
     }
@@ -175,14 +178,15 @@ public class PASharedBufferSampler extends UGen implements PASampler {
      * per-sample rendering cost before those voices have actually been needed.
      *
      * @param multiBuffer          shared source buffer
-     * @param playbackSampleRate   sample rate of the source buffer in Hz
+     * @param bufferSampleRate     sample rate of the source buffer in Hz
      * @param out                  target AudioOutput for playback
      * @param maxVoices            maximum simultaneous voices
      */
-    public PASharedBufferSampler(MultiChannelBuffer multiBuffer, float playbackSampleRate, AudioOutput out, int maxVoices) {
+    public PASharedBufferSampler(MultiChannelBuffer multiBuffer, float bufferSampleRate, AudioOutput out, int maxVoices) {
     	this.buffer = Arrays.copyOf(multiBuffer.getChannel(0), multiBuffer.getBufferSize());
        	this.bufferLen = buffer.length;
-    	this.playbackSampleRate = playbackSampleRate;
+		this.bufferSampleRate = bufferSampleRate;
+		this.outputSampleRate = (out != null) ? out.sampleRate() : bufferSampleRate;
     	this.out = out;
     	this.maxVoices = Math.max(1, maxVoices);
     	this.patch(out);   	
@@ -225,8 +229,9 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         if (v == null) return 0;
         v.activate(range[0], range[1], amplitude, env, pitch, pan, globalLooping, wrapAround);
         int eventSamples = computeEventSamples(range[0], range[1], env, pitch);
-        float bufferReadSamples = range[1] * Math.abs(pitch);
-        float durationMS = eventSamples / playbackSampleRate * 1000f;
+        // range[1] is the source-buffer window traversed by this finite event.
+        float bufferReadSamples = range[1];
+        float durationMS = eventSamples / outputSampleRate * 1000f;
         // information to be shared later
         PlaybackInfo info = new PlaybackInfo(
             v.getVoiceId(),
@@ -235,13 +240,13 @@ public class PASharedBufferSampler extends UGen implements PASampler {
             durationMS,
             globalLooping,
             sampleCursor,
-            playbackSampleRate
+            outputSampleRate
         );
         // debugging
         if (DEBUG) 
             System.out.printf("[Voice %d] eventDuration=%d samples (%.2f ms)%n",
             v.getVoiceId(), eventSamples,
-            eventSamples / playbackSampleRate * 1000f);        
+            eventSamples / outputSampleRate * 1000f);
         return eventSamples;
     }
 
@@ -345,7 +350,8 @@ public class PASharedBufferSampler extends UGen implements PASampler {
                 pitch,
                 env,
                 globalLooping,
-                playbackSampleRate,
+                bufferSampleRate,
+                outputSampleRate,
                 wrapAround
             );
     }
@@ -362,7 +368,7 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         }
         // 2) Allocate lazily if under the configured limit.
         if (voices.size() < maxVoices) {
-            PASamplerVoice v = new PASamplerVoice(buffer, playbackSampleRate);
+            PASamplerVoice v = new PASamplerVoice(buffer, bufferSampleRate, outputSampleRate);
             voices.add(v);
             activeVoices.add(v);
             return v;
@@ -679,18 +685,18 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     }
  
     /**
-     * Replaces the sampler source buffer and playback sample rate.
+     * Replaces the sampler source buffer and its intrinsic sample rate.
      *
      * @param buffer mono source sample buffer
-     * @param playbackSampleRate sample rate of the source buffer in Hz
+     * @param bufferSampleRate sample rate of the source buffer in Hz
      */
-    public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
-    	this.buffer = buffer;
-    	this.bufferLen = (buffer != null) ? buffer.length : 0;
-    	this.playbackSampleRate = playbackSampleRate;
-    	for (PASamplerVoice v : this.voices) {
-    		v.stop();
-            v.setBuffer(buffer, playbackSampleRate);
+    public synchronized void setBuffer(float[] buffer, float bufferSampleRate) {
+		this.buffer = buffer;
+		this.bufferLen = (buffer != null) ? buffer.length : 0;
+		if (bufferSampleRate > 0f) this.bufferSampleRate = bufferSampleRate;
+		for (PASamplerVoice v : this.voices) {
+			v.stop();
+            v.setBuffer(buffer, this.bufferSampleRate);
     	}
         activeVoices.clear();
         freeVoices.clear();
@@ -738,37 +744,63 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     // ------------------------------------------------------------------------
 
     /**
-     * Returns the current sample rate of this sampler.
+     * Returns the current source-buffer sample rate.
      *
-     * @return playback sample rate in Hz
+     * @return source-buffer sample rate in Hz
      */
+    @Deprecated
     public synchronized float getPlaybackSampleRate() {
-    	return playbackSampleRate;
+		return bufferSampleRate;
     }
 
-    /**
-     * Updates the playback sample rate used for reading from the buffer.
-     * Does not affect Minim's UGen sample rate.
-     *
-     * @param newRate playback sample rate in Hz
-     */
-    public synchronized void setPlaybackSampleRate(float newRate) {
-        if (newRate > 0f && newRate != playbackSampleRate) {
-            this.playbackSampleRate = newRate;
+    /** @return source-buffer sample rate in Hz */
+    public synchronized float getBufferSampleRate() { return bufferSampleRate; }
+
+    /** @return audio output sample rate in Hz */
+    public synchronized float getOutputSampleRate() { return outputSampleRate; }
+
+    /** Updates the intrinsic source-buffer sample rate used to derive voice stepping. */
+    @Override
+    public synchronized void setBufferSampleRate(float newRate) {
+        if (newRate > 0f && newRate != bufferSampleRate) {
+            this.bufferSampleRate = newRate;
             for (PASamplerVoice v : voices) {
-                v.setPlaybackSampleRate(newRate);
+                v.setBufferSampleRate(newRate);
+            }
+        }
+    }
+
+    /** Legacy alias for {@link #setBufferSampleRate(float)}. */
+    @Deprecated
+    @Override
+    public synchronized void setPlaybackSampleRate(float newRate) {
+        setBufferSampleRate(newRate);
+    }
+
+    /** Updates the output clock used by voices and their envelopes. */
+    @Override
+    public synchronized void setOutputSampleRate(float newRate) {
+        if (newRate > 0f && newRate != outputSampleRate) {
+            this.outputSampleRate = newRate;
+            for (PASamplerVoice v : voices) {
+                v.setOutputSampleRate(newRate);
             }
         }
     }
 
     /**
-     * Convenience: synchronize playback rate with AudioOutput's sample rate.
-     * Useful if you want playback speed tied to system rate.
+     * Synchronizes the output clock with the current AudioOutput rate.
      */
-    public synchronized void updatePlaybackRateFromOutput() {
+    public synchronized void updateOutputRateFromOutput() {
         if (out != null) {
-            setPlaybackSampleRate(out.sampleRate());
+            setOutputSampleRate(out.sampleRate());
         }
+    }
+
+    /** Legacy alias for {@link #updateOutputRateFromOutput()}. */
+    @Deprecated
+    public synchronized void updatePlaybackRateFromOutput() {
+        updateOutputRateFromOutput();
     }
     
     /** @return source buffer length in samples */

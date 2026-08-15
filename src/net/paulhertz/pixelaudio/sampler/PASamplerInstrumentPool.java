@@ -264,6 +264,8 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
                                  ADSRParams env, float pitch, float pan) {
         PASamplerInstrument inst = getAvailableInstrument();
         if (inst == null) return 0;
+        // sampleLen stays in the source-buffer domain. The selected instrument
+        // forwards musical pitch unchanged; its voice performs rate conversion once.
         return inst.play(samplePos, sampleLen, amplitude, env, pitch, pan);
     }
 
@@ -427,17 +429,18 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
 
 	/** {@inheritDoc} */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
-        return play(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, globalPan);
-    }
+		// Pool globals are already propagated to each instrument; do not apply them twice.
+		return play(samplePos, sampleLen, amplitude, defaultEnv, 1f, 0f);
+	}
 
     /** {@inheritDoc} */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
-        return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0f);
     }
 
     /** {@inheritDoc} */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
-        return play(samplePos, sampleLen, amplitude, env, globalPitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, env, 1f, 0f);
     }
 
     /**
@@ -452,7 +455,7 @@ public class PASamplerInstrumentPool implements PASamplerPlayable, PAPlayable, A
      */
     public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
                                        ADSRParams env, float pitch) {
-        return play(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, env, pitch, 0f);
     }
     
     /**

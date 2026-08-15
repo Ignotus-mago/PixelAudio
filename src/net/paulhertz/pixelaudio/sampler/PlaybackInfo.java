@@ -26,7 +26,7 @@ public class PlaybackInfo {
     /** Unique sampler voice identifier. */
     public final long voiceId;
 
-    /** Duration in output samples (pitch-independent). */
+    /** Duration in output samples. */
     public final int eventSamples;
 
     /** Duration in milliseconds. */
@@ -82,11 +82,11 @@ public class PlaybackInfo {
     }
     
     /**
-     * Computes total playback duration (in output samples, pitch-independent).
+     * Computes total playback duration when source and output rates are equal.
      * Envelope stage times are assumed to be in seconds.
      *
      * @param samplePos    buffer index to start playback
-     * @param sampleLen    requested duration in samples
+     * @param sampleLen    requested duration in source-buffer samples
      * @param bufferLen    source buffer length in samples
      * @param pitch        pitch or playback-rate multiplier
      * @param env          optional ADSR envelope
@@ -102,14 +102,15 @@ public class PlaybackInfo {
     		ADSRParams env,
     		boolean looping,
     		float sampleRate) {
-    	return computeVoiceDuration(samplePos, sampleLen, bufferLen, pitch, env, looping, sampleRate, false);
+		return computeVoiceDuration(samplePos, sampleLen, bufferLen, pitch, env, looping,
+				sampleRate, sampleRate, false);
     }
     
     /**
      * Computes total playback duration (in output samples) with optional source-buffer wrapping.
      *
      * @param samplePos    buffer index to start playback
-     * @param sampleLen    requested duration in samples
+     * @param sampleLen    requested duration in source-buffer samples
      * @param bufferLen    source buffer length in samples
      * @param pitch        pitch or playback-rate multiplier
      * @param env          optional ADSR envelope
@@ -127,6 +128,36 @@ public class PlaybackInfo {
     		boolean looping,
     		float sampleRate,
     		boolean wrapAround) {
+		return computeVoiceDuration(samplePos, sampleLen, bufferLen, pitch, env, looping,
+				sampleRate, sampleRate, wrapAround);
+    }
+
+    /**
+     * Computes rendered duration using distinct source-buffer and output clocks.
+     * The note window is measured in source-buffer samples; the result is measured
+     * in output samples because voices and envelopes advance once per output tick.
+     *
+     * @param samplePos source-buffer index at which playback begins
+     * @param sampleLen requested note-window length in source-buffer samples
+     * @param bufferLen source-buffer length in samples
+     * @param pitch musical pitch ratio; 1.0 preserves source frequency
+     * @param env optional ADSR envelope
+     * @param looping true when playback loops indefinitely
+     * @param bufferSampleRate intrinsic source-buffer sample rate in Hz
+     * @param outputSampleRate audio output sample rate in Hz
+     * @param wrapAround true to preserve the requested source length across the buffer boundary
+     * @return total duration in output samples, including release
+     */
+    public static int computeVoiceDuration(
+			int samplePos,
+			int sampleLen,
+			int bufferLen,
+			float pitch,
+			ADSRParams env,
+			boolean looping,
+			float bufferSampleRate,
+			float outputSampleRate,
+			boolean wrapAround) {
     	if (looping) return Integer.MAX_VALUE;
 
     	// Clamp to buffer bounds
@@ -136,17 +167,22 @@ public class PlaybackInfo {
     		sampleLen = Math.max(0, bufferLen - samplePos);
     	}
 
-    	// Base playback time in samples (pitch-independent)
-    	float baseSamples = sampleLen;
+		float sourceStep = outputSampleRate > 0f
+				? Math.abs(pitch) * bufferSampleRate / outputSampleRate
+				: Math.abs(pitch);
+		if (!(sourceStep > 0f)) return Integer.MAX_VALUE;
 
-    	// Envelope duration (attack + decay + release) in seconds → samples
+		// Convert the source-buffer note window to elapsed output samples.
+		float baseSamples = sampleLen / sourceStep;
+
+		// Attack and decay occur inside the note window. Only release extends it.
     	float envSamples = 0f;
     	if (env != null) {
-    		envSamples = (env.getAttack() + env.getDecay() + env.getRelease()) * sampleRate;
+			envSamples = env.getRelease() * outputSampleRate;
     	}
 
     	float totalSamples = baseSamples + envSamples;
-    	return (int) totalSamples;
+		return totalSamples >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(totalSamples);
     }
 
 

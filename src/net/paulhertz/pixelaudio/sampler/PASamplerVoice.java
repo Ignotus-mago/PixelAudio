@@ -38,7 +38,10 @@ public class PASamplerVoice {
     private static long NEXT_VOICE_ID = 0;
 
     private float[] buffer;
-    private float playbackSampleRate;
+    /** Intrinsic rate of samples stored in {@link #buffer}. */
+    private float bufferSampleRate;
+    /** Rate at which {@link #nextSample()} is called by the audio output. */
+    private float outputSampleRate;
 
     private long voiceId;
     private boolean active;
@@ -47,12 +50,13 @@ public class PASamplerVoice {
     private boolean looping;
     private boolean wrapAround;
 
-    private int start;        // start sample index
-    private int end;          // end sample index
-    private float position;   // current sample index as float
-    private float rate;       // pitch ratio
-    private float gain;       // amplitude factor
-    private float pan;        // stereo location (-1.0f...1.0f)
+    private int start;           // start sample index
+    private int end;             // end sample index
+    private float position;      // current sample index as float
+    private float musicalPitch;  // requested transposition; 1.0 preserves source pitch
+    private float sourceStep;    // source-buffer samples advanced per output sample
+    private float gain;          // amplitude factor
+    private float pan;           // stereo location (-1.0f...1.0f)
 
     
     // ------------------------------------------------------------------------
@@ -74,14 +78,28 @@ public class PASamplerVoice {
     // ------------------------------------------------------------------------
     
     /**
-     * Constructs an inactive sampler voice.
+     * Backward-compatible constructor for buffers whose rate matches the output rate.
      *
      * @param buffer shared mono source buffer
-     * @param sampleRate playback sample rate in Hz
+     * @param sampleRate source-buffer and output sample rate in Hz
      */
     public PASamplerVoice(float[] buffer, float sampleRate) {
+        this(buffer, sampleRate, sampleRate);
+    }
+
+    /**
+     * Constructs an inactive sampler voice with distinct source and output clocks.
+     *
+     * @param buffer shared mono source buffer
+     * @param bufferSampleRate intrinsic sample rate of {@code buffer}, in Hz
+     * @param outputSampleRate rate at which {@link #nextSample()} is called, in Hz
+     */
+    public PASamplerVoice(float[] buffer, float bufferSampleRate, float outputSampleRate) {
         this.buffer = buffer;
-        this.playbackSampleRate = sampleRate;
+        this.bufferSampleRate = positiveRateOr(bufferSampleRate, outputSampleRate);
+        this.outputSampleRate = positiveRateOr(outputSampleRate, this.bufferSampleRate);
+        this.musicalPitch = 1f;
+        updateSourceStep();
         this.active = false;
         this.released = false;
         this.finished = false;
@@ -94,13 +112,13 @@ public class PASamplerVoice {
     /**
      * Activates the voice over a buffer region.
      *
-     * @param start buffer index to start playback
-     * @param length playback length in samples
-     * @param gain linear gain multiplier
-     * @param envParams optional ADSR envelope parameters
-     * @param pitch pitch or playback-rate multiplier
-     * @param pan stereo pan position
-     * @param looping true to loop this voice
+     * @param start       buffer index to start playback
+     * @param length      playback length in source-buffer samples
+     * @param gain        linear gain multiplier
+     * @param envParams   optional ADSR envelope parameters
+     * @param pitch       musical pitch multiplier; 1.0 preserves the source frequency
+     * @param pan         stereo pan position
+     * @param looping     true to loop this voice
      */
     public void activate(int start, int length, float gain,
                          ADSRParams envParams, float pitch, float pan, boolean looping) {
@@ -110,14 +128,14 @@ public class PASamplerVoice {
     /**
      * Activates the voice over a buffer region.
      *
-     * @param start buffer index to start playback
-     * @param length playback length in samples
-     * @param gain linear gain multiplier
-     * @param envParams optional ADSR envelope parameters
-     * @param pitch pitch or playback-rate multiplier
-     * @param pan stereo pan position
-     * @param looping true to loop this voice
-     * @param wrapAround true to wrap finite source-buffer reads at buffer boundaries
+     * @param start        buffer index to start playback
+     * @param length       playback length in source-buffer samples
+     * @param gain         linear gain multiplier
+     * @param envParams    optional ADSR envelope parameters
+     * @param pitch        musical pitch multiplier; 1.0 preserves the source frequency
+     * @param pan          stereo pan position
+     * @param looping      true to loop this voice
+     * @param wrapAround   true to wrap finite source-buffer reads at buffer boundaries
      */
     public void activate(int start, int length, float gain,
                          ADSRParams envParams, float pitch, float pan, boolean looping,
@@ -134,7 +152,8 @@ public class PASamplerVoice {
                 ? this.start + Math.max(0, length)
                 : Math.min(buffer.length, start + Math.max(0, length));
         this.position = this.start;
-        this.rate = pitch;
+        this.musicalPitch = pitch;
+        updateSourceStep();
         this.gain = gain;
         this.pan = Math.max(-1f, Math.min(1f, pan));
 
@@ -146,7 +165,9 @@ public class PASamplerVoice {
 
         // Envelope setup
         if (envParams != null) {
-            envelope = envParams.toSimpleADSR(playbackSampleRate);
+            // The envelope advances once per nextSample() call, so its clock is
+            // the audio output rate, not the source buffer's intrinsic rate.
+            envelope = envParams.toSimpleADSR(outputSampleRate);
             envelope.noteOn();
         } else {
             envelope = null;
@@ -184,7 +205,8 @@ public class PASamplerVoice {
         float base = readBufferSample(idx);
 
         // --- 3. Advance ---
-        position += rate;   // rate as pitch determines how fast or slow we advance position
+        // Convert musical pitch to a source-buffer increment exactly once here.
+        position += sourceStep;
 
         // --- 4. Envelope always ticks ---
         float envValue = (envelope != null) ? envelope.tick() : 1f;
@@ -246,14 +268,15 @@ public class PASamplerVoice {
     }
 
     /**
-     * Replaces the source buffer and playback sample rate, then resets the voice.
+     * Replaces the source buffer and its intrinsic sample rate, then resets the voice.
      *
      * @param buffer shared mono source buffer
-     * @param playbackSampleRate playback sample rate in Hz
+     * @param bufferSampleRate intrinsic sample rate of the source buffer in Hz
      */
-    public synchronized void setBuffer(float[] buffer, float playbackSampleRate) {
+    public synchronized void setBuffer(float[] buffer, float bufferSampleRate) {
         this.buffer = buffer;
-        this.playbackSampleRate = playbackSampleRate;
+        if (bufferSampleRate > 0f) this.bufferSampleRate = bufferSampleRate;
+        updateSourceStep();
         resetPosition();
     }
     
@@ -333,12 +356,47 @@ public class PASamplerVoice {
     public void setMicroFadeIn(boolean val) { this.isMicroFadeIn = val; }
     
     /**
-     * Sets the playback sample rate.
+     * Sets the intrinsic source-buffer sample rate.
      *
-     * @param newRate playback sample rate in Hz
+     * @param newRate source-buffer sample rate in Hz
      */
-    public void setPlaybackSampleRate(float newRate) {
-    	this.playbackSampleRate = newRate;
+    public synchronized void setBufferSampleRate(float newRate) {
+		if (newRate > 0f) {
+			this.bufferSampleRate = newRate;
+			updateSourceStep();
+		}
+    }
+
+    /** Legacy alias for {@link #setBufferSampleRate(float)}. */
+    @Deprecated
+    public void setPlaybackSampleRate(float newRate) { setBufferSampleRate(newRate); }
+
+    /** Sets the rate of the audio clock that calls {@link #nextSample()}. */
+    public synchronized void setOutputSampleRate(float newRate) {
+        if (newRate > 0f) {
+            this.outputSampleRate = newRate;
+            updateSourceStep();
+        }
+    }
+
+    /** @return intrinsic source-buffer sample rate in Hz */
+    public float getBufferSampleRate() { return bufferSampleRate; }
+
+    /** @return audio output sample rate in Hz */
+    public float getOutputSampleRate() { return outputSampleRate; }
+
+    /** @return source-buffer samples advanced for each output sample */
+    public float getSourceStep() { return sourceStep; }
+
+    private void updateSourceStep() {
+        sourceStep = outputSampleRate > 0f
+                ? musicalPitch * bufferSampleRate / outputSampleRate
+                : musicalPitch;
+    }
+
+    private static float positiveRateOr(float rate, float fallback) {
+        if (rate > 0f) return rate;
+        return fallback > 0f ? fallback : 44100f;
     }
         
 }

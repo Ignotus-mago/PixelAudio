@@ -32,12 +32,12 @@ public interface PASamplerPlayable extends PAPlayable {
      * arguments in standard order for PixalAudio library.
      *
      * @param samplePos buffer index to start playback
-     * @param sampleLen requested duration in samples
+     * @param sampleLen requested note-window length in source-buffer samples
      * @param amplitude gain multiplier
      * @param env optional ADSR envelope
      * @param pitch pitch or playback-rate multiplier
      * @param pan stereo pan
-     * @return actual event duration in samples
+     * @return actual event duration in output samples
      */
     int play(int samplePos, int sampleLen, float amplitude,
              ADSRParams env, float pitch, float pan);
@@ -109,12 +109,12 @@ public interface PASamplerPlayable extends PAPlayable {
      * Play a subrange of the buffer with full parameters.
      *
      * @param start buffer index to start playback
-     * @param length requested duration in samples
+     * @param length requested note-window length in source-buffer samples
      * @param amplitude gain multiplier
      * @param env optional ADSR envelope
      * @param pitch pitch or playback-rate multiplier
      * @param pan stereo pan
-     * @return actual event duration in samples
+     * @return actual event duration in output samples
      */
     default int playSample(int start, int length, float amplitude,
                            ADSRParams env, float pitch, float pan) {
@@ -125,10 +125,10 @@ public interface PASamplerPlayable extends PAPlayable {
      * Play subrange with amplitude and pitch (no envelope).
      *
      * @param start buffer index to start playback
-     * @param length requested duration in samples
+     * @param length requested note-window length in source-buffer samples
      * @param amplitude gain multiplier
      * @param pitch pitch or playback-rate multiplier
-     * @return actual event duration in samples
+     * @return actual event duration in output samples
      */
     default int playSample(int start, int length, float amplitude, float pitch) {
         return play(start, length, amplitude, null, pitch, 0.0f);
@@ -138,9 +138,9 @@ public interface PASamplerPlayable extends PAPlayable {
      * Play subrange with amplitude only.
      *
      * @param start buffer index to start playback
-     * @param length requested duration in samples
+     * @param length requested note-window length in source-buffer samples
      * @param amplitude gain multiplier
-     * @return actual event duration in samples
+     * @return actual event duration in output samples
      */
     default int playSample(int start, int length, float amplitude) {
         return play(start, length, amplitude, null, 1.0f, 0.0f);

@@ -69,7 +69,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	private float bufferSampleRate;
 	/** Sample rate of the AudioOutput. */
 	private float outputSampleRate;
-	/** Buffer-rate to output-rate ratio, used to correct playback speed. */
+	/** Buffer/output ratio retained for inspection; voices apply it during source stepping. */
 	private float sampleRateRatio;
 
 	/** Default ADSR envelope for playback. */
@@ -136,6 +136,9 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 		this.outputSampleRate = (out != null) ? out.sampleRate() : bufferSampleRate;
 		this.bufferSampleRate = bufferSampleRate;
 		this.sampleRateRatio = (outputSampleRate > 0f) ? bufferSampleRate / outputSampleRate : 1f;
+		// Keep custom sampler implementations on the same two explicit clocks.
+		this.sampler.setBufferSampleRate(this.bufferSampleRate);
+		this.sampler.setOutputSampleRate(this.outputSampleRate);
 	}
 
 	/**
@@ -163,9 +166,10 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	@Override
 	public int play(float amplitude, float pitch, float pan) {
 		if (sampler == null || bufferSize <= 0) return 0;
-		float scaledPitch = pitch * globalPitch * sampleRateRatio;
+		// Pass musical pitch only. PASamplerVoice applies buffer/output rate conversion once.
+		float musicalPitch = pitch * globalPitch;
 		float finalPan = clampPan(globalPan + pan);
-		return sampler.play(0, bufferSize, amplitude, defaultEnv, scaledPitch, finalPan);
+		return sampler.play(0, bufferSize, amplitude, defaultEnv, musicalPitch, finalPan);
 	}
 
 	/**
@@ -175,10 +179,11 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	public int play(int samplePos, int sampleLen, float amplitude,
 			ADSRParams env, float pitch, float pan) {
 		if (sampler == null || bufferSize <= 0) return 0;
-		float scaledPitch = pitch * globalPitch * sampleRateRatio;
+		// sampleLen remains in source-buffer samples; pitch remains a musical ratio.
+		float musicalPitch = pitch * globalPitch;
 		float finalPan = clampPan(globalPan + pan);
 		ADSRParams useEnv = (env != null) ? env : defaultEnv;
-		return sampler.play(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan);
+		return sampler.play(samplePos, sampleLen, amplitude, useEnv, musicalPitch, finalPan);
 	}
 
 	// ------------------------------------------------------------------------
@@ -189,7 +194,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 * Schedules playback of a buffer region at an absolute sample time on this sampler's clock.
 	 *
 	 * @param samplePos    buffer index to start playback
-	 * @param sampleLen    requested duration in samples
+	 * @param sampleLen    requested note-window length in source-buffer samples
 	 * @param amplitude    gain multiplier
 	 * @param env          ADSR envelope parameters, or null to use the default
 	 * @param pitch        pitch or playback-rate multiplier
@@ -199,17 +204,17 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	public synchronized void startAtSampleTime(int samplePos, int sampleLen, float amplitude,
 			ADSRParams env, float pitch, float pan, long startSample) {
 		if (sampler == null || bufferSize <= 0) return;
-		float scaledPitch = pitch * globalPitch * sampleRateRatio;
+		float musicalPitch = pitch * globalPitch;
 		float finalPan = clampPan(globalPan + pan);
 		ADSRParams useEnv = (env != null) ? env : defaultEnv;
-		sampler.startAtSampleTime(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan, startSample);
+		sampler.startAtSampleTime(samplePos, sampleLen, amplitude, useEnv, musicalPitch, finalPan, startSample);
 	}
 
 	/**
 	 * Schedules playback after a delay in samples relative to this sampler's current clock.
 	 *
 	 * @param samplePos      buffer index to start playback
-	 * @param sampleLen      requested duration in samples
+	 * @param sampleLen      requested note-window length in source-buffer samples
 	 * @param amplitude      gain multiplier
 	 * @param env            ADSR envelope parameters, or null to use the default
 	 * @param pitch          pitch or playback-rate multiplier
@@ -219,10 +224,10 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	public synchronized void startAfterDelaySamples(int samplePos, int sampleLen, float amplitude,
 			ADSRParams env, float pitch, float pan, long delaySamples) {
 		if (sampler == null || bufferSize <= 0) return;
-		float scaledPitch = pitch * globalPitch * sampleRateRatio;
+		float musicalPitch = pitch * globalPitch;
 		float finalPan = clampPan(globalPan + pan);
 		ADSRParams useEnv = (env != null) ? env : defaultEnv;
-		sampler.startAfterDelaySamples(samplePos, sampleLen, amplitude, useEnv, scaledPitch, finalPan, delaySamples);
+		sampler.startAfterDelaySamples(samplePos, sampleLen, amplitude, useEnv, musicalPitch, finalPan, delaySamples);
 	}
 
 	/** Schedules playback at the current sampler clock. */
@@ -289,12 +294,12 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 * Trigger playback using all six standard per-voice parameters.
 	 *
 	 * @param samplePos    start position (samples)
-	 * @param sampleLen    playback length (samples)
+	 * @param sampleLen    note-window length in source-buffer samples
 	 * @param amplitude    per-voice amplitude
 	 * @param env          ADSR envelope parameters
 	 * @param pitch        playback rate (1.0 = normal)
 	 * @param pan          stereo position (-1.0 = left, +1.0 = right)
-	 * @return the actual length of the audio event, in samples
+	 * @return actual length of the audio event in output samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude,
 			ADSRParams env, float pitch, float pan) {
@@ -305,7 +310,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 * All params except the envelope, so we use the default envelope. 
 	 * 
 	 * @param samplePos    buffer index to start playback
-	 * @param sampleLen    requested duration in samples
+	 * @param sampleLen    requested note-window length in source-buffer samples
 	 * @param amplitude    gain multiplier
 	 * @param pitch        pitch or playback-rate multiplier
 	 * @param pan          stereo pan
@@ -325,7 +330,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude) {
-		return play(samplePos, sampleLen, amplitude, defaultEnv, globalPitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, defaultEnv, 1f, 0f);
 	}
 
 	/**
@@ -338,7 +343,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, float pitch) {
-		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, defaultEnv, pitch, 0f);
 	}
 
 	/**
@@ -351,7 +356,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env) {
-		return play(samplePos, sampleLen, amplitude, env, globalPitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, env, 1f, 0f);
 	}
 
 	/**
@@ -365,7 +370,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	 * @return actual event duration in samples
 	 */
 	public synchronized int playSample(int samplePos, int sampleLen, float amplitude, ADSRParams env, float pitch) 	{
-		return play(samplePos, sampleLen, amplitude, env, pitch, globalPan);
+		return play(samplePos, sampleLen, amplitude, env, pitch, 0f);
 	}
 
 	/**
@@ -625,7 +630,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	            ? bufferSampleRate / outputSampleRate
 	            : 1f;
 	        // propagate to sampler if relevant
-	        if (sampler != null) sampler.setPlaybackSampleRate(newRate);
+	        if (sampler != null) sampler.setBufferSampleRate(newRate);
 	    }
 	}
 
@@ -639,6 +644,7 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	    if (newRate > 0f) {
 	        this.outputSampleRate = newRate;
 	        this.sampleRateRatio = bufferSampleRate / outputSampleRate;
+	        if (sampler != null) sampler.setOutputSampleRate(newRate);
 	    }
 	}
 	
