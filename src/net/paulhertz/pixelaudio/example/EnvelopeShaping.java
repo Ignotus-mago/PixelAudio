@@ -899,8 +899,9 @@ import ddf.minim.*;
 		while (vary <= 0) {
 			vary = (float) PixelAudio.gauss(1.0, 0.0625);
 		}
-		int samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		// playSample() takes a note-window length in source-buffer samples.
+		int samplelen = (int)(abs((vary * this.noteDuration) * bufferSampleRate / 1000.0f));
+		// println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ bufferSampleRate +"Hz buffer rate");
 		return samplelen;
 	}
 	

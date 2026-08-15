@@ -279,12 +279,15 @@ public class LoadAudioToImage extends PApplet {
 		samplePos = mapper.lookupSignalPos(x, y);
 		// println("----- sample position for "+ mouseX +", "+ mouseY +" is "+ samplePos);
 		int varyDuration = calcSampleLen(duration);
-		int sampleLength = playSample(samplePos, varyDuration, 0.9f);
-		if (sampleLength > 0) {
-			hightlightSample(samplePos, (int)(2 * sampleRate));
+		int eventOutputSamples = playSample(samplePos, varyDuration, 0.9f);
+		if (eventOutputSamples > 0) {
+			// Highlight two seconds in the source-buffer sample domain.
+			hightlightSample(samplePos, (int)(2 * synth.getBufferSampleRate()));
 			int c = mapImage.get(x, y);
 			String str = PixelAudioMapper.colorString(c);
-			println("--- samplePos:", samplePos, "sampleLength:", sampleLength, "size:", width * height, "end:", samplePos + sampleLength + ", " + str);
+			println("--- samplePos:", samplePos, "sourceLength:", varyDuration,
+					"eventOutputSamples:", eventOutputSamples, "size:", width * height,
+					"sourceEnd:", samplePos + varyDuration + ", " + str);
 		}
 	}
 	
@@ -312,8 +315,10 @@ public class LoadAudioToImage extends PApplet {
 		while (vary <= 0) {
 			vary = (float) gauss(1.0, 0.0625);
 		}
-		int len = (int)(abs((vary * durationMS) * sampleRate / 1000.0f));
-		println("---- calcSampleLen result = "+ len +" samples at "+ sampleRate +" Hz sample rate");
+		// PASamplerInstrument accepts sampleCount in source-buffer samples.
+		float bufferRate = synth.getBufferSampleRate();
+		int len = (int)(abs((vary * durationMS) * bufferRate / 1000.0f));
+		println("---- calcSampleLen result = "+ len +" source samples at "+ bufferRate +" Hz buffer rate");
 		return len;
 	}
 
@@ -388,9 +393,9 @@ public class LoadAudioToImage extends PApplet {
 	 * Plays an audio sample with PASamplerInstrument and default ADSR.
 	 * 
 	 * @param samplePos    position of the sample in the audio buffer
-	 * @param sampleCount      number of samples to play
+	 * @param sampleCount  number of source-buffer samples to play
 	 * @param amplitude    amplitude of the samples on playback
-	 * @return the calculated sample length in samples
+	 * @return calculated event duration in output samples
 	 */
 	public int playSample(int samplePos, int sampleCount, float amplitude) {
 		sampleCount = synth.playSample(samplePos, sampleCount, amplitude);

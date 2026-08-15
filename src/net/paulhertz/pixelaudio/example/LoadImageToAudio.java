@@ -481,9 +481,11 @@ public class LoadImageToAudio extends PApplet {
 		while (vary <= 0) {
 			vary = (float) gauss(1.0, 0.0625);
 		}
-		int len = (int)(abs((vary * durationMS) * sampleRate / 1000.0f));
-		int actualLength = (int)((len / sampleRate) * 1000);
-		println("---- calcSampleLen result = "+ len +" samples at "+ sampleRate +" Hz sample rate, "+ actualLength +" milliseconds");
+		// PASamplerInstrument accepts sampleCount in source-buffer samples.
+		float bufferRate = synth.getBufferSampleRate();
+		int len = (int)(abs((vary * durationMS) * bufferRate / 1000.0f));
+		int actualLength = (int)((len / bufferRate) * 1000);
+		println("---- calcSampleLen result = "+ len +" source samples at "+ bufferRate +" Hz buffer rate, "+ actualLength +" milliseconds");
 		return len;
 	}
 
@@ -504,9 +506,9 @@ public class LoadImageToAudio extends PApplet {
 	 * Plays an audio sample with PASamplerInstrument and default ADSR.
 	 * 
 	 * @param samplePos    position of the sample in the audio buffer
-	 * @param sampleCount      number of samples to play
+	 * @param sampleCount  number of source-buffer samples to play
 	 * @param amplitude    amplitude of the samples on playback
-	 * @return the calculated sample length in samples
+	 * @return calculated event duration in output samples
 	 */
 	public int playSample(int samplePos, int sampleCount, float amplitude) {
 		sampleCount = synth.playSample(samplePos, sampleCount, amplitude);

@@ -152,8 +152,9 @@ public int calcSampleLen() {
   while (vary <= 0) {
     vary = (float) PixelAudio.gauss(1.0, 0.0625);
   }
-  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  // playSample() takes a note-window length in source-buffer samples.
+  samplelen = (int)(abs((vary * this.noteDuration) * wavesynth.getSampleRate() / 1000.0f));
+  // println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
   return samplelen;
 }
 

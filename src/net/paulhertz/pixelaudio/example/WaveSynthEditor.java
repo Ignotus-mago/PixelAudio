@@ -1708,7 +1708,7 @@ public class WaveSynthEditor extends PApplet {
 	    vary = (float) PixelAudio.gauss(1.0, 0.0625);
 	  }
 	  samplelen = (int)(abs((vary * this.noteDuration * wavesynth.getSampleRate()) / 1000.0f));
-	  println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+	  println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
 	  return samplelen;
 	}
 

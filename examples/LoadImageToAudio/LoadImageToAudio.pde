@@ -467,9 +467,11 @@ public int calcSampleLen(int durationMS) {
   while (vary <= 0) {
     vary = (float) gauss(1.0, 0.0625);
   }
-  int len = (int)(abs((vary * durationMS) * sampleRate / 1000.0f));
-  int actualLength = (int)((len / sampleRate) * 1000);
-  println("---- calcSampleLen result = "+ len +" samples at "+ sampleRate +" Hz sample rate, "+ actualLength +" milliseconds");
+  // PASamplerInstrument accepts sampleCount in source-buffer samples.
+  float bufferRate = synth.getBufferSampleRate();
+  int len = (int)(abs((vary * durationMS) * bufferRate / 1000.0f));
+  int actualLength = (int)((len / bufferRate) * 1000);
+  println("---- calcSampleLen result = "+ len +" source samples at "+ bufferRate +" Hz buffer rate, "+ actualLength +" milliseconds");
   return len;
 }
 
