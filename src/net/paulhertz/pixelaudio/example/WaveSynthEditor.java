@@ -38,6 +38,8 @@ import g4p_controls.*;
 
 // TODO goofy output to console when editing text fields: PENDING, solution is to replace Spinner with TextField
 // TODO if possible, enable key commands when the control window has focus, not just when the display window has focus.
+//      This is easier for some GUI widgets that for others. Editable text fields cause the most problems.
+// TODO set up playback sampling rate to follow or not follow synth sampling rate... as in other contexts.
 
 
 /**
@@ -57,7 +59,7 @@ import g4p_controls.*;
  * <p>
  * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
  * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
- * some of what you can do with the HilbertGen, BoustropheGen and DiagonalZigzzgGen for 
+ * some of what you can do with the HilbertGen, BoustropheGen and DiagonalZigzagGen for 
  * making patterns with the WaveSynth. There are lots of other possibilities. Patterns 
  * can be loaded from and saved to JSON files. 
  * </p><p>
@@ -141,6 +143,8 @@ import g4p_controls.*;
  * Press 'P' to shift all active WaveSynth phases by -phaseFac.
  * Press 'k' to show all current phase values in the console.
  * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.
+ * Press 'g' to swap the current PixelMapGen.
+ * Press 'G' to swap the wave synth sample rate between default and full screen.
  * Press 'w' or 'W' to toggle audio buffer wrap around.
  * Press '+' or '=' to make the image brighter.
  * Press '-' or '_' to make the image darker.
@@ -242,6 +246,7 @@ public class WaveSynthEditor extends PApplet {
 	ArrayList<WaveSynth> wsCrew;   // a list of WaveSynths
 	WaveData currentWD;            // current WaveData object, for editing
 	int waveDataIndex;             // index of currentWD in wavesynth.waveDataList
+	int defaultSampleRate;         // preferred sample rate, to swap with width * height
 
 	// file IO for JSON and video output
 	File currentDataFile;          // current JSON data file, if one is loaded
@@ -283,7 +288,7 @@ public class WaveSynthEditor extends PApplet {
 	int animSteps = 720;                    // how many steps in an animation loop
 	int animStop = animSteps;               // step where animation recording stops
 	boolean isRecordingVideo = false;       // are we recording? (only if we are animating)
-	int videoFrameRate = 24;                // fps
+	int videoFrameRate = 24;                // frames per second, depending on render speed: I can run 8 operators at 24 fps
 	int step;                               // number of current step in animation loop
 	int startTime;                          // set when animation starts
 	int stopTime;                           // used to calculate animation time until finish and duration
@@ -308,7 +313,7 @@ public class WaveSynthEditor extends PApplet {
 	float outputGain = -6.0f;          // audio output gain
 
 	// SampleInstrument setup
-	int noteDuration = 2000;        // average sample synth note duration, milliseconds
+	int noteDuration = 1000;        // average sample synth note duration, milliseconds
 	int samplelen;                  // calculated sample synth note length, samples
 	PASamplerInstrumentPool pool;   // pool of instruments
 	int poolSize = 8;               // number of instruments
@@ -514,13 +519,17 @@ public class WaveSynthEditor extends PApplet {
 		synth.setScaleHisto(false);
 		synth.setAnimSteps(this.animSteps);
 		// we use a sampling rate that fits nicely with the dimensions of a HilbertGen
-		synth.setSampleRate(genWidth * genWidth);
+		defaultSampleRate = genWidth * genWidth;
+		synth.setSampleRate(defaultSampleRate);   
 		// some other possible sampling rates
 		// synth.setSampleRate(genWidth / 2 * genWidth / 2);
 		// synth.setSampleRate(genWidth / 4 * genWidth / 4);
 		// synth.setSampleRate(gen.getWidth() * gen.getHeight());
 		// synth.setSampleRate(48000);
 		// synth.setSampleRate(this.sampleRate);
+		// and if you want an operator with frequency == 1 to fill the screen, 
+		// use the next line  ('G' key command toggles it with the default):
+		// synth.setSampleRate(this.width * this.height);
 		println("\n====================================================");
 		println("--- mapImage size = " + synth.mapImage.pixels.length);
 		println("--- WaveSynth sample rate = " + synth.getSampleRate());
@@ -798,9 +807,19 @@ public class WaveSynthEditor extends PApplet {
     	case TAB: // turn animation on or off
     		toggleAnimation();
     		break;
-    	case 'g': 
+    	case 'g': // swap PixelMapGen 
     		swapGen();
     		break;
+    	case 'G': // swap wave synth sample rate
+    		if (wavesynth.getSampleRate() == defaultSampleRate) {
+    			wavesynth.setSampleRate(mapImage.width * mapImage.height);
+    		}
+    		else {
+    			wavesynth.setSampleRate(defaultSampleRate);
+    		}
+    		markWaveSynthAudioDirty();
+			println("-- wave synth sample rate is "+ wavesynth.getSampleRate());
+			break;
     	case 'a': // scale all active WaveSynth amplitudes by ampFac
     		scaleAmps(wavesynth.getWaveDataList(), ampFac);
     		loadWaveDataPanelValues(currentWD);
@@ -1050,6 +1069,8 @@ public class WaveSynthEditor extends PApplet {
 		println(" * Press 'P' to shift all active WaveSynth phases by -phaseFac.");
 		println(" * Press 'k' to show all current phase values in the console.");
 		println(" * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.");
+		println(" * Press 'g' to swap the current PixelMapGen.");
+		println(" * Press 'G' to swap the wave synth sample rate between default and full screen.");
 		println(" * Press 'w' or 'W' to toggle audio buffer wrap around.");
 		println(" * Press '+' or '=' to make the image brighter.");
 		println(" * Press '-' or '_' to make the image darker.");
@@ -1682,12 +1703,12 @@ public class WaveSynthEditor extends PApplet {
 
 	public int calcSampleLen() {
 	  float vary = 0; 
-	  // skip the fairly rare negative numbers
+	  // skip negative numbers, a rare occurrence
 	  while (vary <= 0) {
 	    vary = (float) PixelAudio.gauss(1.0, 0.0625);
 	  }
-	  samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-	  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+	  samplelen = (int)(abs((vary * this.noteDuration * wavesynth.getSampleRate()) / 1000.0f));
+	  println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 	  return samplelen;
 	}
 
@@ -1720,8 +1741,9 @@ public class WaveSynthEditor extends PApplet {
 	}    
 
 	
-	/* ----->>> initialize GUI and control window <<<----- */
 	/* ----->>> initialize currentWD and wavesynth.waveDataList before setting up the GUI  <<<----- */
+	// and only then: //
+	/* ----->>> initialize GUI and control window <<<----- */
 
 	/**
 	 * Initialize GUI and control window -- initialize wavesynth before calling this method.
