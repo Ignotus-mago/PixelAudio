@@ -69,8 +69,6 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	private float bufferSampleRate;
 	/** Sample rate of the AudioOutput. */
 	private float outputSampleRate;
-	/** Buffer/output ratio retained for inspection; voices apply it during source stepping. */
-	private float sampleRateRatio;
 
 	/** Default ADSR envelope for playback. */
 	private ADSRParams defaultEnv;
@@ -106,7 +104,6 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 		this.bufferSize = buffer.getBufferSize();
 		this.bufferSampleRate = sampleRate;
 		this.outputSampleRate = (audioOut != null) ? audioOut.sampleRate() : sampleRate;
-		this.sampleRateRatio = (outputSampleRate > 0f) ? bufferSampleRate / outputSampleRate : 1.0f;
 		this.defaultEnv = (env != null) ? env : new ADSRParams(1f, 0.01f, 0.2f, 0.8f, 0.3f);
 		this.globalPitch = 1.0f;
 		this.globalPan = 0.0f;
@@ -135,7 +132,6 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 		this.bufferSize = (buffer != null) ? buffer.getBufferSize() : 0;
 		this.outputSampleRate = (out != null) ? out.sampleRate() : bufferSampleRate;
 		this.bufferSampleRate = bufferSampleRate;
-		this.sampleRateRatio = (outputSampleRate > 0f) ? bufferSampleRate / outputSampleRate : 1f;
 		// Keep custom sampler implementations on the same two explicit clocks.
 		this.sampler.setBufferSampleRate(this.bufferSampleRate);
 		this.sampler.setOutputSampleRate(this.outputSampleRate);
@@ -615,8 +611,6 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	/** @return sample rate used by this instrument's audio clock */
 	@Override
 	public float getSampleRate() { return outputSampleRate; }
-	/** @return buffer-to-output sample-rate ratio */
-	public float getSampleRateRatio() { return sampleRateRatio; }
 	
 	/**
 	 * Update the buffer's intrinsic sample rate.
@@ -626,9 +620,6 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	public synchronized void setBufferSampleRate(float newRate) {
 	    if (newRate > 0f) {
 	        this.bufferSampleRate = newRate;
-	        this.sampleRateRatio = (outputSampleRate > 0f)
-	            ? bufferSampleRate / outputSampleRate
-	            : 1f;
 	        // propagate to sampler if relevant
 	        if (sampler != null) sampler.setBufferSampleRate(newRate);
 	    }
@@ -643,7 +634,6 @@ public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock 
 	public synchronized void setOutputSampleRate(float newRate) {
 	    if (newRate > 0f) {
 	        this.outputSampleRate = newRate;
-	        this.sampleRateRatio = bufferSampleRate / outputSampleRate;
 	        if (sampler != null) sampler.setOutputSampleRate(newRate);
 	    }
 	}

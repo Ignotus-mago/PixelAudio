@@ -3,7 +3,6 @@ package net.paulhertz.pixelaudio.sampler;
 import ddf.minim.MultiChannelBuffer;
 
 /** Smoke tests for source-buffer and output sample-rate separation. */
-@SuppressWarnings("deprecation")
 public final class PASamplerRateDomainTest {
     private static int assertions = 0;
 
@@ -110,7 +109,7 @@ public final class PASamplerRateDomainTest {
         @Override public boolean isLooping() { return false; }
         @Override public void stopAll() { }
         @Override public void releaseAll() { }
-        @Override public void setPlaybackSampleRate(float newRate) { }
+        @Override public void setBufferSampleRate(float newRate) { }
         @Override public void setBuffer(float[] buffer) { }
         @Override public void setBuffer(float[] buffer, float bufferSampleRate) { }
     }
