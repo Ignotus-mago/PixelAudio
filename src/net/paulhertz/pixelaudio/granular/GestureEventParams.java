@@ -56,7 +56,7 @@ public final class GestureEventParams {
     /** Optional per-event linear gain scalar; length equals {@link #n}, or null to use {@link GestureGranularParams#gainLinear}. */
     public final float[] gain;
 
-    /** Optional per-event pitch ratio greater than 0; length equals {@link #n}, or null to use {@link GestureGranularParams#pitchRatio}. */
+    /** Optional per-event musical pitch ratio, excluding sample-rate correction; length equals {@link #n}, or null to use {@link GestureGranularParams#pitchRatio}. */
     public final float[] pitchRatio;
 
     /**

@@ -36,8 +36,9 @@ import net.paulhertz.pixelaudio.sampler.PitchPolicy;
  * contribute to the same block sample, the source performs in-place overlap-add normalization.</p>
  *
  * <p>This source reports {@link PitchPolicy#SOURCE_GRANULAR} because pitch is already handled
- * internally by {@code pitchRatio}; the instrument should not apply a second playback-rate
- * transposition on top of it.</p>
+ * internally. It advances the source buffer by
+ * {@code musicalPitchRatio * bufferSampleRate / outputSampleRate} per output frame; the
+ * instrument should not apply a second playback-rate transposition on top of it.</p>
  *
  * @see PAGranularInstrumentDirector
  * @see PASource
@@ -50,7 +51,10 @@ public final class PABurstGranularSource implements PASource {
     private final int burstGrains;        // >= 1
     private final int timeHopSamples;     // >= 1 (intra-burst spacing in time)
     private final int indexHopSamples;    // >= 0 (intra-burst scan in source index)
-    private final float pitchRatio;       // > 0
+    private final float musicalPitchRatio; // > 0; excludes sample-rate correction
+    private final float bufferSampleRate;
+    private final float outputSampleRate;
+    private final float sourceStep;        // source-buffer samples per output frame
     private boolean wrapAround = false;
 
     // Optional per-source gain (multiplicative). Default unity.
@@ -73,6 +77,9 @@ public final class PABurstGranularSource implements PASource {
     /**
      * Creates a burst granular source.
      *
+     * <p><b>Rate assumption:</b> this compatibility constructor assumes equal buffer and output
+     * sample rates. Use the constructor accepting both rates when they differ.</p>
+     *
      * @param source                mono source buffer to read from
      * @param baseIndex             start index in {@code source} for the first grain
      * @param grainLengthSamples    grain length in samples; values below 1 are clamped to 1
@@ -92,11 +99,14 @@ public final class PABurstGranularSource implements PASource {
             float pitchRatio
     ) {
         this(source, baseIndex, grainLengthSamples, burstGrains, timeHopSamples,
-                indexHopSamples, pitchRatio, false);
+                indexHopSamples, pitchRatio, false, 1f, 1f);
     }
 
     /**
      * Creates a burst granular source.
+     *
+     * <p><b>Rate assumption:</b> this compatibility constructor assumes equal buffer and output
+     * sample rates. Use the constructor accepting both rates when they differ.</p>
      *
      * @param source                mono source buffer to read from
      * @param baseIndex             start index in {@code source} for the first grain
@@ -118,17 +128,63 @@ public final class PABurstGranularSource implements PASource {
             float pitchRatio,
             boolean wrapAround
     ) {
+        this(source, baseIndex, grainLengthSamples, burstGrains, timeHopSamples,
+                indexHopSamples, pitchRatio, wrapAround, 1f, 1f);
+    }
+
+    /**
+     * Creates a burst granular source with explicit source-buffer and output clocks.
+     *
+     * <p>{@code musicalPitchRatio} is a musical transposition only. Source-buffer stepping is
+     * derived exactly once by this source:</p>
+     * <pre>
+     * sourceStep = musicalPitchRatio * bufferSampleRate / outputSampleRate
+     * </pre>
+     *
+     * @param source                  mono source buffer to read from
+     * @param baseIndex               source-buffer index of the first grain
+     * @param grainLengthOutputFrames duration of each grain on the output timeline
+     * @param burstGrains             number of grains in this event
+     * @param timeHopOutputFrames     spacing between burst grains on the output timeline
+     * @param sourceIndexHopSamples   spacing between grain starts in source-buffer samples
+     * @param musicalPitchRatio       musical pitch ratio, excluding sample-rate correction
+     * @param wrapAround              true to wrap finite source-buffer reads
+     * @param bufferSampleRate        intrinsic sample rate of {@code source}
+     * @param outputSampleRate        sample rate of the audio output clock
+     */
+    public PABurstGranularSource(
+            float[] source,
+            int baseIndex,
+            int grainLengthOutputFrames,
+            int burstGrains,
+            int timeHopOutputFrames,
+            int sourceIndexHopSamples,
+            float musicalPitchRatio,
+            boolean wrapAround,
+            float bufferSampleRate,
+            float outputSampleRate
+    ) {
         if (source == null) throw new IllegalArgumentException("source must not be null");
+        if (!Float.isFinite(bufferSampleRate) || bufferSampleRate <= 0f) {
+            throw new IllegalArgumentException("bufferSampleRate must be finite and > 0");
+        }
+        if (!Float.isFinite(outputSampleRate) || outputSampleRate <= 0f) {
+            throw new IllegalArgumentException("outputSampleRate must be finite and > 0");
+        }
         this.source = source;
 
         this.baseIndex = wrapAround ? wrapIndex(baseIndex, source.length) : Math.max(0, baseIndex);
-        this.grainLength = Math.max(1, grainLengthSamples);
+        this.grainLength = Math.max(1, grainLengthOutputFrames);
 
         this.burstGrains = Math.max(1, burstGrains);
-        this.timeHopSamples = Math.max(1, timeHopSamples);
-        this.indexHopSamples = Math.max(0, indexHopSamples);
+        this.timeHopSamples = Math.max(1, timeHopOutputFrames);
+        this.indexHopSamples = Math.max(0, sourceIndexHopSamples);
 
-        this.pitchRatio = (pitchRatio > 0f) ? pitchRatio : 1.0f;
+        this.musicalPitchRatio = (Float.isFinite(musicalPitchRatio) && musicalPitchRatio > 0f)
+                ? musicalPitchRatio : 1.0f;
+        this.bufferSampleRate = bufferSampleRate;
+        this.outputSampleRate = outputSampleRate;
+        this.sourceStep = this.musicalPitchRatio * this.bufferSampleRate / this.outputSampleRate;
         this.wrapAround = wrapAround;
     }
 
@@ -218,7 +274,7 @@ public final class PABurstGranularSource implements PASource {
 
                 final float srcPos =
                         (float) grainSourceStart +
-                        (float) offsetInGrain * pitchRatio;
+                        (float) offsetInGrain * sourceStep;
 
                 if (!wrapAround && (srcPos < 0f || srcPos >= (source.length - 1))) continue;
 
@@ -263,6 +319,18 @@ public final class PABurstGranularSource implements PASource {
     public PitchPolicy pitchPolicy() {
         return PitchPolicy.SOURCE_GRANULAR;
     }
+
+    /** @return intrinsic sample rate of the source buffer */
+    public float getBufferSampleRate() { return bufferSampleRate; }
+
+    /** @return sample rate of the output-frame clock */
+    public float getOutputSampleRate() { return outputSampleRate; }
+
+    /** @return musical pitch ratio, excluding sample-rate correction */
+    public float getMusicalPitchRatio() { return musicalPitchRatio; }
+
+    /** @return source-buffer samples advanced per output frame */
+    public float getSourceStep() { return sourceStep; }
 
     /**
      * Sets the grain window and authoritative grain length for rendering.

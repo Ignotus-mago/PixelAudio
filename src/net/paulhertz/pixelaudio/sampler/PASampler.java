@@ -116,7 +116,7 @@ public interface PASampler {
 	 * @param newRate   new source-buffer playback sample rate in Hz
 	 */
 	default void setBufferSampleRate(float newRate) {
-		setPlaybackSampleRate(newRate);
+		// update source-buffer sample rate
 	}
 
 	/**
@@ -129,13 +129,6 @@ public interface PASampler {
 		// Backward-compatible no-op for sampler implementations that predate
 		// separate source-buffer and output clocks.
 	}
-
-	/**
-	 * Legacy source-rate method retained for third-party sampler implementations.
-	 * New code should call {@link #setBufferSampleRate(float)}.
-	 */
-	@Deprecated
-	void setPlaybackSampleRate(float newRate);
 	
 	/**
 	 * Replaces the sampler source buffer.

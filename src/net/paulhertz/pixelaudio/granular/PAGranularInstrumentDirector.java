@@ -57,13 +57,19 @@ import processing.core.PVector;
  * window is used. {@link PABurstGranularSource} owns sample-level burst rendering for each
  * event.</p>
  *
+ * <p><b>Sample-rate domains:</b> gesture scheduling, grain duration, and envelopes use the
+ * instrument's output sample rate. Source indices use the source buffer's intrinsic sample
+ * rate. Rate-aware playback overloads accept that buffer rate explicitly. Legacy overloads
+ * without a buffer rate assume the buffer has already been resampled to the output rate.</p>
+ *
  * @see GestureGranularParams
  * @see GestureEventParams
  * @see PABurstGranularSource
  */
 public final class PAGranularInstrumentDirector {
     private final PAGranularInstrument instrument;
-    private final float sampleRate;
+    /** Sample rate of the audio output clock used for scheduling and rendering. */
+    private final float outputSampleRate;
 
     // --- cache (offsets only)
     private int lastScheduleSize = -1;
@@ -94,13 +100,16 @@ public final class PAGranularInstrumentDirector {
      */
     public PAGranularInstrumentDirector(PAGranularInstrument instrument) {
         this.instrument = Objects.requireNonNull(instrument, "instrument");
-        this.sampleRate = instrument.getSampleRate();
+        this.outputSampleRate = instrument.getSampleRate();
+        requireValidSampleRate(this.outputSampleRate, "outputSampleRate");
     }
 
     /**
      * Plays a gesture immediately using per-event source-buffer indices.
      *
-     * <p>The start time is the instrument's current sample cursor plus a short lead-in.</p>
+     * <p><b>Rate assumption:</b> this convenience overload assumes {@code monoBuf} is sampled
+     * at the instrument output rate. Use the overload with {@code bufferSampleRate} when it is
+     * not.</p>
      *
      * @param monoBuf         mono source buffer containing audio samples
      * @param schedule        gesture schedule whose size must match {@code startIndices.length}
@@ -109,13 +118,30 @@ public final class PAGranularInstrumentDirector {
      */
     public void playGestureNow(float[] monoBuf, GestureSchedule schedule, 
 		GestureGranularParams params, int[] startIndices) {
+        playGestureNow(monoBuf, outputSampleRate, schedule, params, startIndices);
+    }
+
+    /**
+     * Plays a gesture immediately using an explicitly rated source buffer.
+     *
+     * @param monoBuf mono source-buffer samples
+     * @param bufferSampleRate intrinsic sample rate of {@code monoBuf}; it may differ from the output rate
+     * @param schedule gesture event schedule
+     * @param params granular playback parameters
+     * @param startIndices per-event source-buffer start indices
+     */
+    public void playGestureNow(float[] monoBuf, float bufferSampleRate, GestureSchedule schedule,
+            GestureGranularParams params, int[] startIndices) {
         long now = instrument.getSampleCursor();
-        now += (long)(0.005f * sampleRate); // optional lead-in (once)
-        playGestureAtSampleTime(monoBuf, schedule, params, startIndices, now);
+        now += (long)(0.005f * outputSampleRate); // optional lead-in (once)
+        playGestureAtSampleTime(monoBuf, bufferSampleRate, schedule, params, startIndices, now);
     }
     
     /**
      * Plays a gesture immediately using per-event source-buffer indices and pan overrides.
+     *
+     * <p><b>Rate assumption:</b> this convenience overload assumes {@code monoBuf} is sampled
+     * at the instrument output rate.</p>
      *
      * @param monoBuf         mono source buffer containing audio samples
      * @param schedule        gesture schedule whose size must match the per-event arrays
@@ -125,13 +151,31 @@ public final class PAGranularInstrumentDirector {
      */
     public void playGestureNow(float[] monoBuf, GestureSchedule schedule, 
 		GestureGranularParams params, int[] startIndices, float[] panValues) {
+        playGestureNow(monoBuf, outputSampleRate, schedule, params, startIndices, panValues);
+    }
+
+    /**
+     * Plays a gesture immediately using an explicitly rated source buffer and pan overrides.
+     *
+     * @param monoBuf mono source-buffer samples
+     * @param bufferSampleRate intrinsic sample rate of {@code monoBuf}
+     * @param schedule gesture event schedule
+     * @param params granular playback parameters
+     * @param startIndices per-event source-buffer start indices
+     * @param panValues optional per-event pan values
+     */
+    public void playGestureNow(float[] monoBuf, float bufferSampleRate, GestureSchedule schedule,
+            GestureGranularParams params, int[] startIndices, float[] panValues) {
         long now = instrument.getSampleCursor();
-        now += (long)(0.005f * sampleRate); // optional lead-in (once)
-        playGestureAtSampleTime(monoBuf, schedule, params, startIndices, panValues, now);
+        now += (long)(0.005f * outputSampleRate); // optional lead-in (once)
+        playGestureAtSampleTime(monoBuf, bufferSampleRate, schedule, params, startIndices, panValues, now);
     }
 
     /**
      * Plays a gesture immediately using a complete per-event parameter object.
+     *
+     * <p><b>Rate assumption:</b> this convenience overload assumes {@code monoBuf} is sampled
+     * at the instrument output rate.</p>
      *
      * @param monoBuf     mono source buffer containing audio samples
      * @param schedule    gesture schedule whose size must match {@code evtParams.n}
@@ -142,13 +186,33 @@ public final class PAGranularInstrumentDirector {
             GestureSchedule schedule,
             GestureGranularParams params,
             GestureEventParams evtParams) {
+        playGestureNow(monoBuf, outputSampleRate, schedule, params, evtParams);
+    }
+
+    /**
+     * Plays a gesture immediately using an explicitly rated source buffer.
+     *
+     * @param monoBuf mono source-buffer samples
+     * @param bufferSampleRate intrinsic sample rate of {@code monoBuf}
+     * @param schedule gesture event schedule
+     * @param params granular playback parameters
+     * @param evtParams per-event source indices and overrides
+     */
+    public void playGestureNow(float[] monoBuf,
+            float bufferSampleRate,
+            GestureSchedule schedule,
+            GestureGranularParams params,
+            GestureEventParams evtParams) {
         long now = instrument.getSampleCursor();
-        now += (long)(0.005f * sampleRate); // optional lead-in (once)
-        playGestureAtSampleTime(monoBuf, schedule, params, evtParams, now);
+        now += (long)(0.005f * outputSampleRate); // optional lead-in (once)
+        playGestureAtSampleTime(monoBuf, bufferSampleRate, schedule, params, evtParams, now);
     }
 
     /**
      * Schedules a gesture at an absolute sample time using per-event source-buffer indices.
+     *
+     * <p><b>Rate assumption:</b> this convenience overload assumes {@code monoBuf} is sampled
+     * at the instrument output rate.</p>
      *
      * @param monoBuf         mono source buffer containing audio samples
      * @param schedule        gesture schedule whose size must match {@code startIndices.length}
@@ -157,6 +221,25 @@ public final class PAGranularInstrumentDirector {
      * @param startSampleTime absolute sample time for the first gesture event
      */
     public void playGestureAtSampleTime(float[] monoBuf,
+            GestureSchedule schedule,
+            GestureGranularParams params,
+            int[] startIndices,
+            long startSampleTime) {
+        playGestureAtSampleTime(monoBuf, outputSampleRate, schedule, params, startIndices, startSampleTime);
+    }
+
+    /**
+     * Schedules a gesture using an explicitly rated source buffer.
+     *
+     * @param monoBuf mono source-buffer samples
+     * @param bufferSampleRate intrinsic sample rate of {@code monoBuf}
+     * @param schedule gesture event schedule
+     * @param params granular playback parameters
+     * @param startIndices per-event source-buffer start indices
+     * @param startSampleTime absolute output-frame time of the first event
+     */
+    public void playGestureAtSampleTime(float[] monoBuf,
+            float bufferSampleRate,
             GestureSchedule schedule,
             GestureGranularParams params,
             int[] startIndices,
@@ -171,11 +254,14 @@ public final class PAGranularInstrumentDirector {
                 .startIndices(startIndices)
                 .build();
 
-        playGestureAtSampleTime(monoBuf, schedule, params, evtParams, startSampleTime);
+        playGestureAtSampleTime(monoBuf, bufferSampleRate, schedule, params, evtParams, startSampleTime);
     }
 
     /**
      * Schedules a gesture at an absolute sample time using source-buffer indices and pan overrides.
+     *
+     * <p><b>Rate assumption:</b> this convenience overload assumes {@code monoBuf} is sampled
+     * at the instrument output rate.</p>
      *
      * @param monoBuf          mono source buffer containing audio samples
      * @param schedule         gesture schedule whose size must match the per-event arrays
@@ -185,6 +271,28 @@ public final class PAGranularInstrumentDirector {
      * @param startSampleTime  absolute sample time for the first gesture event
      */
     public void playGestureAtSampleTime(float[] monoBuf,
+            GestureSchedule schedule,
+            GestureGranularParams params,
+            int[] startIndices,
+            float[] panValues,
+            long startSampleTime) {
+        playGestureAtSampleTime(monoBuf, outputSampleRate, schedule, params,
+                startIndices, panValues, startSampleTime);
+    }
+
+    /**
+     * Schedules a gesture using an explicitly rated source buffer and pan overrides.
+     *
+     * @param monoBuf mono source-buffer samples
+     * @param bufferSampleRate intrinsic sample rate of {@code monoBuf}
+     * @param schedule gesture event schedule
+     * @param params granular playback parameters
+     * @param startIndices per-event source-buffer start indices
+     * @param panValues optional per-event pan values
+     * @param startSampleTime absolute output-frame time of the first event
+     */
+    public void playGestureAtSampleTime(float[] monoBuf,
+            float bufferSampleRate,
             GestureSchedule schedule,
             GestureGranularParams params,
             int[] startIndices,
@@ -201,7 +309,7 @@ public final class PAGranularInstrumentDirector {
                 .pan(panValues)
                 .build();
 
-        playGestureAtSampleTime(monoBuf, schedule, params, evtParams, startSampleTime);
+        playGestureAtSampleTime(monoBuf, bufferSampleRate, schedule, params, evtParams, startSampleTime);
     }
 
     /**
@@ -210,6 +318,9 @@ public final class PAGranularInstrumentDirector {
      * <p>This method prepares the schedule according to {@code params}, validates the per-event
      * parameter count, caches event offsets in samples, and schedules one
      * {@link PABurstGranularSource} for each event.</p>
+     *
+     * <p><b>Rate assumption:</b> this convenience overload assumes {@code monoBuf} is sampled
+     * at the instrument output rate.</p>
      *
      * @param monoBuf             mono source buffer containing audio samples
      * @param schedule            raw gesture schedule in milliseconds
@@ -222,9 +333,32 @@ public final class PAGranularInstrumentDirector {
             GestureGranularParams params,
             GestureEventParams evtParams,
             long startSampleTime) {
+        playGestureAtSampleTime(monoBuf, outputSampleRate, schedule, params, evtParams, startSampleTime);
+    }
+
+    /**
+     * Schedules a gesture using an explicitly rated source buffer.
+     *
+     * <p>The director passes both clocks and the musical pitch ratio to each burst source;
+     * {@link PABurstGranularSource} alone derives and applies the source-buffer step.</p>
+     *
+     * @param monoBuf mono source-buffer samples
+     * @param bufferSampleRate intrinsic sample rate of {@code monoBuf}
+     * @param schedule gesture event schedule
+     * @param params granular playback parameters
+     * @param evtParams per-event source indices and overrides
+     * @param startSampleTime absolute output-frame time of the first event
+     */
+    public void playGestureAtSampleTime(float[] monoBuf,
+            float bufferSampleRate,
+            GestureSchedule schedule,
+            GestureGranularParams params,
+            GestureEventParams evtParams,
+            long startSampleTime) {
 
         if (monoBuf == null || monoBuf.length == 0) return;
         if (schedule == null || params == null || evtParams == null) return;
+        requireValidSampleRate(bufferSampleRate, "bufferSampleRate");
 
         // 1) Transform schedule times (ms domain) according to params
         GestureSchedule sched = prepareSchedule(schedule, params);
@@ -240,7 +374,7 @@ public final class PAGranularInstrumentDirector {
 
         // 3) Schedule Model-A events (Director creates sources)
         final WindowFunction grainWf = resolveGrainWindow(params);
-        scheduleEvents(monoBuf, sched, params, evtParams, grainWf, startSampleTime);
+        scheduleEvents(monoBuf, bufferSampleRate, sched, params, evtParams, grainWf, startSampleTime);
     }
     
     /**
@@ -260,16 +394,38 @@ public final class PAGranularInstrumentDirector {
             GestureGranularParams params,
             GestureEventParams evtParams,
             long startSampleTime) {
+        playGestureAtSampleTimeTransformed(monoBuf, outputSampleRate, transformedSchedule,
+                params, evtParams, startSampleTime);
+    }
+
+    /**
+     * Schedules an already-transformed gesture using an explicitly rated source buffer.
+     *
+     * @param monoBuf mono source-buffer samples
+     * @param bufferSampleRate intrinsic sample rate of {@code monoBuf}
+     * @param transformedSchedule prepared gesture schedule
+     * @param params granular playback parameters
+     * @param evtParams per-event source indices and overrides
+     * @param startSampleTime absolute output-frame time of the first event
+     */
+    public void playGestureAtSampleTimeTransformed(float[] monoBuf,
+            float bufferSampleRate,
+            GestureSchedule transformedSchedule,
+            GestureGranularParams params,
+            GestureEventParams evtParams,
+            long startSampleTime) {
 
         if (monoBuf == null || monoBuf.length == 0) return;
         if (transformedSchedule == null || transformedSchedule.isEmpty()) return;
         if (params == null || evtParams == null) return;
+        requireValidSampleRate(bufferSampleRate, "bufferSampleRate");
 
         final int n = transformedSchedule.size();
         if (evtParams.n != n) return;
 
         ensureCache(transformedSchedule, params);
-        scheduleEvents(monoBuf, transformedSchedule, params, evtParams, resolveGrainWindow(params), startSampleTime);
+        scheduleEvents(monoBuf, bufferSampleRate, transformedSchedule, params, evtParams,
+                resolveGrainWindow(params), startSampleTime);
     }
     
     /**
@@ -283,6 +439,7 @@ public final class PAGranularInstrumentDirector {
      * @param startSampleTime    absolute sample time for the first gesture event
      */
     private void scheduleEvents(float[] monoBuf,
+            float bufferSampleRate,
             GestureSchedule sched,
             GestureGranularParams params,
             GestureEventParams evtParams,
@@ -292,13 +449,11 @@ public final class PAGranularInstrumentDirector {
         final int n = sched.size();
         if (n <= 0) return;
 
-        final int grainLen = Math.max(1, params.grainLengthSamples);
-        final int hop      = Math.max(1, params.hopLengthSamples);
-
-        // early model semantics (unchanged)
+        final int grainLengthOutputFrames = Math.max(1, params.grainLengthSamples);
         final int burstGrains = Math.max(1, params.burstGrains);
-        final int timeHop  = hop;
-        final int indexHop = hop;
+        final int eventHopOutputFrames = Math.max(1, params.eventHopOutputFrames);
+        final int burstTimeHopOutputFrames = Math.max(1, params.burstTimeHopOutputFrames);
+        final int burstSourceIndexHopSamples = Math.max(0, params.burstSourceIndexHopSamples);
 
         final boolean fixedHop = (params.hopMode == GestureGranularParams.HopMode.FIXED);
 
@@ -308,12 +463,14 @@ public final class PAGranularInstrumentDirector {
         final float defaultPitch = (params.pitchRatio > 0f) ? params.pitchRatio : 1.0f;
 
         // Prewarm window curve (avoid first-hit allocation)
-        if (wf != null && grainLen > 1) {
-            WindowCache.INSTANCE.prewarm(wf, grainLen);
+        if (wf != null && grainLengthOutputFrames > 1) {
+            WindowCache.INSTANCE.prewarm(wf, grainLengthOutputFrames);
         }
 
         for (int i = 0; i < n; i++) {
-            final long tEvent = fixedHop ? (long)i * (long)hop : cachedEventOffsetsSamples[i];
+            final long tEvent = fixedHop
+                    ? (long) i * (long) eventHopOutputFrames
+                    : cachedEventOffsetsSamples[i];
             final long when = startSampleTime + tEvent;
 
             int idx = evtParams.startIndices[i];
@@ -323,19 +480,21 @@ public final class PAGranularInstrumentDirector {
             final float pan = (evtParams.pan != null) ? clampPan(evtParams.pan[i]) : defaultPan;
             final float dynamics = (evtParams.gain != null) ? Math.max(0f, evtParams.gain[i]) : 1.0f;
             final float gain = defaultGain * dynamics;
-            final float pitchRatio = (evtParams.pitchRatio != null)
+            final float musicalPitchRatio = (evtParams.pitchRatio != null)
                     ? Math.max(1e-6f, evtParams.pitchRatio[i])
                     : defaultPitch;
 
             PASource src = new PABurstGranularSource(
                     monoBuf,
                     idx,
-                    grainLen,
+                    grainLengthOutputFrames,
                     burstGrains,
-                    timeHop,
-                    indexHop,
-                    pitchRatio,
-                    params.wrapAround
+                    burstTimeHopOutputFrames,
+                    burstSourceIndexHopSamples,
+                    musicalPitchRatio,
+                    params.wrapAround,
+                    bufferSampleRate,
+                    outputSampleRate
             );
 
             instrument.startAtSampleTime(
@@ -346,7 +505,7 @@ public final class PAGranularInstrumentDirector {
                     false,    // one-shot burst
                     when,
                     wf,
-                    grainLen
+                    grainLengthOutputFrames
             );
         }
     }
@@ -371,7 +530,7 @@ public final class PAGranularInstrumentDirector {
         for (int i = 0; i < n; i++) {
             float relMs = sched.timesMs[i] - t0;
             if (relMs < 0f) relMs = 0f;
-            cachedEventOffsetsSamples[i] = msToSamples(relMs, sampleRate);
+            cachedEventOffsetsSamples[i] = msToSamples(relMs, outputSampleRate);
         }
 
         lastOffsetsScheduleRef = sched;
@@ -557,6 +716,12 @@ public final class PAGranularInstrumentDirector {
 		if (p >  1f) return  1f;
 		return p;
 	}
+
+    private static void requireValidSampleRate(float rate, String name) {
+        if (!Float.isFinite(rate) || rate <= 0f) {
+            throw new IllegalArgumentException(name + " must be finite and > 0");
+        }
+    }
 	
 	// ------------------------------------------------------------------------
 	// Access to PAGranularInstrument
@@ -570,6 +735,11 @@ public final class PAGranularInstrumentDirector {
 	public PAGranularInstrument getInstrument() {
 		return this.instrument;
 	}
+
+    /** @return sample rate of the output clock used by this director */
+    public float getOutputSampleRate() {
+        return outputSampleRate;
+    }
  
     // ------------------------------------------------------------------------
     // Performance stop and release methods

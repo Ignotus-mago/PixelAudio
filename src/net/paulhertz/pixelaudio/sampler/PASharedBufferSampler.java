@@ -743,16 +743,6 @@ public class PASharedBufferSampler extends UGen implements PASampler {
     // Sample rate management
     // ------------------------------------------------------------------------
 
-    /**
-     * Returns the current source-buffer sample rate.
-     *
-     * @return source-buffer sample rate in Hz
-     */
-    @Deprecated
-    public synchronized float getPlaybackSampleRate() {
-		return bufferSampleRate;
-    }
-
     /** @return source-buffer sample rate in Hz */
     public synchronized float getBufferSampleRate() { return bufferSampleRate; }
 
@@ -768,13 +758,6 @@ public class PASharedBufferSampler extends UGen implements PASampler {
                 v.setBufferSampleRate(newRate);
             }
         }
-    }
-
-    /** Legacy alias for {@link #setBufferSampleRate(float)}. */
-    @Deprecated
-    @Override
-    public synchronized void setPlaybackSampleRate(float newRate) {
-        setBufferSampleRate(newRate);
     }
 
     /** Updates the output clock used by voices and their envelopes. */
@@ -795,12 +778,6 @@ public class PASharedBufferSampler extends UGen implements PASampler {
         if (out != null) {
             setOutputSampleRate(out.sampleRate());
         }
-    }
-
-    /** Legacy alias for {@link #updateOutputRateFromOutput()}. */
-    @Deprecated
-    public synchronized void updatePlaybackRateFromOutput() {
-        updateOutputRateFromOutput();
     }
     
     /** @return source buffer length in samples */

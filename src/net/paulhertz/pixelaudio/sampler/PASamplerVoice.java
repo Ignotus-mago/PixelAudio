@@ -367,10 +367,6 @@ public class PASamplerVoice {
 		}
     }
 
-    /** Legacy alias for {@link #setBufferSampleRate(float)}. */
-    @Deprecated
-    public void setPlaybackSampleRate(float newRate) { setBufferSampleRate(newRate); }
-
     /** Sets the rate of the audio clock that calls {@link #nextSample()}. */
     public synchronized void setOutputSampleRate(float newRate) {
         if (newRate > 0f) {

@@ -105,10 +105,20 @@ public final class GestureGranularParams {
     }
 
     // --- synthesis + scheduling semantics
-    /** Length of each granular grain in samples. Values passed to the builder are clamped to at least 1. */
+    /** Length of each granular grain in output frames. Values passed to the builder are clamped to at least 1. */
     public final int grainLengthSamples;
-    /** Hop length in samples, used for fixed event timing and burst spacing. */
-    public final int hopLengthSamples;     // meaning depends on hopMode; always used for FIXED and for burst spacing
+    /**
+     * Legacy shared hop value. It is used as an output-frame event hop, an output-frame burst
+     * time hop, and a source-buffer-sample index hop. These domains are named separately inside
+     * the director pending a future public-API split.
+     */
+    public final int hopLengthSamples;
+    /** Fixed spacing between gesture events, measured in output frames. */
+    public final int eventHopOutputFrames;
+    /** Spacing between grains within one burst, measured in output frames. */
+    public final int burstTimeHopOutputFrames;
+    /** Movement between burst-grain start positions, measured in source-buffer samples. */
+    public final int burstSourceIndexHopSamples;
     /** Number of grains produced for each scheduled event. Values passed to the builder are clamped to at least 1. */
     public final int burstGrains;
     /** True to apply automatic gain compensation when one event produces multiple burst grains. */
@@ -118,7 +128,7 @@ public final class GestureGranularParams {
     public final float gainLinear;
     /** Default stereo pan in the range [-1, 1]; builder values are clamped when the object is built. */
     public final float pan;                // [-1..1]
-    /** Default playback pitch ratio. Values are clamped to a small positive minimum when built. */
+    /** Default musical pitch ratio, excluding buffer/output sample-rate correction. */
     public final float pitchRatio;         // >0
     /** Envelope applied to granular voices; null lets the instrument or sampler use its default envelope. */
     public final ADSRParams env;           // nullable => instrument default
@@ -146,6 +156,9 @@ public final class GestureGranularParams {
     private GestureGranularParams(Builder b) {
         this.grainLengthSamples = b.grainLengthSamples;
         this.hopLengthSamples   = b.hopLengthSamples;
+        this.eventHopOutputFrames = b.eventHopOutputFrames;
+        this.burstTimeHopOutputFrames = b.burstTimeHopOutputFrames;
+        this.burstSourceIndexHopSamples = b.burstSourceIndexHopSamples;
         this.burstGrains        = b.burstGrains;
         this.autoBurstGainComp  = b.autoBurstGainComp;
 
@@ -187,6 +200,9 @@ public final class GestureGranularParams {
         // defaults chosen to match your Director defaults
         private int grainLengthSamples = 1024;
         private int hopLengthSamples   = 256;
+        private int eventHopOutputFrames = 256;
+        private int burstTimeHopOutputFrames = 256;
+        private int burstSourceIndexHopSamples = 256;
         private int burstGrains        = 1;
         private boolean autoBurstGainComp = false;
 
@@ -221,7 +237,44 @@ public final class GestureGranularParams {
          * @param v hop length; values below 1 are clamped to 1
          * @return this builder
          */
-        public Builder hopLengthSamples(int v)   { this.hopLengthSamples   = Math.max(1, v); return this; }
+        public Builder hopLengthSamples(int v) {
+            int hop = Math.max(1, v);
+            this.hopLengthSamples = hop;
+            this.eventHopOutputFrames = hop;
+            this.burstTimeHopOutputFrames = hop;
+            this.burstSourceIndexHopSamples = hop;
+            return this;
+        }
+
+        /**
+         * Sets fixed event spacing in output frames without changing either burst hop.
+         * @param v event hop; values below 1 are clamped to 1
+         * @return this builder
+         */
+        public Builder eventHopOutputFrames(int v) {
+            this.eventHopOutputFrames = Math.max(1, v);
+            return this;
+        }
+
+        /**
+         * Sets intra-burst grain spacing in output frames.
+         * @param v time hop; values below 1 are clamped to 1
+         * @return this builder
+         */
+        public Builder burstTimeHopOutputFrames(int v) {
+            this.burstTimeHopOutputFrames = Math.max(1, v);
+            return this;
+        }
+
+        /**
+         * Sets intra-burst movement through the source buffer in source samples.
+         * @param v source-index hop; negative values are clamped to 0
+         * @return this builder
+         */
+        public Builder burstSourceIndexHopSamples(int v) {
+            this.burstSourceIndexHopSamples = Math.max(0, v);
+            return this;
+        }
 
         /**
          * Sets the number of grains generated for each scheduled event.
