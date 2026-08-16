@@ -66,7 +66,8 @@ public class PAGranularVoice {
     private float pan = 0f;           // -1..+1 stereo pan
     private boolean looping = false;  // loop entire path
 
-    private float playbackSampleRate;
+    /** Sample rate of the output clock; used for the macro envelope. */
+    private final float outputSampleRate;
 
     // Block buffers
     private final float[] blockL;
@@ -94,12 +95,15 @@ public class PAGranularVoice {
      *
      * @param source               initial source for the voice; may be replaced during activation
      * @param blockSize            internal render-block size
-     * @param playbackSampleRate   sample rate used by the voice envelope
+     * @param outputSampleRate     sample rate of the output clock used by the voice envelope
      */
-    public PAGranularVoice(PASource source, int blockSize, float playbackSampleRate) {
+    public PAGranularVoice(PASource source, int blockSize, float outputSampleRate) {
+        if (!Float.isFinite(outputSampleRate) || outputSampleRate <= 0f) {
+            throw new IllegalArgumentException("outputSampleRate must be finite and > 0");
+        }
         this.source = source;
         this.blockSize = blockSize;
-        this.playbackSampleRate = playbackSampleRate;
+        this.outputSampleRate = outputSampleRate;
         this.blockL = new float[blockSize];
         this.blockR = new float[blockSize];
         this.active = false;
@@ -188,7 +192,7 @@ public class PAGranularVoice {
     	ADSRParams useEnv = (envParams != null) ? envParams : defaultEnvParams;
 
     	// Envelope setup (macro envelope over a gesture)
-        envelope = useEnv.toSimpleADSR(playbackSampleRate);
+        envelope = useEnv.toSimpleADSR(outputSampleRate);
     	envelope.noteOn();
     }
 

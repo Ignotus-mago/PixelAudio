@@ -43,8 +43,8 @@ public interface PAFloatSource {
      * {@code blockSize} elements. Samples should be added to the buffers, not assigned over
      * existing contents, so multiple voices can accumulate into the same output block.</p>
      *
-     * @param blockStart absolute sample index in the source's playback domain
-     * @param blockSize number of samples to render
+     * @param blockStart absolute output-frame index in the source's playback timeline
+     * @param blockSize number of output frames to render
      * @param outL left channel buffer to mix into
      * @param outR right channel buffer to mix into; may be the same array as {@code outL} for mono
      */
@@ -54,9 +54,9 @@ public interface PAFloatSource {
                      float[] outR);
 
     /**
-     * Returns the source duration in samples.
+     * Returns the source duration in output frames.
      *
-     * @return duration in samples, or {@link Long#MAX_VALUE} for an effectively infinite or streaming source
+     * @return duration in output frames, or {@link Long#MAX_VALUE} for an effectively infinite or streaming source
      */
     long lengthSamples();
 }
