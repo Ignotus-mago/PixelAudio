@@ -276,11 +276,13 @@ public class WaveSynthEditor extends PApplet {
 	float colorShift = 1.0f/24;
 	/** Sets how much to scale frequencies with scaleFreqs() 
 	 *  tritone (half octave): (Math.sqrt(2.0)); semitone: (Math.pow(2.0, 1.0/12)); */
-	float freqFac = (float) (Math.sqrt(2.0)); 
+	float freqFac = (float) (Math.pow(2.0, 1.0/12)); 
 	/** Sets how much to scale amplitudes with scaleAmps() */
 	float ampFac = 0.9375f; // 15/16
 	/** Sets the increment to apply to wavesynth gain (brightness) */
 	float gainInc = 0.03125f;
+	/** saturation factor */
+	float saturationFac = 1.0f/1.0625f;
 
 	boolean isAnimating = false;
 	boolean isLooping = false;
@@ -880,6 +882,18 @@ public class WaveSynthEditor extends PApplet {
     		step = 0;
     		markWaveSynthVisualDirty();
     		break;
+    	case 'z': // decrease color saturation
+    		scaleSaturation(wavesynth.getWaveDataList(), saturationFac);
+    		wavesynth.updateWaveColors();
+    		refreshGlobalPanel();
+    		markWaveSynthVisualDirty();
+    		break;
+    	case 'Z': // increase color saturation
+    		scaleSaturation(wavesynth.getWaveDataList(), 1/saturationFac);
+    		wavesynth.updateWaveColors();
+    		refreshGlobalPanel();
+    		markWaveSynthVisualDirty();
+    		break;    		
     	case '+': // make the image brighter
     	case '=':
     		wavesynth.setGain(wavesynth.gain + gainInc);
@@ -1026,11 +1040,6 @@ public class WaveSynthEditor extends PApplet {
     			println("--->> Sorted wave data operators by frequency.");
     		}
     		break;
-    	case 'z': // find nearest zero crossing in the audio signal and play from there
-    		isFindZeroCrossing = !isFindZeroCrossing;
-    		println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
-    		toggleZeroCrossing(isFindZeroCrossing);
-    		break;
     	case 'q': // show animation status on screen (will not be recorded)
     		showAnimationStatus = !showAnimationStatus;
     		println("-- showAnimationStatus is "+ showAnimationStatus);
@@ -1069,6 +1078,8 @@ public class WaveSynthEditor extends PApplet {
 		println(" * Press 'P' to shift all active WaveSynth phases by -phaseFac.");
 		println(" * Press 'k' to show all current phase values in the console.");
 		println(" * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.");
+		println(" * Press 'z' to decrease color saturation.");
+		println(" * Press 'Z' to increase color saturation.");
 		println(" * Press 'g' to swap the current PixelMapGen.");
 		println(" * Press 'G' to swap the wave synth sample rate between default and full screen.");
 		println(" * Press 'w' or 'W' to toggle audio buffer wrap around.");
@@ -1098,7 +1109,6 @@ public class WaveSynthEditor extends PApplet {
 		println(" * Press 'v' to toggle video recording.");
 		println(" * Press 'V' to record a complete video loop from frame 0 to stop frame.");
 		println(" * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.");
-		println(" * Press 'z' to find nearest zero crossing in the audio signal and play from there.");
 		println(" * Press 'q' to show animation status on screen (will not be recorded).");
 		println(" * Press '?' to print window dimensions, video frame rate, and audio settings to the console.");
 		println(" * press 'h' or 'H' to show this help message in the console.");
@@ -1212,6 +1222,14 @@ public class WaveSynthEditor extends PApplet {
 		refreshGlobalPanel();
 	}
 	
+	/**
+	 * Toggles a Sampler instrument setting to start audio playback at a zero-crossing. The issue
+	 * that we were dealing with, initial noise in a Sampler audio event, was solved with better
+	 * envelope implementation. This method is not needed, but I'm leaving it in "for historical purposes."
+	 * 
+	 * @param newFindZero   true if instrument should begin playback at nearest zero-crossing
+	 * 
+	 */
 	public void toggleZeroCrossing(boolean newFindZero) {
 		for (PASamplerInstrument inst: pool.getInstruments() ) {
 			for (PASamplerVoice voice : ((PASharedBufferSampler) inst.getSampler()).getVoices()) {
@@ -1248,12 +1266,23 @@ public class WaveSynthEditor extends PApplet {
 	 * @param shift		the amount shift each color
 	 */
 	public void shiftColors(ArrayList<WaveData> waveDataList, float shift) {
+		float[] hsb = new float[3];
 		for (WaveData wd : waveDataList) {
 			if (wd.isMuted)
 				continue;
-			wd.setWaveColor(WaveSynthBuilder.colorShift(wd.waveColor, shift));
+			wd.setWaveColor(WaveSynthBuilder.colorShift(wd.waveColor, shift, hsb));
 		}
 		if (isVerbose) println("----->>> shift colors " + shift);
+	}
+	
+	public void scaleSaturation(ArrayList<WaveData> waveDataList, float scale) {
+		float[] hsb = new float[3];
+		for (WaveData wd : waveDataList) {
+			if (wd.isMuted)
+				continue;
+			wd.setWaveColor(WaveSynthBuilder.saturationScale(wd.waveColor, scale, hsb));
+		}
+		if (isVerbose) println("----->>> scale color saturation " + scale);		
 	}
 	
 	/**
