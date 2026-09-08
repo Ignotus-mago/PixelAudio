@@ -283,6 +283,53 @@ public class WaveSynthBuilder {
 		return Color.HSBtoRGB(h, hsb[1], hsb[2]);
 	}
 	
+	/**
+	 * Moves an RGB color into the HSB color space and shifts it by a decimal fraction
+	 * in the range (0.0,1.0) that represents a portion of the circle of hue values.
+	 * For example, 1.0f/24 is 15 degrees around the 360-degree HSB color circle.
+	 * 
+	 * @param c			an RGB color 
+	 * @param shift		the shift [0..1] of the hue in the HSB representation of color c
+	 * @param hsb       a reusable array of three floats
+	 * @return			the RGB representation of the shifted color
+	 */
+	public static int colorShift(int c, float shift, float[] hsb) {
+		float h = PixelAudioMapper.hue(c, hsb);
+		h = (h + shift);
+		return Color.HSBtoRGB(h, hsb[1], hsb[2]);
+	}
+	
+	/**
+	 * Moves an RGB color into the HSB color space and scales its saturation.
+	 * 
+	 * @param c			an RGB color 
+	 * @param shift		the scaling amount of the saturation in the HSB representation of color c
+	 * @return			the RGB representation of the changed color
+	 */
+	public static int saturationScale(int c, float shift) {
+		float[] hsb = new float[3];
+		float s = PixelAudioMapper.saturation(c, hsb);
+		s *= shift;
+		s = Math.min(1.0f, Math.max(0.0f, s));
+		return Color.HSBtoRGB(hsb[0], s, hsb[2]);
+	}
+	
+	/**
+	 * Moves an RGB color into the HSB color space and scales its saturation.
+	 * 
+	 * @param c			an RGB color 
+	 * @param shift		the scaling amount of the saturation in the HSB representation of color c
+	 * @param hsb       a reusable array of three floats
+	 * @return			the RGB representation of the changed color
+	 */
+	public static int saturationScale(int c, float shift, float[] hsb) {
+		float s = PixelAudioMapper.saturation(c, hsb);
+		s *= shift;
+		s = Math.min(1.0f, Math.max(0.0f, s));
+		return Color.HSBtoRGB(hsb[0], s, hsb[2]);
+	}
+	
+	
 	
 	/* ------------------------------------------------ */
 	/*               WaveDataList Methods               */
