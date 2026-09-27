@@ -472,7 +472,7 @@ public class WaveSynth {
 	 */
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("Animation steps: " + this.getAnimSteps() + "\n");
+		sb.append("\nAnimation steps: " + this.getAnimSteps() + "\n");
 		sb.append("blendFactor: " + this.getGain() + "\n");
 		sb.append("gamma: " + this.getGamma() + "\n");
 		if (this.isScaleHisto()) {
@@ -483,7 +483,7 @@ public class WaveSynth {
 		sb.append("comments: " + this.getComments() + "\n");
 		sb.append("video filename: " + this.getVideoFilename() + "\n");
 		sb.append("sampling frequency: " + this.getSampleRate() + "\n");
-		sb.append("WaveData list: ");
+		sb.append("WaveData list: \n");
 		for (int i = 0; i < this.waveDataList.size(); i++) {
 			WaveData wd = this.waveDataList.get(i);
 			sb.append("  " + (i + 1) + ":: " + wd.toString() + "\n");
