@@ -1,6 +1,16 @@
 ## PixelAudio
 
-PixelAudio is a Processing Library that maps arrays of audio samples onto arrays of pixel values, captures and transforms drawing gestures, and creates interactive audio and image events for live performance. You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a curve and record its timing information and then replay it with animation and an audio sampler or granular synthesis engine. You can create presets for drawing and audio synthesis and cue them in live performance. PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. There are several demos here: https://vimeo.com/showcase/12305064, and an early performance/installation work, Campos | Temporales, here: https://vimeo.com/767814419. 
+PixelAudio is a Processing Library that 
+- maps arrays of audio samples onto arrays of pixel values, 
+- captures and transforms drawing gestures and represents them on screen as brushstrokes, 
+- creates interactive audio and image events for live performance,
+- provides audio engines for sampling and granular synthesis.
+
+You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a curve and record its timing information and then replay it with animation using the audio sampler or granular synthesis engine. You can create presets for drawing and audio synthesis and cue them in live performance. Access to the audio file is non-linear, determined by the captured gesture and the mapping between the signal and the image.
+
+PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. To support live performance, it added file i/o for curves, timing information, and audio configuration. The color organ morphed into the WaveSynth class and its supporting classes, with its own file i/o features. The live performance applet Bagatelle.java supports presets for drawing and audio synthesis and can cue them in live performance. There are several demos here: https://vimeo.com/showcase/12305064, and an early performance/installation work, Campos | Temporales, here: https://vimeo.com/767814419.
+
+PixelAudio is a toolkit rather than a performance application, so I hope that people will play with it and create capabilities that go far beyond the sample code that I have provided.
 
 ### Installing and Running PixelAudio
 
