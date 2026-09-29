@@ -4,11 +4,11 @@ PixelAudio is a Processing Library that
 - maps arrays of audio samples onto arrays of pixel values, 
 - captures and transforms drawing gestures and represents them on screen as brushstrokes, 
 - creates interactive audio and image events for live performance,
-- provides audio engines for sampling and granular synthesis.
+- provides polyphonic audio instruments for sampling and granular synthesis.
 
 You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a curve and record its timing information and then replay it with animation using the audio sampler or granular synthesis engine. You can create presets for drawing and audio synthesis and cue them in live performance. Access to the audio file is non-linear, determined by the captured gesture and the mapping between the signal and the image.
 
-PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. To support live performance, it added file i/o for curves, timing information, and audio configuration. The color organ morphed into the WaveSynth class and its supporting classes, with its own file i/o features. The live performance applet Bagatelle.java supports presets for drawing and audio synthesis and can cue them in live performance. There are several demos here: https://vimeo.com/showcase/12305064, and an early performance/installation work, Campos | Temporales, here: https://vimeo.com/767814419.
+PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. To support live performance, it added file i/o for curves, timing information, and audio configuration. The color organ morphed into the WaveSynth class and its supporting classes, with its own file i/o features. The live performance applet Bagatelle.java supports presets for drawing and audio synthesis and can cue them in live performance. There are several video demos here: https://vimeo.com/showcase/12305064, and an early performance/installation work, Campos | Temporales, here: https://vimeo.com/767814419.
 
 PixelAudio is a toolkit rather than a performance application, so I hope that people will play with it and create capabilities that go far beyond the sample code that I have provided.
 
@@ -19,6 +19,8 @@ To start with, you'll need to have Processing installed and configured. If this 
 To install PixelAudio, go to the [Releases page](https://github.com/Ignotus-mago/PixelAudio/releases "Releases page") and download the latest version of PixelAudio. Extract the files from the downloaded archive. You should end up with one folder, "PixelAudio". Move it into the "libraries" folder in your Sketchbook folder. That's all you need to do to install the PixelAudio library, or any other Processing library.
 
 Some PixelAudio classes use the **Minim** audio library. PixelAudio has no other dependencies, but to run the examples that come with it you will need to install some additional libraries. You can install them with the Processing `Sketch->Import Library...->Manage Libraries...` menu command, which opens the Contribution Manager dialog. In addition to **Minim**, other libraries used in the examples are **Video Export**, by Abe Pazos, **oscP5**, by Andreas Schlegel, and the **G4P** library, by Peter Lager. I also recommend you install the **Sound** library and **Video Library for Processing 4**, both from the Processing Foundation.
+
+### Dependencies
 
 I use the [Minim Audio Library](https://code.compartmental.net/tools/minim/ "Minim Audio Library") for working with audio signals and audio files. I rely on [Video Export](https://funprogramming.org/VideoExport-for-Processing/ "Video Export") to save animations to a video file. Video Export depends on **ffmpeg**. If you don't have ffmpeg installed, see the **Video Export** page or the [official ffmpeg site](https://ffmpeg.org/ "official ffmpeg site") for more information. MacOS Silicon binaries can be found [here](https://osxexperts.net/). Instructions for installation on MacOS with Homebrew, MacPorts, or manually can be found [here](https://phoenixnap.com/kb/ffmpeg-mac). I use [G4P](http://www.lagers.org.uk/g4p/ "G4P") wherever I have a GUI: `TutorialOne_05_GesturePlayground`, `WaveSynthEditor`, `ArgosyMixer`, `Bagatelle`. I use [oscP5](https://www.sojamo.de/libraries/oscP5/ "oscP5") in the `Bagatelle` and `TutorialOne_04_Network` examples to communicate over a network with the UDP protocol. My UDP clients are created with [Max](https://en.wikipedia.org/wiki/Max_(software)). 
 
@@ -36,7 +38,9 @@ The library includes packages for:
 - Curve-modeling
 - Gesture capture and transformation
 - Sampler-based audio synthesis
+- Polyphonic sampler instruments with ADSR envelopes
 - Granular synthesis
+- Polyphonic granular instruments
 - Event scheduling
 - File IO for curve and gesture data and audio synthesis settings
 
@@ -46,8 +50,7 @@ Example sketches in Processing and Java provide a survey of PixelAudio features,
 - mixing color channels and audio samples
 - playing audio samples interactively
 - capturing live audio
-- adjusting audio synthesis settings
-- using JSON files for additive synthesis, gesture-modeling and audio synthesis settings
+- adjusting and saving audio synthesis settings
 - communication with external applications via UDP
 
 Some sketches include graphical user interfaces and can be used directly in live performance. See the [Examples README](https://github.com/Ignotus-mago/PixelAudio/tree/master/examples "Examples README") for descriptions of each example.
@@ -67,3 +70,4 @@ Release 0.9.6-beta was created for a workshop in Chicago. It provided gesture ca
 Release 0.9.5-beta, November 12, 2025: A new package of classes to support digital audio sampling synthesis was a major addition to PixelAudio and replaced previous audio generation classes, which were mostly created within Processing.
 
 Composer Christopher Walczak and I used the `WaveSynth`, `Argosy` and `Lindenmayer` classes to produce the music and animation for [Campos | Temporales](https://vimeo.com/856300250 "Campos | Temporales") (2023). The first beta release of the PixelAudio library happened November 9, 2024, at [Experimental Sound Studio](https://ess.org/) in Chicago, where I was the Spain-Chicago artist in residence. New workshop and beta releases arrived in January and May, 2025.  In early July 2025, I presented PixelAudio at the [EVA London Conference](http://www.eva-london.org/). Release 0.9.1-beta was presented for the EVA London workshop. 
+
