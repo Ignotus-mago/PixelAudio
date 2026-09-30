@@ -1,10 +1,11 @@
 As of July 18, 2026, we have these examples, in the suggested order for learning about PixelAudio:
 
 - **LookupTables**: an introduction to a core concept in PixelAudio, lookup tables. Start here. 
-- **Starter**: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
+- **Starter**: basics of creating a `PixelMapGen` instance and plugging it into a `PixelAudioMapper`.
 - **SimpleAnimation**: a simple way to animate a bitmap using PixelAudioMapper.
 - **MultiGenDemo**: chain PixelMapGens together to generate a large image.
 - **MultiGenLookupTables**: lookup tables in MultiGens, a useful place to test your MultiGenCode.
+- **MultiGenZoo**: continuation of `MultiGenLookupTables` (optional).
 - **TransformPimage** (optional): introduces the affine transforms available in the BitmapTransform class.
 - **Tutorial Folder**
    1. **TutorialOne_01_FileIO**: Load audio and image files, turn images into sound, sound into images.
