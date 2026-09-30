@@ -1,6 +1,6 @@
 ## PixelAudio
 
-PixelAudio is a Processing Library that 
+The PixelAudio library for Processing blends sounds and images to create visual music and gesture-driven multi-media performances. Here are its core features:
 - maps arrays of audio samples onto arrays of pixel values, 
 - captures and transforms drawing gestures and represents them on screen as brushstrokes, 
 - creates interactive audio and image events for live performance,
