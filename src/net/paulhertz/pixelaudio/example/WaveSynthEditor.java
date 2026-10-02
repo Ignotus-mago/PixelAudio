@@ -43,42 +43,42 @@ import g4p_controls.*;
 
 
 /**
- * Additive audio synthesis engine produces colorful animated patterns and electronic synth sounds. 
+ * Additive audio synthesis engine produces colorful animated patterns and electronic synth sounds, 
+ * includes a complete GUI control panel for loading, editing, and saving configuration data. 
  * 
  * <h2>WaveSynth Editor Sketch</h2>
  * <p>
- * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns 
- * that can be saved to video or played as an additive synthesis audio source. It 
- * provides an introduction to the {@code WaveSynth} class and the {@code WaveData} objects 
- * that WaveSynths use to generate visual patterns and audio signals. 
+ * The PixelAudio demo sketch {@code WaveSynthEditor} makes patterns that can be 
+ * animated and saved to video or played as an additive synthesis audio source. It 
+ * provides an introduction to the {@link WaveSynth} class and the {@link WaveData} objects 
+ * that {@code WaveSynth} uses to generate visual patterns and audio signals. 
  * </p>
  * <figure>
  * <img src="doc-files/wavesyntheditor.png" alt="WaveSynthEditor Screen" width="800" height="640"/>
  * <figcaption>WaveSynthEditor screen with Graphical User Interface.</figcaption>
  * </figure>
  * <p>
- * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
- * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
- * some of what you can do with the HilbertGen, BoustropheGen and DiagonalZigzagGen for 
- * making patterns with the WaveSynth. There are lots of other possibilities. Patterns 
- * can be loaded from and saved to JSON files. 
+ * WaveSynthEditor lets you edit the attributes of a PixelAudio WaveSynth, including 
+ * its individual WaveData operators, using a nice GUI made with {@code g4p_controls} for Processing. 
+ * Patterns can be loaded from and saved to JSON files. You can experiment with a few 
+ * different PixelMapGen classes: a MultiGen built from Hilbert curves, a {@link BoustropheGen}, 
+ * and a {@link DiagonalZigzagGen}. 
  * </p><p>
  * For audio signals, a WaveSynth behaves like an audio synthesizer that adds together 
- * sine waves at different frequencies. The WaveSynthSequencer example sketch also 
+ * sine waves at different frequencies. The {@link WaveSynthSequencer} example sketch also 
  * produces audio with a WaveSynth. This example provides a graphical
  * user interface for editing frequencies, colors and other properties of a WaveSynth. 
  * </p><p>
  * Click on the WaveSynth image or press spacebar to hear the audio version of the image. Note
  * that the appearance of the image is determined by the current sampling frequency, set in the
  * initWaveSynth() method. For a higher sampling rate, there are more samples. One sampling rate
- * I commonly use for the WaveSynth Editor is the number of pixels in the WaveSynth image, 
- * 1024 * 1024 = 1048576. Though it may have more or less samples, the sound of the audio will not
- * vary, as its frequency is governed by the sampling rate. If you want to save the audio to a
- * file, you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
+ * I commonly use for the WaveSynth Editor is the number of pixels in the WaveSynth image. 
+ * Though it may have more or less samples, the sound of the audio will not vary, as its
+ * frequency is governed by the sampling rate.
  * </p><p>
  * A WaveSynth depends on global attributes, such as gain (i.e. loudness or brightness) and
  * gamma (a sort of contrast setting), and on data objects. The data objects include 
- * a bitmap, mapImage, that is a Processing PImage instance for the image representation
+ * a bitmap, {@code mapImage}, that is a Processing {@code PImage} instance for the image representation
  * of the WaveSynth, a PixelAudioMapper that allows the WaveSynth to mediate between audio 
  * data and image data, and an array of WaveData objects that define the individual
  * sine wave components of the WaveSynth. The PixelAudioMapper arranges colors controlled 
@@ -110,23 +110,17 @@ import g4p_controls.*;
  * 
  * In addition to the GUI commands, there are some useful key commands.
  * </p><p>
- * ---------------------------------------------------------------------------------------------
- * ***]]  NOTE: Key commands only work when the image display window is the front window.  [[***
- * ---------------------------------------------------------------------------------------------
- * </p><p>
  * Key commands will NOT work when the control panel is the active window.
  * Click on the display window to make it the active window and then try the commands. 
  * See the parseKey() method and the methods it calls for more information about key commands.
  * </p><p>
  * The quickest way to record a video, from frame 0 to the stop frame value in the 
  * control panel, is to press the 'V' (capital 'v') key. 
- * </p><p>
- * The code in this example is extensively annotated. We the author heartily recommend you 
- * read the notes for the various methods. 
- * </p>
- * <pre>
- * ::: KEY COMMANDS ONLY WORK WHEN DISPLAY WINDOW IS ACTIVE :::
-
+ * </p><pre>
+ * ---------------------------------------------------------------------------------------------
+ * ***]]  NOTE: Key commands only work when the image display window is the front window.  [[***
+ * ---------------------------------------------------------------------------------------------
+ * 
  * Press the UP arrow to increase audio output gain by 3.0 dB.
  * Press the DOWN arrow to decrease audio output gain by 3.0 dB.
  * Press ' ' (spacebar) to trigger audio playback at the current mouse position.
