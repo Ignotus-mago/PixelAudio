@@ -27,6 +27,9 @@
  * <li>{@link net.paulhertz.pixelaudio.example.MultiGenZoo MultiGenZoo} builds on MultiGenLookupTables to show a 
  * collection of MultiGen construction methods adapted from ArgosyMixer.</li>
  *
+ * <li>{@link net.paulhertz.pixelaudio.example.BuildFromPathGenDemo BuildFromPathGenDemo} shows how PixelMapGen 
+ * data can be stored in and loaded from a JSON file.</li>
+ *
  * <li>{@link net.paulhertz.pixelaudio.example.SimpleWaveSynth SimpleWaveSynth} demonstrates setting up a WaveSynth
  * as an animated visual display with gamma adjustment and multiple curve generators (Hilbert, Moore, DiagonalZigzag).</li>
  *
@@ -74,7 +77,7 @@
  *
  * </ul>
  *
- * <p><b>Introduction to WaveSynth Series</b></p>
+ * <p><b>WaveSynth Sketches</b></p>
  *
  * <ul>
  *
@@ -84,16 +87,6 @@
  * <li>{@link net.paulhertz.pixelaudio.example.JSONWaveSynth JSONWaveSynth} demonstrates JSON-based serialization and
  * loading of waveform parameters for configuration management.</li>
  *
- * </ul>
- *
- * <p><b>Performance and Production Examples</b></p>
- *
- * <ul>
- *
- * <li>{@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle} is a comprehensive interactive audio-visual performance
- * tool supporting brush management, session saving/loading, gesture recording, and real-time granular synthesis with
- * extensive preset library support and a graphical user interface.</li>
- *
  * <li>{@link net.paulhertz.pixelaudio.example.WaveSynthEditor WaveSynthEditor} provides a GUI for editing WaveSynth 
  * color organ parameters. It can construct complex spectral and visual compositions that can be output to video. 
  * WaveSynth parameters can be saved to or retrieved from a JSON file.</li>
@@ -101,6 +94,16 @@
  * <li>{@link net.paulhertz.pixelaudio.example.WaveSynthSequencer WaveSynthSequencer} demonstrates sequencing with the 
  * WaveSynth color organ, with frequency, rhythmic timing, and image generation.</li>
  * 
+ * </ul>
+ *
+ * <p><b>Performance and Production Sketches</b></p>
+ *
+ * <ul>
+ *
+ * <li>{@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle} is a comprehensive interactive audio-visual performance
+ * tool supporting brush management, session saving/loading, gesture recording, and real-time granular synthesis with
+ * extensive preset library support and a graphical user interface.</li>
+ *
  * <li>{@link net.paulhertz.pixelaudio.example.ArgosyMixer ArgosyMixer} is a specialized mixing and synthesis tool
  * for rhythmic pattern making in images and audio. It also provides a GUI with 18 different MultiGen instances 
  * to try out, a menu of patterns, animation controls, and image, audio, and video export.
