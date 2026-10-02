@@ -16,7 +16,7 @@ import ddf.minim.*;
  * Hovering over the image and pressing the spacebar will also trigger an audio event.
  * The hightlightSample() method highlights the pixels that correspond to the audio signal 
  * that is played. The highlight changes the pixels and can change the audio, too: just press 
- * the 'w' key to transcode the image to an audio signal and write it to the PASamplerInstrument.
+ * the 'w' key to transcode the image to an audio signal and refresh the PASamplerInstrument.
  * You can also load audio to individual RGB or HSB Hue and Brightness channels. To hear the 
  * results of loading to different channels, write the image to the audio signal ('w' key) and 
  * click in the image. 

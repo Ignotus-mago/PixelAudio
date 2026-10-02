@@ -10,40 +10,44 @@ import net.paulhertz.pixelaudio.*;
 
 
 /**
- * BuildFromPathGenDemo shows how PixelMapGen data can be stored in and
+ * {@code BuildFromPathGenDemo} shows how {@link PixelMapGen} data can be stored in and
  * loaded from a JSON file.
- *
+ * <p>
  * There are three JSON files available in the data folder of this sketch:
  * vertical.json, bigDiagonal.json, multigen.json.
  * This sketch provides various methods for reading and writing JSON files.
  * The JSON file should contain a "header" with fields "PXAU", "Description" and "PixelAudioURL".
  * The value of the PXAU field is set to "BGEN" to identify the JSON data as encoding a PixelMapGen.
  * The PXAU field is repeated in the body of the JSON file, which must contain the following fields:
- * {@code 
+ * </p>
+ * <pre>{@code 
  *   "PXAU": "BGEN"
  *   "width": <PixelMapGen width>
  *   "height": <PixelMapGen height>
  *   "pixelMap": [...]
- * }
- * "pixelMap" flags an array of integers that are the values of the indices of the signal path,
- * signalToImageLUT, from a PixelMapGen. The signalToImageLUT values can be decoded to (x, y)
- * coordinates and used to initialize the remaining fields of a BuildFromPathGen. Most of the
- * work gets done by calling importGenDataJSON(JSONObject json) with the data loaded from the
- * JSON file. The type of PixelMapGen created in importGenDataJSON() is a BuildFromPathGen.
+ * }</pre>
+ * <p>
+ * {@code pixelMap} keys an array of integers that are the values of the indices of the signal path,
+ * {@code signalToImageLUT}, from a {@code PixelMapGen}. The signalToImageLUT values can be decoded to (x, y)
+ * coordinates and used to initialize the remaining fields of a {@code BuildFromPathGen}. Most of the
+ * work gets done by calling {@code importGenDataJSON(JSONObject json)} with the data loaded from the
+ * JSON file. The type of PixelMapGen created in importGenDataJSON() is a {@code BuildFromPathGen}.
  * The BuildFromPathGen constructor requires width and height. To complete initialization,
- * you must call BuildFromPathGen.setPixelMap() with the integer array derived from the JSON
- * data. Then call BuildFromPathGen.generate() to initialize all remaining variables.
- *
+ * you must call {@code BuildFromPathGen.setPixelMap()} with the integer array derived from the JSON
+ * data. Then call {@code BuildFromPathGen.generate()} to initialize all remaining variables.
+ * </p>
+ * <pre>{@code 
  *     BuildFromPathGen myGen = new BuildFromPathGen(w, h);
  *     int[] pixelMap = map.toIntArray();
  *     // always call BuildFromPathGen.setPixelMap() before you call BuildFromPathGen.generate()
  *     myGen.setPixelMap(pixelMap);
  *     myGen.generate();
- *
+ * }</pre>
+ * <p>
  * For most purposes, the BuildFromPathGen can be handled as PixelMapGen. Note that only the
  * signalToImageLUT data is saved to the JSON. Color data and audio samples are external to the
  * PixelMapGen. You can save them to image or audio files and reload them later.
- *
+ * </p>
  */
 public class BuildFromPathGenDemo extends PApplet {
 
