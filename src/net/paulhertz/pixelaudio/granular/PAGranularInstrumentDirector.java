@@ -52,15 +52,19 @@ import processing.core.PVector;
  *   source-buffer lookup, pitch-ratio playback, windowing, and overlap-add normalization.</li>
  * </ol>
  *
- * <p>This class owns the gesture-level decisions: when events occur, where each event reads
- * from the source buffer, which per-event pan/gain/pitch overrides apply, and which grain
- * window is used. {@link PABurstGranularSource} owns sample-level burst rendering for each
- * event.</p>
+ * <p>This class, {@link PAGranularInstrumentDirector}, owns the gesture-level decisions:  
+ * when events occur, where each event reads from the source buffer, which per-event 
+ * pan/gain/pitch overrides apply, and which grain window is used. {@link PABurstGranularSource} 
+ * owns sample-level burst rendering for each event.</p>
  *
  * <p><b>Sample-rate domains:</b> gesture scheduling, grain duration, and envelopes use the
  * instrument's output sample rate. Source indices use the source buffer's intrinsic sample
  * rate. Rate-aware playback overloads accept that buffer rate explicitly. Legacy overloads
- * without a buffer rate assume the buffer has already been resampled to the output rate.</p>
+ * without a buffer rate assume the buffer has already been resampled to the output rate.
+ * Things may sound off in pitch if this isn't the case. If you don't resample when loading
+ * an audio file to a granular buffer, use methods that apply bufferSampleRate set from 
+ * your file to get accurate pitch. 
+ * </p>
  *
  * @see GestureGranularParams
  * @see GestureEventParams
