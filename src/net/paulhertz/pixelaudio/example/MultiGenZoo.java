@@ -14,6 +14,8 @@ import net.paulhertz.pixelaudio.PixelMapGen;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
+// TODO inspect and fix the orientation and order of PixelMapGens where necessary.
+
 /**
  * MultiGenZoo: a small sketch showing different ways to create MultiGens, copied and condensed from 
  * {@link ArgosyMixer}.
@@ -357,7 +359,7 @@ public class MultiGenZoo extends PApplet {
         return new MultiGen(stacks * units * genW, rows * genH, offsetList, genList);
     }
 
-    /**
+     /**
      * This method creates a vertical stacks of rows of HilbertGens. Each row
      * begins genH pixels down from the previous row. Alternating rows add units
      * in opposite directions. This means path continuity is possible in each

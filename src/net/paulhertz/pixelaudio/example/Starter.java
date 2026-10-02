@@ -5,7 +5,7 @@ import processing.core.PImage;
 import net.paulhertz.pixelaudio.*;
 
 /**
- * Basics of setting up a PixelAudio sketch with an image. 
+ * Basics of setting up a PixelAudio sketch with a bitmap color array. 
  * <figure>
  * <img src="doc-files/starter.png" alt="Starter Screen" width="256" height="271"/>
  * <figcaption>Starter screen with spectrum mapped to a Hilbert Curve.</figcaption>
@@ -13,26 +13,32 @@ import net.paulhertz.pixelaudio.*;
  * <p>
  * It goes something like this:
  * </p>
- * <pre>
+ * <pre><code>
  *  PixelAudio pixelaudio;        // the library that we need to load in setup()
- *  HilbertGen hGen;              // a PixelMapGen for making Hilbert curves, generates the signal path
+ *  HilbertGen hGen;              // a PixelMapGen for generating a Hilbert curve signal path
  *  PixelAudioMapper mapper;      // a class initialized with a PixelMapGen, for mapping and transcoding audio samples and RGB pixels
  *  PImage mapImage;              // a bitmap image for display
- *  int[] spectrum;               // an array of colors that will be written along the "signal path" in mapImage
- *  
- *	public void setup() {
- *	  pixelaudio = new PixelAudio(this);           // 1. initialize PixelAudio library
- *	  hGen = new HilbertGen(width, height);        // 2. create a PixelMapGen: here it's the Hilbert curve generator
- *	  mapper = new PixelAudioMapper(hGen);         // 3. initialize a PixelAudioMapper object with the gen
+ *  int[] spectrum;               // an array of colors to write along the "signal path" in mapImage
+ * 
+ *	public void setup() { 
+ *	  pixelaudio = new PixelAudio(this);     // 1. initialize PixelAudio library  
+ *	  hGen = new HilbertGen(width, height);  // 2. create a PixelMapGen, hGen
+ *	  mapper = new PixelAudioMapper(hGen);   // 3. create PixelAudioMapper mapper with hGen 
  *	  // at this point, we could initialize audio and load an audio file
  *	  mapImage = createImage(width, height, RGB);  // 4. create an image for display 
- *	  mapImage.loadPixels();                       //    prepare to set its pixel array
- *	  spectrum = getColors(mapper.getSize());      // 5. generate a pixel array (could have been transcoded audio)
- *	  // 6. mapper.plantPixels writes the spectrum RGB values to mapImage along the signal path
+ *	  mapImage.loadPixels();                       // 5. prepare to set mapImage.pixels 
+ *	  spectrum = getColors(mapper.getSize());      // 6. generate an RGB pixel array 
+ *	  // 7. write spectrum to mapImage.pixels along mapper's signal path
  *	  mapper.plantPixels(spectrum, mapImage.pixels, 0, mapper.getSize());
  *	  mapImage.updatePixels();
  *	}
- * </pre>
+ * </code></pre>
+ * <p>
+ * Here we load the <code>PImage</code> <code>mapImage</code> with an array of RGB colors that we 
+ * create with the <code>getColors(int size)</code> method. We could have read the pixel array from
+ * a file, or we could load an audio file and then transcode its audio samples to RGB data and use
+ * that as our pixel array. You'll see all of these techniques in later sample code. 
+ * </p>
  * 
  */
 public class Starter extends PApplet {

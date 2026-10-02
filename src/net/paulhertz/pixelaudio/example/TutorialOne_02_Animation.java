@@ -92,24 +92,26 @@ import com.hamoid.*;
  * the variable {@code shift}, and tracking the accummulated shifting with
  * another variable, {@code totalShift}. The audio buffer itself is never
  * shifted, nor is the canonic image {@code baseImage}. We just use
- * totalShift to determine where to locate pixels or audio samples. The shifting
- * is managed by the PixelAudioMapper object {@code mapper}, which provides
- * methods for accessing pixel and audio data with shifting taken into account.
+ * {@code totalShift} to determine where to locate pixels or audio samples. 
+ * The PixelAudioMapper object {@code mapper} manages the shifting using methods 
+ * for accessing pixel and audio data that take shifting into account.
  * Of course, if you only want to animate the image, you can just ignore the
  * value of totalShift when accessing the audioBuffer.
  * </p><p>
- * The shift variable can be tied to the audio sample rate and the video frame
+ * The {@code shift} variable can be tied to the audio sample rate and the video frame
  * rate in such a way that the animation is synchronized with the audio when we
  * trigger an audio event once every frame. If the audio sample rate is 44100
  * and the video frame rate is 24, as it is in this example, then we can set
- * shift to 44100/24, which is about 1838 ('m' key). If we then trigger an audio
+ * shift to 44100/24, which is close to 1840 ('m' key). If we then trigger an audio
  * event once every frame in the same location in the window, the audio events
  * will advance through the buffer in sync with the animation, and the audio
  * will play more or less as it would if it were streaming from a file. If you
  * double the shift or cut it in half (UP ARROW or DOWN ARROW), the audio events
  * will happen at double or half speed. If you reverse the sign of shift ('A'
  * key), the animation will run backwards, and the audio events will also happen
- * in reverse order. 
+ * in reverse order. The flanging that you hear is a result of samples taken 
+ * close together interfering with each other, and is particularly evident 
+ * when shift value is changing. 
  * </p><p>
  * We also provide commands for saving an animation to video ('V' key) and saving
  * the display image and audio buffer to files. To visualize the Signal Path, you
@@ -348,6 +350,7 @@ public class TutorialOne_02_Animation extends PApplet {
 			doRain();
 		runTimeArray();    // animate audio event markers
 		if (isAnimating) {
+			// we always click in the same place, but the audio buffer position shifts between each frame
 		    if (isPlayMusicBox) audioMouseClick(width/2 - 1, height/2 - 192);
 			animate();
 		}
@@ -478,8 +481,8 @@ public class TutorialOne_02_Animation extends PApplet {
     		parseKey(key, keyCode);
     	}
     	else {
-    		int maxShift = 16384;
-    		int minShift = shiftInc;
+    		int maxShift = 8192;
+    		int minShift = - maxShift;
 			if (keyCode == UP) { // increment shift value by shiftInc
 				shift = shift < maxShift ? shift + shiftInc : shift;
 			}
@@ -530,6 +533,7 @@ public class TutorialOne_02_Animation extends PApplet {
 				isShowOverlay = true;
 				float rate = this.frameRate;    // system frame rate, we could use videoFrameRate instead
 				shift = Math.round(audioOut.sampleRate() / rate);
+				shift = (shift / shiftInc) * shiftInc;
 				println("-- starting Music Box with shift = "+ shift +" at frame rate "+ rate);
 				isAnimating = true;
 			}
@@ -834,11 +838,10 @@ public class TutorialOne_02_Animation extends PApplet {
 	}
 
 	/**
-	 * Attempts to load audio data from a selected file into playBuffer, then
-	 * calls writeAudioToImage() to transcode audio data and write it to mapImage
-	 * 
-	 * If doResample is true, resamples files whose sample rate differs from
-	 * the current audio output.
+	 * Attempts to load audio data from a selected file into playBuffer, then calls
+	 * writeAudioToImage() via renderAudioToMapImage(chan, 0) to transcode audio data and write it to mapImage.
+	 * If doResample is true, resamples files whose sample rate differs from the current audio output sample rate.
+	 * As long as the Sampler keeps track of the bufferSampleRate with updateAudioChain(), the audio will not sound different.
 	 * 
 	 * @param audFile    an audio file
 	 */

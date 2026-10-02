@@ -33,8 +33,8 @@ import ddf.minim.*;
 
 /**
  * Opens audio or image files and loads either file type to both the image
- * display and the audio buffer. The images or audio can be "played" with a mouse click or 
- * spacebar press to play the audio mapped to the mouse location.
+ * display and the audio buffer. Use a mouse click or spacebar press 
+ * to play the audio mapped to the mouse location.
  * <figure>
  * <img src="doc-files/tutorialone_01_fileio.png" alt="TutorialOne_01_FileIO Screen" width="768" height="526"/>
  * <figcaption>Audio data written as grayscale values along the signal path of mapImage, overlaid with a color spectrum.</figcaption>
@@ -47,7 +47,8 @@ import ddf.minim.*;
  *   <li><b>{@link Starter}:</b> basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.</li>
  *   <li><b>{@link SimpleAnimation}:</b> a simple way to animate a bitmap using PixelAudioMapper.</li>
  *   <li><b>{@link MultiGenDemo}:</b> chain PixelMapGens together to generate a large image.</li>
- *   <li><b>{@link MultiGenLookupTables}:</b> lookup tables in MultiGens, a useful place to test your MultiGenCode.</li> 
+ *   <li><b>{@link MultiGenLookupTables}:</b> lookup tables in MultiGens, a useful place to test your MultiGen code.</li> 
+ *   <li><b>{@link MultiGenZoo}:</b> (optional) recipes for more MultiGens, also used in {@link ArgosyMixer}. 
  *   <li><b>{@link TransformPImage}</b> (optional): introduces the affine transforms available in the BitmapTransform class.</li>
  * </ul><p>
  * This series of example sketches shows the basics of loading the PixelAudio library and 
@@ -59,13 +60,13 @@ import ddf.minim.*;
  * TutorialOne sequence provides examples of creating and using MultiGen objects that
  * you can modify. 
  * </p><p>
- * TutorialOne_01_FileIO can open and display audio and image files, transcode RGB pixel 
- * data to audio samples and transcode audio samples to RGB pixel data. It can also save audio
- * and image files. It responds to mouse clicks by playing the audio samples corresponding 
- * to the click location in the display image. To help you visualize the signal path, the 
- * 'k' command key generates a rainbow color array that follows the signal path but keeps
- * the brightness information in the image intact. The image also appears when you launch
- * the sketch.
+ * TutorialOne_01_FileIO can open and display audio and image files, transcode RGB pixel
+ * data to audio samples and transcode audio samples to RGB pixel data. It can also save
+ * audio and image files. It responds to mouse clicks by playing the audio samples
+ * corresponding to the click location in the display image using PixelAudio's sampler
+ * synth. To help you visualize the signal path, the 'k' command key generates a rainbow
+ * color array that follows the signal path but keeps the brightness information in the
+ * image intact. The image also appears when you launch the sketch.
  * </p><p>
  *   1. Launch the sketch and then press the 'o' key to open a image or an audio file.
  *      Files for the example sketches are located in the "examples/example_data/" 
@@ -82,8 +83,8 @@ import ddf.minim.*;
  *      In the image created from Saucer_mixdown, high frequency sounds create fine-grained
  *      patterns and low frequency sounds create coarse-grained patterns. 
  * </p><p>     
- *   3. Snowfence.jpg is loaded into mapImage and then transcoded from to the playBuffer and 
- *      audioSignal variables. If you click in the image, you can hear the sound created 
+ *   3. Snowfence.jpg is loaded into mapImage and then transcoded to the <code>playBuffer</code> and 
+ *      <code>audioSignal</code> variables. If you click in the image, you can hear the sound created 
  *      by reading the brightness levels of pixels along the signal path and changing 
  *      them into audio sample data. The sky, with very little variation in texture, is
  *      relatively quiet. The fence and other areas are noisy. Most images result in
@@ -121,12 +122,22 @@ import ddf.minim.*;
  * The second method allows you to supply your own ADSR. Press the 'r' key to have this
  * sketch trigger sounds with a randomly selected envelope from adsrList. 
  * <p>
- * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.sampler
- * play an audio event for the requested duration (samplelen) using the attack, decay,
- * and sustain portion of the envelope. When the duration ends, the release portion of the 
- * envelope controls how the audio fades away. Calls to the instruments playSample() methods
- * return the amount of time the envelope will actually take, which is greater than or equal
- * to the requested duration. 
+ * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.sampler play
+ * an audio event for the requested duration (samplelen) using the attack, decay, and sustain
+ * portion of the envelope. When the duration ends, the release portion of the envelope controls
+ * how the audio fades away. Calls to the instrument's playSample() methods return the amount of
+ * time the envelope will actually take, which is greater than or equal to the requested duration. 
+ * </p><p>
+ * PASamplerInstrument will take the sampling rate of the audio source into account
+ * when it plays. When <code>doResample</code> is true, loadAudioFile() resamples audio sources to
+ * audioOut.sampleRate before it writes them to the audio buffer used by PASamplerInstrument.
+ * When doResample is false, loadAudioFile() sets bufferSampleRate to the file's sample rate and
+ * updates PASamplerInstrument's internal sample rate when it calls <code>updateAudioChain()</code>.
+ * The sound doesn't change, but the processor has a little more work to do when
+ * PASamplerInstrument.bufferSampleRate and PASamplerInstrument.outputSampleRate are not equal.
+ * For optimal performance, use files whose sample rate is the same as your output sample rate. 
+ * Check out the files in the "_sonic" folder with doResample set to true and then false to see
+ * how the display changes when the buffer is resampled or not resampled.
  * </p>
  * Still to come, as the tutorial advances:
  * <ul>
@@ -143,11 +154,13 @@ import ddf.minim.*;
  * <pre>
  * KEY COMMANDS 
  * 
+ * Press ' ' (spacebar) to play sample at current mouse position.
  * Press 'c' to apply color from image file to display image.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage.
  * Press 'o' or 'O' to open an audio or image file.
  * Press 'r' or 'R' to use the default envelope or a random envelope from a list.
  * Press 'w' or 'W' to toggle audio buffer wrap around.
+ * Press 'd' to toggle doResample: if true, loadAudioFile() resamples audio when fileSampleRate != audioOut.sampleRate()
  * Press 'h' or 'H' to show help and key commands in console.
  * </pre>
  * 
@@ -159,7 +172,7 @@ import ddf.minim.*;
 	 /* ------------------------------------------------------------------ */
 
 	 PixelAudio pixelaudio;     // our shiny new library
-	 MultiGen multigen;         // a PixelMapGen that links together multiple PixelMapGens
+	 MultiGen multigen;         // a MultiGen, a class that links together multiple PixelMapGens
 	 int genWidth = 512;        // width of multigen PixelMapGens
 	 int genHeight = 512;       // height of  multigen PixelMapGens
 	 PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
@@ -251,8 +264,8 @@ import ddf.minim.*;
 		frameRate(24);
 		// 1. initialize PixelAudio
 		pixelaudio = new PixelAudio(this);         
-		// 2. create a PixelMapGen object
-		multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);    
+		// 2. create a PixelMapGen object, a MultiGen composed of 6 HilbertGens
+		multigen = HilbertGen.hilbertLoop3x2(genWidth, genHeight);   
 		// 3. initialize a PixelAudioMapper object with the gen
 		mapper = new PixelAudioMapper(multigen);
 		// keep track of the area of the PixelAudioMapper
@@ -428,7 +441,7 @@ import ddf.minim.*;
 	 * Here is a special section of code for TutorialOne and other applications that
 	 * color a grayscale image with color data from a file. The color and saturation
 	 * come from the selected file, the brightness (gray values, more or less) come
-	 * from an image you supply, such as display image. 
+	 * from an image you supply, such as the current display image. 
 	 */
 
 
@@ -551,6 +564,7 @@ import ddf.minim.*;
 	 * Attempts to load audio data from a selected file into playBuffer, then calls
 	 * writeAudioToImage() to transcode audio data and write it to mapImage.
 	 * If doResample is true, resamples files whose sample rate differs from the current audio output.
+	 * As long as the Sampler keeps track of the bufferSampleRate with updateAudioChain(), the audio will not sound different.
 	 * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
 	 * 
 	 * @param audFile    an audio file
@@ -561,12 +575,14 @@ import ddf.minim.*;
         // load the audio file and resample it if necessary
 		if (fileSampleRate > 0) {
 			if (fileSampleRate != audioOut.sampleRate() && doResample) {
+				// resample audio file data to audioOut.sampleRate and load it to buff channel 0
 				float[] resampled = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
 				buff.setBufferSize(resampled.length);
 				buff.setChannel(0, resampled);
 				bufferSampleRate = audioOut.sampleRate();
 			}
 			else {
+				// set bufferSampleRate to the file's sample rate
 				bufferSampleRate = fileSampleRate;
 			}
 			this.audioFileLength = buff.getBufferSize();
@@ -583,7 +599,7 @@ import ddf.minim.*;
 		// write the signal to mapImage
 		// we do it automatically here, but that will change in later examples
 		writeAudioToImage(audioSignal, mapper, mapImage, chan);
-		//if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+		// if (applyColorMapOnLoad) applyColorMapToDisplay(true);
 	}
 
 	
@@ -843,8 +859,8 @@ import ddf.minim.*;
      * === This is the ONLY method that should mutate the global audio signal state. ===
      * 
      * In PixelAudio examples, the signal is typically loaded from a file, but
-     * it could also be signal cached in memory, a signal generated by code, audio
-     * captured live, etc. 
+     * it could also be a signal cached in memory, a signal generated by code, 
+     * audio captured live, etc. 
 	 * 
 	 * @param sig                 an audio signal
 	 * @param bufferSampleRate    audio sample rate for sig,

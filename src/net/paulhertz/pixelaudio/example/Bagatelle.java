@@ -5057,9 +5057,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		//   targetDurationMs <= 0 → keep natural duration
 	    // apply resample/duration/warp via scheduleBuilder
 	    GestureSchedule sched = scheduleBuilder.build(gb.curve(), snap, audioOut.sampleRate());
+	    if (sched == null || sched.isEmpty()) return;
 	    // ***** LIMIT SCHED TO IN-BOUNDS POINTS ***** TODO cache GestureSchedule
 	    sched = boundsPolicy.applySchedule(sched);
-	    if (sched == null || sched.isEmpty()) return;
 	    if (isDebugging) {
 		    println("sched.size=" + sched.size()
 		    + " durationMs=" + sched.durationMs()

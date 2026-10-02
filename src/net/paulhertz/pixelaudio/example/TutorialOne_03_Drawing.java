@@ -118,24 +118,34 @@ import com.hamoid.*;
  * <li>Draw a few more brushstrokes to experiment with drawing and the Sampler instrument. 
  * Draw fast and slow, right to left or left to right (forwards or backwards in time), 
  * vertically, horizontally, or diagonally.</li> 
- * <li><b>Noise:</b> As with any polyphonic instrument, the number of overlapping audio events affects Sampler
- * clipping and noise level. Instrument gain, envelope shape and duration, and low level noise  
- * reduction all influence output. Your audio source also matters: sources with greater RMS energy 
- * will be more likely to distort than sources with lower energy. A sample of street sounds has 
- * more energy than most instrumental samples and will distort more easily.</li>
- * <li>To adjust Sampler audio output: 
+ * </ol>
+ * 
+ * <h4>Sampler Noise and Distortion</h4> 
+ * <p>
+ * As with any polyphonic instrument, the number of overlapping audio events affects Sampler
+ * clipping and noise level. In addition to setting the number of points in a brushstroke, 
+ * you can adjust the number of instruments and voices. See 
+ * {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool PASamplerInstrumentPool} or
+ * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
+ * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.
+ * If you are doing downstream processing of audio output, such as reverb, that can also create distortion.
+ * </p><p>
+ * Instrument gain, envelope shape and duration, and low level noise reduction all influence output. 
+ * Adjust these attributes of Sampler audio output as follows:</p>
  * <ul>
- *   <li>RIGHT ARROW and LEFT ARROW change Sampler gain.</li>
+ *   <li>RIGHT ARROW and LEFT ARROW change Sampler instrument gain.</li>
  *   <li>'e' steps through available envelope shapes.</li> 
  *   <li>'E' toggles automatic envelope duration based on gesture event density.</li>
  *   <li>'m' steps through the low level noise reduction profiles.</li>
  * </ul>
- * </li>
- * </ol>
  * 
- * <p>See {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool PASamplerInstrumentPool} or
- * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a> 
- * for information about suggested {@code poolSize} and {@code maxVoices} usage with PASamplerInstrumentPool.</p>
+ * <p>Your audio source also matters. <b>We recommend that you normalize
+ * the dynamics of your audio files to -6.0 dB to provide adequate headroom for amplification.</b> 
+ * Sources with greater RMS energy will also be more likely to distort than sources with 
+ * lower energy. A sample of street sounds has more energy than most instrumental samples 
+ * and will distort more easily. The {@link net.paulhertz.pixelaudio.schedule.AudioUtility AudioUtility}
+ * class provides some methods you can use on-the-fly to normalize audio sources when you load
+ * them to a buffer.</p>
  * 
  * <h3>Granular Instrument</h3>
  * <ol>
@@ -146,15 +156,15 @@ import com.hamoid.*;
  * of the brushstroke provides enough density to provide a continuous sound for the short
  * envelopes used by grains. The reduced points representation may sound too sparse.
  * Press 't' again to switch the curve back to use the Sampler instrument. </li> 
+ * 
  * <li>When the Granular instrument plays a curve, it steps through the audio buffer in a 
  * non-linear way. Rather than advancing steadily through the file, it leaps from one curve
  * point to the next. These points may be closely correlated with the audio buffer, and the sound
  * may be close to linear audio buffer playback. It all depends on the PixelAudioMap you use.</li>
- * <li>Various keys can change the sound of the Granular instrument. The granular instrument 
- * is less susceptible to noise than the Sampler, but it can still distort if its gain is too high
- * or if it has too many overlapping steps or simultaneously playing brushstrokes. 
+ * 
+ * <li>Various keys can change the sound of the Granular instrument.  
  *   <ul>
- *   <li>SHIFT-RIGHT ARROW and SHIFT-LEFT ARROW adjust the gain of a brush you are hovering over.</li> 
+ *   <li>SHIFT-RIGHT ARROW and SHIFT-LEFT ARROW change the granular instrument gain.</li> 
  *   <li>The '[' and ']' keys adjust the number of steps in the CURVE_STEPS representation of the curve.</li>
  *   <li>The 'f' and 'g' keys toggle between FIXED and GESTURE playback. FIXED playback ignores 
  *   gesture timing and overlaps each audio sample by the time offset {@code hopSamples}.</li>
@@ -175,13 +185,45 @@ import com.hamoid.*;
  * <p>See the key commands for various ways to alter the sound of the granular synth
  * and other features. Check out the comments on the various methods for detailed 
  * information about the features of TutorialOne_03_Drawing. For a GUI with greater control
- * over drawing, gesture, and audio synthesis, see the {@link TutorialOne_05_GesturePlayground} and {@link Bagatelle} sketches.
+ * over drawing, gesture, and audio synthesis, see the {@link TutorialOne_05_GesturePlayground} 
+ * and {@link Bagatelle} sketches. GesturePlayground goes into more detail than TutorialOne_03_Drawing, 
+ * and provides a GUI to tweak almost every Granular instrument feature. The Bagatelle example sketch 
+ * provides a model for real time performance, reading and writing brushstroke data as JSON files, 
+ * implementing a cue-based Performance Preset model, and communicating with Max over UDP. 
+ * </p>
+ * <h4>Granular Audio Processing</h4>
+ * <p>
+ * The {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector} 
+ * class manages the high level processes for granular synthesis. Probably all
+ * the functionality you will commonly need is available in its methods. The
+ * various {@code playGestureNow(...)} methods allow you to control the timing,
+ * panning, pitch, and gain of individual grains, if you want to. Parameters for
+ * grain shaping are set with the {@code GestureGranularParams} class. The
+ * GestureEventParams class supports arrays of values to set timing, pan, gain,
+ * and pitch for individual grains. The timing and pan settings for individual
+ * grains can also be passed as arrays to overloaded {@code playGestureNow(...)}
+ * methods. 
+ * </p><p>
+ * If you're curious about how the granular synthesis engine works, see the outline in
+ * {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector}.
+ * </p>
+ * <h4>Granular Noise and Distortion</h4>
+ * <p>
+ * The granular instrument is less susceptible to noise than the Sampler, but it can 
+ * still distort if its gain is too high or if it has too many overlapping steps or 
+ * simultaneously playing brushstrokes. As with the Sampler, the audio source 
+ * normalization and RMS energy can affect distortion. The density of events also
+ * matters. Setting the number of curve points, grain length, and burst grains
+ * will affect density. In addition, the {@link TutorialOne_05_GesturePlayground} 
+ * and {@link Bagatelle} sketches provide automated grain optimization settings 
+ * that you can trigger with a command key and modify with the sketch's GUI
+ * control panel.
  * </p>
  * <div>
  * <h2>Points + Times = Gestures</h2>
  * <p>
- * The drawing tools and commands are a substantial addition. To implement them
- * we call on a whole new package of code, {@link net.paulhertz.pixelaudio.curves
+ * The drawing tools and commands are a substantial addition to PixelAudio. To implement
+ * them we call on a whole new package of code, {@link net.paulhertz.pixelaudio.curves
  * PixelAudio Curves Package}. To turn gestures into timing information that can
  * be used to schedule audio events, particularly with granular synthesis, we
  * rely on the {@link net.paulhertz.pixelaudio.schedule PixelAudio Schedule Package}. 
@@ -201,12 +243,12 @@ import com.hamoid.*;
  * representation of the gesture. The curve can be divided into line segments,
  * with the potential to generate an audio event at each vertex. The number of
  * divisions is controlled by the {@code PACurveMaker.setCurveSteps(int
- * curveSteps)} method. In the GesturePlayground sketch you can vary the
- * curve divisions with the GUI.
+ * curveSteps)} method. In the GesturePlayground and Bagatelle sketches you 
+ * can vary the curve divisions of individual brushstrokes with a GUI.
  * </p><p>
  * The CURVE_POINTS curve is used to create a stylized brushstroke. The
- * brushstroke is an {@code PABezShape} object. PABezShape provides a
- * {@code pointInPoly()} method that you can use to detect the mouse
+ * brushstroke is a {@link PABezShape} object. PABezShape provides a
+ * {@link PABezShape#pointInPoly pointInPoly} method that you can use to detect the mouse
  * hovering over or clicking within a brushstroke. TutorialOne_03_Drawing shows
  * how the brushstroke can be activated as an animated UI element and used to
  * trigger audio events. 
@@ -225,30 +267,25 @@ import com.hamoid.*;
  * it in a somewhat redundant form here. In performance, a caching scheme might
  * be useful--this may eventually show up in the Bagatelle example sketch. 
  * </p>
- * <h2>Audio Processing</h2>
+ * <h2>Animation</h2>
  * <p>
- * The {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector} 
- * class manages the high level processes for granular synthesis. Probably all
- * the functionality you will commonly need is available in its methods. The
- * various {@code playGestureNow(...)} methods allow you to control the timing,
- * panning, pitch, and gain of individual grains, if you want to. Parameters for
- * grain shaping are set with the {@code GestureGranularParams} class. The
- * GestureEventParams class supports arrays of values to set timing, pan, gain,
- * and pitch for individual grains. The timing and pan settings for individual
- * grains can also be passed as arrays to overloaded {@code playGestureNow(...)}
- * methods. 
+ * Use the 'a' key to toggle animation. Animation changes the display image by shifting
+ * pixels from {@code baseImage} into {@code mapImage} along the signal path. The audio
+ * buffers and {@code baseImage} are not changed. Instead, {@code totalShift} is used to
+ * change the mapping from display coordinates to indices in the audio buffer. The
+ * brushstroke's coordinates remain constant. Activating the same brushstroke again
+ * after the animation has advanced calculates different buffer indices, because 
+ * {@code totalShift} has changed. On repeated triggering while animation advances, 
+ * Sampler and Granular brushstrokes will play audio from different buffer positions.
  * </p><p>
- * If you're curious about how the granular synthesis engine works, there's an outline in
- * {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector PAGranularInstrumentDirector}.
- * </p><p>
- * This sketch and GesturePlayground provide a good introduction to the functions available 
- * in the granular synth. GesturePlayground goes into more detail than TutorialOne_03_Drawing, 
- * and provides a GUI to tweak almost every Granular instrument feature. In TutorialOne_03_Drawing 
- * we are principally concerned with showing how to create interactive brushstrokes by drawing 
- * on the screen. Finally, the Bagatelle example sketch provides a tested model for real time 
- * performance, reading and writing brushstroke data as JSON files, implementing a cue-based
- * Performance Preset model, and communicating with Max over UDP. 
- * </p> 
+ * When you activate a Sampler brushstroke, the event times, display coordinates, and
+ * corresponding audio-buffer indices are calculated and stored. The scheduled events
+ * subsequently play using those stored indices, even if animation continues while the
+ * brushstroke is playing. A Granular brushstroke behaves similarly: the audio-buffer 
+ * index for every event point is calculated when the brushstroke is activated, and 
+ * the complete gesture is then submitted to the granular instrument. The granular 
+ * sources maintain references to the audio buffer. 
+ * </p>
  * <pre>{@code 
  * Here are the key commands for this sketch:
  * 
@@ -387,7 +424,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     
     // Sampler Instrument setup
 	int samplelen;                  // calculated sample synth note length, samples
-	float samplerGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for Sampler gesture event
+	float samplerGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for Sampler gesture event
 	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
 	boolean isMuted = false;
 	// see https://github.com/Ignotus-mago/PixelAudio/issues/45 for information about poolSize and maxVoices} usage with PASamplerInstrumentPool
@@ -415,7 +452,7 @@ public class TutorialOne_03_Drawing extends PApplet {
     public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
     public PAGranularInstrument gSynth;         // granular synthesis instrument
     public PAGranularInstrumentDirector gDir;   // director of granular events
-    public float granularGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for a granular gesture event
+    public float granularGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for a granular gesture event
     public float granularPointGain = 1.0f;      // linear gain for a granular point event
     // parameters for granular synthesis
     boolean useShortGrain = false;              // default to short grains, if true
@@ -919,7 +956,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 			else if (keyCode == RIGHT) {				
 				if (!shiftIsDown) {
 					adjustPoolGain(3.0f);
-					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+					println("---- sampler gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
 				} else {
 					adjustGranGain(3.0f);
 					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
@@ -928,7 +965,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 			else if (keyCode == LEFT) {
 				if (!shiftIsDown) {
 					adjustPoolGain(-3.0f);					
-					println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
+					println("---- sampler gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");					
 				} else {
 					adjustGranGain(-3.0f);
 					println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");					
@@ -1462,9 +1499,10 @@ public class TutorialOne_03_Drawing extends PApplet {
 	}
 
 	/**
-	 * Attempts to load audio data from a selected file into playBuffer, then calls
-	 * writeAudioToImage() to transcode audio data and write it to mapImage.
-	 * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
+	 * Attempts to load audio data from a selected file into playBuffer. When isLoadToBoth is true, 
+	 * transcodes audio data and writes it to mapImage. If doResample is true, resamples audio files 
+	 * whose sample rate differs from the current audio output sample rate. As long as the Sampler
+	 * keeps track of the bufferSampleRate with updateAudioChain(), the audio will not sound different.
 	 * 
 	 * @param audFile    an audio file
 	 */

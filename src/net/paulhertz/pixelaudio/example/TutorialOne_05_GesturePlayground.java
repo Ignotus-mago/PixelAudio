@@ -188,8 +188,11 @@ import net.paulhertz.pixelaudio.sampler.*;
  *
  * <li>{@code PAGranularInstrumentDirector} has its own calling chain that goes all the way down to
  * the individual sample level using the Minim library's UGen interface. If you just want to
- * play music, you'll probably never have to deal with the hierarchy of classes directly, but
- * comments in {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector} may be useful. </li>
+ * play music, you'll probably never have to deal with the hierarchy of classes directly. The 
+ * various {@code playGesture*} methods in {@code PAGranularInstrumentDirector} can address
+ * the timing, buffer position, panning, pitch, and amplitude of each individual grain. 
+ * If you're curious, there's an outline of the audio chain in 
+ * {@link net.paulhertz.pixelaudio.granular.PAGranularInstrumentDirector}. </li>
  * </ul>
  * 
  * <p>Part of the calling chain for a SamplerBrush:</p><ul>
@@ -527,6 +530,15 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	/*                       DEBUGGING & LOCAL SETTINGS                   */
 	/* ------------------------------------------------------------------ */
 	
+	// PABoundsPolicy: CLIP, WRAP, REFLECT, SKIP_TIME, KEEP_TIME. CLIP may be 
+	// the most versatile if you are drawing with a mouse or other device.
+	// Exercise: draw a curve that strikes the display bounds. Increase epsilon. 
+	// Set Path Source to Curve Points in the GUI control panel. Play the brushstroke. 
+	// Brush points will likely extend beyond the display bounds, but be clipped
+	// to it for playback. 
+    PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+    PABoundsPolicy boundsPolicy;
+	
 	boolean isVerbose = true;
 	boolean isDebugging = false;
 	
@@ -573,6 +585,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		mapper = new PixelAudioMapper(multigen);
 		mapSize = mapper.getSize();
 		scheduleBuilder = new GestureScheduleBuilder();
+		// initialize the boundary policy for keeping points and indices in bounds
+		boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
 		colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
 		initImages();                   // load baseImage and mapImage
 		initAudio();                    // set up Minima and our granular and sampling synths
@@ -2816,7 +2830,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		ensureSamplerReady();
 		GestureGranularConfig snap = sb.snapshot();
 		GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
-		// GestureSchedule sched = getScheduleForBrush(sb);  // just the brush settings here
+		sched = boundsPolicy.applySchedule(sched);
 		storeSamplerCurveTL(sched, millis() + 10);
 		PVector startPoint = sched.points.get(0);
 		int clickPos = mapper.lookupSignalPos(clickX, clickY);
@@ -2874,6 +2888,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	    // apply resample/duration/warp via scheduleBuilder
 	    GestureSchedule sched = scheduleBuilder.build(gb.curve(), snap, audioOut.sampleRate());
 	    if (sched == null || sched.isEmpty()) return;
+	    // ***** LIMIT SCHED TO IN-BOUNDS POINTS ***** 
+	    sched = boundsPolicy.applySchedule(sched);
 	    if (isVerbose) {
 		    println("sched.size=" + sched.size()
 		    + " durationMs=" + sched.durationMs()
@@ -2881,8 +2897,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		    + " cfg.targetDurationMs=" + snap.targetDurationMs
 		    + " cfg.pathMode=" + snap.pathMode
 		    + " warp=" + snap.warpShape);
-	    }
-	    
+	    }    
 	    boolean isGesture = gb.cfg().hopMode == HopMode.GESTURE;
 		GestureGranularParams gParams = gb.cfg().build().toParams();
 		// GestureSchedule sched = getScheduleForBrush(gb); 

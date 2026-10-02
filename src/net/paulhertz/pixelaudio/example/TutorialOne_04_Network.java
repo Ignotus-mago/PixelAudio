@@ -37,7 +37,7 @@ import com.hamoid.*;
 
 
 /**
- * Adds networking with UDP to the previous Drawing tutorial. 
+ * Adds networking with UDP to the previous drawing tutorial. 
  * 
  * <p>
  * TutorialOne_04_Network is a copy of {@link TutorialOne_03_Drawing} with networking features added. 
@@ -118,11 +118,11 @@ import com.hamoid.*;
  * <p>To find the points at which networking code is implemented in methods in this sketch, 
  * search for "// *****]]] NETWORKING [[[***** //". 
  * The NetworkDelegate class provides a number of messaging methods, each prefaced with "oscSend". 
- * For receiving remote messages, it calls oscP5's "plug" method (in initOscPlugs()) to link 
- * incoming messages to local methods. In addition, it provides some boolean toggles, such as
+ * For receiving remote messages, it calls oscP5's "plug" method (in {@link NetworkDelegate#initOscPlugs() initOscPlugs}) 
+ * to link incoming messages to local methods. In addition, it provides some boolean toggles, such as
  * {@code isNetSendDrawingPoints}, to turn features on or off at various points in the 
  * TutorialOne_04_Network code--if you aren't going to use data, don't send it. 
- * In this sketch, we concentrate on:
+ * In this sketch, we don't implement all the available methods and messages. We concentrate on:
  * </p>
  * <ul>
  * <li>sending mouse coordinates and audio buffer position to simpleAudioIO</li>
@@ -136,7 +136,7 @@ import com.hamoid.*;
  * I chance to develop them. 
  * </p>
  * <div>
- * <pre>{@code 
+ * <pre>
  * Here are the key commands for this sketch:
  * 
  * Press UP ARROW to increase audio gain by 3 dB.
@@ -159,8 +159,8 @@ import com.hamoid.*;
  * Press 'P' to adjust pitch of current brushstroke.
  * Press '.' to increment epsilon value of current brush (reduced points decrease).
  * Press ',' to decrement epsilon value of current brush (reduced points increase).
- * Press '>' to increment curve steps value of current brush.
- * Press '<' to decrement curve steps value of current brush.
+ * Press '&gt;' to increment curve steps value of current brush.
+ * Press '&lt;' to decrement curve steps value of current brush.
  * Press 'm' to change the Sampler noise reduction profile.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
@@ -188,7 +188,7 @@ import com.hamoid.*;
  * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
  * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * Press 'h' or 'H' to show help message in the console.
- * }</pre>
+ * </pre>
  * </div>
  * 
  * <p>See {@link net.paulhertz.pixelaudio.sampler.PASamplerInstrumentPool PASamplerInstrumentPool} or
@@ -286,7 +286,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     
     // Sampler Instrument setup
 	int samplelen;                  // calculated sample synth note length, samples
-	float samplerGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for Sampler gesture event
+	float samplerGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for Sampler gesture event
 	float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
 	boolean isMuted = false;
 	PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
@@ -312,7 +312,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
     public PAGranularInstrument gSynth;         // granular synthesis instrument
     public PAGranularInstrumentDirector gDir;   // director of granular events
-    public float granularGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for a granular gesture event
+    public float granularGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for a granular gesture event
     public float granularPointGain = 1.0f;      // linear gain for a granular point event
     // parameters for granular synthesis
     boolean useShortGrain = false;              // default to short grains, if true
@@ -1572,9 +1572,10 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 
 	/**
-	 * Attempts to load audio data from a selected file into playBuffer, then calls
-	 * writeAudioToImage() to transcode audio data and write it to mapImage.
-	 * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
+	 * Attempts to load audio data from a selected file into playBuffer. When isLoadToBoth is true, 
+	 * transcodes audio data and writes it to mapImage. If doResample is true, resamples audio files 
+	 * whose sample rate differs from the current audio output sample rate. As long as the Sampler
+	 * keeps track of the bufferSampleRate with updateAudioChain(), the audio will not sound different.
 	 * 
 	 * @param audFile    an audio file
 	 */
