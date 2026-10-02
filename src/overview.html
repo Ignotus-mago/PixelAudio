@@ -4,15 +4,20 @@
 </head>
 <body>
 <!-- vimeo.com/showcase/12305064 -->
-PixelAudio is a Processing Library that maps arrays of audio samples onto arrays of pixel
-values, captures and transforms drawing gestures, and creates interactive audio and image events
-for live performance. 
+PixelAudio is a Processing Library that:
+<ul>
+    <li>maps arrays of audio samples onto arrays of pixel values,</li>
+    <li>captures and transforms drawing gestures and represents them as brush strokes,</li>
+    <li>creates interactive audio and image events for live performance,</li>
+    <li>provides polyphonic audio instruments for sampling and granular synthesis.</li>
+</ul>
 
 <p>You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded
 audio) into a 2D image. Once you have loaded an audio file, you can draw a curve on the display
 image (which may be a visualizaton of the audio) and record its timing information. You can
-click on the curve to replay the recorded gesture with animation while triggering an audio
-sampler or granular synthesis engine.</p>
+click on the curve to replay the recorded gesture with animation while triggering the audio
+sampler or granular synthesis engine. Access to the audio file is non-linear, determined by the 
+captured gesture and the mapping between the signal and the image.</p>
 
 <p>PixelAudio began as a color organ, where sine waves mapped to a Hilbert curve determined the
 pixel values (RGB colors) in a bitmap traversed by the curve. It later added gesture capture,
@@ -20,15 +25,25 @@ sampling and granular synthesis audio instruments. To support live performance, 
 i/o for curves, timing information, and audio configuration. The color organ morphed into the
 WaveSynth class and its supporting classes, with its own file i/o features. The live performance
 applet Bagatelle.java supports presets for drawing and audio synthesis and can cue them in live
-performance.</p>
+performance. There are several demos here: <a href="https://vimeo.com/showcase/12305064">PixelAudio Showcase</a>, 
+and an early performance/installation work here: <a href="https://vimeo.com/767814419">Campos | Temporales</a>. </p>
 
 <p>See the <a href="https://github.com/Ignotus-mago/PixelAudio">GitHub repository</a> for more 
-information and instructions on installation.</p>
+information and instructions on installation. Check out the 
+<a href="https://github.com/Ignotus-mago/PixelAudio/tree/master/examples">example code</a> for 
+more information on how to use PixelAudio. PixelAudio is a toolkit rather than a performance application, 
+so I hope that people will play with it and create capabilities that go far beyond the sample code 
+that I have provided.</p>
 
 <h1>How PixelAudio Works</h1>
 
-<p>The two core concepts in PixelAudio are <b>lookup table (LUT) mapping</b> and <b>gesture capture</b>. LUT mapping is the core
-functionality that joins audio and image data, while gesture capture is the core functionality for user interaction.</p>
+<p>The two core concepts in PixelAudio are <b>lookup table (LUT) mapping</b> and <b>gesture capture</b>. 
+LUT mapping is the core functionality that joins audio and image data, while gesture capture is the 
+core functionality for user interaction. Gestures are represented on screen as brushstrokes. 
+The geometric points determined by a brushstroke map to indices in the corresponding audio signal. 
+Activating a brushstroke triggers the playback of the corresponding audio sample
+with the sampling or granular synthesis engines.
+</p>
 
 <h2>Lookup Table (LUT) Mapping</h2>
 
@@ -46,7 +61,8 @@ bitmap.</p>
 
 <img src="net/paulhertz/pixelaudio/doc-files/LUTdiagram.png" alt="LUT Diagram" width="768" height="416"/>
 
-<p>The <code>PixelAudioMapper</code> class and the <code>PixelMapGen</code> class and its subclasses provide
+<p>The <a href="net/paulhertz/pixelaudio/PixelAudioMapper.html"><code>PixelAudioMapper</code></a> class and the 
+<a href="net/paulhertz/pixelaudio/PixelMapGen.html"><code>PixelMapGen</code></a> class and its subclasses provide
 the core functionality of the library and are abundantly commented. <code>PixelMapGen</code> provides a
 lightweight framework for creating mappings between audio sample and pixel data arrays. A <code>PixelMapGen</code>
 subclass ("gen" for short) generates the (x,y) coordinates of the signal path over the image, and creates
@@ -65,11 +81,31 @@ there are many built-in child classes that can get you up and running.</p>
 
 
 <p>If LUT mapping is the core functionality that joins audio and image data, gesture capture is the core 
-functionality for user interaction. A Gesture combines location and timing information. The <code>curves</code>
-package provides a framework for gesture geometry. The <code>schedule</code> package handles timing. For a 
-formal definition of a gesture, see the Javadoc for the 
-<a href="net/paulhertz/pixelaudio/curves/PAGesture.html"><code>PAGesture</code></a> class.
+functionality for user interaction. A Gesture combines location and timing information. The 
+<a href="net/paulhertz/pixelaudio/curves/package-summary.html"><code>curves</code></a> package provides a 
+framework for gesture geometry and representation. The 
+<a href="net/paulhertz/pixelaudio/schedule/package-summary.html"><code>schedule</code></a> 
+package handles timing. For a formal definition of a gesture, see the Javadoc for the 
+<a href="net/paulhertz/pixelaudio/curves/PAGesture.html"><code>PAGesture</code></a> class. 
 </p>
+
+<h2>Interaction</h2>
+
+<p>Gestures are represented as brushstrokes, the UI element that provides interaction with the underlying 
+audio file. The GUI examples
+<a href="net/paulhertz/pixelaudio/example/TutorialOne_05_GesturePlayground.html"><code>GesturePlayground</code></a> and 
+<a href="net/paulhertz/pixelaudio/example/Bagatelle.html"><code>Bagatelle</code></a> provide tools to edit brushstrokes 
+and determine their interactions with audio synthesis engines for traditional sampling synthesis and 
+granular synthesis. 
+</p>
+
+<h2>Audio Synthesis</h2>
+
+<p>PixelAudio provides two types of audio synthesis: traditional sampling synthesis with ADSR-style envelopes
+and granular synthesis with windowed granular samples. A mouse click typically triggers a single sample or granular burst. 
+A brushstroke triggers multiple samples or grains. The points in the brushstroke access the audio file 
+indices in non-linear order. The two synthesis engines and their supporting methods provide 
+polyphonic instruments with a number of advanced features for real-time performance.</p>
 
 <!--
 There are several demo vidoes
