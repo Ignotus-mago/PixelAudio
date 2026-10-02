@@ -32,8 +32,8 @@ package net.paulhertz.pixelaudio;
  * {@link BitmapTransform BitmapTransform} class applies the transformations 
  * defined in this enum to bitmaps using lookup tables. 
  * </p><p>
- * Naming follows computer graphics conventions where 0 degrees points right and
- * positive rotation is counterclockwise.</p>
+ * <b>Please Note:</b> Naming follows computer graphics conventions where 0 degrees
+ * points right and positive rotation is counterclockwise.</p>
  * 
  * 	<pre>
  *   NADA         no operation
