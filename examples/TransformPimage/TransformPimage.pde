@@ -48,14 +48,25 @@ import net.paulhertz.pixelaudio.*;
 
 PImage img;
 // fShapeSquare.png is an opaque square, fShapeRect.png is a rectangle.
+// In Processing, these files are in the "data" folder associated with this sketch.
 String imgFilename = "fShapeRect.png";
 BitmapTransform bTrans;
 PixelAudio pixelaudio;
+String dataPath;
+
+public void settings() {
+  size(1024, 1024);
+}
 
 public void setup() {
-  size(1024, 1024);
-  img = loadImage(imgFilename);
   pixelaudio = new PixelAudio(this);
+  // in Processing:
+  dataPath = dataPath("");
+  img = loadImage(imgFilename);    // points to the local "data" folder
+  // in Eclipse, hard-coded:
+  // dataPath = "/Users/paulhz/Code/Workspace/TestProcessing/src/net/paulhertz/testpixelaudio/data";
+  // img = loadImage(dataPath +"/"+ imgFilename);
+  println("-- data path: "+ dataPath);
   showHelp();
 }
 
@@ -80,43 +91,43 @@ public void showHelp() {
 
 public void keyPressed() {
   switch (key) {
-    case 'f':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.R270);
-      break;
-    case 'b':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.R90);
-      break;
-    case 'r':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.R180);
-      break;
-    case 'x':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPX);
-      break;
-    case 'y':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPY);
-      break;
-    case '1':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.FX90);
-      break;
-    case '2':
-      img = BitmapTransform.imageTransform(img, AffineTransformType.FX270);
-      break;
-    case 'o':
-      // reload the image
-      img = loadImage(imgFilename);
-      break;
-    case 's':
-      img.save("transformed_image.png");
-      break;
-    case 'm':
-        if (imgFilename.equals("fShapeRect.png")) testAffineMap(4, 3);
-        else testAffineMap(4, 4);
-        break;
-    case 'h':
-        showHelp();
-        break;
-    default:
-      break;
+  case 'f':
+    img = BitmapTransform.imageTransform(img, AffineTransformType.R270);
+    break;
+  case 'b':
+    img = BitmapTransform.imageTransform(img, AffineTransformType.R90);
+    break;
+  case 'r':
+    img = BitmapTransform.imageTransform(img, AffineTransformType.R180);
+    break;
+  case 'x':
+    img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPX);
+    break;
+  case 'y':
+    img = BitmapTransform.imageTransform(img, AffineTransformType.FLIPY);
+    break;
+  case '1':
+    img = BitmapTransform.imageTransform(img, AffineTransformType.FX90);
+    break;
+  case '2':
+    img = BitmapTransform.imageTransform(img, AffineTransformType.FX270);
+    break;
+  case 'o':
+    // reload the image
+    img = loadImage(imgFilename);
+    break;
+  case 's':
+    img.save("transformed_image.png");
+    break;
+  case 'm':
+    if (imgFilename.equals("fShapeRect.png")) testAffineMap(4, 3);
+    else testAffineMap(4, 4);
+    break;
+  case 'h':
+    showHelp();
+    break;
+  default:
+    break;
   }
 }
 
