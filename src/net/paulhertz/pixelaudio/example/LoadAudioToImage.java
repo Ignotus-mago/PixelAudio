@@ -20,6 +20,13 @@ import ddf.minim.*;
  * You can also load audio to individual RGB or HSB Hue and Brightness channels. To hear the 
  * results of loading to different channels, write the image to the audio signal ('w' key) and 
  * click in the image. 
+ * <p>
+ * Note that we are not doing any resampling of audio: the Sampler synth just
+ * gets set to the sample rate of the most recently loaded file. This can produce
+ * some interesting audio when you load files with different sample rates to different
+ * color channels and then write mapImage to the audio buffer ('w' key command). The "_sonic"
+ * folder in the example data contains some audio files with different sampling rates. 
+ * </p>
  * <figure>
  * <img src="doc-files/loadaudiotoimage.png" alt="LoadAudioToImage Screen" width="512" height="527"/>
  * <figcaption>Audio selections with corresponding pixels overwritten with a pattern.</figcaption>
@@ -352,7 +359,9 @@ public class LoadAudioToImage extends PApplet {
 
 	/**
 	 * Attempts to load audio data from a selected file into playBuffer, then calls
-	 * writeAudioToImage() to transcode audio data and write it to mapImage
+	 * writeAudioToImage() to transcode audio data and write it to a mapImage channel.
+	 * We don't resample the audio file, but we do supply its sample rate to 
+	 * the Sampler synth with {@code synth.setBuffer(audioSignal, fileSampleRate)}.
 	 * 
 	 * @param audioFile    an audio file
 	 */

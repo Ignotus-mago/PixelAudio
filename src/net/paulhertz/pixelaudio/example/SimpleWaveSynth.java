@@ -1,8 +1,12 @@
 package net.paulhertz.pixelaudio.example;
 
 import java.util.ArrayList;
+
 import processing.core.*;
+
 import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.AffineTransformType;
+
 
 /**
  * SimpleWaveSynth demonstrates the basics of setting up a {@code WaveSynth} as an animated 
@@ -141,6 +145,7 @@ public class SimpleWaveSynth extends PApplet {
 	 */
 	public void swapGen(PixelMapGen gen) {
 		mapper.setGenerator(gen);
+		wavesynth.renderFrame(step);
 		// if we had a new mapper, we would call wavesynth.setMapper(mapper) and reset
 		// synthImage locally.
 		// As it is, mapper only changed its variables, so the swap is really simple
@@ -229,6 +234,7 @@ public class SimpleWaveSynth extends PApplet {
 				println("----- using diagonal zigzag generator: " + gen.describe());
 				break;
 			}
+			
 		case 'f': // set the WaveSynth to output an image rotated 90 degrees clockwise
 			// rotate gen 90 degrees clockwise
 			gen.setTransformType(AffineTransformType.R270);
