@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import net.paulhertz.pixelaudio.*;
 
 
+// TODO JSON i/o code should eventually be incorporated into BuildFromPathGen.java
+// and also be reachable from the JSON i/o methods in WaveSynthBuiilder.
+
 /**
  * {@code BuildFromPathGenDemo} shows how {@link PixelMapGen} data can be stored in and
  * loaded from a JSON file.

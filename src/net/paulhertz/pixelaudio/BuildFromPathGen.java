@@ -20,6 +20,8 @@ package net.paulhertz.pixelaudio;
 
 import java.util.ArrayList;
 
+// TODO incorporate JSON i/o from BuildFromPathGenDemo here, with consistency checking. 
+
 /**
  * A PixelMapGen that loads data from an external {@code PixelMapGen.pixelMap}, such as might be saved in a JSON file.
  * When you instantiate a BuildFromPathGen, set the pixelMap field before you call generate().  

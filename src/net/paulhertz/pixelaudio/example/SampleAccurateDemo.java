@@ -819,7 +819,7 @@ public class SampleAccurateDemo extends PApplet {
         textLeading(20);
         String status = audioStatus + "\n"
                 + fileStatus + "\n"
-                + "Granular brush left, Sampler brush right\n"
+                + "Granular brush left (blue), Sampler brush right (yellow)\n"
                 + "wrapAround: " + wrapAround
                 + "    point synth: " + (pointUsesGranular ? "Granular" : "Sampler") + "\n"
                 + "hover: " + hoverBrushKind.label
@@ -828,8 +828,8 @@ public class SampleAccurateDemo extends PApplet {
                 + "    gain target: " + instrumentGainTarget().label + "\n"
                 + "Sampler gain: " + nf(samplerPool.getGainDb(), 0, 2) + " dB"
                 + "    Granular gain: " + nf(granularSynth.getGlobalGainDb(), 0, 2) + " dB\n"
-                + "Sampler interval: " + nf(samplerIntervalMs, 0, 3) + " ms"
-                + "    Granular interval: " + nf(granularIntervalMs, 0, 3) + " ms\n"
+                + "Granular interval: " + nf(granularIntervalMs, 0, 3) + " ms"
+                + "    Sampler interval: " + nf(samplerIntervalMs, 0, 3) + " ms\n"
                 + actionStatus;
         text(status, 28, 40, 532, 170);
         popStyle();

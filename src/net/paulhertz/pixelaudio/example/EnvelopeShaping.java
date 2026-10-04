@@ -30,6 +30,7 @@ import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
 //audio library
 import ddf.minim.*;
 
+// WORK IN PROGRESS
 
 /**
  * Demonstrates how to design ADSR envelopes with PixelAudio's {@link net.paulhertz.pixelaudio.sampler.ADSRParams}
