@@ -115,7 +115,8 @@ import ddf.minim.*;
  * You can create stereo drones with the 'e' command, which creates a series of audio events along 
  * the points of an ellipse. 
  * </p><p>
- * Press the spacebar to start or stop animation. 
+ * Press the tab key to start or stop animation. 
+ * Press the spacebar to play audio generated from the transcoded display image.
  *   
  * <pre>  
  * --------------------------------------------------------------------------------------------
@@ -692,7 +693,7 @@ public class ArgosyMixer extends PApplet {
 			audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
 			return;
 		}
-		case '\t': { // toggle animation
+		case '\t': { // toggle animation with tab key
 			toggleAnimation();
 			return;
 		}

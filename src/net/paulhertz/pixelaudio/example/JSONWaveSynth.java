@@ -16,7 +16,7 @@ import com.hamoid.*;
  * and for the complete set of WaveSynth parameters that you can edit in a GUI and
  * load and save to files. 
  * <pre>
- * Press ' ' (spacebar) to toggle animation.
+ * Press 'TAB' (tab) to toggle animation.
  * Press 'o' to open a new JSON file containing WaveSynth data.
  * Press 'O' to reload a JSON file, or open a JSON file is none has yet been loaded.
  * Press 'j' or 'J' to write WaveSynth data to a JSON file.
@@ -182,7 +182,7 @@ public class JSONWaveSynth extends PApplet {
 
 	public void keyPressed() {
 		switch (key) {
-		case ' ': // toggle animation
+		case '\t': // toggle animation with tab key
 			isAnimating = !isAnimating;
 			println(isAnimating ? "Starting animation at frame " + step + " of " + animSteps
 					: "Stopping animation at frame " + step + " of " + animSteps);
@@ -249,7 +249,7 @@ public class JSONWaveSynth extends PApplet {
 	}
 
 	public void showHelp() {
-		println(" * Press ' ' (spacebar) to toggle animation.");
+		println(" * Press 'TAB' (tab) to toggle animation.");
 		println(" * Press 'o' to open a new JSON file containing WaveSynth data.");
 		println(" * Press 'O' to reload a JSON file, or open a JSON file is none has yet been loaded.");
 		println(" * Press 'j' or 'J' to write WaveSynth data to a JSON file.");
