@@ -13,7 +13,7 @@ void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
   ensureSamplerReady();
   GestureGranularConfig snap = sb.snapshot();
   GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
-  // GestureSchedule sched = getScheduleForBrush(sb);  // just the brush settings here
+  sched = boundsPolicy.applySchedule(sched);
   storeSamplerCurveTL(sched, millis() + 10);
   PVector startPoint = sched.points.get(0);
   int clickPos = mapper.lookupSignalPos(clickX, clickY);
@@ -71,6 +71,8 @@ void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
   // apply resample/duration/warp via scheduleBuilder
   GestureSchedule sched = scheduleBuilder.build(gb.curve(), snap, audioOut.sampleRate());
   if (sched == null || sched.isEmpty()) return;
+  // ***** LIMIT SCHED TO IN-BOUNDS POINTS *****
+  sched = boundsPolicy.applySchedule(sched);
   if (isVerbose) {
     println("sched.size=" + sched.size()
       + " durationMs=" + sched.durationMs()

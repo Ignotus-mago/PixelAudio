@@ -2,8 +2,12 @@
 //               JSON FILE I/O               //
 //-------------------------------------------//
 
+// This code is also available in WaveSynthBuilder static methods. 
 
-// select a file of WaveData objects in JSON format to open
+/**
+ * Select a file of WaveData objects in JSON format to open.
+ * See {@link WaveSynthEditor} for JSON i/o using {@code WaveSynthBuilder} methods.
+ */
 public void loadWaveData() {
   File folderToStartFrom = new File(dataPath("") + jsonFolder + "//*.json");
   selectInput("Select a file to open", "fileSelectedOpen", folderToStartFrom);

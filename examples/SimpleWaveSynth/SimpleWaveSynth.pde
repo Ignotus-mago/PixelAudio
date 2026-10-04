@@ -112,6 +112,7 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
 
 public void swapGen(PixelMapGen gen) {
   mapper.setGenerator(gen);
+  wavesynth.renderFrame(step);
   // if we had a new mapper, we would call wavesynth.setMapper(mapper) and reset
   // synthImage locally.
   // As it is, mapper only changed its variables, so the swap is really simple

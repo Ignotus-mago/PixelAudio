@@ -139,11 +139,10 @@ public void fileSelected(File selectedFile) {
 }
 
 /**
- * Attempts to load audio data from a selected file into playBuffer, then
- * calls writeAudioToImage() to transcode audio data and write it to mapImage
- *
- * If doResample is true, resamples files whose sample rate differs from
- * the current audio output.
+ * Attempts to load audio data from a selected file into playBuffer, then calls
+ * writeAudioToImage() via renderAudioToMapImage(chan, 0) to transcode audio data and write it to mapImage.
+ * If doResample is true, resamples files whose sample rate differs from the current audio output sample rate.
+ * As long as the Sampler tracks bufferSampleRate with updateAudioChain(), the audio will not sound different.
  *
  * @param audFile    an audio file
  */

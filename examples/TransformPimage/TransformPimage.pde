@@ -1,7 +1,7 @@
 /**
  *
  * TransformPImage demonstrates some of the commands available in the BitmapTransform class.
- * The commands rely on PixelAudio's AffineTransformType enum and BitmapTransform class.
+ * The commands rely on PixelAudio's {@link AffineTransformType} enum and {@link BitmapTransform} class.
  * They are limited to rotation and reflection, but are optimized to do them fast.
  *
  * The AffineTransformType enum defines the types of affine transformations that
@@ -11,22 +11,22 @@
  * class applies the transformations defined in AffineTransformType to rotate
  * and reflect bitmaps using lookup tables.
  *
- * Naming follows computer graphics conventions where 0 degrees points right and
+ * Please note: Naming follows computer graphics conventions where 0 degrees points right and
  * positive rotation is counterclockwise.
  *
  * Here are AffineTransformType's operations:
  *
  *   NADA     no operation
- *   R270     rotate 90 degrees clockwise
+ *   R270     rotate 270 counterclockwise, 90 degrees clockwise
  *   R180     rotate 180 degrees
- *   R90      rotate 90 degrees counterclockwise
+ *   R90      rotate 90 degrees counterclockwise, 270 degrees clockwise
  *   FLIPX    reflect on y-axis, y coordinates do not change
  *   FX270    reflect on y-axis, then rotate 90 clockwise
- *                => reflect on the secondary diagonal, upper left to lower right,
+ *                => i.e., reflect on the secondary diagonal, upper left to lower right,
  *                secondary diagonal does not change
  *   FLIPY    reflect on x-axis, x coordinates do not change
  *   FX90     reflect on y-axis, then rotate 90 counterclockwise
- *                => reflect on the primary diagonal, upper right to lower left,
+ *                => i.e., reflect on the primary diagonal, upper right to lower left,
  *                primary diagonal does not change
  *
  *

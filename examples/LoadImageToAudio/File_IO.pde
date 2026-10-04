@@ -130,7 +130,9 @@ public void fileSelected(File selectedFile) {
 
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
- * writeAudioToImage() to transcode audio data and write it to mapImage
+ * writeAudioToImage() to transcode audio data and write it to a mapImage channel.
+ * Note that we are not doing any resampling of audio: the Sampler synth just
+ * gets set to the sample rate of the most recently loaded file.
  *
  * @param audioFile    an audio file
  */

@@ -31,7 +31,9 @@ public void fileSelected(File selectedFile) {
 
 /**
  * Attempts to load audio data from a selected file into playBuffer, then calls
- * writeAudioToImage() to transcode audio data and write it to mapImage
+ * writeAudioToImage() to transcode audio data and write it to a mapImage channel.
+ * We don't resample the audio file, but we do supply its sample rate to
+ * the Sampler synth with synth.setBuffer(audioSignal, fileSampleRate).
  *
  * @param audioFile    an audio file
  */

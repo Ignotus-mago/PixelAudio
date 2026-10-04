@@ -481,6 +481,15 @@ int eventStep = 90;    // milliseconds between events, formerly used by Sampler 
 /*                       DEBUGGING & LOCAL SETTINGS                   */
 /* ------------------------------------------------------------------ */
 
+// PABoundsPolicy: CLIP, WRAP, REFLECT, SKIP_TIME, KEEP_TIME. CLIP may be
+// the most versatile if you are drawing with a mouse or other device.
+// Exercise: draw a curve that strikes the display bounds. Increase epsilon.
+// Set Path Source to Curve Points in the GUI control panel. Play the brushstroke.
+// Brush points will likely extend beyond the display bounds, but be clipped
+// to it for playback.
+PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+PABoundsPolicy boundsPolicy;
+
 boolean isVerbose = true;
 boolean isDebugging = false;
 
@@ -521,7 +530,9 @@ public void setup() {
 	// 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
 	mapper = new PixelAudioMapper(multigen);
 	mapSize = mapper.getSize();
-	scheduleBuilder = new GestureScheduleBuilder();
+  scheduleBuilder = new GestureScheduleBuilder();
+  // initialize the boundary policy for keeping points and indices in bounds
+  boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
 	colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
 	initImages();                   // load baseImage and mapImage
 	initAudio();                    // set up Minima and our granular and sampling synths

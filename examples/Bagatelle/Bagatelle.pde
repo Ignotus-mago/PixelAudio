@@ -110,11 +110,12 @@ int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
 int samplelen;                    // calculated sample synth note length, samples
 float samplerGain = 0.5f;         // linear gain setting for Sampler instrument
 float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
-float outputGain = 0.0f;          // gain setting for audio output, decibels
+float outputGain = -6.0f;         // gain setting for audio output, decibels
 boolean isMuted = false;          // global muting
 PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
-int poolSize = 16;                 // number of sampler instruments for polyphony
-int sMaxVoices = 256;             // number of voices to allocate to pool or synth
+// see https://github.com/Ignotus-mago/PixelAudio/issues/45 for suggested poolSize and sMaxVoices usage
+int poolSize = 4;                 // number of sampler instruments for polyphony
+int sMaxVoices = 128;             // number of voices to allocate to pool or synth
 
 // ====== Granular Synth ====== //
 
@@ -160,7 +161,7 @@ boolean isTrackMouse = false;        // if true, drag the mouse to change shift 
 int animSteps = 720;                 // how many steps in an animation loop
 boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
 int videoFrameRate = 120;            // fps, frames per second
-int videoSteps = 720;                // TODO seems redundant
+int videoSteps = 720;                // number of frames in video output file
 int step;                            // number of current step in animation loop
 VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
 
@@ -751,8 +752,7 @@ public void setup() {
   boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
   colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
   initImages();                   // load baseImage and mapImage
-  initAudio();                    // set up Minima and our granular and sampling synths
-  // initListener();              // PLACEHOLDER: sample-accurate audio timer -- TODO future implementation
+  initAudio();                    // set up Minim and our granular and sampling synths
   initConfig();                   // set up configuration for granular and sampling instruments
   initDrawing();                  // set up drawing variables
   initGUI();                      // set up the G4P control window and widgets
@@ -1433,7 +1433,7 @@ public void parseKey(char key, int keyCode) { // TODO create auto-adjust Sampler
     pool.cycleMixProfile();
     println("-- mix profile is "+ pool.getMixProfile().name());
     break;
-  case 'R': // reset transform of active brush if it has a transform TODO clarify
+  case 'R': // reset active AudioBrush's transformState to unity, or fall through to reset instrument config
     if (activeBrush != null && activeBrush.hasTransform()) {
       activeBrush.restoreTransform();
       activeBrush.transform().resetTransform();
@@ -1674,7 +1674,7 @@ public void showHelp() {
   println(" * Press ':' to stop all loops.");
   println(" * Press 'y' to toggle transform animation test.");
   println(" * Press 'Y' to freeze / unfreeze brush geometric transform animation.");
-  println(" * Press 'R' to reset transform of active brush if it has a transform.");    // TODO clarify
+  println(" * Press 'R' to reset geometric transform of active brush, if it has a transform.");
   println(" * Press 'G' to create a beatBrush.");
   println(" * Press '.' to turn random raindrops audio events on or off.");
   println(" * Press '`' to fade out all instruments.");

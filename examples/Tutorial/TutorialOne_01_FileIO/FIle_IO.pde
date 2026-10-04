@@ -128,6 +128,7 @@ public void fileSelected(File selectedFile) {
  * Attempts to load audio data from a selected file into playBuffer, then calls
  * writeAudioToImage() to transcode audio data and write it to mapImage.
  * If doResample is true, resamples files whose sample rate differs from the current audio output.
+ * As long as the Sampler tracks bufferSampleRate with updateAudioChain(), the audio will not sound different.
  * If you want to load the image file and audio file separately, comment out writeAudioToImage().
  *
  * @param audFile    an audio file
@@ -159,7 +160,7 @@ public void loadAudioFile(File audFile) {
   // write the signal to mapImage
   // we do it automatically here, but that will change in later examples
   writeAudioToImage(audioSignal, mapper, mapImage, chan);
-  //if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+  // if (applyColorMapOnLoad) applyColorMapToDisplay(true);
 }
 
 

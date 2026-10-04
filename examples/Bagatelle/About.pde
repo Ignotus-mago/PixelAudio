@@ -205,7 +205,7 @@
  * Press ':' to stop all loops.
  * Press 'y' to toggle transform animation test.
  * Press 'Y' to freeze / unfreeze brush geometric transform animation.
- * Press 'R' to reset transform of active brush if it has a transform.
+ * Press 'R' to reset geometric transform of active brush, if it has a transform.
  * Press 'G' to create a beatBrush.
  * Press '.' to turn random raindrops audio events on or off.
  * Press '`' to fade out all instruments.

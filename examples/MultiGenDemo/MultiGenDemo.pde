@@ -6,10 +6,10 @@ import net.paulhertz.pixelaudio.*;
 /**
  * MultiGenDemo: How to Combine Gens into a MultiGen
  *
- * MultiGen is a child class of PixelMapGen that allows you to combine multiple PixelMapGens
+ * MultiGen is a child class of {@code PixelMapGen} that allows you to combine multiple PixelMapGens
  * into a single PixelMapGen, with a single signal path through all the gens. There are four
- * different constructors that you can use. The first two, MultiGen(int width, int height)
- * and MultiGen(int width, int height, AffineTransformType type), create two DiagonalZigzagGens
+ * different constructors that you can use. The first two, {@code MultiGen(int width, int height)}
+ * and {@code MultiGen(int width, int height, AffineTransformType type)}, create two DiagonalZigzagGens
  * to fill whatever width and height you provide. Things get interesting with the two custom constructors,
  * MultiGen(int width, int height, int rows, int columns, ArrayList<PixelMapGen> genList)
  * and MultiGen(int width, int height, ArrayList<int[]> offsetList, ArrayList<PixelMapGen> genList).
@@ -28,7 +28,7 @@ import net.paulhertz.pixelaudio.*;
  * a continuous signal path through the final image. This application
  * demonstrates how to do that with HilbertGens.
  *
- * The PixelMapGen subclasses HilbertGen, DiagonalZigzagGen, and BoustropheGen
+ * The PixelMapGen subclasses {@link HilbertGen}, {@link DiagonalZigzagGen}, and {@link BoustropheGen}
  * include various static methods to generate MultiGen objects. Check them out.
  *
  * Animation helps to visualize the orientation of PixelMapGen objects.
@@ -116,6 +116,7 @@ public MultiGen multiGenFromGenList() {
   int c = columns * 2;
   int genW = width/r;
   int genH = height/c;
+  // when we use HilbertGen objects, the width and height must be equal powers of 2
   if (genW != genH) {
     throw new IllegalArgumentException("--> genW must equal genH");
   }

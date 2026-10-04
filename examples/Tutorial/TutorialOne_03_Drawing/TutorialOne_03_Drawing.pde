@@ -349,7 +349,7 @@ int envMaxDurationMs = 1280;    // max envelope duration, milliseconds
 
 // Sampler Instrument setup
 int samplelen;                  // calculated sample synth note length, samples
-float samplerGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for Sampler gesture event
+float samplerGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for Sampler gesture event
 float samplerPointGain = 0.75f; // linear gain for point events with the Sampler instrument
 boolean isMuted = false;
 PASamplerInstrumentPool pool;   // an allocation pool of PASamplerInstruments
@@ -375,7 +375,7 @@ int granEnvDuration = 120;          // envelope duration in ms
 public float[] granSignal;                  // buffer source for granular (defaults to audioSignal)
 public PAGranularInstrument gSynth;         // granular synthesis instrument
 public PAGranularInstrumentDirector gDir;   // director of granular events
-public float granularGain = AudioUtility.dbToLinear(-3.0f);    // linear gain for a granular gesture event
+public float granularGain = AudioUtility.dbToLinear(-6.0f);    // linear gain for a granular gesture event
 public float granularPointGain = 1.0f;      // linear gain for a granular point event
 // parameters for granular synthesis
 boolean useShortGrain = false;              // default to short grains, if true
@@ -891,7 +891,7 @@ public void mouseClicked() {
     } else if (keyCode == RIGHT) {
       if (!shiftIsDown) {
         adjustPoolGain(3.0f);
-        println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");
+        println("---- sampler gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");
       } else {
         adjustGranGain(3.0f);
         println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");
@@ -899,7 +899,7 @@ public void mouseClicked() {
     } else if (keyCode == LEFT) {
       if (!shiftIsDown) {
         adjustPoolGain(-3.0f);
-        println("---- pool gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");
+        println("---- sampler gain is "+ nf(pool.getGainDb(), 0, 2) +"dB");
       } else {
         adjustGranGain(-3.0f);
         println("---- granular gain is "+ nf(gDir.getInstrument().getGlobalGainDb(), 0, 2) +"dB");

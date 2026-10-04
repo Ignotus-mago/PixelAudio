@@ -27,7 +27,13 @@
  * signal with all its resolution to play sounds. When you click in the image,
  * you will be playing a sample from the signal.
  *
- * You can write the audio signal to the image with the 'W' key command. This will
+ * Note that we are not doing any resampling of audio: the Sampler synth just
+ * gets set to the sample rate of the most recently loaded file. This can produce
+ * some interesting audio when you load files with different sample rates to different
+ * color channels and then write mapImage to the audio buffer ('w' command). The "_sonic"
+ * folder in the example data contains some audio files with different sampling rates.
+ *
+ * You can also write the audio signal to the image with the 'W' key command. This will
  * convert the audioSignal into HSB Brightness values and write them to mapImage.
  * If you open this image in all color channels or in the HSB Brightness channel
  * and then write it to the audio channel, you will get a reasonably good recreation

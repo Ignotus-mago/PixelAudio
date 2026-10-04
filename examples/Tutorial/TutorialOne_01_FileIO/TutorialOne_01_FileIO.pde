@@ -1,7 +1,7 @@
 /**
  * The first tutorial opens audio or image files and loads either file type to both the image
- * display and the audio buffer. The images or audio can be "played" with a mouse click or
- * spacebar press to play the audio mapped to the mouse location.
+ * display and the audio buffer. Use a mouse click or spacebar press
+ * to play the audio mapped to the mouse location.
  *
  * If you are just starting to work with PixelAudio coding, I suggest looking through these
  * sketches before doing the TutorialOne sequence:
@@ -10,7 +10,8 @@
  *   -- Starter: basics of creating a PixelMapGen instance and plugging it into a PixelAudioMapper.
  *   -- SimpleAnimation: a simple way to animate a bitmap using PixelAudioMapper.
  *   -- MultiGenDemo: chain PixelMapGens together to generate a large image.
- *   -- MultiGenLookupTables: lookup tables in MultiGens, a useful place to test your MultiGenCode.
+ *   -- MultiGenLookupTables: lookup tables in MultiGens, a useful place to test your MultiGen code.
+ *   -- MultiGenZoo: (optional) recipes for more MultiGens, also used in ArgosyMixer.
  *   -- TransformPimage (optional): introduces the affine transforms available in the BitmapTransform class.
  *
  * The opening sequence, above, shows the basics of loading the PixelAudio library and
@@ -21,9 +22,10 @@
  * and BoustropheGen include various static methods to generate MultiGen objects.
  *
  * TutorialOne_01_FileIO can open and display audio and image files, transcode RGB pixel
- * data to audio samples and transcode audio samples to RGB pixel data. It can also save audio
- * and image files. It responds to mouse clicks by playing the audio samples corresponding
- * to the click location in the display image. To help you visualize the signal path, the
+ * data to audio samples and transcode audio samples to RGB pixel data. It can also save
+ * audio and image files. It responds to mouse clicks by playing the audio samples
+ * corresponding to the click location in the display image using PixelAudio's sampler
+ * synth. To help you visualize the signal path, the
  * 'k' command key generates a rainbow color array that follows the signal path but keeps
  * the brightness information in the image intact. The image also appears when you launch
  * the sketch.
@@ -81,12 +83,15 @@
  * The second method allows you to supply your own ADSR. Press the 'r' key to have this
  * sketch trigger sounds with a randomly selected envelope from adsrList.
  *
- * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.sampler
- * play an audio event for the requested duration (samplelen) using the attack, decay,
- * and sustain portion of the envelope. When the duration ends, the release portion of the
- * envelope controls how the audio fades away. Calls to the instruments playSample() methods
- * return the amount of time the envelope will actually take, which is greater than or equal
- * to the requested duration.
+ * PASamplerInstrument and the other audio instruments in net.paulhertz.pixelaudio.sampler play
+ * an audio event for the requested duration (samplelen) using the attack, decay, and sustain
+ * portion of the envelope. When the duration ends, the release portion of the envelope controls
+ * how the audio fades away. Calls to the instrument's playSample() methods return the amount of
+ * time the envelope will actually take, which is greater than or equal to the requested duration.
+ *
+ * PASamplerInstrument takes the sampling rate of the audio source into account when it plays.
+ * When doResample is true, loadAudioFile() resamples audio sources to audioOut.sampleRate before
+ * writing them to the audio buffer. When false, bufferSampleRate tracks the file's sample rate.
  *
  * Still to come, as the tutorial advances:
  *
@@ -101,11 +106,13 @@
  *
  * KEY COMMANDS
  *
+ * Press ' ' (spacebar) to play sample at current mouse position.
  * Press 'c' to apply color from image file to display image.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage.
  * Press 'o' or 'O' to open an audio or image file.
  * Press 'r' or 'R' to use the default envelope or a random envelope from a list.
- * Press 'd' to toggle doResample: if true, resample audio when fileSampleRate != audioOut.sampleRate().
+ * Press 'w' or 'W' to toggle audio buffer wrap around.
+ * Press 'd' to toggle doResample: if true, loadAudioFile() resamples audio when fileSampleRate != audioOut.sampleRate().
  * Press 'h' or 'H' to show help and key commands in console.
  *
  *
@@ -141,7 +148,7 @@ import ddf.minim.*;
 /* ------------------------------------------------------------------ */
 
 PixelAudio pixelaudio;     // our shiny new library
-MultiGen multigen;         // a PixelMapGen that links together multiple PixelMapGens
+MultiGen multigen;         // a MultiGen, a class that links together multiple PixelMapGens
 int genWidth = 512;        // width of multigen PixelMapGens
 int genHeight = 512;       // height of  multigen PixelMapGens
 PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data

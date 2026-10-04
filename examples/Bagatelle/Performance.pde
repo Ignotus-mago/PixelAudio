@@ -79,6 +79,8 @@ void runPerformanceCue(char key) {
 				this.nd.oscSendOnOff(1, true);
 				println("-- trig 1 -- reverb ON");
 			}
+			this.setAudioGain(0.0f);                  // change gain from initial default of -6.0 dB
+			setPoolAttributes(poolSize, sMaxVoices);  // in case you want to change pool size / max voices
 			loadAudioFile(new File(daPath + "bag_1_gest_1_tail.wav"));
 			this.doPlayOnNewBrush = true;
 			this.doPlayWhileDrawing = false;
@@ -188,6 +190,11 @@ void runPerformanceCue(char key) {
 		throw new IllegalStateException("Unhandled performance mode: " + pMode);
 
 	}  // switch (pMode)
+}
+
+public void setPoolAttributes(int size, int maxVoices) {
+	pool.setPoolSize(size);
+	pool.setMaxVoices(maxVoices);
 }
 
 /**

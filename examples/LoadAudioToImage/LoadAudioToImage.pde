@@ -4,10 +4,16 @@
  * Hovering over the image and pressing the spacebar will also trigger an audio event.
  * The hightlightSample() method highlights the pixels that correspond to the audio signal
  * that is played. The highlight changes the pixels and can change the audio, too: just press
- * the 'w' key to transcode the image to an audio signal and write it to the PASamplerInstrument.
+ * the 'w' key to transcode the image to an audio signal and refresh the PASamplerInstrument.
  * You can also load audio to individual RGB or HSB Hue and Brightness channels. To hear the
  * results of loading to different channels, write the image to the audio signal ('w' key) and
  * click in the image.
+ *
+ * Note that we are not doing any resampling of audio: the Sampler synth just
+ * gets set to the sample rate of the most recently loaded file. This can produce
+ * some interesting audio when you load files with different sample rates to different
+ * color channels and then write mapImage to the audio buffer ('w' key command). The "_sonic"
+ * folder in the example data contains some audio files with different sampling rates.
  *
  * This sketch also includes some common methods for adjusting the brightness and contrast of
  * an image: gamma adjustment changes contrast up or down and histogram equalization stretches

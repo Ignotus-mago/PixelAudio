@@ -1,35 +1,34 @@
 /**
- * Additive audio synthesis engine produces colorful animated patterns and electronic synth sounds.
+ * Additive audio synthesis engine produces colorful animated patterns and electronic synth sounds,
+ * including a complete GUI control panel for loading, editing, and saving configuration data.
  *
  * WaveSynth Editor Sketch
  *
- * The PixelAudio demo application WaveSynthEditor makes hypnotic animated patterns
- * that can be saved to video or played as an additive synthesis audio source. It
- * provides an introduction to the WaveSynth class and the WaveData objects
- * that WaveSynths use to generate visual patterns and audio signals.
+ * The PixelAudio demo sketch {@code WaveSynthEditor} makes patterns that can be
+ * animated and saved to video or played as an additive synthesis audio source. It
+ * provides an introduction to the {@link WaveSynth} class and the {@link WaveData} objects
+ * that {@code WaveSynth} uses to generate visual patterns and audio signals.
  *
- * This application lets you edit a PixelAudio WaveSynth, including its individual WaveData
- * operators, using a nice GUI made with g4p_controls for Processing. This sketch shows
- * some of what you can do with the HilbertGen, BoustropheGen and DiagonalZigzzgGen for
- * making patterns with the WaveSynth. There are lots of other possibilities. Patterns
- * can be loaded from and saved to JSON files.
+ * WaveSynthEditor lets you edit the attributes of a PixelAudio WaveSynth, including
+ * its individual WaveData operators, using a GUI made with {@code g4p_controls} for Processing.
+ * Patterns can be loaded from and saved to JSON files. You can experiment with a MultiGen
+ * built from Hilbert curves, a {@link BoustropheGen}, and a {@link DiagonalZigzagGen}.
  *
  * For audio signals, a WaveSynth behaves like an audio synthesizer that adds together
- * sine waves at different frequencies. The WaveSynthSequencer example sketch also
+ * sine waves at different frequencies. The {@link WaveSynthSequencer} example sketch also
  * produces audio with a WaveSynth. This example provides a graphical
  * user interface for editing frequencies, colors and other properties of a WaveSynth.
  *
  * Click on the WaveSynth image or press spacebar to hear the audio version of the image. Note
  * that the appearance of the image is determined by the current sampling frequency, set in the
  * initWaveSynth() method. For a higher sampling rate, there are more samples. One sampling rate
- * I commonly use for the WaveSynth Editor is the number of pixels in the WaveSynth image,
- * 1024 * 1024 = 1048576. Though it may have more or less samples, the sound of the audio will not
- * vary, as its frequency is governed by the sampling rate. If you want to save the audio to a
- * file, you should probably set a standard sampling rate like 48000 in the initWaveSynth() method.
+ * I commonly use for the WaveSynth Editor is the number of pixels in the WaveSynth image.
+ * Though it may have more or less samples, the sound of the audio will not vary, as its
+ * frequency is governed by the sampling rate.
  *
  * A WaveSynth depends on global attributes, such as gain (i.e. loudness or brightness) and
  * gamma (a sort of contrast setting), and on data objects. The data objects include
- * a bitmap, mapImage, that is a Processing PImage instance for the image representation
+ * a bitmap, {@code mapImage}, that is a Processing {@code PImage} instance for the image representation
  * of the WaveSynth, a PixelAudioMapper that allows the WaveSynth to mediate between audio
  * data and image data, and an array of WaveData objects that define the individual
  * sine wave components of the WaveSynth. The PixelAudioMapper arranges colors controlled
@@ -94,6 +93,11 @@
  * Press 'P' to shift all active WaveSynth phases by -phaseFac.
  * Press 'k' to show all current phase values in the console.
  * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.
+ * Press 'z' to decrease color saturation.
+ * Press 'Z' to increase color saturation.
+ * Press 'g' to swap the current PixelMapGen.
+ * Press 'G' to swap the wave synth sample rate between default and full screen.
+ * Press 'w' or 'W' to toggle audio buffer wrap around.
  * Press '+' or '=' to make the image brighter.
  * Press '-' or '_' to make the image darker.
  // ------------- COMMANDS FOR ANIMATION STEPPING ------------- //
@@ -120,7 +124,6 @@
  * Press 'v' to toggle video recording.
  * Press 'V' to record a complete video loop from frame 0 to stop frame.
  * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.
- * Press 'z' to find nearest zero crossing in the audio signal and play from there.
  * Press 'q' to show animation status on screen (will not be recorded).
  * Press '?' to print window dimensions, video frame rate, and audio settings to the console.
  * press 'h' or 'H' to show this help message in the console.
@@ -225,6 +228,7 @@ WaveSynth wavesynth;           // a WaveSynth to generate patterns from additive
 ArrayList<WaveSynth> wsCrew;   // a list of WaveSynths
 WaveData currentWD;            // current WaveData object, for editing
 int waveDataIndex;             // index of currentWD in wavesynth.waveDataList
+int defaultSampleRate;         // preferred sample rate, to swap with width * height
 
 // file IO for JSON and video output
 File currentDataFile;          // current JSON data file, if one is loaded
@@ -254,11 +258,13 @@ float phaseShift = (float) (Math.PI * 1.0 / 1536.0);
 float colorShift = 1.0f/24;
 /** Sets how much to scale frequencies with scaleFreqs()
  *  tritone (half octave): (Math.sqrt(2.0)); semitone: (Math.pow(2.0, 1.0/12)); */
-float freqFac = (float) (Math.sqrt(2.0));
+float freqFac = (float) (Math.pow(2.0, 1.0/12));
 /** Sets how much to scale amplitudes with scaleAmps() */
 float ampFac = 0.9375f; // 15/16
 /** Sets the increment to apply to wavesynth gain (brightness) */
 float gainInc = 0.03125f;
+/** saturation factor */
+float saturationFac = 1.0f/1.0625f;
 
 boolean isAnimating = false;
 boolean isLooping = false;
@@ -266,7 +272,7 @@ boolean oldIsAnimating;
 int animSteps = 720;                    // how many steps in an animation loop
 int animStop = animSteps;               // step where animation recording stops
 boolean isRecordingVideo = false;       // are we recording? (only if we are animating)
-int videoFrameRate = 24;                // fps
+int videoFrameRate = 24;                // frames per second, depending on render speed: I can run 8 operators at 24 fps
 int step;                               // number of current step in animation loop
 int startTime;                          // set when animation starts
 int stopTime;                           // used to calculate animation time until finish and duration
@@ -291,7 +297,7 @@ int audioLength;                   // length of the audioSignal, same as the num
 float outputGain = -6.0f;          // audio output gain
 
 // SampleInstrument setup
-int noteDuration = 2000;        // average sample synth note duration, milliseconds
+int noteDuration = 1000;        // average sample synth note duration, milliseconds
 int samplelen;                  // calculated sample synth note length, samples
 PASamplerInstrumentPool pool;   // pool of instruments
 int poolSize = 4;               // number of instruments
@@ -490,12 +496,17 @@ public WaveSynth initWaveSynth(WaveSynth synth) {
   synth.setGamma(1.0f);
   synth.setScaleHisto(false);
   synth.setAnimSteps(this.animSteps);
-  synth.setSampleRate(genWidth * genWidth);
+  defaultSampleRate = genWidth * genWidth;
+  synth.setSampleRate(defaultSampleRate);
   // some other possible sampling rates
   // synth.setSampleRate(genWidth / 2 * genWidth / 2);
   // synth.setSampleRate(genWidth / 4 * genWidth / 4);
   // synth.setSampleRate(gen.getWidth() * gen.getHeight());
   // synth.setSampleRate(48000);
+  // synth.setSampleRate(this.sampleRate);
+  // and if you want an operator with frequency == 1 to fill the screen,
+  // use the next line ('G' key command toggles it with the default):
+  // synth.setSampleRate(this.width * this.height);
   println("\n====================================================");
   println("--- mapImage size = " + synth.mapImage.pixels.length);
   println("--- WaveSynth sample rate = " + synth.getSampleRate());
@@ -667,8 +678,17 @@ public void parseKey(char theKey, int keyCode) {
   case TAB: // turn animation on or off
     toggleAnimation();
     break;
-  case 'g':
+  case 'g': // swap PixelMapGen
     swapGen();
+    break;
+  case 'G': // swap wave synth sample rate
+    if (wavesynth.getSampleRate() == defaultSampleRate) {
+      wavesynth.setSampleRate(mapImage.width * mapImage.height);
+    } else {
+      wavesynth.setSampleRate(defaultSampleRate);
+    }
+    markWaveSynthAudioDirty();
+    println("-- wave synth sample rate is "+ wavesynth.getSampleRate());
     break;
   case 'a': // scale all active WaveSynth amplitudes by ampFac
     scaleAmps(wavesynth.getWaveDataList(), ampFac);
@@ -728,6 +748,18 @@ public void parseKey(char theKey, int keyCode) {
   case 'K': // set all phase values so that first frame looks like the current frame, then go to first frame
     capturePhaseValues(wavesynth.getWaveDataList());
     step = 0;
+    markWaveSynthVisualDirty();
+    break;
+  case 'z': // decrease color saturation
+    scaleSaturation(wavesynth.getWaveDataList(), saturationFac);
+    wavesynth.updateWaveColors();
+    refreshGlobalPanel();
+    markWaveSynthVisualDirty();
+    break;
+  case 'Z': // increase color saturation
+    scaleSaturation(wavesynth.getWaveDataList(), 1/saturationFac);
+    wavesynth.updateWaveColors();
+    refreshGlobalPanel();
     markWaveSynthVisualDirty();
     break;
   case '+': // make the image brighter
@@ -876,11 +908,6 @@ public void parseKey(char theKey, int keyCode) {
       println("--->> Sorted wave data operators by frequency.");
     }
     break;
-  case 'z': // find nearest zero crossing in the audio signal and play from there
-    isFindZeroCrossing = !isFindZeroCrossing;
-    println("----- isFindZeroCrossing is "+ isFindZeroCrossing);
-    toggleZeroCrossing(isFindZeroCrossing);
-    break;
   case 'q': // show animation status on screen (will not be recorded)
     showAnimationStatus = !showAnimationStatus;
     println("-- showAnimationStatus is "+ showAnimationStatus);
@@ -919,6 +946,10 @@ public void showHelp() {
   println(" * Press 'P' to shift all active WaveSynth phases by -phaseFac.");
   println(" * Press 'k' to show all current phase values in the console.");
   println(" * Press 'K' to set all phase values so that first frame looks like the current frame, then go to first frame.");
+  println(" * Press 'z' to decrease color saturation.");
+  println(" * Press 'Z' to increase color saturation.");
+  println(" * Press 'g' to swap the current PixelMapGen.");
+  println(" * Press 'G' to swap the wave synth sample rate between default and full screen.");
   println(" * Press 'w' or 'W' to toggle audio buffer wrap around.");
   println(" * Press '+' or '=' to make the image brighter.");
   println(" * Press '-' or '_' to make the image darker.");
@@ -946,7 +977,6 @@ public void showHelp() {
   println(" * Press 'v' to toggle video recording.");
   println(" * Press 'V' to record a complete video loop from frame 0 to stop frame.");
   println(" * Press 't' to sort wave data operators in control panel by frequency (lowest first), useful when saving to JSON.");
-  println(" * Press 'z' to find nearest zero crossing in the audio signal and play from there.");
   println(" * Press 'q' to show animation status on screen (will not be recorded).");
   println(" * Press '?' to print window dimensions, video frame rate, and audio settings to the console.");
   println(" * press 'h' or 'H' to show this help message in the console.");
@@ -1054,6 +1084,13 @@ public void toggleRecording() {
   refreshGlobalPanel();
 }
 
+/**
+ * Toggles a Sampler instrument setting to start audio playback at a zero-crossing. The issue
+ * that we were dealing with, initial noise in a Sampler audio event, was solved with better
+ * envelope implementation. This method is not needed, but is retained for historical purposes.
+ *
+ * @param newFindZero true if instrument should begin playback at nearest zero-crossing
+ */
 public void toggleZeroCrossing(boolean newFindZero) {
 	for (PASamplerInstrument inst: pool.getInstruments() ) {
 		for (PASamplerVoice voice : ((PASharedBufferSampler) inst.getSampler()).getVoices()) {

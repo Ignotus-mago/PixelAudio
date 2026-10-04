@@ -23,6 +23,8 @@ public void initAudio() {
   audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
   granSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
   this.audioLength = audioSignal.length;
+  // precautionary measure
+  samplerEnv = envPreset("Soft");
   // initialize event animation tracking arrays
   initTimedEventLists();
   ensureGranularReady();

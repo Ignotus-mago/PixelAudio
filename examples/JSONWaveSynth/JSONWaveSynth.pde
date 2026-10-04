@@ -1,7 +1,9 @@
 /**
  * Demo of how to set and save WaveSynth parameters from JSON files.
- * See WaveSynthEditor for the complete set of WaveSynth parameters
- * you can edit in a GUI, load and save to files, and output as video.
+ * The JSON i/o code in this sketch is part of the {@link WaveSynthBuilder} class.
+ * See {@link WaveSynthEditor} for JSON i/o using {@code WaveSynthBuilder} methods
+ * and for a complete set of WaveSynth parameters that you can edit in a GUI and
+ * load and save to files.
  *
  * Press ' ' (spacebar) to toggle animation.
  * Press 'o' to open a new JSON file containing WaveSynth data.

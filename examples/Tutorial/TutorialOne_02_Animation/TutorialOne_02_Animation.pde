@@ -450,8 +450,8 @@ public void mouseReleased() {
   if (key != CODED) {
     parseKey(key, keyCode);
   } else {
-    int maxShift = 16384;
-    int minShift = shiftInc;
+    int maxShift = 8192;
+    int minShift = - maxShift;
     if (keyCode == UP) { // increment shift value by shiftInc
       shift = shift < maxShift ? shift + shiftInc : shift;
     } else if (keyCode == DOWN) { // decrement shift value by shiftInc
@@ -497,6 +497,7 @@ public void parseKey(char key, int keyCode) {
       isShowOverlay = true;
       float rate = this.frameRate;    // system frame rate, we could use videoFrameRate instead
       shift = Math.round(audioOut.sampleRate() / rate);
+      shift = (shift / shiftInc) * shiftInc;
       println("-- starting Music Box with shift = "+ shift +" at frame rate "+ rate);
       isAnimating = true;
     }

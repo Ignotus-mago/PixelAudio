@@ -52,6 +52,7 @@ public PImage drawOffscreen() {
 
 /**
  * Save audio buffer to a file
+ * @param isStereo if true, save in stereo audio format, otherwise in mono
  */
 public void saveToAudio(boolean isStereo) {
   renderSignals();

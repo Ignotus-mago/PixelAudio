@@ -26,12 +26,23 @@ public void scaleAmps(ArrayList<WaveData> waveDataList, float scale) {
 	 * @param shift		the amount shift each color
 	 */
 public void shiftColors(ArrayList<WaveData> waveDataList, float shift) {
+  float[] hsb = new float[3];
   for (WaveData wd : waveDataList) {
     if (wd.isMuted)
       continue;
-    wd.setWaveColor(WaveSynthBuilder.colorShift(wd.waveColor, shift));
+    wd.setWaveColor(WaveSynthBuilder.colorShift(wd.waveColor, shift, hsb));
   }
   if (isVerbose) println("----->>> shift colors " + shift);
+}
+
+public void scaleSaturation(ArrayList<WaveData> waveDataList, float scale) {
+  float[] hsb = new float[3];
+  for (WaveData wd : waveDataList) {
+    if (wd.isMuted)
+      continue;
+    wd.setWaveColor(WaveSynthBuilder.saturationScale(wd.waveColor, scale, hsb));
+  }
+  if (isVerbose) println("----->>> scale color saturation " + scale);
 }
 
 	/**

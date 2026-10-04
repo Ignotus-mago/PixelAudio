@@ -65,6 +65,8 @@ import net.paulhertz.pixelaudio.PixelMapGen;
 import processing.core.PApplet;
 import processing.core.PGraphics;
 
+// TODO inspect and fix the orientation and order of PixelMapGens where necessary.
+
 
 PixelAudio pixelaudio;
 PixelAudioMapper mapper;

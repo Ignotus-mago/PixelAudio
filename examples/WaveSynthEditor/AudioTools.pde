@@ -148,13 +148,13 @@ public int playSample(int samplePos, int samplelen, float amplitude) {
 
 public int calcSampleLen() {
   float vary = 0;
-  // skip the fairly rare negative numbers
+  // skip negative numbers, a rare occurrence
   while (vary <= 0) {
     vary = (float) PixelAudio.gauss(1.0, 0.0625);
   }
   // playSample() takes a note-window length in source-buffer samples.
   samplelen = (int)(abs((vary * this.noteDuration) * wavesynth.getSampleRate() / 1000.0f));
-  // println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
+  println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
   return samplelen;
 }
 
