@@ -506,7 +506,7 @@ float samplerSourceRateRef = -1;
 
 // system-specific path to example files data
 // String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";  // Eclipse
-String daPath = sketchPath("") + "../../examples_data/";                               // Processing
+String daPath;
 String daFile = "_sonic/FullMoonTonight_22050Hz.mp3";    // _sonic/FullMoonTonight_22050Hz.mp3, Saucer_mixdown.wav
 
 boolean isDebugging = false;

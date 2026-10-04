@@ -5,7 +5,7 @@
  * we just shift an index into an array and then copy the pixels to the display using the shifted
  * index. We'll use this technique in all our examples.
  *
- * Press ' ' (spacebar) to toggle animation.
+ * Press 'TAB' (tab) to toggle animation.
  * When animating, drag the mouse to change pixel-shifting speed and direction.
  * Press 'm' to turn mouse tracking on and off (it's on to begin with).
  * Press 'h' to print help to the console.
@@ -98,7 +98,7 @@ public void mouseDragged() {
 
 public void keyPressed() {
   switch(key) {
-  case ' ': // toggle animation
+  case '\t': // toggle animation with tab
     isAnimating = !isAnimating;
     println(isAnimating ? "-- animation is running" : "-- animation is paused");
     break;
@@ -115,7 +115,7 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press ' ' (spacebar) to toggle animation.");
+  println(" * Press 'TAB' (tab) to toggle animation.");
   println(" * When animating, drag the mouse to change pixel-shifting speed and direction.");
   println(" * Press 'm' to turn mouse tracking on and off (it's on to begin with).");
   println(" * Press 'h' to print help to the console.");

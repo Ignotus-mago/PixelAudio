@@ -222,7 +222,7 @@ boolean isBlending = false;     // flags blending of newly opened audio or image
 // system-specific path to example files data
 // in Processing, for PixelAudio Tutorial examples, use this in setup():
 // daPath = sketchPath("") + "../../examples_data/";
-String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";
+String daPath;
 
 
 /* ------------------------------------------------------------------ */

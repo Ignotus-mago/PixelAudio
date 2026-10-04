@@ -148,7 +148,7 @@ public void draw() {
 
 public void keyPressed() {
   switch (key) {
-  case ' ': // toggle animation
+  case '\t': // toggle animation with tab key
     isAnimating = !isAnimating;
     break;
   case 'j': // export signal path to a JSON file
@@ -166,7 +166,7 @@ public void keyPressed() {
 }
 
 public void showHelp() {
-  println(" * Press ' ' to toggle animation.");
+  println(" * Press 'TAB' to toggle animation.");
   println(" * Press 'j' to export signal path to a JSON file.");
   println(" * Press 'o' to import signal path from a JSON file.");
   println(" * Press 'h' to show help message in the console.");

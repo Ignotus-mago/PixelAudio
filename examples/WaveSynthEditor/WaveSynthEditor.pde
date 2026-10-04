@@ -1060,7 +1060,7 @@ public void toggleLooping() {
  *     Turn animation off if it is currently on.
  *     Press 'i' to go to frame 0.
  *     Press 'v' to start recording, or check record in the control panel.
- *     Press spacebar to start animation and recording.
+ *     Press tab to start animation and recording.
  *
  * You can also just press the 'V' (capital vee) key to record from frame 0 to the stop frame.
  *
@@ -1070,7 +1070,7 @@ public void toggleRecording() {
   println(" Recording video is "+ isRecordingVideo);
   if (isRecordingVideo) {
     if (!isAnimating) {
-      println(" Press spacebar to start animation and video recording from frame "+ step);
+      println(" Press tab to start animation and video recording from frame "+ step);
     } else {
       println(" Recording animation from frame "+ step);
     }

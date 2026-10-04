@@ -556,7 +556,7 @@ public void parseKey(char key, int keyCode) {
     audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
     return;
   }
-  case '\t': { // toggle animation
+  case '\t': { // toggle animation with tab key
     toggleAnimation();
     return;
   }

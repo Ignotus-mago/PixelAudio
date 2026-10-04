@@ -719,7 +719,7 @@ boolean isNetSendGestures = false;
 
 // system-specific path to example files data
 // in Processing, for PixelAudio Tutorial examples, use this: performanceBasePath = sketchPath("") + "../examples_data/";
-String performanceBasePath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";
+String performanceBasePath;
 String daPath;   // path derived from performancBasePath
 String daFilename = "audioBlend.wav";    // "audioBlend.wav";
 ArrayList<String> daFilelist = new ArrayList<>();

@@ -580,7 +580,7 @@ boolean shiftIsDown = false;        // shift key state
 // system-specific path to example files data
 // in Processing, for PixelAudio Tutorial examples, use this in setup():
 // daPath = sketchPath("") + "../../examples_data/";
-String daPath = sketchPath("") + "../../examples_data/";
+String daPath;
 String daFile = "Saucer_mixdown.wav";    // _sonic/FullMoonTonight_22050Hz.mp3
 
 
