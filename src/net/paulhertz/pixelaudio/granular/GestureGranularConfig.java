@@ -134,6 +134,7 @@ public final class GestureGranularConfig {
   /** Envelope applied to granular or sampler playback. */
   public final ADSRParams env;         // consider copying if ADSRParams is mutable
   // TODO note duration, particularly for Sampler instrument
+  public final int envDurationMs;
   /** Playback gain in decibels; converted to linear gain by {@link #gainLinear()}. */
   public final float gainDb;
   /** Pitch offset in semitones; converted to a playback ratio by {@link #pitchRatio()}. */
@@ -169,6 +170,7 @@ public final class GestureGranularConfig {
 
     this.grainLengthSamples = b.grainLengthSamples;
     this.env = Objects.requireNonNull(b.env, "env");
+    this.envDurationMs = 1000;
     this.gainDb = b.gainDb;
     this.pitchSemitones = b.pitchSemitones;
 
@@ -227,6 +229,8 @@ public final class GestureGranularConfig {
     public int grainLengthSamples = 2048;
     /** Envelope applied to granular or sampler playback. */
     public ADSRParams env = new ADSRParams(1.0f, 0.02f, 0.06f, 0.9f, 0.10f);
+    /** Envelope duration for Sampler instruments */
+    public int envDurationMs = 1000;
     /** Playback gain in decibels. */
     public float gainDb = -6.0f;
     /** Pitch offset in semitones. */
@@ -277,6 +281,17 @@ public final class GestureGranularConfig {
     	this.env = env;
     	return this;
     }
+    
+    /**
+     * Makes explicit to the caller that the envelope duration is being set for SAMPLER synthesis.
+     *
+     * @param edurationMs   the envelope duration in milliseconds
+     * @return this builder
+     */
+    public Builder samplerEnvDurationMs(int durationMs) {
+    	this.envDurationMs = durationMs;
+    	return this;
+    }    
 
     /**
      * Enables or disables source-buffer wrapping for finite sampler or granular events.
@@ -367,7 +382,8 @@ public final class GestureGranularConfig {
     	b.warpShape = this.warpShape;
     	b.warpExponent = this.warpExponent;
     	b.grainLengthSamples = this.grainLengthSamples;
-    	b.env = this.env; // OK for presets
+    	b.env = this.env; // individual sampler event or global granular envelope, OK for presets
+    	b.envDurationMs = this.envDurationMs;   // Sampler envelope duration MS
     	b.gainDb = this.gainDb;
     	b.pitchSemitones = this.pitchSemitones;
     	b.burstGrains = this.burstGrains;
@@ -404,6 +420,7 @@ public final class GestureGranularConfig {
 
     	this.grainLengthSamples = src.grainLengthSamples;
     	this.env = src.env; // presets ok
+    	this.envDurationMs = src.envDurationMs;
     	this.gainDb = src.gainDb;
     	this.pitchSemitones = src.pitchSemitones;
 
@@ -488,6 +505,7 @@ public final class GestureGranularConfig {
 			  // Envelope / looping
 			  // -------------------------
 			  .env(env)
+			  // TODO envelope duration, for Sampler
 			  .looping(false)                    // granular bursts are one-shot by default
 
 			  // -------------------------

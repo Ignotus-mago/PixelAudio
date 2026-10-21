@@ -131,8 +131,12 @@ import net.paulhertz.pixelaudio.sampler.*;
  * 
  * <li>The controls for the Sampler are fairly simple. You can change the number of points in the curve
  * with the geometry controls. You can also change the duration of the gesture and the number of 
- * points in it with the Resample and Duration sliders. Finally, there's a Sampler Envelope menu
- * that will change the ADSR envelope of each sampler event point.<br><br></li> 
+ * points in it with the Resample and Duration sliders. Resampled points are not drawn on-screen; 
+ * they appear when the brush is activated. Finally, there's a Sampler Envelope menu that will change 
+ * the ADSR envelope of each sampler event point. The Duration (ms) field below it sets the duration 
+ * of a single click event. When {@code isAdjustEnvelope} is true (the default, set with the 
+ * 'E' key command), brush event durations are calculated to fit the curve duration. When it is 
+ * false, the Duration (ms) field controls both brush and click event durations. <br><br></li> 
  * 
  * <li>The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus 
  * many controls for granular synthesis:
@@ -265,6 +269,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
+ * Press '*' to turn automatic audio path coloring on file load on and off.
  * Press 'r' to reset instrument configuration to defaults in GUI.
  * Press 'c' or 'C' to print the current configuration status to the console.
  * ----- File IO and Mapping -----
@@ -389,7 +394,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	ADSRParams granularEnv;           // envelope for a sequence of Granular events
 	final int noteDuration = 1000;    // average sample synth note duration, milliseconds, for reference
 	int envDuration = noteDuration;   // current envelope duration
-	boolean isAdjustEnvelope = true;  // if true, adjust envelope duration based on gesture duration
+	boolean isAdjustEnvelope = true;  // if true, adjust envelope duration based on gesture duration, otherwise, use envDuration
     float overlapFactor = 3.0f;       // envelope overlap
     int envMinDurationMs = 40;        // min envelope duration, milliseconds
     int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
@@ -1021,7 +1026,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		frameRate(120);
 		surface.setTitle(performanceTitle());
 		// we can put application and control panel always on top, see createControlWindow()
-		surface.setAlwaysOnTop(true);    
+		surface.setAlwaysOnTop(false);    
 		// 1) initialize our library
 		pixelaudio = new PixelAudio(this);
 		// 2) create a PixelMapGen instance with dimensions equal to the display window.
@@ -1897,6 +1902,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				nd.oscSendSetnum(4, 5120.0f);
 			}
 			break;
+		case '*':
+			applyColorMapOnLoad = !applyColorMapOnLoad;
+			println("-- applyColorMapOnLoad = "+ applyColorMapOnLoad);
+			break;
 		case 'h': case 'H': // show help message
 			showHelp();
 			break; 
@@ -1935,6 +1944,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
+		println(" * Press '*' to turn automatic audio path coloring on file load on and off.");
 		println(" * Press 'r' to reset instrument configuration to defaults in GUI.");
 		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
 		
@@ -4965,8 +4975,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            int x = Math.round(loc.x);
 	            int y = Math.round(loc.y);
 	            int pos = mapper.lookupSignalPos(x, y);
-	            int eventDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration) : noteDuration;
+	            int eventDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration) : envDuration;
 	            int len = calcSampleLen(eventDuration, 1.0f, 0.0625f);
+	            println("---- event duration = "+ eventDuration);
 	            int t = startTime + Math.round(sched.timesMs[i]);
 	            float pan = map(x, 0, width - 1, -0.875f, 0.875f);
 	            float gain = baseGain;
@@ -5634,6 +5645,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	GOption arcLengthTimeOption;
 	GLabel envelopeLabel; 
 	GDropList envelopeMenu; 
+	GLabel envDurationLabel;
+	GSlider envDurationSlider;
+	GTextField envDurationField;
+	
 
 	static final String ENV_CUSTOM = "Custom";
 	String[] envPresetItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad", ENV_CUSTOM};
@@ -5922,6 +5937,21 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
 		envelopeValuesLabel.setOpaque(false);
 		envelopeValuesLabel.setText("");
+		// envelope duration
+		yPos += yInc + yInc/2;
+		envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		envDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		envDurationLabel.setText("Duration (ms)");
+		envDurationLabel.setOpaque(true);
+		envDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		envDurationSlider.setShowValue(true);
+		envDurationSlider.setLimits(gConfig.envDurationMs, 125, 5000);
+		envDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+		envDurationSlider.setOpaque(false);
+		envDurationSlider.addEventHandler(this, "envDuration_changed");
+		envDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		envDurationField.setText("" + gConfig.envDurationMs);
+		envDurationField.setTextEditEnabled(false);
 		
 		// arc length time option3		
 		arcLengthTimeOption = new GOption(controlWindow, 280, yPos, 120, 20);
@@ -6002,6 +6032,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		controlPanel.addControl(envelopeMenu);
 		controlPanel.addControl(envelopeValuesLabel);
 		controlPanel.setCollapsed(false);
+		// envelope duration
+		controlPanel.addControl(envDurationLabel);
+		controlPanel.addControl(envDurationSlider);
+		controlPanel.addControl(envDurationField);
 		// arcLengthTime
 		controlPanel.addControl(arcLengthTimeOption);
 	}
@@ -6317,6 +6351,18 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		// println("envelopeMenu - GDropList >> GEvent." + event + " @ " + millis());
 	} 
 	
+	public void envDuration_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 5);
+		if (quant != raw) source.setValue(quant);
+		gConfig.envDurationMs = quant;
+		this.envDuration = gConfig.envDurationMs;
+		this.envDurationField.setText(""+ gConfig.envDurationMs);
+		if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ gConfig.envDurationMs);
+	}
+	
 	public void printGConfigStatus() {
 		// GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
 		String status = gConfig.build().toString();
@@ -6452,6 +6498,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			if (envelopeValuesLabel != null) {
 				envelopeValuesLabel.setText(formatEnv(envToShow));
 			}
+			
+			// envelope durations (sampler)
+			int envDurSafe = Math.max(125, envDuration);
+			int envDurShown = (gConfig.envDurationMs == 0) ? envDurSafe : gConfig.envDurationMs;
+			envDurShown = clampInt(envDurShown, 125, 5000);
+			envDurationSlider.setLimits(envDurShown, 125, 5000);
+			envDurationField.setText(""+ envDurShown);
+			
 
 			// warp radio + exponent
 			linearWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.LINEAR);
@@ -6578,6 +6632,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		// Envelope menu is sampler-only in your current UX (visible in sampler edit and play-only sampler context).
 		envelopeMenu.setVisible(showSampler);
 		envelopeMenu.setEnabled(inSamplerEdit && canEdit);
+		envDurationSlider.setVisible(showSampler);
+		envDurationSlider.setEnabled(inSamplerEdit && canEdit);
+		envDurationField.setVisible(showSampler);
+		envDurationLabel.setVisible(showSampler);
 
 		// ---------- Global synth controls (shared) ----------
 		// Gain/pitch are editable in either edit mode, read-only in play-only.
