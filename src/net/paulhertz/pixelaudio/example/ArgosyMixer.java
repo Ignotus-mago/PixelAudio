@@ -1705,6 +1705,7 @@ public class ArgosyMixer extends PApplet {
 	  controlWindow.noLoop();
 	  controlWindow.setActionOnClose(G4P.KEEP_OPEN);
 	  controlWindow.addDrawHandler(this, "drawControlWindow");
+	  controlWindow.setAlwaysOnTop(true);
 	  /* ----->>> argosy01 controls <<<----- */
       ypos = 10;
 	  argo1Label = new GLabel(controlWindow, 10, ypos, 220, 20);
