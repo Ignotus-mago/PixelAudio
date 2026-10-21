@@ -87,7 +87,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <li>The controls for the Sampler are fairly simple. You can change the number of points in the curve
  * with the geometry controls. You can also change the duration of the gesture and the number of 
  * points in it with the Resample and Duration sliders. Finally, there's a Sampler Envelope menu
- * that will change the ADSR envelope of each sampler event point.</li> 
+ * that will change the ADSR envelope of each sampler event point. The Duration (ms) control below
+ * it sets the duration of a single click event. When {@code isAdjustEnvelope} is true (the default,
+ * toggled with the 'E' key), brush event durations are calculated from the gesture timing. When it
+ * is false, the Duration (ms) control sets both click and brush event durations.</li>
  * 
  * <li>The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus 
  * many controls for granular synthesis:
@@ -202,7 +205,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * {@code getPathPoints(sb)} and then use {@code sb.snapshot()} and
  * {@code scheduleBuilder.build()} to build a {@code GestureSchedule} </li>
  *
- * <li>Finally, we pass the schedule and a small time offset to {@code storeSamplerCurveTL()},
+ * <li>Finally, we pass the schedule, configuration snapshot, and a small time offset to
+ * {@code storeSamplerCurveTL()},
  * an array of {@code TimedLocation} objects that is checked at every pass through the
  * {@code draw()} loop and posts both Sampler instrument triggers and animation events.
  * Unlike the Granular instrument, which requires very accurate timing, the Sampler synth
@@ -226,6 +230,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 't' to switch between Granular and Sampler editing and playing.
  * Press 'z' to change the drawing mode of the hover brush.
  * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.
+ * Press 'E' to toggle automatic Sampler envelope duration adjustment for brush events.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
@@ -329,6 +334,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 
 	// SampleInstrument setup
 	int noteDuration = 1000;        // average sample synth note duration, milliseconds
+	int envDuration = noteDuration; // current Sampler envelope duration
+	boolean isAdjustEnvelope = true;
+	int envMinDurationMs = 40;
+	int envMaxDurationMs = 1280;
 	int samplelen;                  // calculated sample synth note length, samples
 	float samplerGain = 0.95f;      // linear gain setting for Sampler instrument
 	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
@@ -983,6 +992,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			doPlayOnDraw = !doPlayOnDraw;
 			println("-- play on draw is "+ doPlayOnDraw);
 			break;
+		case 'E': // toggle whether brush envelope duration follows gesture timing
+			isAdjustEnvelope = !isAdjustEnvelope;
+			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -1067,6 +1080,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
 		println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.");
+		println(" * Press 'E' to toggle automatic Sampler envelope duration adjustment for brush events.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'j' to turn audio and image blending on or off.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
@@ -1763,7 +1777,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		ensureSamplerReady();
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
 		float panning = map(x, 0, width, -0.8f, 0.8f);
-		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
+		int len = calcSampleLen(envDuration, 1.0f, 0.0625f);
 		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
 		pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));		
@@ -2004,7 +2018,42 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 	
 	public int calcSampleLen() {
-		return calcSampleLen(noteDuration, 1.0f, 0.0625f);
+		return calcSampleLen(envDuration, 1.0f, 0.0625f);
+	}
+
+	/**
+	 * Calculates a Sampler event duration from the average interval between scheduled points.
+	 * Envelope presets use different overlap factors, and the result is constrained to the
+	 * configured minimum and maximum durations.
+	 *
+	 * @param sched       schedule whose timing determines the event duration
+	 * @param envName     envelope preset name used to select an overlap factor
+	 * @param fallbackMs  duration returned when the schedule has fewer than two points
+	 * @return event duration in milliseconds
+	 */
+	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+		int n = sched.points.size();
+		if (n < 2) return fallbackMs;
+		float avgStepMs = sched.durationMs() / (float)(n - 1);
+		float factor;
+		switch (envName) {
+		case "Pluck":
+		case "Percussion":
+			factor = 4.0f;
+			break;
+		case "Soft":
+		case "Fade":
+			factor = 3.0f;
+			break;
+		case "Swell":
+		case "Pad":
+			factor = 2.0f;
+			break;
+		default:
+			factor = 3.0f;
+		}
+		return PApplet.constrain(
+				Math.round(avgStepMs * factor), envMinDurationMs, envMaxDurationMs);
 	}
 	
 	/**
@@ -2831,23 +2880,32 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		GestureGranularConfig snap = sb.snapshot();
 		GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
 		sched = boundsPolicy.applySchedule(sched);
-		storeSamplerCurveTL(sched, millis() + 10);
+		storeSamplerCurveTL(sched, snap, millis() + 10);
 		PVector startPoint = sched.points.get(0);
 		int clickPos = mapper.lookupSignalPos(clickX, clickY);
 		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
 		if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	}
 
-	public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
+	/**
+	 * Queues Sampler brush events with the duration determined at scheduling time.
+	 *
+	 * @param sched      event locations and offsets for the brush
+	 * @param snap       immutable brush configuration used for event duration
+	 * @param startTime  requested playback start time in milliseconds
+	 */
+	public synchronized void storeSamplerCurveTL(
+			GestureSchedule sched, GestureGranularConfig snap, int startTime) {
 		int i = 0;
-		startTime = millis() + 5;
+		int eventDuration = isAdjustEnvelope
+				? computeEnvDurationMs(sched, envNameFor(snap.env), noteDuration)
+				: snap.envDurationMs;
 		// we store the point and the current time + time offset, where timesMs[0] == 0
 		for (PVector loc : sched.points) {
 			int x = Math.round(loc.x);
 			int y = Math.round(loc.y);
 			int t = startTime + Math.round(sched.timesMs[i++]);
-			int d = 200;
-			this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
+			this.samplerTimeLocs.add(new TimedLocation(x, y, t, eventDuration));
 		}
 		Collections.sort(samplerTimeLocs);
 	}
@@ -2861,7 +2919,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	            int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
 	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
 	            int pos = getSamplePos(sampleX, sampleY);
-                playSample(pos, calcSampleLen(), samplerGain, panning);
+	            playSample(pos, calcSampleLen(tl.getDurationMs(), 1.0f, 0.0625f), samplerGain, panning);
         		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
 	            tl.setStale(true);
 	        } 
@@ -3145,6 +3203,9 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	GLabel envelopeLabel; 
 	GDropList envelopeMenu; 
 	GLabel envelopeValuesLabel;
+	GLabel envDurationLabel;
+	GSlider envDurationSlider;
+	GTextField envDurationField;
 
 	
 	GTextArea commentsField;    // testing
@@ -3430,6 +3491,21 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
 		envelopeValuesLabel.setOpaque(false);
 		envelopeValuesLabel.setText("");
+		// envelope duration
+		yPos += yInc + yInc/2;
+		envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		envDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		envDurationLabel.setText("Duration (ms)");
+		envDurationLabel.setOpaque(true);
+		envDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		envDurationSlider.setShowValue(true);
+		envDurationSlider.setLimits(gConfig.envDurationMs, 125, 5000);
+		envDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+		envDurationSlider.setOpaque(false);
+		envDurationSlider.addEventHandler(this, "envDuration_changed");
+		envDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		envDurationField.setText("" + gConfig.envDurationMs);
+		envDurationField.setTextEditEnabled(false);
 
 		// arc length time option3
 		
@@ -3510,6 +3586,9 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		controlPanel.addControl(envelopeLabel);
 		controlPanel.addControl(envelopeMenu);
 		controlPanel.addControl(envelopeValuesLabel);
+		controlPanel.addControl(envDurationLabel);
+		controlPanel.addControl(envDurationSlider);
+		controlPanel.addControl(envDurationField);
 		controlPanel.setCollapsed(false);
 		// arcLengthTime
 		controlPanel.addControl(arcLengthTimeOption);
@@ -3830,6 +3909,18 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		}
 		// println("envelopeMenu - GDropList >> GEvent." + event + " @ " + millis());
 	} 
+
+	public void envDuration_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 5);
+		if (quant != raw) source.setValue(quant);
+		gConfig.envDurationMs = quant;
+		envDuration = quant;
+		envDurationField.setText("" + quant);
+		if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ quant);
+	}
 	
 	public void printGConfigStatus() {
 		// GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
@@ -3965,7 +4056,14 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			envelopeMenu.setSelected(envMenuIndex(envName));
 			if (envelopeValuesLabel != null) {
 				envelopeValuesLabel.setText(formatEnv(envToShow));
-			}			
+			}
+
+			int envDurSafe = Math.max(125, envDuration);
+			int envDurShown = (gConfig.envDurationMs == 0) ? envDurSafe : gConfig.envDurationMs;
+			envDurShown = clampInt(envDurShown, 125, 5000);
+			envDuration = envDurShown;
+			envDurationSlider.setLimits(envDurShown, 125, 5000);
+			envDurationField.setText("" + envDurShown);
 
 			// warp radio + exponent
 			linearWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.LINEAR);
@@ -4067,6 +4165,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		// Envelope menu is sampler-only in your current UX (visible in sampler edit and play-only sampler context).
 		envelopeMenu.setVisible(showSampler);
 		envelopeMenu.setEnabled(inSamplerEdit && canEdit);
+		envDurationSlider.setVisible(showSampler);
+		envDurationSlider.setEnabled(inSamplerEdit && canEdit);
+		envDurationField.setVisible(showSampler);
+		envDurationLabel.setVisible(showSampler);
 
 		// ---------- Global synth controls (shared) ----------
 		// Gain/pitch are editable in either edit mode, read-only in play-only.

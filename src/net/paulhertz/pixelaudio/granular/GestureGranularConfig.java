@@ -170,7 +170,7 @@ public final class GestureGranularConfig {
 
     this.grainLengthSamples = b.grainLengthSamples;
     this.env = Objects.requireNonNull(b.env, "env");
-    this.envDurationMs = 1000;
+    this.envDurationMs = b.envDurationMs;
     this.gainDb = b.gainDb;
     this.pitchSemitones = b.pitchSemitones;
 

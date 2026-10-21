@@ -4975,7 +4975,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            int x = Math.round(loc.x);
 	            int y = Math.round(loc.y);
 	            int pos = mapper.lookupSignalPos(x, y);
-	            int eventDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, baseEnv.toString(), noteDuration) : envDuration;
+	            int eventDuration = isAdjustEnvelope
+	                    ? computeEnvDurationMs(sched, envNameFor(baseEnv), noteDuration)
+	                    : snap.envDurationMs;
 	            int len = calcSampleLen(eventDuration, 1.0f, 0.0625f);
 	            println("---- event duration = "+ eventDuration);
 	            int t = startTime + Math.round(sched.timesMs[i]);
@@ -6503,6 +6505,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			int envDurSafe = Math.max(125, envDuration);
 			int envDurShown = (gConfig.envDurationMs == 0) ? envDurSafe : gConfig.envDurationMs;
 			envDurShown = clampInt(envDurShown, 125, 5000);
+			boolean isSamplerContext = activeBrush instanceof SamplerBrush
+					|| (activeBrush == null && drawingMode == DrawingMode.DRAW_EDIT_SAMPLER);
+			if (isSamplerContext) envDuration = envDurShown;
 			envDurationSlider.setLimits(envDurShown, 125, 5000);
 			envDurationField.setText(""+ envDurShown);
 			

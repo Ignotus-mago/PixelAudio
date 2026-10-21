@@ -155,6 +155,7 @@ public final class GestureGranularConfigIO {
 
         cfg.setInt("grainLengthSamples", b.grainLengthSamples);
         cfg.setJSONObject("env", adsrToJson(b.env));
+        cfg.setInt("envDurationMs", b.envDurationMs);
         cfg.setFloat("gainDb", b.gainDb);
         cfg.setFloat("pitchSemitones", b.pitchSemitones);
 
@@ -233,6 +234,7 @@ public final class GestureGranularConfigIO {
 
         if (cfg.hasKey("grainLengthSamples")) b.grainLengthSamples = cfg.getInt("grainLengthSamples");
         if (cfg.hasKey("env")) b.env = adsrFromJson(cfg.getJSONObject("env"));
+        if (cfg.hasKey("envDurationMs")) b.envDurationMs = cfg.getInt("envDurationMs");
         if (cfg.hasKey("gainDb")) b.gainDb = cfg.getFloat("gainDb");
         if (cfg.hasKey("pitchSemitones")) b.pitchSemitones = cfg.getFloat("pitchSemitones");
 
