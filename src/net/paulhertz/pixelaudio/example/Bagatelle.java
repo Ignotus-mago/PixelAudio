@@ -266,7 +266,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.
  * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.
  * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.
- * Press 'p' to jitter the pitch of granular gestures.
+ * Press 'p' to jitter the pitch of granular gestures and point events.
+ * Press 'P' to toggle useLongBursts (granular click event behavior).
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  * Press '*' to turn automatic audio path coloring on file load on and off.
@@ -282,7 +283,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'W' to write the audio buffer to the display image.
  * ----- Audio Mix Dynamics -----
  * Press 'n' to set noise reduction policy for Sampler instrument audio mix.
- * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
+ * Press 'E' to toggle adjusting envelope duration using gesture duration or envelope duration.
  * Press 'g' to toggle use of dynamics in gainCurve with gesture .
  * ----- Special FX -----
  * Press 'l' to loop the hovered brush 4 times.
@@ -924,6 +925,109 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 	ArrayList<DBWF_PerformancePreset> dbwf_presetStack = new ArrayList<>();
 
+
+	/* ------------------------------------------------------------------ */
+	/*                            OK PRESET LIST                          */
+	/* ------------------------------------------------------------------ */
+
+	/* OK Presets for filling in by end user. 
+	 *    1. Resample curve to 4000 milliseconds long.
+     *    2. Impose some weird settings.
+	 */ 
+	/**
+	 * Presets are applied to each new brush at the moment drawing is completed by 
+	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
+	 * all brush creation. Presets are best used just for brush modifications. If you
+	 * want to change application settings, use runPerformanceCue() with your own custom 
+	 * code. You can address the host application with the <code>app</code> parameter, 
+	 * but keep in mind that is is called on every brush. 
+	 */
+	enum OK_PerformancePreset {
+	    NEW_DURATION('1') {
+	    	// change the duration of a curve to newDurationMs
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	        	int newDurationMs = (int)(PixelAudio.randomInRange(2, 5)) * 1000;
+	        	println("---- new duration = "+ newDurationMs);
+				int curveColor = PixelAudioMapper.composeColor(233, 34, 34, 255);
+				curve.setBrushColor(curveColor);
+				cfg.targetDurationMs = newDurationMs;
+				cfg.rdpEpsilon = 2;
+				cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+				cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
+				cfg.burstGrains = 8;
+				cfg.grainLengthSamples = 2560;
+				cfg.hopLengthSamples = 640;
+	            return new CueResult(curve, cfg);
+	        }
+	    },
+	    WEIRD('2') {
+	    	// make the sound reeeally weird; add pitch jitter ('p') for more weirdness
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+				cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+				cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
+				cfg.burstGrains = 8;
+				cfg.grainLengthSamples = 108;
+				cfg.hopLengthSamples = 216;
+				cfg.warpShape = GestureGranularConfig.WarpShape.EXP;
+				cfg.warpExponent = 1.5f;
+            return new CueResult(curve, cfg);
+	        }
+	    },
+	    RANDOM_DYNAMICS('3') {
+	    	// change the application setting "dynamics" each time you draw 
+	    	// note that isAddDynamics must be true to hear the dynamics
+	    	@Override 
+	    	CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	    		float dur = curve.getTimeOffset();
+	    		float peak = Math.round(PixelAudio.randomInRange(dur * 0.1f, dur * 0.9f));
+				float[] timesMs = new float[] {0, peak, dur * 0.9125f, dur * 1.05f};
+	        	float t = timesMs[timesMs.length - 1];
+	        	float[] values = new float[] {0.1f, 1.0f, 0.25f, 0.1f};
+	        	float[] times = new float[timesMs.length];
+	        	for (int i = 0; i < times.length; i++) {
+	        		times[i] =  map(timesMs[i], 0f, t, 0f, 1f);
+	        	}
+	        	app.dynamics = new PAKeyframeControlCurve (times, values); 	    		
+	    		return new CueResult(curve, cfg);
+	    	}
+	    },
+	    BLANK('4') {
+	    	@Override 
+	    	CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	    		return new CueResult(curve, cfg);
+	    	}
+	    };
+
+	    final char key;
+
+	    OK_PerformancePreset(char key) {
+	        this.key = key;
+	    }
+
+	    static OK_PerformancePreset fromKey(char k) {
+	        for (OK_PerformancePreset c : values()) {
+	            if (c.key == k) return c;
+	        }
+	        return null;
+	    }
+	    
+	    /**
+	     * Abstract method for concrete apply() methods implemented by each enum constant. In the preset
+	     * logic, each constant is in effect its own function, which can be invoked by reference. 
+	     * 
+	     * @param cfg      configuration parameters for GestureGranularConfig, used to modify audio synthesis
+	     * @param curve    a PACurveMaker gesture, which can be modifed by the concrete apply() method
+	     * @param app      a reference to the host application, use with caution
+	     * @return         a reference to the concrete apply() method for an enum constant 
+	     */
+	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app);
+	}
+
+	ArrayList<OK_PerformancePreset> ok_presetStack = new ArrayList<>();
+	
+	
 	
 	/**
 	 * Gesture and audio configuration data returned by a PerformancePreset.
@@ -954,18 +1058,19 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 */
 	enum PerformanceMode {
 	    ABSTRACT_JAILBREAK,
-	    DEADBODYWORKFLOW
+	    DEADBODYWORKFLOW,
+	    OK_USER_PRESETS
 	}
 
 	/** current performance mode */
-	PerformanceMode pMode = PerformanceMode.ABSTRACT_JAILBREAK;
+	PerformanceMode pMode = PerformanceMode.OK_USER_PRESETS;
 	
 	boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
 	boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
 	boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
 	boolean doMagicClick = false;        // find a brush that starts in a selected rectangle and play it
     boolean usePitchedGrains = false;    // jitter granular pitch if true
-    float pitchJitter = 0.0167f;         // amount of jitter
+    float   pitchJitter = 0.0167f;       // amount of jitter
 	boolean applyColorMapOnLoad = true;  // if true, apply the color map when a file is loaded
 
 	boolean isReplaceBrushes = true;     // if true, replace current brushes when we load a session or library folder
@@ -1191,6 +1296,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			return "DeadBodyWorkFlow";
 		case ABSTRACT_JAILBREAK:
 			return "Abstract Jailbreak";
+		case OK_USER_PRESETS:
+			return "User Custom Presets";
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		}
@@ -1205,6 +1312,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			return loadWordGen(genWidth/4, genHeight/4);
 		case ABSTRACT_JAILBREAK:
 			return HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
+		case OK_USER_PRESETS:
+			return(BoustropheGen.boustrophRowOriented(3, 2, width/3, height/2, PixelMapGen.nada));
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		}
@@ -1227,6 +1336,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		case ABSTRACT_JAILBREAK:
 			daPath = performanceBasePath + "Bag/";
 			daFilename = "bag_1_gest_1_tail.wav";
+			preloadFiles(daPath, daFilename);
+			break;
+		case OK_USER_PRESETS:
+			daPath = performanceBasePath;
+			daFilename = "Schumann_Carnaval_-6dBNorm.wav";
 			preloadFiles(daPath, daFilename);
 			break;
 		default:
@@ -1676,11 +1790,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			doPlayWhileDrawing = !doPlayWhileDrawing;
 			println("-- play while drawing is "+ doPlayWhileDrawing);
 			break;
-		case 'p': // jitter the pitch of granular gestures
+		case 'p': // jitter the pitch of granular gestures and point events
 			usePitchedGrains = !usePitchedGrains;
-			pitchJitter = 0.0167f;
+			// pitchJitter = 0.0167f;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
 			println("-- Play granular synth with "+ msg);
+			println("-- usePitchedGrains = " + usePitchedGrains + ", pitchJitter = " + pitchJitter);
+			break;
+		case 'P': // toggle useLongBursts (granular click event behavior)
+			useLongBursts = !useLongBursts;
+			println("-- useLongBursts = "+ useLongBursts);
 			break;
 		case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
 			applyColorMapToDisplay(false);
@@ -1747,7 +1866,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			isAutoOptimize = !isAutoOptimize;
 			println("-- isAutoOptimize is "+ isAutoOptimize);
 			break;
-		case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
+		case 'E': // toggle adjusting envelope duration using gesture duration or envelope duration
 			isAdjustEnvelope = !isAdjustEnvelope;
 			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
 			break;
@@ -1866,9 +1985,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			if (pMode == PerformanceMode.ABSTRACT_JAILBREAK) {
 				dbwf_presetStack.clear();
 				setPerformanceMode(PerformanceMode.DEADBODYWORKFLOW, true);
-			} else {
+			} else if (pMode == PerformanceMode.DEADBODYWORKFLOW) {
+				ok_presetStack.clear();
+				setPerformanceMode(PerformanceMode.OK_USER_PRESETS, true);
+			} else if (pMode == PerformanceMode.OK_USER_PRESETS) {
 				aj_presetStack.clear();
-				setPerformanceMode(PerformanceMode.ABSTRACT_JAILBREAK, true);
+				setPerformanceMode(PerformanceMode.ABSTRACT_JAILBREAK, true);				
 			}
 			break;
 		case '&': // clear events in granular and sample synths
@@ -1906,9 +2028,18 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			applyColorMapOnLoad = !applyColorMapOnLoad;
 			println("-- applyColorMapOnLoad = "+ applyColorMapOnLoad);
 			break;
-		case 'h': case 'H': // show help message
+		case 'h': // show help message
 			showHelp();
 			break; 
+		case 'H': // for testing
+			float[] values = ((PAKeyframeControlCurve) dynamics).getValues();
+			float[] times = ((PAKeyframeControlCurve) dynamics).getTimes01();
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < times.length; i++) {
+				sb.append(times[i]+": "+values[i]+"; ");
+			}
+    		println("---- dynamics = "+ sb.toString());
+			break;
 		default:
 			break;
 		}
@@ -1941,7 +2072,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
 		println(" * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.");
 		println(" * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.");
-		println(" * Press 'p' to jitter the pitch of granular gestures.");
+		println(" * Press 'p' to jitter the pitch of granular gestures and point events.");
+		println(" * Press 'P' to toggle useLongBursts (granular click event behavior).");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
 		println(" * Press '*' to turn automatic audio path coloring on file load on and off.");
@@ -1959,7 +2091,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		
 		println(" * ----- Audio Mix Dynamics -----");
 		println(" * Press 'n' to set noise reduction policy for Sampler instrument audio mix.");
-		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
+		println(" * Press 'E' to toggle adjusting envelope duration using gesture duration or envelope duration.");
 		println(" * Press 'g' to toggle use of dynamics in gainCurve with gesture .");
 		
 		println(" * ----- Special FX -----");
@@ -2009,6 +2141,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		case DEADBODYWORKFLOW:
 			runDBWF_PerformancePreset(DBWF_PerformancePreset.fromKey(key), key);
 			break;
+		case OK_USER_PRESETS:
+			runOK_PerformancePreset(OK_PerformancePreset.fromKey(key), key);
+			break;
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		}
@@ -2057,6 +2192,23 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	        changed = true;
 	    }
 	    if (changed) println("-- cues: " + dbwf_presetStack);
+	}
+	
+	public void runOK_PerformancePreset(OK_PerformancePreset cue, char key) {
+		boolean changed = false;
+		if (cue != null) {
+			if (ok_presetStack.contains(cue)) {
+				ok_presetStack.remove(cue);
+			} else {
+				ok_presetStack.add(cue);
+				runPerformanceCue(key);
+			}
+			changed = true;
+		} else if (key == '0') {
+	        ok_presetStack.clear();
+	        changed = true;
+		}
+	    if (changed) println("-- cues: " + ok_presetStack);		
 	}
 
 	
@@ -2182,6 +2334,24 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			}  // switch (key)
 			break;
 		}  // case DEADBODYWORKFLOW
+		
+		case OK_USER_PRESETS: {
+			switch(key) {
+			case '1':   // NEW_DURATION
+				isLoadToBoth = true;
+				applyColorMapOnLoad = true;
+				doPlayOnNewBrush = true;
+				break;
+			case '2': // WEIRD
+				break;
+			case '3': // RANDOM_DYNAMICS
+				isAddDynamics = true;
+				break;
+			case '4': // BLANK
+				break;
+			} // switch (key)
+			break;
+		}
 		
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
@@ -3169,7 +3339,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 
 
 	/**
-	 * Plays a granular burst and animates a point
+	 * Plays a granular burst and animates a point.
+	 * 
 	 * @param x    x-coordinate of event
 	 * @param y    y-coordinate of event
 	 */
@@ -3203,8 +3374,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
         		+ " hopSamples = "+ hopSamples
         		+ ", hopMsF = "+ hopMsF
         		+ ", grainCount = "+ grainCount
-        		+ ", duration = " + sched.durationMs()
-        		+ ", eventTime = " + startTime
+        		+ ", duration = "+ sched.durationMs()
+        		+ ", eventTime = "+ startTime
         		+ ", buffer index = "+ signalPos);
 	}
 
@@ -4221,6 +4392,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			return applyDBWFPresets(cfg, curve);
 		case ABSTRACT_JAILBREAK:
 			return applyAJPresets(cfg, curve);
+		case OK_USER_PRESETS:
+			return applyOKPresets(cfg, curve);
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		}
@@ -4269,6 +4442,29 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    }
 	    return new CueResult(curCurve, curCfg);
 	}
+	
+	/**
+	 * Apply a performance preset from ok_presetStack, for "OKUSER-PRESETS" performance.
+	 * @param cfg     audio and curve configuration
+	 * @param curve   PACurveMaker instance for brush
+	 * @return gesture and audio configuration determined by preset
+	 */
+	public CueResult applyOKPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+		if (ok_presetStack == null || ok_presetStack.isEmpty()) {
+			return new CueResult(curve, cfg);
+		}
+		PACurveMaker curCurve = curve;
+		GestureGranularConfig.Builder curCfg = cfg;
+		for (OK_PerformancePreset cue : ok_presetStack) {
+			CueResult r = cue.apply(curCfg, curCurve, this);
+			if (r != null) {
+				if (r.cfg != null) curCfg = r.cfg;
+				if (r.curve != null) curCurve = r.curve;
+			}
+		}
+		return new CueResult(curCurve, curCfg);
+	}
+	
 	
 	/**
 	 * @param b   an AudioBrush instance
@@ -6503,11 +6699,18 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			
 			// envelope durations (sampler)
 			int envDurSafe = Math.max(125, envDuration);
-			int envDurShown = (gConfig.envDurationMs == 0) ? envDurSafe : gConfig.envDurationMs;
+			boolean isSamplerDefaultContext = activeBrush == null
+					&& drawingMode == DrawingMode.DRAW_EDIT_SAMPLER;
+			int envDurShown = isSamplerDefaultContext
+					? envDurSafe
+					: ((gConfig.envDurationMs == 0) ? envDurSafe : gConfig.envDurationMs);
 			envDurShown = clampInt(envDurShown, 125, 5000);
 			boolean isSamplerContext = activeBrush instanceof SamplerBrush
-					|| (activeBrush == null && drawingMode == DrawingMode.DRAW_EDIT_SAMPLER);
-			if (isSamplerContext) envDuration = envDurShown;
+					|| isSamplerDefaultContext;
+			if (isSamplerContext) {
+				envDuration = envDurShown;
+				gConfig.envDurationMs = envDurShown;
+			}
 			envDurationSlider.setLimits(envDurShown, 125, 5000);
 			envDurationField.setText(""+ envDurShown);
 			

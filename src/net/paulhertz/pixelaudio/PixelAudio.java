@@ -180,7 +180,15 @@ public class PixelAudio {
 		return rando;
 	}
 	
-	
+	public static float randomInRange(float low, float high) {
+		if (high < low) {
+			float temp = low;
+			low = high;
+			high = temp;
+		}
+		float result = rando().nextFloat(high-low) + low;
+		return result;
+	}
 	
 
 }
