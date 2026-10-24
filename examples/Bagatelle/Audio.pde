@@ -112,36 +112,87 @@ void runSamplerDrawEvent(int x, int y) {
  */
 void runGranularPointEvent(int x, int y) {
   ensureGranularReady();
-  float hopMsF = (float)(AudioUtility.samplesToMillis(hopSamples, sampleRate));
+  float hopMsF = (float) AudioUtility.samplesToMillis(hopSamples, sampleRate);
   int dur = envDuration;
-  final int grainCount = useLongBursts ?  8 * (int) Math.round(dur/hopMsF) : (int) Math.round(dur/hopMsF);
-  // if (isVerbose) println("-- granular burst with grainCount = "+ grainCount +", hopMsF = "+ hopMsF);
-  ArrayList<PVector> path = new ArrayList<>(grainCount);
-  int[] timing = new int[grainCount];
+  // useLongBursts calculates grain count for 2 * envelope duration
+  final int grainCount = Math.max(
+    1,
+    useLongBursts
+      ? 2 * (int) Math.round(dur / hopMsF)
+      : (int) Math.round(dur / hopMsF)
+  );
   int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
-  for (int i = 0; i < grainCount; i++) {
-    if (useLongBursts) {
-      path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
-    } else {
-      path.add(this.jitterCoord(x, y, 3));
-    }
-    timing[i] = Math.round(i * hopMsF);
-  }
   int startTime = millis() + 10;
-  PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
-  curve.setDragTimes(timing);
-  curve.setTimeStamp(startTime);
-  GestureSchedule sched = curve.getAllPointsSchedule();
   float[] buf = (granSignal != null) ? granSignal : audioSignal;
-  playGranularGesture(buf, sched, gParamsFixed);
-  storeGranularCurveTL(sched, startTime, false);
-  if (isDebugging) println("-- point event: "
-    + " hopSamples = "+ hopSamples
-    + ", hopMsF = "+ hopMsF
-    + ", grainCount = "+ grainCount
-    + ", duration = " + sched.durationMs()
-    + ", eventTime = " + startTime
-    + ", buffer index = "+ signalPos);
+
+  if (useLongBursts) {
+    /*
+     * Audio: one scheduled event containing the complete burst.
+     */
+    ArrayList<PVector> audioPath = new ArrayList<>(1);
+    audioPath.add(getCoordFromSignalPos(signalPos));
+    PACurveMaker audioCurve = PACurveMaker.buildCurveMaker(audioPath);
+    audioCurve.setDragTimes(new int[] { 0 });
+    audioCurve.setTimeStamp(startTime);
+    // create a GestureSchedule for audioCurve
+    GestureSchedule audioSchedule = audioCurve.getAllPointsSchedule();
+
+    GestureGranularParams pointBurstParams =
+      GestureGranularParams.builder()
+        .grainLengthSamples(granSamples)
+        .hopLengthSamples(hopSamples)
+        .burstTimeHopOutputFrames(hopSamples)
+        .burstSourceIndexHopSamples(hopSamples)
+        .burstGrains(grainCount)
+        .gainLinear(granularPointGain)
+        .looping(false)
+        .env(gParamsFixed.env)
+        .hopMode(GestureGranularParams.HopMode.FIXED)
+        .build();
+
+    playGranularGesture(buf, audioSchedule, pointBurstParams);
+
+    /*
+     * Animation: trace the burst independently of the audio schedule.
+     * Schedule at most one circle every four grains, or use the
+     * configured burst size when it is larger.
+     */
+    int animationStride = Math.max(4, burstGrains); // okay to hard code
+    int animationCount = (grainCount + animationStride - 1) / animationStride;
+    ArrayList<PVector> animationPath = new ArrayList<>(animationCount);
+    int[] animationTiming = new int[animationCount];
+    for (int i = 0; i < animationCount; i++) {
+      int grainIndex = i * animationStride;
+      animationPath.add(
+        getCoordFromSignalPos(
+          signalPos + hopSamples * grainIndex
+        )
+      );
+      animationTiming[i] = Math.round(grainIndex * hopMsF);
+    }
+    PACurveMaker animationCurve = PACurveMaker.buildCurveMaker(animationPath);
+    animationCurve.setDragTimes(animationTiming);
+    animationCurve.setTimeStamp(startTime);
+    GestureSchedule animationSchedule = animationCurve.getAllPointsSchedule();
+    storeGranularCurveTL(animationSchedule, startTime, false);
+  }
+  else {
+    /*
+     * Preserve the existing short/jittered point behavior.
+     */
+    ArrayList<PVector> path = new ArrayList<>(grainCount);
+    int[] timing = new int[grainCount];
+    for (int i = 0; i < grainCount; i++) {
+      path.add(jitterCoord(x, y, 3));
+      timing[i] = Math.round(i * hopMsF);
+    }
+    PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+    curve.setDragTimes(timing);
+    curve.setTimeStamp(startTime);
+    GestureSchedule schedule = curve.getAllPointsSchedule();
+    playGranularGesture(buf, schedule, gParamsFixed);
+    storeGranularCurveTL(schedule, startTime, false);
+  }
 }
 
 
