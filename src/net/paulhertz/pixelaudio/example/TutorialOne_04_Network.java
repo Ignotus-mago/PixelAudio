@@ -155,6 +155,7 @@ import com.hamoid.*;
  * Press 'y' to select granular or sampler synth for click response.
  * Press 'r' to select long or short grain duration .
  * Press 'b' to toggle between long burst grains and short burst grains.
+ * Press 'B' to toggle between long and short granular point event duration.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'P' to adjust pitch of current brushstroke.
  * Press '.' to increment epsilon value of current brush (reduced points decrease).
@@ -277,6 +278,10 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	// Sampler Instrument duration and envelopes
 	final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
 	int envDuration;                // current envelope duration
+	final int shortPointDurationMs = 250;
+	final int longPointDurationMs = noteDuration;
+	boolean useLongSamplerPointDuration = true;
+	int samplerPointDurationMs = longPointDurationMs;
 	boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
     String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
     int presetIndex = envPresets.length - 1;    // current preset index
@@ -328,6 +333,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     int maxBurstGrains = 8;
     int minBurstGrains = 1;
     int burstGrains = useLongBursts ? maxBurstGrains : minBurstGrains;
+	boolean useLongGranularPointDuration = true;
+	int granPointDurationMs = longPointDurationMs;
 	boolean usePitchedGrains = false;           // detune a granular gesture, if true
 
 
@@ -950,6 +957,11 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			msg = useLongBursts ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
 			println("-- Granular synth uses "+ msg +" grains.");
 			break;
+		case 'B': // toggle between long and short granular point event duration
+			useLongGranularPointDuration = !useLongGranularPointDuration;
+			granPointDurationMs = useLongGranularPointDuration ? longPointDurationMs : shortPointDurationMs;
+			println("-- granular point duration = " + granPointDurationMs + " ms");
+			break;
 		case 'p': // jitter the pitch of granular gestures
 			usePitchedGrains = !usePitchedGrains;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -1015,6 +1027,11 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
 			isAdjustEnvelope = !isAdjustEnvelope;
 			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+			break;
+		case 'D': // toggle between long and short Sampler point envelope duration
+			useLongSamplerPointDuration = !useLongSamplerPointDuration;
+			samplerPointDurationMs = useLongSamplerPointDuration ? longPointDurationMs : shortPointDurationMs;
+			println("-- Sampler point envelope duration = " + samplerPointDurationMs + " ms");
 			break;
 		case 'a': //  start or stop animation (bitmap rotation along the signal path)
 			isAnimating = !isAnimating;
@@ -1160,6 +1177,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		println(" * Press 'y' to select granular or sampler synth for click response.");
 		println(" * Press 'r' to select long or short grain duration .");
 		println(" * Press 'b' to toggle between long burst grains and short burst grains.");
+		println(" * Press 'B' to toggle between long and short granular point event duration.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'P' to adjust pitch of current brushstroke.");
 		println(" * Press '.' to increment epsilon value of current brush (reduced points decrease).");
@@ -1169,6 +1187,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		println(" * Press 'm' to change the Sampler noise reduction profile.");
 		println(" * Press 'e' to change the envelope we're using .");
 		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
+		println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
 		println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
 		println(" * Press 'd' to toggle play audio on new brush .");
 		println(" * Press 'c' to apply color from image file to display image.");
@@ -2025,7 +2044,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    	// use Sampler synthesis instrument
 	    	ensureSamplerReady();
 	        float panning = map(x, 0, width, -0.8f, 0.8f);
-	        int len = calcSampleLen();
+	        int len = calcSampleLen(samplerPointDurationMs, 1.0, 0.0625);
 	        samplelen = playSample(samplePos, len, samplerPointGain, defaultEnv, panning);
 	        int durationMS = (int)(samplelen / sampleRate * 1000);
 	        pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
@@ -2034,7 +2053,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     	// use Granular synthesis instrument
 	    ensureGranularReady();
 	    float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-	    final int grainCount = useLongBursts ?  2 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
+	    final int grainCount = Math.max(1, (int) Math.round(granPointDurationMs / hopMsF));
 	    println("-- granular point burst with grainCount = "+ grainCount);
 	    ArrayList<PVector> path = new ArrayList<>(grainCount);
 	    int[] timing = new int[grainCount];

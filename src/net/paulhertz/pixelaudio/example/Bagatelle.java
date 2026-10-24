@@ -267,7 +267,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.
  * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.
  * Press 'p' to jitter the pitch of granular gestures and point events.
- * Press 'P' to toggle useLongBursts (granular click event behavior).
+ * Press 'P' to toggle useLinearPointTraversal (granular click event behavior).
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  * Press '*' to turn automatic audio path coloring on file load on and off.
@@ -283,7 +283,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'W' to write the audio buffer to the display image.
  * ----- Audio Mix Dynamics -----
  * Press 'n' to set noise reduction policy for Sampler instrument audio mix.
- * Press 'E' to toggle adjusting envelope duration using gesture duration or envelope duration.
+ * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.
  * Press 'g' to toggle use of dynamics in gainCurve with gesture .
  * ----- Special FX -----
  * Press 'l' to loop the hovered brush 4 times.
@@ -328,7 +328,6 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   and out to a dac~.<br>
  * 
  * </DIV>
- * 
  * 
  */
 public class Bagatelle extends PApplet implements PANetworkClientINF {
@@ -394,7 +393,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	ADSRParams samplerEnv;			  // good old attack, decay, sustain, release for individual Sampler events
 	ADSRParams granularEnv;           // envelope for a sequence of Granular events
 	final int noteDuration = 1000;    // average sample synth note duration, milliseconds, for reference
-	int envDuration = noteDuration;   // current envelope duration
+	int envDurationMs = noteDuration;   // current envelope duration
 	boolean isAdjustEnvelope = true;  // if true, adjust envelope duration based on gesture duration, otherwise, use envDuration
     float overlapFactor = 3.0f;       // envelope overlap
     int envMinDurationMs = 40;        // min envelope duration, milliseconds
@@ -435,9 +434,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
     GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED, for granular point event
     GestureGranularParams gParamsDraw;          // granular parameters when drawing
-    boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
+    boolean useLinearPointTraversal = false;    // controls grains in a point event or gesture event
     int maxBurstGrains = 4;
     int burstGrains = 1;
+    int granPointDurationMs = noteDuration;     // granular point event duration
     
 	
 	/* ------------------------------------------------------------------ */
@@ -543,6 +543,30 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	ArrayList<SamplerBrush> samplerBrushes;      
 	SamplerBrush activeSamplerBrush;             // the currently active PACurveMaker, collecting points as user drags the mouse
 	int activeSamplerIndex = 0;                  // index of active brush in samplerBrushes
+
+	
+	/** Selects which instruments are included when replaying the brush-creation timeline. */
+	public enum BrushPlaybackMode { GRANULAR, SAMPLER, BOTH }
+
+	/** A brush waiting for its creation-time-relative replay deadline. */
+	static class ScheduledBrushPlayback implements Comparable<ScheduledBrushPlayback> {
+		final AudioBrush brush;
+		final int eventTimeMs;
+
+		ScheduledBrushPlayback(AudioBrush brush, int eventTimeMs) {
+			this.brush = brush;
+			this.eventTimeMs = eventTimeMs;
+		}
+
+		@Override
+		public int compareTo(ScheduledBrushPlayback other) {
+			return Integer.compare(eventTimeMs, other.eventTimeMs);
+		}
+	}
+
+	/** List of brush playback events */
+	final ArrayList<ScheduledBrushPlayback> brushPlaybackEvents = new ArrayList<>();
+	
 	
     // TimedLocation events
 	ArrayList<TimedLocation> pointTimeLocs;             // a list of timed events for mouse clicks
@@ -995,7 +1019,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    },
 	    BLANK('4') {
 	    	@Override 
-	    	CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
+	    	CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {   		
 	    		return new CueResult(curve, cfg);
 	    	}
 	    };
@@ -1468,9 +1492,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		}
 		if (isAnimating) animate();
 		// 5) depending on your event dispatching model, run scheduled events
-	    runSamplerBrushEvents();
-	    runPointEvents();
-	    runGrainEvents();
+	    runBrushPlaybackEvents();   // automated replay of brushes
+	    runSamplerBrushEvents();    // sampler synth events
+	    runPointEvents();           // point events, usually audio + animation
+	    runGrainEvents();           // granular synth events
 	}
 
 	/**
@@ -1797,9 +1822,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			println("-- Play granular synth with "+ msg);
 			println("-- usePitchedGrains = " + usePitchedGrains + ", pitchJitter = " + pitchJitter);
 			break;
-		case 'P': // toggle useLongBursts (granular click event behavior)
-			useLongBursts = !useLongBursts;
-			println("-- useLongBursts = "+ useLongBursts);
+		case 'P': // toggle useLinearPointTraversal (granular click event behavior)
+			useLinearPointTraversal = !useLinearPointTraversal;
+			println("-- useLinearPointTraversal = "+ useLinearPointTraversal);
 			break;
 		case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
 			applyColorMapToDisplay(false);
@@ -1866,8 +1891,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			isAutoOptimize = !isAutoOptimize;
 			println("-- isAutoOptimize is "+ isAutoOptimize);
 			break;
-		case 'E': // toggle adjusting envelope duration using gesture duration or envelope duration
+		case 'E': // toggle calculating envelope duration from brush points or setting it to envDurationMs
 			isAdjustEnvelope = !isAdjustEnvelope;
+			if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) envFitToBrushCheck.setSelected(isAdjustEnvelope);
 			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
 			break;
 		case 'g': // toggle use of dynamics in gainCurve with gesture 
@@ -2073,7 +2099,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println(" * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.");
 		println(" * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.");
 		println(" * Press 'p' to jitter the pitch of granular gestures and point events.");
-		println(" * Press 'P' to toggle useLongBursts (granular click event behavior).");
+		println(" * Press 'P' to toggle useLinearPointTraversal (granular click event behavior).");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
 		println(" * Press '*' to turn automatic audio path coloring on file load on and off.");
@@ -2091,7 +2117,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		
 		println(" * ----- Audio Mix Dynamics -----");
 		println(" * Press 'n' to set noise reduction policy for Sampler instrument audio mix.");
-		println(" * Press 'E' to toggle adjusting envelope duration using gesture duration or envelope duration.");
+		println(" * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.");
 		println(" * Press 'g' to toggle use of dynamics in gainCurve with gesture .");
 		
 		println(" * ----- Special FX -----");
@@ -2300,7 +2326,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			case '2': // VOICE_AND_MELODY
 				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
 				controlWindow.setTitle("Sampler Synth");								
-				envDuration = 432;
+				envDurationMs = 432;
 				samplerEnv = envPreset("Percussion");
 				isLoadToBoth = false;
 				isAnimating = false;
@@ -2348,6 +2374,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				isAddDynamics = true;
 				break;
 			case '4': // BLANK
+				// an odd way to give a command, but possible
+				this.playBrushstrokes(BrushPlaybackMode.GRANULAR);
 				break;
 			} // switch (key)
 			break;
@@ -3064,6 +3092,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    List<AudioBrush> allBrushes = new ArrayList<>();
 	    allBrushes.addAll(granularBrushes);
 	    allBrushes.addAll(samplerBrushes);
+	    allBrushes.sort((a, b) -> Integer.compare(a.curve().timeStamp, b.curve().timeStamp));
 	    if (allBrushes.isEmpty()) {
 	        println("-- No brushes to save.");
 	        return;
@@ -3313,7 +3342,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		ensureSamplerReady();
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
 		float panning = map(x, 0, width, -0.875f, 0.875f);
-		int len = calcSampleLen(envDuration, 1.0f, 0.0625f);
+		int len = calcSampleLen(envDurationMs, 1.0f, 0.0625f);
 		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
 		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
@@ -3329,7 +3358,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		ensureSamplerReady();
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
 		float panning = map(x, 0, width, -0.875f, 0.875f);
-		int len = calcSampleLen(envDuration, 1.0f, 0.0625f)/4;
+		int len = calcSampleLen(envDurationMs, 1.0f, 0.0625f)/4;
 		ADSRParams env = envPreset("Pluck");
 		samplelen = playSample(signalPos, len, 0.5f, env, panning);
 		int durationMS = (int)(samplelen / sampleRate * 1000);
@@ -3346,37 +3375,87 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 */
 	void runGranularPointEvent(int x, int y) {
 		ensureGranularReady();
-		float hopMsF = (float)(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		int dur = envDuration;
-		final int grainCount = useLongBursts ?  8 * (int) Math.round(dur/hopMsF) : (int) Math.round(dur/hopMsF);
-		// if (isVerbose) println("-- granular burst with grainCount = "+ grainCount +", hopMsF = "+ hopMsF);
-		ArrayList<PVector> path = new ArrayList<>(grainCount);
-		int[] timing = new int[grainCount];
+		float hopMsF = (float) AudioUtility.samplesToMillis(hopSamples, sampleRate);
+		int dur = granPointDurationMs;
+		// useLinearPointTraversal determine grain advancement
+		final int grainCount = Math.max(
+			1,
+			useLinearPointTraversal
+				? (int) Math.round(dur / hopMsF)
+				: (int) Math.round(dur / hopMsF)
+		);
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
-		for (int i = 0; i < grainCount; i++) {
-			if (useLongBursts) {
-				path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
-			}
-			else {
-				path.add(this.jitterCoord(x, y, 3));
-			}
-			timing[i] = Math.round(i * hopMsF);
-		}
 		int startTime = millis() + 10;
-		PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
-		curve.setDragTimes(timing);
-		curve.setTimeStamp(startTime);
-		GestureSchedule sched = curve.getAllPointsSchedule();
 		float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    playGranularGesture(buf, sched, gParamsFixed);
-	    storeGranularCurveTL(sched, startTime, false);
-        if (isDebugging) println("-- point event: "
-        		+ " hopSamples = "+ hopSamples
-        		+ ", hopMsF = "+ hopMsF
-        		+ ", grainCount = "+ grainCount
-        		+ ", duration = "+ sched.durationMs()
-        		+ ", eventTime = "+ startTime
-        		+ ", buffer index = "+ signalPos);
+
+		if (useLinearPointTraversal) {
+			/*
+			 * Audio: one scheduled event containing the complete burst.
+			 */
+			ArrayList<PVector> audioPath = new ArrayList<>(1);
+			audioPath.add(getCoordFromSignalPos(signalPos));
+			PACurveMaker audioCurve = PACurveMaker.buildCurveMaker(audioPath);
+			audioCurve.setDragTimes(new int[] { 0 });
+			audioCurve.setTimeStamp(startTime);
+			// create a GestureSchedule for audioCurve
+			GestureSchedule audioSchedule = audioCurve.getAllPointsSchedule();
+
+			GestureGranularParams pointBurstParams =
+				GestureGranularParams.builder()
+					.grainLengthSamples(granSamples)
+					.hopLengthSamples(hopSamples)
+					.burstTimeHopOutputFrames(hopSamples)
+					.burstSourceIndexHopSamples(hopSamples)
+					.burstGrains(grainCount)
+					.gainLinear(granularPointGain)
+					.looping(false)
+					.env(gParamsFixed.env)
+					.hopMode(GestureGranularParams.HopMode.FIXED)
+					.build();
+
+			playGranularGesture(buf, audioSchedule, pointBurstParams);
+
+			/*
+			 * Animation: trace the burst independently of the audio schedule.
+			 * Schedule at most one circle every four grains, or use the
+			 * configured burst size when it is larger.
+			 */
+			int animationStride = Math.max(4, burstGrains); // okay to hard code
+			int animationCount = (grainCount + animationStride - 1) / animationStride;
+			ArrayList<PVector> animationPath = new ArrayList<>(animationCount);
+			int[] animationTiming = new int[animationCount];
+			for (int i = 0; i < animationCount; i++) {
+				int grainIndex = i * animationStride;
+				animationPath.add(
+					getCoordFromSignalPos(
+						signalPos + hopSamples * grainIndex
+					)
+				);
+				animationTiming[i] = Math.round(grainIndex * hopMsF);
+			}
+			PACurveMaker animationCurve = PACurveMaker.buildCurveMaker(animationPath);
+			animationCurve.setDragTimes(animationTiming);
+			animationCurve.setTimeStamp(startTime);
+			GestureSchedule animationSchedule = animationCurve.getAllPointsSchedule();
+			storeGranularCurveTL(animationSchedule, startTime, false);
+		}
+		else {
+			/*
+			 * Preserve the existing short/jittered point behavior.
+			 */
+			ArrayList<PVector> path = new ArrayList<>(grainCount);
+			int[] timing = new int[grainCount];
+			for (int i = 0; i < grainCount; i++) {
+				path.add(jitterCoord(x, y, 3));
+				timing[i] = Math.round(i * hopMsF);
+			}
+			PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+			curve.setDragTimes(timing);
+			curve.setTimeStamp(startTime);
+			GestureSchedule schedule = curve.getAllPointsSchedule();
+			playGranularGesture(buf, schedule, gParamsFixed);
+			storeGranularCurveTL(schedule, startTime, false);
+		}
 	}
 
 	
@@ -3562,7 +3641,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @return calculated sample length in samples of an envelope
 	 */
 	public int calcSampleLen() {
-		return calcSampleLen(envDuration, 1.0f, 0.0625f);
+		return calcSampleLen(envDurationMs, 1.0f, 0.0625f);
 	}
 
 	/**
@@ -4117,7 +4196,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    float pan = map(x, 0, width, -0.875f, 0.875f);
 
 	    // Keep the taste short and light.
-	    int len = calcSampleLen(envDuration, 1.0f, 0.0625f) / 4;
+	    int len = calcSampleLen(envDurationMs, 1.0f, 0.0625f) / 4;
 	    ADSRParams env = envPreset("Percussion");
 
 	    samplelen = playSample(signalPos, len, 0.125f, env, pan);
@@ -5093,6 +5172,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/*                 TIME/LOCATION/ACTION METHODS                   */
 	/*                                                                */
 	/*----------------------------------------------------------------*/
+
 	
 	// ------------- STANDARD SAMPLER AND GRANULAR BRUSH SCHEDULING ------------- //
 
@@ -5392,6 +5472,67 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		noStroke();
 		circle(x, y, 18);
 	}
+	
+	// ------------- PLAYBACK CURRENT BRUSHES IN CREATION ORDER AND TIME ------------- //
+	
+	/**
+	 * Replays brushstrokes in creation order, preserving the relative delay
+	 * between their {@link PACurveMaker#timeStamp} values. Calling this method
+	 * replaces any brush timeline replay already in progress; audio events that
+	 * have already been emitted by a brush are not cancelled.
+	 *
+	 * @param mode which brush instruments to include
+	 */
+	public void playBrushstrokes(BrushPlaybackMode mode) {
+		if (mode == null) throw new IllegalArgumentException("mode must not be null");
+		// get the brushes and sort them by time stamp
+		ArrayList<AudioBrush> selected = new ArrayList<>();
+		if (mode == BrushPlaybackMode.GRANULAR || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(granularBrushes);
+		}
+		if (mode == BrushPlaybackMode.SAMPLER || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(samplerBrushes);
+		}
+		selected.sort((a, b) -> Integer.compare(a.curve().timeStamp, b.curve().timeStamp));
+		// thread safe set up of brush playback events
+		synchronized (brushPlaybackEvents) {
+			brushPlaybackEvents.clear();
+			if (selected.isEmpty()) return;
+			int firstTimeStamp = selected.get(0).curve().timeStamp;
+			int playbackStart = millis() + 10;
+			for (AudioBrush brush : selected) {
+				int relativeTime = Math.max(0, brush.curve().timeStamp - firstTimeStamp);
+				brushPlaybackEvents.add(
+						new ScheduledBrushPlayback(brush, playbackStart + relativeTime));
+			}
+		}
+	}
+
+	/** Dispatches brushstrokes whose replay deadlines have arrived. */
+	void runBrushPlaybackEvents() {
+		int now = millis();
+		synchronized (brushPlaybackEvents) {
+			Iterator<ScheduledBrushPlayback> iter = brushPlaybackEvents.iterator();
+			while (iter.hasNext()) {
+				ScheduledBrushPlayback event = iter.next();
+				if (event.eventTimeMs > now) break;
+				AudioBrush brush = event.brush;
+				ArrayList<PVector> points = getPathPoints(brush);
+				if (points != null && !points.isEmpty()) {
+					PVector start = points.get(0);
+					int x = clipToWidth(Math.round(start.x));
+					int y = clipToHeight(Math.round(start.y));
+					if (brush instanceof GranularBrush gb) {
+						scheduleGranularBrushClick(gb, x, y);
+					} else if (brush instanceof SamplerBrush sb) {
+						scheduleSamplerBrushClick(sb, x, y);
+					}
+				}
+				iter.remove();
+			}
+		}
+	}
+
 
 	
 	/*----------------------------------------------------------------*/
@@ -5846,6 +5987,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	GLabel envDurationLabel;
 	GSlider envDurationSlider;
 	GTextField envDurationField;
+	GLabel granDurationLabel;
+	GSlider granDurationSlider;
+	GTextField granDurationField;
+	GCheckbox envFitToBrushCheck;
+
 	
 
 	static final String ENV_CUSTOM = "Custom";
@@ -5873,7 +6019,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		G4P.messagesEnabled(false);
 		G4P.setGlobalColorScheme(GCScheme.BLUE_SCHEME);
 		G4P.setMouseOverEnabled(false);
-		controlWindow = GWindow.getWindow(this, "Granular Synth", 960, 420, 460, 600, JAVA2D);
+		controlWindow = GWindow.getWindow(this, "Granular Synth", 960, 420, 460, 620, JAVA2D);
 		controlWindow.noLoop();
 		controlWindow.setActionOnClose(G4P.EXIT_APP);
 		controlWindow.addDrawHandler(this, "winDraw");
@@ -5885,7 +6031,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * Create the GUI control palette.
 	 */
 	public void createControlPanel() {
-		controlPanel = new GPanel(controlWindow, 5, 5, 470, 600, "Settings");
+		controlPanel = new GPanel(controlWindow, 5, 5, 470, 620, "Settings");
 		controlPanel.setCollapsible(false);
 		controlPanel.setCollapsed(false);
 		controlPanel.setDraggable(false);
@@ -6135,11 +6281,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
 		envelopeValuesLabel.setOpaque(false);
 		envelopeValuesLabel.setText("");
+		envFitToBrushCheck = new GCheckbox(controlWindow, 230, yPos + 16, 160, 40, "Fit to brush");
+		envFitToBrushCheck.setVisible(false);   // visible in Sampler editing
+		envFitToBrushCheck.addEventHandler(this, "fitToBrush_clicked");
 		// envelope duration
 		yPos += yInc + yInc/2;
-		envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
 		envDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
-		envDurationLabel.setText("Duration (ms)");
+		envDurationLabel.setText("Envelope Duration (ms)");
 		envDurationLabel.setOpaque(true);
 		envDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
 		envDurationSlider.setShowValue(true);
@@ -6149,7 +6298,23 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		envDurationSlider.addEventHandler(this, "envDuration_changed");
 		envDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
 		envDurationField.setText("" + gConfig.envDurationMs);
-		envDurationField.setTextEditEnabled(false);
+		envDurationField.setTextEditEnabled(false);		
+		// granular point event duration (shares the sampler duration row)
+		granDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
+		granDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		granDurationLabel.setText("Point Duration (ms)");
+		granDurationLabel.setOpaque(true);
+		granDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		granDurationSlider.setShowValue(true);
+		granDurationSlider.setLimits(granPointDurationMs, 125, 5000);
+		granDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+		granDurationSlider.setOpaque(false);
+		granDurationSlider.addEventHandler(this, "granDuration_changed");
+		granDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		granDurationField.setText("" + granPointDurationMs);
+		granDurationField.setTextEditEnabled(false);
+		// sampler envelope fit duration to gesture
+		
 		
 		// arc length time option3		
 		arcLengthTimeOption = new GOption(controlWindow, 280, yPos, 120, 20);
@@ -6234,6 +6399,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		controlPanel.addControl(envDurationLabel);
 		controlPanel.addControl(envDurationSlider);
 		controlPanel.addControl(envDurationField);
+		controlPanel.addControl(envFitToBrushCheck);
+		// granular point event duration
+		controlPanel.addControl(granDurationLabel);
+		controlPanel.addControl(granDurationSlider);
+		controlPanel.addControl(granDurationField);
 		// arcLengthTime
 		controlPanel.addControl(arcLengthTimeOption);
 	}
@@ -6556,9 +6726,30 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		int quant = quantizeToStep(raw, 5);
 		if (quant != raw) source.setValue(quant);
 		gConfig.envDurationMs = quant;
-		this.envDuration = gConfig.envDurationMs;
+		this.envDurationMs = gConfig.envDurationMs;
 		this.envDurationField.setText(""+ gConfig.envDurationMs);
 		if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ gConfig.envDurationMs);
+	}
+	
+	public void fitToBrush_clicked(GCheckbox source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			return;
+		}
+		isAdjustEnvelope = (source.isSelected());
+	}
+
+	public void granDuration_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 5);
+		if (quant != raw) source.setValue(quant);
+		granPointDurationMs = quant;
+		granDurationField.setText("" + granPointDurationMs);
+		if (event == GEvent.RELEASED) println("granPointDurationMs = " + granPointDurationMs);
 	}
 	
 	public void printGConfigStatus() {
@@ -6698,7 +6889,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			}
 			
 			// envelope durations (sampler)
-			int envDurSafe = Math.max(125, envDuration);
+			int envDurSafe = Math.max(125, envDurationMs);
 			boolean isSamplerDefaultContext = activeBrush == null
 					&& drawingMode == DrawingMode.DRAW_EDIT_SAMPLER;
 			int envDurShown = isSamplerDefaultContext
@@ -6708,11 +6899,18 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			boolean isSamplerContext = activeBrush instanceof SamplerBrush
 					|| isSamplerDefaultContext;
 			if (isSamplerContext) {
-				envDuration = envDurShown;
+				envDurationMs = envDurShown;
 				gConfig.envDurationMs = envDurShown;
 			}
 			envDurationSlider.setLimits(envDurShown, 125, 5000);
 			envDurationField.setText(""+ envDurShown);
+			envFitToBrushCheck.setSelected(isAdjustEnvelope);
+
+			// granular point event duration
+			int granDurShown = clampInt(granPointDurationMs, 125, 5000);
+			granPointDurationMs = granDurShown;
+			granDurationSlider.setLimits(granDurShown, 125, 5000);
+			granDurationField.setText("" + granDurShown);
 			
 
 			// warp radio + exponent
@@ -6844,6 +7042,15 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		envDurationSlider.setEnabled(inSamplerEdit && canEdit);
 		envDurationField.setVisible(showSampler);
 		envDurationLabel.setVisible(showSampler);
+		envFitToBrushCheck.setVisible(showSampler);
+		envFitToBrushCheck.setEnabled(inSamplerEdit);
+		
+		// Granular point duration shares the same row, so show it only in Granular edit mode.
+		granDurationSlider.setVisible(inGranularEdit);
+		granDurationSlider.setEnabled(inGranularEdit);
+		granDurationField.setVisible(inGranularEdit);
+		granDurationField.setEnabled(true);
+		granDurationLabel.setVisible(inGranularEdit);
 
 		// ---------- Global synth controls (shared) ----------
 		// Gain/pitch are editable in either edit mode, read-only in play-only.

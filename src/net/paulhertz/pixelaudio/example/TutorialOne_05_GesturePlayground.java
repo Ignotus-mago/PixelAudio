@@ -230,7 +230,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 't' to switch between Granular and Sampler editing and playing.
  * Press 'z' to change the drawing mode of the hover brush.
  * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.
- * Press 'E' to toggle automatic Sampler envelope duration adjustment for brush events.
+ * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
@@ -370,9 +370,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
     int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
     int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
     GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED, for granular point event
-    boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
+    boolean useLinearPointTraversal = false;              // controls the number of burst grain in a point event or gesture event
     int maxBurstGrains = 4;
     int burstGrains = 1;
+    int granPointDurationMs = noteDuration;     // granular point event duration
     boolean usePitchedGrains = false;
 
 	
@@ -992,8 +993,9 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			doPlayOnDraw = !doPlayOnDraw;
 			println("-- play on draw is "+ doPlayOnDraw);
 			break;
-		case 'E': // toggle whether brush envelope duration follows gesture timing
+		case 'E': // toggle calculating envelope duration from brush points or setting it to envDurationMs
 			isAdjustEnvelope = !isAdjustEnvelope;
+			if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) envFitToBrushCheck.setSelected(isAdjustEnvelope);
 			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
 			break;
 		case 'p': // jitter the pitch of granular gestures
@@ -1080,7 +1082,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		println(" * Press 't' to switch between Granular and Sampler editing and playing.");
 		println(" * Press 'z' to change the drawing mode of the hover brush.");
 		println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.");
-		println(" * Press 'E' to toggle automatic Sampler envelope duration adjustment for brush events.");
+		println(" * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.");
 		println(" * Press 'p' to jitter the pitch of granular gestures.");
 		println(" * Press 'j' to turn audio and image blending on or off.");
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
@@ -1792,13 +1794,13 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	void runGranularPointEvent(int x, int y) {
 		ensureGranularReady();
 		float hopMsF = Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-		final int grainCount = useLongBursts ?  8 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
+		final int grainCount = useLinearPointTraversal ?  (int) Math.round(granPointDurationMs/hopMsF) : (int) Math.round(granPointDurationMs/hopMsF);
 		if (isVerbose) println("-- granular point burst with grainCount = "+ grainCount);
 		ArrayList<PVector> path = new ArrayList<>(grainCount);
 		int[] timing = new int[grainCount];
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
 		for (int i = 0; i < grainCount; i++) {
-			if (useLongBursts) {
+			if (useLinearPointTraversal) {
 				path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
 			}
 			else {
@@ -3206,6 +3208,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	GLabel envDurationLabel;
 	GSlider envDurationSlider;
 	GTextField envDurationField;
+	GLabel granDurationLabel;
+	GSlider granDurationSlider;
+	GTextField granDurationField;
+	GCheckbox envFitToBrushCheck;
 
 	
 	GTextArea commentsField;    // testing
@@ -3230,7 +3236,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		G4P.messagesEnabled(false);
 		G4P.setGlobalColorScheme(GCScheme.BLUE_SCHEME);
 		G4P.setMouseOverEnabled(false);
-		controlWindow = GWindow.getWindow(this, "Granular Synth", 60, 420, 460, 600, JAVA2D);
+		controlWindow = GWindow.getWindow(this, "Granular Synth", 60, 420, 460, 620, JAVA2D);
 		controlWindow.noLoop();
 		controlWindow.setActionOnClose(G4P.EXIT_APP);
 		controlWindow.addDrawHandler(this, "winDraw");
@@ -3241,7 +3247,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	 * Create the GUI control palette.
 	 */
 	public void createControlPanel() {
-		controlPanel = new GPanel(controlWindow, 5, 5, 470, 600, "Settings");
+		controlPanel = new GPanel(controlWindow, 5, 5, 470, 620, "Settings");
 		controlPanel.setCollapsible(false);
 		controlPanel.setCollapsed(false);
 		controlPanel.setDraggable(false);
@@ -3491,11 +3497,14 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
 		envelopeValuesLabel.setOpaque(false);
 		envelopeValuesLabel.setText("");
+		envFitToBrushCheck = new GCheckbox(controlWindow, 230, yPos + 16, 160, 40, "Fit to brush");
+		envFitToBrushCheck.setVisible(false);   // visible in Sampler editing
+		envFitToBrushCheck.addEventHandler(this, "fitToBrush_clicked");
 		// envelope duration
 		yPos += yInc + yInc/2;
-		envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
 		envDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
-		envDurationLabel.setText("Duration (ms)");
+		envDurationLabel.setText("Envelope Duration (ms)");
 		envDurationLabel.setOpaque(true);
 		envDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
 		envDurationSlider.setShowValue(true);
@@ -3506,6 +3515,20 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		envDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
 		envDurationField.setText("" + gConfig.envDurationMs);
 		envDurationField.setTextEditEnabled(false);
+		// granular point event duration (shares the sampler duration row)
+		granDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
+		granDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		granDurationLabel.setText("Point Duration (ms)");
+		granDurationLabel.setOpaque(true);
+		granDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		granDurationSlider.setShowValue(true);
+		granDurationSlider.setLimits(granPointDurationMs, 125, 5000);
+		granDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+		granDurationSlider.setOpaque(false);
+		granDurationSlider.addEventHandler(this, "granDuration_changed");
+		granDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		granDurationField.setText("" + granPointDurationMs);
+		granDurationField.setTextEditEnabled(false);
 
 		// arc length time option3
 		
@@ -3589,6 +3612,10 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		controlPanel.addControl(envDurationLabel);
 		controlPanel.addControl(envDurationSlider);
 		controlPanel.addControl(envDurationField);
+		controlPanel.addControl(envFitToBrushCheck);
+		controlPanel.addControl(granDurationLabel);
+		controlPanel.addControl(granDurationSlider);
+		controlPanel.addControl(granDurationField);
 		controlPanel.setCollapsed(false);
 		// arcLengthTime
 		controlPanel.addControl(arcLengthTimeOption);
@@ -3921,6 +3948,25 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		envDurationField.setText("" + quant);
 		if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ quant);
 	}
+
+	public void fitToBrush_clicked(GCheckbox source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) return;
+		isAdjustEnvelope = source.isSelected();
+	}
+
+	public void granDuration_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 5);
+		if (quant != raw) source.setValue(quant);
+		granPointDurationMs = quant;
+		granDurationField.setText("" + granPointDurationMs);
+		if (event == GEvent.RELEASED) println("granPointDurationMs = " + granPointDurationMs);
+	}
 	
 	public void printGConfigStatus() {
 		// GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
@@ -4064,6 +4110,12 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			envDuration = envDurShown;
 			envDurationSlider.setLimits(envDurShown, 125, 5000);
 			envDurationField.setText("" + envDurShown);
+			envFitToBrushCheck.setSelected(isAdjustEnvelope);
+
+			int granDurShown = clampInt(granPointDurationMs, 125, 5000);
+			granPointDurationMs = granDurShown;
+			granDurationSlider.setLimits(granDurShown, 125, 5000);
+			granDurationField.setText("" + granDurShown);
 
 			// warp radio + exponent
 			linearWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.LINEAR);
@@ -4169,6 +4221,14 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		envDurationSlider.setEnabled(inSamplerEdit && canEdit);
 		envDurationField.setVisible(showSampler);
 		envDurationLabel.setVisible(showSampler);
+		envFitToBrushCheck.setVisible(showSampler);
+		envFitToBrushCheck.setEnabled(inSamplerEdit);
+		// Granular point duration shares the same row, so show it only in Granular edit mode.
+		granDurationSlider.setVisible(inGranularEdit);
+		granDurationSlider.setEnabled(inGranularEdit);
+		granDurationField.setVisible(inGranularEdit);
+		granDurationField.setEnabled(true);
+		granDurationLabel.setVisible(inGranularEdit);
 
 		// ---------- Global synth controls (shared) ----------
 		// Gain/pitch are editable in either edit mode, read-only in play-only.
