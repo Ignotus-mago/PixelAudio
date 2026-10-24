@@ -131,8 +131,6 @@ public final class PACurveMakerIO {
         putIfPresent(gesture, "description", meta.description);
         putIfPresent(gesture, "notes", meta.notes);
 
-        gesture.setJSONArray("dragPoints", pointsToJson(curve.getAllPoints()));
-        gesture.setJSONArray("dragTimes", intsToJson(curve.getDragTimes()));
         gesture.setInt("startTime", curve.getTimeStamp());
         gesture.setInt("timeOffset", curve.getTimeOffset());
 
@@ -143,6 +141,9 @@ public final class PACurveMakerIO {
         gesture.setFloat("brushSize", curve.getBrushSize());
         gesture.setBoolean("drawWeighted", curve.isDrawWeighted());
         gesture.setBoolean("brushIsCustom", curve.brushIsCustom);
+
+        gesture.setJSONArray("dragPoints", pointsToJson(curve.getAllPoints()));
+        gesture.setJSONArray("dragTimes", intsToJson(curve.getDragTimes()));
 
         if (meta.includeStyle) {
             JSONObject style = new JSONObject();

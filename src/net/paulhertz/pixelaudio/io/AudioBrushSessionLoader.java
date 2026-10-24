@@ -60,6 +60,10 @@ public final class AudioBrushSessionLoader {
 		public GestureGranularConfig.Builder config;
 		/** Instrument type declared by linked configuration data. */
 		public GestureGranularConfigIO.InstrumentType instrumentType;
+		/** Session-relative brush start time, or null for legacy data. */
+		public Integer startTimeMs;
+		/** Manifest-level gesture duration, or null for legacy data. */
+		public Integer durationMs;
 	}
 
 	/** Result of loading a gesture, configuration, or session file. */
@@ -213,6 +217,10 @@ public final class AudioBrushSessionLoader {
 						item.hasKey("instrumentType")
 						? GestureGranularConfigIO.InstrumentType.valueOf(item.getString("instrumentType"))
 								: null;
+				Integer startTimeMs = item.hasKey("startTimeMs")
+						? Math.max(0, item.getInt("startTimeMs")) : null;
+				Integer durationMs = item.hasKey("durationMs")
+						? Math.max(0, item.getInt("durationMs")) : null;
 
 				PACurveMaker curve = null;
 				GestureGranularConfig.Builder cfg = null;
@@ -222,6 +230,7 @@ public final class AudioBrushSessionLoader {
 					if (gestureFile.exists()) {
 						PACurveMakerIO.Result g = PACurveMakerIO.read(gestureFile);
 						curve = g.curve;
+						AudioBrushSessionIO.applySessionTiming(curve, startTimeMs, durationMs);
 					}
 				}
 
@@ -238,6 +247,8 @@ public final class AudioBrushSessionLoader {
 				bd.curve = curve;
 				bd.config = cfg;
 				bd.instrumentType = type;
+				bd.startTimeMs = startTimeMs;
+				bd.durationMs = durationMs;
 				brushes.add(bd);
 			}
 		}

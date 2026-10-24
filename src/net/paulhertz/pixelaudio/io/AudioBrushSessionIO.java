@@ -49,7 +49,7 @@ public final class AudioBrushSessionIO {
     /** Format identifier written to session manifest headers. */
     public static final String FORMAT = "net.paulhertz.pixelaudio.session";
     /** Session manifest format version. */
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     /** Adapter that exposes brush data needed for writing a session. */
     public interface BrushAdapter<B> {
@@ -147,6 +147,10 @@ public final class AudioBrushSessionIO {
         public String gesturePath;
         /** Relative path to the configuration JSON file. */
         public String configPath;
+        /** Brush start time in milliseconds relative to the first brush in the session. */
+        public Integer startTimeMs;
+        /** Recorded duration of the brush gesture in milliseconds. */
+        public Integer durationMs;
     }
 
     /** Loaded session data with rebuilt brush objects and source records. */
@@ -207,6 +211,13 @@ public final class AudioBrushSessionIO {
 
         JSONArray arr = new JSONArray();
 
+        int sessionStartTime = Integer.MAX_VALUE;
+        for (B brush : brushes) {
+            PACurveMaker curve = adapter.curveOf(brush);
+            if (curve != null) sessionStartTime = Math.min(sessionStartTime, curve.getTimeStamp());
+        }
+        if (sessionStartTime == Integer.MAX_VALUE) sessionStartTime = 0;
+
         int index = 0;
         for (B brush : brushes) {
             String id = safeId(adapter.idOf(brush));
@@ -242,6 +253,9 @@ public final class AudioBrushSessionIO {
             item.setString("instrumentType", instrumentType.name());
             item.setString("gesturePath", relativize(sessionDir, gestureFile));
             item.setString("configPath", relativize(sessionDir, configFile));
+            PACurveMaker curve = adapter.curveOf(brush);
+            item.setInt("startTimeMs", Math.max(0, curve.getTimeStamp() - sessionStartTime));
+            item.setInt("durationMs", Math.max(0, curve.getTimeOffset()));
             putIfPresent(item, "name", adapter.nameOf(brush));
             putIfPresent(item, "description", adapter.descriptionOf(brush));
             putIfPresent(item, "notes", adapter.notesOf(brush));
@@ -290,7 +304,7 @@ public final class AudioBrushSessionIO {
         JSONObject root = JSONObject.parse(json);
 
         JSONObject header = root.getJSONObject("header");
-        requireHeader(header, FORMAT, VERSION);
+        requireCompatibleHeader(header, FORMAT, VERSION);
 
         SessionMeta meta = new SessionMeta();
         JSONObject session = root.getJSONObject("session");
@@ -322,6 +336,8 @@ public final class AudioBrushSessionIO {
                 if (item.hasKey("name")) rec.name = item.getString("name");
                 if (item.hasKey("description")) rec.description = item.getString("description");
                 if (item.hasKey("notes")) rec.notes = item.getString("notes");
+                if (item.hasKey("startTimeMs")) rec.startTimeMs = item.getInt("startTimeMs");
+                if (item.hasKey("durationMs")) rec.durationMs = item.getInt("durationMs");
                 records.add(rec);
 
                 File gestureFile = new File(sessionDir, rec.gesturePath);
@@ -330,12 +346,35 @@ public final class AudioBrushSessionIO {
                 PACurveMakerIO.Result g = PACurveMakerIO.read(gestureFile);
                 GestureGranularConfigIO.Result c = GestureGranularConfigIO.read(configFile);
 
+                // Version 2 puts editable score timing in the manifest. Version 1
+                // sessions continue to use the timestamps in their gesture files.
+                applySessionTiming(g.curve, rec.startTimeMs, rec.durationMs);
+
                 B brush = factory.create(g.curve, c.builder, rec.instrumentType, rec);
                 brushes.add(brush);
             }
         }
 
         return new SessionData<>(meta, brushes, records);
+    }
+
+    /** Applies editable manifest timing while preserving each point's relative timing. */
+    static void applySessionTiming(PACurveMaker curve, Integer startTimeMs, Integer durationMs) {
+        if (curve == null) return;
+        if (startTimeMs != null) curve.setTimeStamp(Math.max(0, startTimeMs));
+        if (durationMs == null) return;
+
+        int desiredDuration = Math.max(0, durationMs);
+        int[] times = curve.getDragTimes();
+        int sourceDuration = (times.length == 0) ? 0 : times[times.length - 1];
+        if (sourceDuration > 0 && sourceDuration != desiredDuration) {
+            int[] scaledTimes = new int[times.length];
+            for (int i = 0; i < times.length; i++) {
+                scaledTimes[i] = Math.round(times[i] * (desiredDuration / (float) sourceDuration));
+            }
+            curve.setDragTimes(scaledTimes);
+        }
+        curve.setTimeOffset(desiredDuration);
     }
 
     private static String sessionStem(File sessionFile) {
@@ -364,6 +403,18 @@ public final class AudioBrushSessionIO {
             throw new IllegalArgumentException("Unexpected format: " + format);
         }
         if (version != expectedVersion) {
+            throw new IllegalArgumentException("Unsupported version: " + version);
+        }
+    }
+
+    private static void requireCompatibleHeader(JSONObject header, String expectedFormat, int latestVersion) {
+        if (header == null) throw new IllegalArgumentException("Missing header");
+        String format = header.getString("format");
+        int version = header.getInt("version");
+        if (!expectedFormat.equals(format)) {
+            throw new IllegalArgumentException("Unexpected format: " + format);
+        }
+        if (version < 1 || version > latestVersion) {
             throw new IllegalArgumentException("Unsupported version: " + version);
         }
     }
