@@ -157,8 +157,8 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
  *    }
  *    </pre>
  * <p>
- * In addition, I note that the primary point sets in PACUrveMaker are {@code dragPoints} (getAllPoints()), 
- * {@code rdpPoints} (getCurvePoints()), and {@code eventPoints} (getCurvePoints()). The full 
+ * Note that the primary point sets in PACUrveMaker are {@code dragPoints} (getAllPoints()), 
+ * {@code rdpPoints} (getReducedPoints()), and {@code eventPoints} (getCurvePoints()). The full 
  * gesture is conveyed by {@code dragPoints} and {@code dragTimes}. The indices of {@code rdpPoints} are tracked 
  * and stored in {@code ArrayList<Integer> rdpIndices}, so that we can map back to the original gesture points 
  * if needed. The points in {@code rdpPoints} are also the anchor points in the Bezier path {@code curveShape},
