@@ -1,0 +1,100 @@
+{
+  "header": {
+    "format": "net.paulhertz.pixelaudio.gesture",
+    "type": "PACurveMaker",
+    "version": 1
+  },
+  "gesture": {
+    "dragTimes": [
+      0,
+      33,
+      50,
+      58,
+      66,
+      74,
+      91,
+      99,
+      108,
+      116,
+      124,
+      134,
+      142,
+      150,
+      167
+    ],
+    "bezierBias": 0.390524297952652,
+    "brushIsCustom": false,
+    "linkedConfig": {"path": "configs/brushmix_01_config_4.json"},
+    "timeOffset": 167,
+    "curveSteps": 16,
+    "polySteps": 8,
+    "epsilon": 2,
+    "brushSize": 24,
+    "name": "granular_2",
+    "dragPoints": [
+      {
+        "x": 780,
+        "y": 120
+      },
+      {
+        "x": 781,
+        "y": 121
+      },
+      {
+        "x": 783,
+        "y": 123
+      },
+      {
+        "x": 784,
+        "y": 125
+      },
+      {
+        "x": 787,
+        "y": 128
+      },
+      {
+        "x": 789,
+        "y": 130
+      },
+      {
+        "x": 793,
+        "y": 134
+      },
+      {
+        "x": 793,
+        "y": 135
+      },
+      {
+        "x": 801,
+        "y": 144
+      },
+      {
+        "x": 802,
+        "y": 145
+      },
+      {
+        "x": 803,
+        "y": 148
+      },
+      {
+        "x": 804,
+        "y": 149
+      },
+      {
+        "x": 804,
+        "y": 150
+      },
+      {
+        "x": 805,
+        "y": 152
+      },
+      {
+        "x": 805,
+        "y": 153
+      }
+    ],
+    "startTime": 573869,
+    "id": "granular_2",
+    "drawWeighted": false
+  }
+}

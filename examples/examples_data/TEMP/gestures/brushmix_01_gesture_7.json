@@ -1,0 +1,105 @@
+{
+  "header": {
+    "format": "net.paulhertz.pixelaudio.gesture",
+    "type": "PACurveMaker",
+    "version": 1
+  },
+  "gesture": {
+    "dragTimes": [
+      0,
+      17,
+      25,
+      33,
+      41,
+      50,
+      57,
+      67,
+      75,
+      83,
+      91,
+      100,
+      108,
+      116,
+      125,
+      133
+    ],
+    "bezierBias": 0.390524297952652,
+    "brushIsCustom": false,
+    "linkedConfig": {"path": "configs/brushmix_01_config_7.json"},
+    "timeOffset": 142,
+    "curveSteps": 16,
+    "polySteps": 8,
+    "epsilon": 2,
+    "brushSize": 24,
+    "name": "sampler_3",
+    "dragPoints": [
+      {
+        "x": 1245,
+        "y": 202
+      },
+      {
+        "x": 1246,
+        "y": 202
+      },
+      {
+        "x": 1247,
+        "y": 204
+      },
+      {
+        "x": 1248,
+        "y": 207
+      },
+      {
+        "x": 1248,
+        "y": 208
+      },
+      {
+        "x": 1250,
+        "y": 211
+      },
+      {
+        "x": 1252,
+        "y": 213
+      },
+      {
+        "x": 1252,
+        "y": 214
+      },
+      {
+        "x": 1254,
+        "y": 216
+      },
+      {
+        "x": 1255,
+        "y": 216
+      },
+      {
+        "x": 1256,
+        "y": 218
+      },
+      {
+        "x": 1259,
+        "y": 221
+      },
+      {
+        "x": 1260,
+        "y": 223
+      },
+      {
+        "x": 1261,
+        "y": 223
+      },
+      {
+        "x": 1264,
+        "y": 226
+      },
+      {
+        "x": 1265,
+        "y": 226
+      }
+    ],
+    "startTime": 574718,
+    "id": "sampler_3",
+    "drawWeighted": false
+  }
+}

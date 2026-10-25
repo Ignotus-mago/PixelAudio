@@ -1,0 +1,85 @@
+{
+  "header": {
+    "format": "net.paulhertz.pixelaudio.gesture",
+    "type": "PACurveMaker",
+    "version": 1
+  },
+  "gesture": {
+    "dragTimes": [
+      0,
+      9,
+      17,
+      26,
+      33,
+      51,
+      58,
+      67,
+      76,
+      84,
+      100,
+      109
+    ],
+    "bezierBias": 0.390524297952652,
+    "brushIsCustom": false,
+    "linkedConfig": {"path": "configs/brushmix_01_config_22.json"},
+    "timeOffset": 109,
+    "curveSteps": 16,
+    "polySteps": 8,
+    "epsilon": 2,
+    "brushSize": 24,
+    "name": "granular_11",
+    "dragPoints": [
+      {
+        "x": 528,
+        "y": 736
+      },
+      {
+        "x": 524,
+        "y": 741
+      },
+      {
+        "x": 514,
+        "y": 750
+      },
+      {
+        "x": 509,
+        "y": 754
+      },
+      {
+        "x": 500,
+        "y": 759
+      },
+      {
+        "x": 494,
+        "y": 762
+      },
+      {
+        "x": 491,
+        "y": 764
+      },
+      {
+        "x": 482,
+        "y": 766
+      },
+      {
+        "x": 475,
+        "y": 767
+      },
+      {
+        "x": 457,
+        "y": 768
+      },
+      {
+        "x": 445,
+        "y": 769
+      },
+      {
+        "x": 438,
+        "y": 769
+      }
+    ],
+    "startTime": 579431,
+    "id": "granular_11",
+    "drawWeighted": false
+  }
+}
