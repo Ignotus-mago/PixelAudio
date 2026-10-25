@@ -447,7 +447,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     // This example concentrates on audio synthesis, we don't do pixel-shift 
     // animation, but the hooks for handling it are all here
     
-    int shift = 1;                       // number of pixels to shift the animation
+    final int defaultShift = 1;
+    int shift = defaultShift;            // number of pixels to shift the animation
     int leap = 65536;                    // a big shift 
     int totalShift = 0;                  // cumulative shift
     boolean isAnimating = false;         // do we run animation or not?
@@ -971,7 +972,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    	// change the duration of a curve to newDurationMs
 	        @Override
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, Bagatelle app) {
-	        	int newDurationMs = (int)(PixelAudio.randomInRange(2, 5)) * 1000;
+	        	int newDurationMs = (int)(PixelAudio.randomInRange(2, 5)) * 500;
 	        	println("---- new duration = "+ newDurationMs);
 				int curveColor = PixelAudioMapper.composeColor(233, 34, 34, 255);
 				curve.setBrushColor(curveColor);
@@ -1770,7 +1771,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			break;
 		case 'a': // toggle animation
 			isAnimating = !isAnimating;
-			println(isAnimating ? "-- animation is ON" : "-- animation is OFF");
+			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
+			break;
+		case 'A': // change animation shift
+			// animation is synchronized with the audio when we trigger an audio event once every frame
+			// we can calculate with the actual rate, frameRate, or our requested rate, videoFrameRate
+			float rate = this.frameRate;    
+			shift = (shift == defaultShift) 
+				? Math.round(audioOut.sampleRate() / rate)
+				: defaultShift;
+			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
 			break;
 		case 'c': case 'C': // print the current configuration status to the console
 			printGConfigStatus();
@@ -1817,7 +1827,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			break;
 		case 'p': // jitter the pitch of granular gestures and point events
 			usePitchedGrains = !usePitchedGrains;
-			// pitchJitter = 0.0167f;
 			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
 			println("-- Play granular synth with "+ msg);
 			println("-- usePitchedGrains = " + usePitchedGrains + ", pitchJitter = " + pitchJitter);
@@ -2001,7 +2010,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			granularBrushes.clear();
 			samplerBrushes.clear();
 			break;
-		case '`': // fade out all instruments
+		case '`': // fade out all instruments, does not cancel loops
 			suspendScheduledEvents();
 			if (pool != null) pool.fadeOutAll();
 			if (gDir != null) gDir.cancelAndReleaseAll();
@@ -2375,7 +2384,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				break;
 			case '4': // BLANK
 				// an odd way to give a command, but possible
-				this.playBrushstrokes(BrushPlaybackMode.GRANULAR);
+				this.playBrushstrokes(BrushPlaybackMode.BOTH, 10, true);
 				break;
 			} // switch (key)
 			break;
@@ -4836,6 +4845,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		}
 	}
 	
+	
 	/*----------------------------------------------------------------*/
 	/*                                                                */
 	/*                   BRUSH INTERACTION METHODS                    */
@@ -5255,7 +5265,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	                    ? computeEnvDurationMs(sched, envNameFor(baseEnv), noteDuration)
 	                    : snap.envDurationMs;
 	            int len = calcSampleLen(eventDuration, 1.0f, 0.0625f);
-	            println("---- event duration = "+ eventDuration);
 	            int t = startTime + Math.round(sched.timesMs[i]);
 	            float pan = map(x, 0, width - 1, -0.875f, 0.875f);
 	            float gain = baseGain;
@@ -5506,6 +5515,56 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 						new ScheduledBrushPlayback(brush, playbackStart + relativeTime));
 			}
 		}
+	}
+	
+	/**
+	 * Replays brushstrokes in creation order, spacing each brush relative to the
+	 * end of the previous brush.
+	 * A zero offset starts each brush when the previous brush ends. A positive
+	 * offset adds silence between brushes. A negative offset overlaps brushes,
+	 * but never schedules a brush before the preceding brush's start time.
+	 *
+	 * @param mode        which brush instruments to include
+	 * @param offsetMs    milliseconds between the end of one brush and the start of the next
+	 * @param rewriteTiming
+	 */
+	public void playBrushstrokes(BrushPlaybackMode mode, int offsetMs, boolean rewriteTiming) {
+		if (mode == null) throw new IllegalArgumentException("mode must not be null");
+		// get the brushes and sort them by time stamp
+		ArrayList<AudioBrush> selected = new ArrayList<>();
+		if (mode == BrushPlaybackMode.GRANULAR || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(granularBrushes);
+		}
+		if (mode == BrushPlaybackMode.SAMPLER || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(samplerBrushes);
+		}
+		// List.sort is stable, so equal timestamps retain their existing order.
+		selected.sort((a, b) -> Integer.compare(a.curve().timeStamp, b.curve().timeStamp));
+		// thread safe set up of brush playback events
+		synchronized (brushPlaybackEvents) {
+			brushPlaybackEvents.clear();
+			if (selected.isEmpty()) return;
+			int eventStart = millis() + 10;
+			for (AudioBrush brush : selected) {
+				brushPlaybackEvents.add(new ScheduledBrushPlayback(brush, eventStart));
+				if (rewriteTiming) brush.curve().setTimeStamp(eventStart);
+				GestureSchedule schedule = scheduleBuilder.build(
+						brush.curve(),
+						brush.snapshot(),
+						audioOut.sampleRate());
+				schedule = boundsPolicy.applySchedule(schedule);
+				int durationMs = (schedule == null || schedule.isEmpty())
+						? 0 : Math.max(0, Math.round(schedule.durationMs()));
+				long proposedStart = (long) eventStart + durationMs + offsetMs;
+				// Negative offsets may overlap events, but may not reverse their
+				// creation order by starting this event before the previous one.
+				eventStart = (int) Math.max(eventStart, proposedStart);
+			}
+		}
+	}
+	
+	public void playBrushstrokes(BrushPlaybackMode mode, int offsetMs) {
+		playBrushstrokes(mode, offsetMs, false);
 	}
 
 	/** Dispatches brushstrokes whose replay deadlines have arrived. */
