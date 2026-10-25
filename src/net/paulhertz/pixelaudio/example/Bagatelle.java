@@ -59,7 +59,7 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 /* 
  * DONE a release version where two different preset lists and performance cues can be swapped.
- * 
+ * TODO playback with specified gap
  */
 
 /**
