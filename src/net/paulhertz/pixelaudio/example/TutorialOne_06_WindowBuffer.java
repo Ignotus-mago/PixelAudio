@@ -31,7 +31,6 @@ import ddf.minim.*;
 //video export library
 import com.hamoid.*;
 
-// TODO optimize granular brush 'q' command (may not be necessary for a demo
 
 /**
  * 
@@ -501,8 +500,8 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
     // Using samplerMaxVoices = 256 resulted in noise artifacts whose
     // origin I have not tracked down yet. You can probably set poolSize = 8
     // and samplerMaxVoices = 128 without difficulty. I tested these values and 
-    // didn't have any problems. TODO resolve the issue with noise when 
-    // samplerMaxVoices is comparatively large. I regard the issue as minor,
+    // didn't have any problems. Resolved the issue with noise when samplerMaxVoices
+    // is comparatively large, Issue #45 in github. I regard the issue as minor,
     // as 128 voices should be entirely adequate for most uses of the Sampler. 
 	
     /* ------------------------------------------------------------------ */
@@ -2550,7 +2549,6 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 
 	/**
 	 * Entry point for drawing brushstrokes on the screen.
-	 * TODO distinguish brush types by color.
 	 */
 	public void drawBrushShapes() {
 	    if (brushes == null || brushes.isEmpty()) return;
@@ -2894,17 +2892,6 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	public boolean mouseInPoly(ArrayList<PVector> poly) {
 	    return PABezShape.pointInPoly(poly, mouseX, mouseY);
 	}
-
-
-	/**
-	 * Reinitializes audio and clears event lists.   
-	 * -- TODO drop, this used to be the "emergency off" switch for runaway audio processing
-	 */
-	@Deprecated
-	public void reset() {
-
-	}
-
 
 	/**
 	 * Removes the current active AudioBrushLite instance.

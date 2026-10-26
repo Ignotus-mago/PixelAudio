@@ -59,7 +59,7 @@ import net.paulhertz.pixelaudio.sampler.*;
 
 /* 
  * DONE a release version where two different preset lists and performance cues can be swapped.
- * TODO playback with specified gap
+ * TODO playback with specified gap DONE
  */
 
 /**
@@ -1743,7 +1743,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param key        {@code char} for key that was pressed 
 	 * @param keyCode    numeric code for key that was pressed
 	 */
-	public void parseKey(char key, int keyCode) { // TODO create auto-adjust Sampler note duration toggle
+	public void parseKey(char key, int keyCode) { // TODO create auto-adjust Sampler note duration toggle DONE
 		String msg;
 		if ("0123456789".contains("" + key)) {numericKey(key);}
 		switch(key) {
