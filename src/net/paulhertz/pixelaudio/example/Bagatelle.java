@@ -303,10 +303,10 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Press 'X' to delete the most recent brush shape.
  * Press '≈' to option-x on MacOS keyboard, clear all brushes.
  * ----- Network -----
- * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
- * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
- * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.
- * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '=' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
+ * Press '-' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
+ * Press '+' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '_' to send UDP message to Max (simpleAudioIO.maxpat): unused.
  * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
  * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * ----- Help -----
@@ -955,9 +955,12 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/*                            OK PRESET LIST                          */
 	/* ------------------------------------------------------------------ */
 
-	/* OK Presets for filling in by end user. 
+	/* OK Presets. Some examples are filled in already. Now roll your own. 
 	 *    1. Resample curve to 4000 milliseconds long.
      *    2. Impose some weird settings.
+     *    3. Create a random app.dynamics setting each time you draw. 
+     *       isAddDynamics must be true to hear the dynamics.
+     *    4. Left blank, but used in runPerformanceCue() to play brushstrokes. 
 	 */ 
 	/**
 	 * Presets are applied to each new brush at the moment drawing is completed by 
@@ -2031,16 +2034,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		case '&': // clear events in granular and sample synths
 			clearSynthEvents();
 		    break;
-		case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
+		case '=': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
 			if (nd != null) nd.oscSendOnOff(1, true);
 			break;
-		case '[': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
+		case '-': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
 			if (nd != null) nd.oscSendOnOff(1, false);
 			break;
-		case '}': // send UDP message to Max (simpleAudioIO.maxpat): unused
+		case '+': // send UDP message to Max (simpleAudioIO.maxpat): unused
 			if (nd != null) nd.oscSendOnOff(2, true);
 			break;
-		case '{': // send UDP message to Max (simpleAudioIO.maxpat): unused
+		case '_': // send UDP message to Max (simpleAudioIO.maxpat): unused
 			if (nd != null) nd.oscSendOnOff(2, false);
 			break;
 		case 'v': // send UDP message to Max (simpleAudioIO.maxpat): small reverb settings
@@ -2149,10 +2152,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		println(" * Press '≈' to option-x on MacOS keyboard, clear all brushes.");
 		
 		println(" * ----- Network -----");		
-		println(" * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
-		println(" * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
-		println(" * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
-		println(" * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press '=' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
+		println(" * Press '-' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
+		println(" * Press '+' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press '_' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
 		println(" * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.");
 		println(" * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
 		
@@ -3854,6 +3857,21 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		activeLoops.removeIf(loop -> !loop.active);
 	}
 
+	/**
+	 * Prevents future loop iterations for a brush without interrupting the iteration
+	 * that is already playing.
+	 * @param brush    AudioBrush whose looping will finish after the current iteration
+	 */
+	public synchronized void finishLoopsForBrush(AudioBrush brush) {
+		if (brush == null || activeLoops.isEmpty()) return;
+		for (InstrumentLoop loop : activeLoops) {
+			if (loop.brush == brush) {
+				loop.active = false;
+			}
+		}
+		activeLoops.removeIf(loop -> !loop.active);
+	}
+
 	public synchronized boolean hasLoopForBrush(AudioBrush brush) {
 		if (brush == null) return false;
 		for (InstrumentLoop loop : activeLoops) {
@@ -4895,16 +4913,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	public void removeNewestBrush() {
 		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
 			if (samplerBrushes != null && !samplerBrushes.isEmpty()) {
-				int idx = samplerBrushes.size();
-				samplerBrushes.remove(idx - 1);	// brushShapes array starts at 0
+				int idx = samplerBrushes.size() - 1;
+				removeSamplerBrush(samplerBrushes.get(idx), idx);
 				if (isVerbose) println("-->> removed newest brush");
 				curveMaker = null;
 			}
 		}
 		else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
 			if (granularBrushes != null && !granularBrushes.isEmpty()) {
-				int idx = granularBrushes.size();
-				granularBrushes.remove(idx - 1);
+				int idx = granularBrushes.size() - 1;
+				removeGranularBrush(granularBrushes.get(idx), idx);
 				if (isVerbose) println("-->> removed newest brush");
 				curveMaker = null;
 			}
@@ -4920,14 +4938,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	public void removeOldestBrush() {
 		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
 			if (samplerBrushes != null && !samplerBrushes.isEmpty()) {
-				samplerBrushes.remove(0);	// brushShapes array starts at 0
+				removeSamplerBrush(samplerBrushes.get(0), 0);
 				if (isVerbose) println("-->> removed oldest brush");
 				if (samplerBrushes.isEmpty()) curveMaker = null;
 			}
 		}
 		else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
 			if (granularBrushes != null && !granularBrushes.isEmpty()) {
-				granularBrushes.remove(0);
+				removeGranularBrush(granularBrushes.get(0), 0);
 				if (isVerbose) println("-->> removed oldest brush");
 				if (granularBrushes.isEmpty()) curveMaker = null;
 			}
@@ -5068,12 +5086,15 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	void removeGranularBrush(AudioBrush gb, int idx) {
 		if (gb instanceof SamplerBrush) return;
 	    if (gb == null || granularBrushes == null || granularBrushes.isEmpty()) return;
+	    boolean removed;
 	    if (idx >= 0 && idx < granularBrushes.size() && granularBrushes.get(idx) == gb) {
-	        granularBrushes.remove(idx);
+	        removed = granularBrushes.remove(idx) == gb;
 	    }
 	    else {
-	        granularBrushes.remove(gb);
+	        removed = granularBrushes.remove(gb);
 	    }
+	    if (!removed) return;
+	    finishLoopsForBrush(gb);
 	    if (activeGranularBrush == gb) {
 	        activeGranularBrush = null;
 	        activeGranularIndex = -1;
@@ -5088,12 +5109,15 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	void removeSamplerBrush(AudioBrush sb, int idx) {
 		if (sb instanceof GranularBrush) return;
 	    if (sb == null || samplerBrushes == null || samplerBrushes.isEmpty()) return;
+	    boolean removed;
 	    if (idx >= 0 && idx < samplerBrushes.size() && samplerBrushes.get(idx) == sb) {
-	        samplerBrushes.remove(idx);
+	        removed = samplerBrushes.remove(idx) == sb;
 	    }
 	    else {
-	        samplerBrushes.remove(sb);
+	        removed = samplerBrushes.remove(sb);
 	    }
+	    if (!removed) return;
+	    finishLoopsForBrush(sb);
 	    if (activeSamplerBrush == sb) {
 	        activeSamplerBrush = null;
 	        activeSamplerIndex = -1;
@@ -5483,6 +5507,14 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	}
 	
 	// ------------- PLAYBACK CURRENT BRUSHES IN CREATION ORDER AND TIME ------------- //
+
+	/*
+	 * TODO Future development: Treat brush playback timing as editable musical data.
+	 * A generated playback schedule could optionally be written back to each brush's
+	 * timestamp and saved. Longer term, brushes could be organized into independent
+	 * "flocks," each with its own local timing/rhythm, launch time, and potentially
+	 * migratory behavior.
+	 */
 	
 	/**
 	 * Replays brushstrokes in creation order, preserving the relative delay

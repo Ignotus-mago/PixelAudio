@@ -182,10 +182,10 @@ import com.hamoid.*;
  * Press 'X' to delete the most recent brush shape.
  * Press 'u' to mute audio.
  * Press 'V' to record a video.
- * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
- * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
- * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.
- * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '=' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
+ * Press '-' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
+ * Press '+' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '_' to send UDP message to Max (simpleAudioIO.maxpat): unused.
  * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
  * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * Press 'h' or 'H' to show help message in the console.
@@ -1119,16 +1119,16 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			isAnimating = true;
 			break;
 		// *****]]] NETWORKING [[[***** // key commands for networking
-		case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
+		case '=': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
 			if (nd != null) nd.oscSendOnOff(1, true);
 			break;
-		case '[': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
+		case '-': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
 			if (nd != null) nd.oscSendOnOff(1, false);
 			break;
-		case '}': // send UDP message to Max (simpleAudioIO.maxpat): unused
+		case '+': // send UDP message to Max (simpleAudioIO.maxpat): unused
 			if (nd != null) nd.oscSendOnOff(2, true);
 			break;
-		case '{': // send UDP message to Max (simpleAudioIO.maxpat): unused
+		case '_': // send UDP message to Max (simpleAudioIO.maxpat): unused
 			if (nd != null) nd.oscSendOnOff(2, false);
 			break;
 		case 'q': // send UDP message to Max (simpleAudioIO.maxpat): small reverb settings
@@ -1205,10 +1205,10 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		println(" * Press 'X' to delete the most recent brush shape.");
 		println(" * Press 'u' to mute audio.");
 		println(" * Press 'V' to record a video.");
-		println(" * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
-		println(" * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
-		println(" * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
-		println(" * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press '=' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
+		println(" * Press '-' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
+		println(" * Press '+' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press '_' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
 		println(" * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.");
 		println(" * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
 		println(" * Press 'h' or 'H' to show help message in the console.");
