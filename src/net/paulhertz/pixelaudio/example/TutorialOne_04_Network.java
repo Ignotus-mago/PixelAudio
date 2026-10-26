@@ -240,9 +240,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video 
     boolean isBlending = false;     // flags blending of newly opened audio or image file with display/buffer 
 
-	// system-specific path to example files data
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
-	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
+	// path to the shared example files data
+	String daPath;
     String daFile = "Saucer_mixdown.wav";    // _sonic/FullMoonTonight_22050Hz.mp3
 
 
@@ -521,6 +520,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	}
 	
 	public void setup() {
+		daPath = sketchPath("examples/examples_data") + File.separator;
 		// set a standard animation framerate
 		frameRate(24);
 		// 1. Initialize our library.

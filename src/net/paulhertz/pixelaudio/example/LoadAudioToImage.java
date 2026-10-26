@@ -129,8 +129,8 @@ public class LoadAudioToImage extends PApplet {
 		initAudio();		// set up audio 
 		rando = new Random();
 		chan = PixelAudioMapper.ChannelNames.L;
-		String path = "/Users/paulhz/Documents/Processing/libraries/PixelAudio/examples/examples_data";
-		File audioSource = new File(path +"/youthorchestra.wav");
+		String path = sketchPath("examples/examples_data") + File.separator;
+		File audioSource = new File(path + "youthorchestra.wav");
 		fileSelected(audioSource);
 		showHelp();
 	}

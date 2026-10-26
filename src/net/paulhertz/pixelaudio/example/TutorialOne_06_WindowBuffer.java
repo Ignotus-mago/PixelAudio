@@ -509,11 +509,8 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	/*                 APPLICATION SPECIFIC VARIABLES                     */
 	/* ------------------------------------------------------------------ */
     
-	// system-specific path to example files data
-    
-	// system-specific path to example files data
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
-	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
+	// path to the shared example files data
+	String daPath;
     String daFile = "_sonic/FullMoonTonight_22050Hz.mp3";    // _sonic/FullMoonTonight_22050Hz.mp3, Saucer_mixdown.wav
     
     boolean isDebugging = false;
@@ -531,6 +528,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	
 	/// Processing `setup()` method.
 	public void setup() {
+		daPath = sketchPath("examples/examples_data") + File.separator;
         surface.setTitle("PixelAudio Tutorial One 06: WindowBuffer");
 		// set a standard animation framerate
 		frameRate(24);

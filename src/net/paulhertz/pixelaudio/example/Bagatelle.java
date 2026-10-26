@@ -1130,10 +1130,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	boolean isNetSendFileInfo = false;
 	boolean isNetSendGestures = false;
 	
-	// system-specific path to example files data
-	// in Processing, for PixelAudio Tutorial examples, use this: performanceBasePath = sketchPath("") + "../examples_data/"; 
-	static String performanceBasePath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/"; 
-	String daPath;   // path derived from performancBasePath
+	// path to the shared example files data
+	String performanceBasePath;
+	String daPath;   // path derived from performanceBasePath
 	String daFilename = "audioBlend.wav";    // "audioBlend.wav";
 	ArrayList<String> daFilelist = new ArrayList<>();
 
@@ -1352,6 +1351,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * initial audio image files. 
 	 */
 	void initCustomSettings() {
+		performanceBasePath = sketchPath("examples/examples_data") + File.separator;
 		switch (pMode) {
 		case DEADBODYWORKFLOW:
 			isLoadToBoth = false;

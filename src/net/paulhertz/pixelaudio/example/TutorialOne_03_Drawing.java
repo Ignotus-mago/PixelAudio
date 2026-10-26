@@ -643,9 +643,8 @@ public class TutorialOne_03_Drawing extends PApplet {
 	/*                 APPLICATION SPECIFIC VARIABLES                     */
 	/* ------------------------------------------------------------------ */
     
-	// system-specific path to example files data
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
-	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
+	// path to the shared example files data
+	String daPath;
     String daFile = "Saucer_mixdown.wav";    // _sonic/FullMoonTonight_22050Hz.mp3
 
 
@@ -661,6 +660,7 @@ public class TutorialOne_03_Drawing extends PApplet {
 	
 	/// Processing `setup()` method.
 	public void setup() {
+		daPath = sketchPath("examples/examples_data") + File.separator;
 		// set a standard animation framerate
 		frameRate(24);
 		// 1. Initialize our library.

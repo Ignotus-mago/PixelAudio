@@ -555,9 +555,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	boolean isRunWordGame = false;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
 	boolean doPlayOnDraw = false;     // play audio when a curve is drawn
 	
-	// system-specific path to example files data
-	String daPath = "/Users/paulhz/Code/Workspace/PixelAudio/examples/examples_data/";    // Eclipse
-	// String daPath = sketchPath("") + "../../examples_data/";                           // Processing    
+	// path to the shared example files data
+	String daPath;
 	String daFile = "audioBlend.wav";
 
 	
@@ -575,6 +574,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	}
 	
 	public void setup() {
+		daPath = sketchPath("examples/examples_data") + File.separator;
 		// Set video framerate, window title, screen location
 		frameRate(24);
 		surface.setTitle("Granular Playground");
