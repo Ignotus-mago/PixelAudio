@@ -94,9 +94,14 @@ public class PixelAudio {
 
 
 	
-	//-------------------------------------------//
-	//           LERP, MAP, CONSTRAIN            //
-	//-------------------------------------------//
+	/*---------------------------------------------------------------------------------------------
+	 *                                                                                            *
+	 *                                      STATIC METHODS                                        *
+	 *                                                                                            *         
+	 * These are meant as a convenience, but also to be accessed in library code static contexts  *
+	 * where identical Processing methods that depend on PApplet do not provide a static context. *
+	 *                                                                                            *
+	 *--------------------------------------------------------------------------------------------*/
 
 
 	/**
