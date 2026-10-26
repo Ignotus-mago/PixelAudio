@@ -102,7 +102,13 @@
  *
  * <li>{@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle} is a comprehensive interactive audio-visual performance
  * tool supporting brush management, session saving/loading, gesture recording, and real-time granular synthesis with
- * extensive preset library support and a graphical user interface.</li>
+ * extensive preset library support and a graphical user interface. It contains presets used in live performances
+ * of Chris Walczak's "Abstract Jailbreak" and Paul Hertz's "DEADBODYWORKFLOW".</li>
+ *
+ * <li>{@link net.paulhertz.pixelaudio.example.PerformanceModel PerformanceModel} is a reference version of Bagatelle.
+ * It retains the live-performance shell and example user presets without the composition-specific cues, assets,
+ * performance modes, and class-level javadocs code in Bagatelle. It adds windowed traversal of
+ * full-length audio sources.</li>
  *
  * <li>{@link net.paulhertz.pixelaudio.example.ArgosyMixer ArgosyMixer} is a specialized mixing and synthesis tool
  * for rhythmic pattern making in images and audio. It also provides a GUI with 18 different MultiGen instances 
