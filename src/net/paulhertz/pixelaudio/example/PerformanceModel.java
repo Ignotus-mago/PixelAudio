@@ -1,0 +1,6606 @@
+/*
+ *  Copyright (c) 2024 - 2025 by Paul Hertz <ignotus@gmail.com>
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as published
+ *   by the Free Software Foundation; either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+package net.paulhertz.pixelaudio.example;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+
+import processing.core.PApplet;
+import processing.core.PImage;
+import processing.core.PVector;
+import processing.event.KeyEvent;
+
+// video export
+import com.hamoid.VideoExport;
+
+// Minim audio library
+import ddf.minim.AudioOutput;
+import ddf.minim.Minim;
+import ddf.minim.MultiChannelBuffer;
+
+//GUI library for Processing
+import g4p_controls.*;
+
+// our red leaf lettuce of a library, so crisp and delicious
+import net.paulhertz.pixelaudio.*;
+import net.paulhertz.pixelaudio.PixelAudioMapper.ChannelNames;
+import net.paulhertz.pixelaudio.curves.*;
+import net.paulhertz.pixelaudio.schedule.*;
+import netP5.NetAddress;
+import oscP5.OscMessage;
+import oscP5.OscP5;
+import net.paulhertz.pixelaudio.granular.*;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.*;
+import net.paulhertz.pixelaudio.io.*;
+import net.paulhertz.pixelaudio.sampler.*;
+
+
+/**
+ * A reusable real-time PixelAudio performance application with drawing, sampler and granular
+ * synthesis, brush editing, presets, JSON session I/O, looping, animation, video export, and
+ * optional UDP control. It is a neutral reference model derived from Bagatelle: composition-specific
+ * presets and cues have been removed, while {@link OK_PerformancePreset} remains as an example and
+ * extension point.
+ * <p>
+ * See {@link Bagatelle} for a detailed description of how PerformanceModel works. Otherwise, I'm
+ * leaving this space open for your own performance notes. 
+ * </p><p>
+ * Number keys 1-4 toggle example presets, and 0 clears the preset stack. Use the o key to load
+ * audio, image, brush, or session data. The remaining commands are printed by {@link #showHelp()}.
+ * Customize {@link OK_PerformancePreset}, {@link #runPerformanceCue(char)},
+ * {@link #loadPerformanceGen()}, and {@link #initCustomSettings()} for a particular performance.
+ * {@link WindowedBuffer} buffer traversal code is marked with {@code // *** WindowedBuffer support *** //}.
+ * </p>
+ *
+ * @see Bagatelle
+ */
+public class PerformanceModel extends PApplet implements PANetworkClientINF {
+
+	/* ------------------------------------------------------------------ */
+	/*                       PIXELAUDIO VARIABLES                         */
+	/* ------------------------------------------------------------------ */
+	
+	PixelAudio pixelaudio;     // our shiny new library
+	MultiGen multigen;         // a PixelMapGen that links together multiple PixelMapGens
+	int genWidth = 512;        // width of multigen PixelMapGens
+	int genHeight = 512;       // height of  multigen PixelMapGens
+	PixelAudioMapper mapper;   // object for reading, writing, and transcoding audio and image data
+	int mapSize;               // size of the display bitmap, audio signal, wavesynth pixel array, mapper arrays, etc.
+	// baseImage is a reference image that generally should not be changed except when you load a new file
+	PImage baseImage;          // unchanging source image
+	// mapImage can change, and often does so with reference to the stable baseImage, for example when animating
+	PImage mapImage;           // image for display, may be animated
+	PixelAudioMapper.ChannelNames chan = ChannelNames.ALL;    // also try ChannelNames.L (HSB brightness channel)
+	int[] colors;              // array of spectral colors
+	
+	/* ------------------------------------------------------------------ */
+	/*                        FILE I/O VARIABLES                          */
+	/* ------------------------------------------------------------------ */
+	
+	// audio file
+	File audioFile;
+	String audioFilePath;
+	String audioFileName;
+	String audioFileTag;
+	int audioFileLength;
+
+	// image file
+	File imageFile;
+	String imageFilePath;
+	String imageFileName;
+	String imageFileTag;
+	int imageFileWidth;
+	int imageFileHeight;
+	
+	boolean isLoadToBoth = true;    // if true, load newly opened file both to audio and to video
+	boolean isBlending = false;
+
+
+	/* ------------------------------------------------------------------ */
+	/*                          AUDIO VARIABLES                           */
+	/* ------------------------------------------------------------------ */
+	
+	/** Minim audio library */
+	Minim minim;					  // library that handles audio 
+	AudioOutput audioOut;			  // line out to sound hardware
+	float sampleRate = 48000;         // target audio engine rate used to configure audioOut
+	float fileSampleRate;             // sample rate of most recently opened file (before resampling)
+	float bufferSampleRate;           // sample rate of playBuffer, usually == audioOut.sampleRate()
+	boolean doResample = true;        // if true, resample audio from files whose sampling rate != audioOut.sampleRate()
+	float[] audioSignal;			  // the audio signal as an array of floats
+	MultiChannelBuffer playBuffer;	  // a buffer for playing the audio signal
+	int samplePos;                    // an index into the audio signal, selected by a mouse click on the display image
+	int audioLength;				  // length of the audioSignal, same as the number of pixels in the display image
+
+	/* ------------------------------------------------------------------ */
+	/*                  WINDOWED BUFFER SUPPORT                           */
+	/* ------------------------------------------------------------------ */
+
+	/** Full-file mono source; the display shows one mapper-sized window. */
+	float[] backingSignal;
+	/** Full-file source buffer used by the Sampler instrument pool. */
+	MultiChannelBuffer backingBuffer;
+	/** Moving mapper-sized view onto {@link #backingSignal}. */
+	WindowedBuffer windowBuff;
+	/** Number of samples advanced per frame during automatic traversal. */
+	int windowHopSize = 64;
+	/** Whether draw() advances the window on every frame. */
+	boolean isWindowing = false;
+	/** Window traversal state saved while a file chooser is open. */
+	boolean oldIsWindowing = false;
+	/** True after the backing source and its instrument bindings are installed. */
+	boolean windowAudioReady = false;
+	/** Tracks the source currently bound to the Sampler pool. */
+	MultiChannelBuffer samplerSourceRef;
+	/** Tracks the sample rate currently bound to the Sampler pool. */
+	float samplerSourceRateRef = -1;
+  
+	// ====== Envelopes ====== //
+	
+	ADSRParams samplerEnv;			  // good old attack, decay, sustain, release for individual Sampler events
+	ADSRParams granularEnv;           // envelope for a sequence of Granular events
+	final int noteDuration = 1000;    // average sample synth note duration, milliseconds, for reference
+	int envDurationMs = noteDuration;   // current envelope duration
+	boolean isAdjustEnvelope = true;  // if true, adjust envelope duration based on gesture duration, otherwise, use envDuration
+    float overlapFactor = 3.0f;       // envelope overlap
+    int envMinDurationMs = 40;        // min envelope duration, milliseconds
+    int envMaxDurationMs = 1280;      // max envelope duration, milliseconds
+	
+	// ====== Sampler Synth ====== //
+	
+	int samplelen;                    // calculated sample synth note length, samples
+	float samplerGain = 0.5f;         // linear gain setting for Sampler instrument
+	float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
+	float outputGain = -6.0f;         // gain setting for audio output, decibels
+	boolean isMuted = false;          // global muting
+	PASamplerInstrumentPool pool;     // an allocation pool of PASamplerInstruments
+	// see https://github.com/Ignotus-mago/PixelAudio/issues/45 for information about suggested poolSize and sMaxVoices usage
+	int poolSize = 4;                 // number of sampler instruments for polyphony
+	int sMaxVoices = 128;             // number of voices to allocate to pool or synth
+
+    // ====== Granular Synth ====== //
+
+	public float[] granSignal;
+	public PAGranularInstrument gSynth;
+	public int curveSteps = 16;
+	public int granLength = 4096;
+	public int granHop = 1024;
+	public int gMaxVoices = 512;
+	
+	String currentGranStatus = "";
+	
+	// anything to do?
+    public PAGranularInstrumentDirector gDir;   // director of granular events
+    public float granularGain = 1.0f;           // linear gain for a granular gesture event
+    public float granularPointGain = 0.9f;      // linear gain for a granular point event ("granular burst")
+    // parameters for granular synthesis
+    boolean useShortGrain = true;               // default to short grains, if true
+    int longSample = 4096;                      // number of samples for a moderately long grain
+    int shortSample = 512;                      // number of samples for a relatively short grain
+    int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
+    int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
+    GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED, for granular point event
+    GestureGranularParams gParamsDraw;          // granular parameters when drawing
+    boolean useLinearPointTraversal = false;    // controls grains in a point event or gesture event
+    int maxBurstGrains = 4;
+    int burstGrains = 1;
+    int granPointDurationMs = noteDuration;     // granular point event duration
+    
+	
+	/* ------------------------------------------------------------------ */
+	/*                   ANIMATION AND VIDEO VARIABLES                    */
+	/* ------------------------------------------------------------------ */
+	
+    // This example concentrates on audio synthesis, we don't do pixel-shift 
+    // animation, but the hooks for handling it are all here
+    
+    final int defaultShift = 1;
+    int shift = defaultShift;            // number of pixels to shift the animation
+    int leap = 65536;                    // a big shift 
+    int totalShift = 0;                  // cumulative shift
+    boolean isAnimating = false;         // do we run animation or not?
+    boolean oldIsAnimating;              // keep track of animation state when opening a file
+    boolean isTrackMouse = false;        // if true, drag the mouse to change shift value
+    // animation variables
+    int animSteps = 720;                 // how many steps in an animation loop
+    boolean isRecordingVideo = false;    // are we recording? (only if we are animating)
+    int videoFrameRate = 120;             // fps, frames per second
+    int videoSteps = 720;                // number of frames in video output file
+    int step;                            // number of current step in animation loop
+    VideoExport videx;                   // hamoid library class for video export (requires ffmpeg)
+    
+    
+	/* ------------------------------------------------------------------ */
+	/*                         DRAWING VARIABLES                          */
+	/* ------------------------------------------------------------------ */
+	
+	/*
+	 * Drawing uses classes in the package net.paulhertz.pixelaudio.curves to store drawing data
+	 * and draw Bezier curves and lines. It also provides very basic brushstroke modeling code. 
+	 * Unlike most of the code in PixelAudio, which avoids dependencies on Processing, the 
+	 * curves.* classes interface with Processing to draw to PApplets and PGraphics instances. 
+	 * See the CurveMaker class for details of how drawing works. 
+	 *
+	 */
+	
+	// curve drawing and interaction
+	public PACurveMaker curveMaker;                     // class for tracking and storing drawing data
+	public boolean isDrawMode = false;                  // is drawing on or not?
+	public float epsilon = 4.0f;						// controls how much reduction is applied to points
+	
+    public PVector currentPoint = new PVector(-1, -1);  // point to add to brushstroke points
+    public ArrayList<PVector> allPoints;                // in-progress brushstroke points
+    public ArrayList<Integer> allTimes;                 // in-progress brushstroke times
+    public int startTime;                               // in-progress brushstroke start time
+	
+	public int dragColor = color(220, 178, 152, 128);	    // color for initial drawing 
+	public float dragWeight = 8.0f;						// weight (brush diameter) of initial line drawing
+	
+	public int polySteps = 5;							// number of steps in polygon representation of a Bezier curve	
+	
+	// ====== Visual styling for brushstrokes ======
+	
+	// the next series of colors seems to be all we need
+	int readyGranColor = color(34, 55, 89, 178);		// color for a brushstroke when available to be clicked
+	int hoverGranColor = color(55, 89, 144, 178);     	// color for brushstroke under the cursor
+	int activeGranColor = color(199, 123, 55, 233);	    // color for the selected (clicked or currently active for editing) brushstroke
+	int readySamplerColor = color(55, 34, 89, 178);		// color for a brushstroke when available to be clicked
+	int hoverSamplerColor = color(89, 55, 144, 178);    // color for brushstroke under the cursor
+	int activeSamplerColor = color(123, 199, 55, 233);	// color for the selected (clicked or currently active for editing) brushstroke
+
+	int dimmedBrushColor = color(55, 55, 55, 178);      // color for a brush that cannot be selected
+	
+	int circleColor = color(233, 178, 144);             // interior circles in brushstrokes
+	int dimCircleColor = color(178, 168, 136);
+	int lineColor = color(233, 220, 178);               // interior lines in brushStrokes
+	int dimLineColor = color(178, 168, 136);
+    int animatedCircleColor = color(233, 220, 199);     // color for animated circles when playing audio   
+
+	boolean isIgnoreOutsideBounds = true;               // when drawing, clip or ignore points outside display bounds
+	
+	
+	/* ------------------------------------------------------------------ */
+	/*                        INTERACTION VARIABLES                       */
+	/* ------------------------------------------------------------------ */
+	
+	/**
+	 * Simple container for a brush hit-test result.
+	 * Holds the brush that was hit and its index in the corresponding list.
+	 */
+	static class BrushHit {
+	    final AudioBrush brush;
+	    final int index;
+
+	    BrushHit(AudioBrush brush, int index) {
+	        this.brush = brush;
+	        this.index = index;
+	    }
+	}
+	
+	/** AudioBrush wraps a PACurveMaker (gesture) and a GestureGranularConfig.Builder (granular synthesis parameters) */
+	private AudioBrush hoverBrush;               // the brush the mouse is over, if there is one
+	private int hoverIndex;                      // index of hoverBrush in a brush list
+	private AudioBrush activeBrush;              // brush slotted for selection/highlight/editing in GUI
+
+	// AudioBrushes for use with PAGranularInstrument
+	ArrayList<GranularBrush> granularBrushes;
+	GranularBrush activeGranularBrush = null;
+	int activeGranularIndex = -1;                // index of active brush in granularBrushes
+
+	// AudioBrushes for use with PASamplerInstrument 
+	ArrayList<SamplerBrush> samplerBrushes;      
+	SamplerBrush activeSamplerBrush;             // the currently active PACurveMaker, collecting points as user drags the mouse
+	int activeSamplerIndex = 0;                  // index of active brush in samplerBrushes
+
+	
+	/** Selects which instruments are included when replaying the brush-creation timeline. */
+	public enum BrushPlaybackMode { GRANULAR, SAMPLER, BOTH }
+
+	/** A brush waiting for its creation-time-relative replay deadline. */
+	static class ScheduledBrushPlayback implements Comparable<ScheduledBrushPlayback> {
+		final AudioBrush brush;
+		final int eventTimeMs;
+
+		ScheduledBrushPlayback(AudioBrush brush, int eventTimeMs) {
+			this.brush = brush;
+			this.eventTimeMs = eventTimeMs;
+		}
+
+		@Override
+		public int compareTo(ScheduledBrushPlayback other) {
+			return Integer.compare(eventTimeMs, other.eventTimeMs);
+		}
+	}
+
+	/** List of brush playback events */
+	final ArrayList<ScheduledBrushPlayback> brushPlaybackEvents = new ArrayList<>();
+	
+	
+    // TimedLocation events
+	ArrayList<TimedLocation> pointTimeLocs;             // a list of timed events for mouse clicks
+	ArrayList<SamplerBrushEvent> samplerBrushEvents;    // a list of sampler brush events
+	ArrayList<TimedLocation> grainTimeLocs;             // a list of timed events for Granular brushes
+	final Object pointTimeLocsLock   = new Object();    // dedicated lock for pointTimeLocs access
+	final Object samplerBrushEventsLock = new Object(); // dedicated lock for samplerBrushEvents
+	final Object grainTimeLocsLock   = new Object();    // dedicated lock for grainTimeLocsLock access
+	
+	boolean pointEventUseSampler = true;
+	boolean runningFadeOut = true;
+	
+	/* ------------------------------------------------------------------ */
+	/*                  GRAPHIC USER INTERFACE VARIABLES                  */
+	/* ------------------------------------------------------------------ */
+		
+	// configuration for the GUI to control, also part of the audio synthesis chain
+	GestureGranularConfig.Builder gConfig = new GestureGranularConfig.Builder(); 
+	// for reset to default configuration, optionally set to non-default values
+	final GestureGranularConfig.Builder defaultGranConfig = new GestureGranularConfig.Builder().gainDb(0.0f); 
+	final GestureGranularConfig.Builder defaultSampConfig  = new GestureGranularConfig.Builder().gainDb(-6.0f);
+	
+	boolean guiSyncing = false;   // prevents event feedback loops
+	int baselineCount = 0;
+	int baselineDurationMs = 0;
+	GestureScheduleBuilder scheduleBuilder;
+
+	/** Modes available for drawing and editing curves and configuration. */
+	enum DrawingMode { DRAW_EDIT_SAMPLER, DRAW_EDIT_GRANULAR, PLAY_ONLY }
+	DrawingMode drawingMode = DrawingMode.DRAW_EDIT_GRANULAR;
+
+	static final int CURVE_STEPS_HARD_MAX = 128;   // Curve steps GUI slider max
+	static final int CURVE_STEPS_SAFE_MAX = 32;    // Curve steps preferred max threshold
+	static final int CURVE_STEPS_FLOOR = 4;        // don’t go too low
+
+	
+	/* ------------------------------------------------------------------ */
+	/*                    TIME/LOCATION/ACTION VARIABLES                  */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Barebones interface for "something that happens at a certain point", 
+	 * for use with AudioScheduler. The time-when-something-happens gets connected to
+	 * the-room-where-it-happens and the entire cast of Hamilton steps in, if you let them. 
+	 */
+	interface Happening { int x(); int y(); }
+		
+	AudioScheduler<Happening> audioSched = new AudioScheduler<>();	
+		
+	// grain density mod
+	float hopScale = 1.0f;
+	// optimal number of grains for specified time
+	int optGrainCount = 2;
+
+	int eventStep = 90;    // milliseconds between events, formerly used by Sampler instrument
+	
+	/* ------------------------------------------------------------------ */
+	/*                              JSON FILE IO                          */
+	/* ------------------------------------------------------------------ */
+
+	boolean isSaveConfig = true;
+
+	/* ------------------------------------------------------------------ */
+	/*                           PLAY WHILE DRAWING                       */
+	/* ------------------------------------------------------------------ */
+
+	// ----- lightweight audio buffer "tasting" while drawing -----
+	
+	int drawTasteIntervalMs = 30;      // minimum time between tasting triggers
+	float drawTasteMinDist = 6.0f;     // minimum mouse movement before retrigger
+	int drawTasteDurationMs = 96;      // short taste burst
+	int drawTasteMaxGrains = 12;       // hard cap on grains per taste
+	int drawTasteBurstGrains = 1;      // keep taste small and cheap
+
+	int lastDrawTasteMs = -100000;        // milliseconds since last draw taste
+	PVector lastDrawTastePoint = null;    // last point where we tasted a sample
+	
+	
+	/* ------------------------------------------------------------------ */
+	/*                                LOOPING                             */
+	/* ------------------------------------------------------------------ */
+	
+	/**
+	 * Supports looping of brush animation and associated audio events. 
+	 */
+	static class InstrumentLoop {
+		final AudioBrush brush;     // optional owner, useful later for hover/cancel
+		final Runnable playAction;
+		final Runnable stopAction;
+
+		final int durationMs;       // one cycle duration
+		final int gapMs;            // silence between cycles
+		int repeatsRemaining;       // -1 = infinite
+		long nextStartMillis;       // next trigger time
+		boolean active = true;
+
+		InstrumentLoop(AudioBrush brush,
+				Runnable playAction,
+				Runnable stopAction,
+				int durationMs,
+				int gapMs,
+				int repeatsRemaining,
+				long nextStartMillis) {
+			this.brush = brush;
+			this.playAction = playAction;
+			this.stopAction = stopAction;
+			this.durationMs = Math.max(1, durationMs);
+			this.gapMs = Math.max(0, gapMs);
+			this.repeatsRemaining = repeatsRemaining;
+			this.nextStartMillis = nextStartMillis;
+		}
+
+		void stop() {
+			active = false;
+			if (stopAction != null) stopAction.run();
+		}
+	}
+	
+	final ArrayList<InstrumentLoop> activeLoops = new ArrayList<>();
+
+	/* ------------------------------------------------------------------ */
+	/*                            OK PRESET LIST                          */
+	/* ------------------------------------------------------------------ */
+
+	/* OK Presets. Some examples are filled in already. Now roll your own. 
+	 *    1. Resample curve to 4000 milliseconds long.
+     *    2. Impose some weird settings.
+     *    3. Create a random app.dynamics setting each time you draw. 
+     *       isAddDynamics must be true to hear the dynamics.
+     *    4. Left blank, but used in runPerformanceCue() to play brushstrokes.
+	 */ 
+	/**
+	 * Presets are applied to each new brush at the moment drawing is completed by 
+	 * releasing the mouse button and calling makeBrush(), the bottleneck method for
+	 * all brush creation. Presets are best used just for brush modifications. If you
+	 * want to change application settings, use runPerformanceCue() with your own custom 
+	 * code. You can address the host application with the <code>app</code> parameter, 
+	 * but keep in mind that is is called on every brush. 
+	 */
+	enum OK_PerformancePreset {
+	    NEW_DURATION('1') {
+	    	// change the duration of a curve to newDurationMs
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, PerformanceModel app) {
+	        	int newDurationMs = (int)(PixelAudio.randomInRange(2, 5)) * 500;
+	        	println("---- new duration = "+ newDurationMs);
+				int curveColor = PixelAudioMapper.composeColor(233, 34, 34, 255);
+				curve.setBrushColor(curveColor);
+				cfg.targetDurationMs = newDurationMs;
+				cfg.rdpEpsilon = 2;
+				cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+				cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
+				cfg.burstGrains = 8;
+				cfg.grainLengthSamples = 2560;
+				cfg.hopLengthSamples = 640;
+	            return new CueResult(curve, cfg);
+	        }
+	    },
+	    WEIRD('2') {
+	    	// make the sound reeeally weird; add pitch jitter ('p') for more weirdness
+	        @Override
+	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, PerformanceModel app) {
+				cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+				cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
+				cfg.burstGrains = 8;
+				cfg.grainLengthSamples = 108;
+				cfg.hopLengthSamples = 216;
+				cfg.warpShape = GestureGranularConfig.WarpShape.EXP;
+				cfg.warpExponent = 1.5f;
+            return new CueResult(curve, cfg);
+	        }
+	    },
+	    RANDOM_DYNAMICS('3') {
+	    	// change the application setting "dynamics" each time you draw 
+	    	// note that isAddDynamics must be true to hear the dynamics
+	    	@Override 
+	    	CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, PerformanceModel app) {
+	    		float dur = curve.getTimeOffset();
+	    		float peak = Math.round(PixelAudio.randomInRange(dur * 0.1f, dur * 0.9f));
+				float[] timesMs = new float[] {0, peak, dur * 0.9125f, dur * 1.05f};
+	        	float t = timesMs[timesMs.length - 1];
+	        	float[] values = new float[] {0.1f, 1.0f, 0.25f, 0.1f};
+	        	float[] times = new float[timesMs.length];
+	        	for (int i = 0; i < times.length; i++) {
+	        		times[i] =  map(timesMs[i], 0f, t, 0f, 1f);
+	        	}
+	        	app.dynamics = new PAKeyframeControlCurve (times, values); 	    		
+	    		return new CueResult(curve, cfg);
+	    	}
+	    },
+	    BLANK('4') {
+	    	@Override 
+	    	CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, PerformanceModel app) {   		
+	    		return new CueResult(curve, cfg);
+	    	}
+	    };
+
+	    final char key;
+
+	    OK_PerformancePreset(char key) {
+	        this.key = key;
+	    }
+
+	    static OK_PerformancePreset fromKey(char k) {
+	        for (OK_PerformancePreset c : values()) {
+	            if (c.key == k) return c;
+	        }
+	        return null;
+	    }
+	    
+	    /**
+	     * Abstract method for concrete apply() methods implemented by each enum constant. In the preset
+	     * logic, each constant is in effect its own function, which can be invoked by reference. 
+	     * 
+	     * @param cfg      configuration parameters for GestureGranularConfig, used to modify audio synthesis
+	     * @param curve    a PACurveMaker gesture, which can be modifed by the concrete apply() method
+	     * @param app      a reference to the host application, use with caution
+	     * @return         a reference to the concrete apply() method for an enum constant 
+	     */
+	    abstract CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, PerformanceModel app);
+	}
+
+	ArrayList<OK_PerformancePreset> ok_presetStack = new ArrayList<>();
+	
+	
+	
+	/**
+	 * Gesture and audio configuration data returned by a PerformancePreset.
+	 */
+	static class CueResult {
+	    final PACurveMaker curve;
+	    final GestureGranularConfig.Builder cfg;
+	    CueResult(PACurveMaker curve, GestureGranularConfig.Builder cfg) {
+	        this.curve = curve;
+	        this.cfg = cfg;
+	    }
+	}
+	
+	/* ------------------------------------------------------------------ */
+	/*                    DEBUGGING + PERFORMANCE SETTINGS                */
+	/* ------------------------------------------------------------------ */
+	
+	boolean isVerbose = true;
+	boolean isDebugging = false;
+	boolean isTrackSamplerVoices = false;
+	
+	boolean shiftIsDown = false;         // flag for shift key down
+	
+	// performance state
+	
+	boolean doPlayOnNewBrush = false;    // play audio when a curve is drawn
+	boolean doPlayWhileDrawing = false;  // play audio events while drawing, or not
+	boolean isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
+	boolean doMagicClick = false;        // find a brush that starts in a selected rectangle and play it
+    boolean usePitchedGrains = false;    // jitter granular pitch if true
+    float   pitchJitter = 0.0167f;       // amount of jitter
+	boolean applyColorMapOnLoad = true;  // if true, apply the color map when a file is loaded
+
+	boolean isReplaceBrushes = true;     // if true, replace current brushes when we load a session or library folder
+	boolean isSaveSession = true;        // save the session brushes ('J' key commend)	
+
+	boolean isRaining = false;           // if true, run random audio/animation point events
+	
+    boolean isAddDynamics = false;       // add dynamics curve to gestures
+    // dynamics for sampler and granular gestures
+    PAControlCurve dynamics = new PAKeyframeControlCurve (
+			new float[] {0.0f, 0.5f, 1.0f},    // times
+			new float[] {0.1f, 1.0f, 0.1f} );  // values
+ 
+    boolean isBrushTransformTest = false;      // testing animation feature (key 'y')
+	boolean isBrushTransformFrozen = false;    // freeze animation (key 'Y')
+	
+	boolean isBrushSelectionModal = false;     // if false, select all brushes, otherwise, select by active mode
+	
+    PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+    PABoundsPolicy boundsPolicy;
+	
+	
+	// *****]]] NETWORKING [[[***** //
+	NetworkDelegate nd;
+	boolean isUseNetworkDelegate = false;
+	boolean isNetSendDrawingPoints = true;
+	boolean isNetSendOutsideBrushPoints = true;
+	boolean isNetSendBrushTriggers = false;
+	boolean isNetSendFileInfo = false;
+	boolean isNetSendGestures = false;
+	
+	// Path to the shared example data, resolved from the launch directory in initCustomSettings().
+	String performanceBasePath;
+	String daPath;   // path derived from performanceBasePath
+	String daFilename = "audioBlend.wav";    // "audioBlend.wav";
+	ArrayList<String> daFilelist = new ArrayList<>();
+
+	
+	//------------- APPLICATION CODE -------------//
+	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		//PApplet.main(new String[] { "--display=1", "--present", "--window-color=#000000", PerformanceModel.class.getName() });
+		PApplet.main(new String[] { PerformanceModel.class.getName() });
+	}
+	
+	public void settings() {
+		size(3 * genWidth, 2 * genHeight);
+	}
+	
+	public void setup() {
+		// Use a common professional-audio sample rate and a responsive visual frame rate.
+		sampleRate = 48000;
+		frameRate(120);
+		surface.setTitle("PixelAudio Performance Model");
+		// we can put application and control panel always on top, see createControlWindow()
+		surface.setAlwaysOnTop(false);    
+		// 1) initialize our library
+		pixelaudio = new PixelAudio(this);
+		// 2) create a PixelMapGen instance with dimensions equal to the display window.
+		multigen = loadPerformanceGen();
+		// 3) Create a PixelAudioMapper to handle the mapping of pixel colors to audio samples.
+		mapper = new PixelAudioMapper(multigen);
+		mapSize = mapper.getSize();
+		scheduleBuilder = new GestureScheduleBuilder();
+		// initialize the boundary policy for keeping points and indices in bounds
+		boundsPolicy = PABoundsPolicy.fromWidthHeight(mapper.getWidth(), mapper.getHeight(), boundaryMode);
+		colors = getColors(mapSize);    // create an array of rainbow colors with mapSize elements
+		initImages();                   // load baseImage and mapImage
+		initAudio();                    // set up Minim and our granular and sampling synths
+		initConfig();                   // set up configuration for granular and sampling instruments
+		initDrawing();                  // set up drawing variables
+		initGUI();                      // set up the G4P control window and widgets
+		resetConfigForMode();           // determine which GestureGranularConfig to use first and load it
+	    // *****]]] NETWORKING [[[***** //
+		isUseNetworkDelegate = true;
+		initNetwork();
+		// customize environment, setting daPath from performanceBasePath
+		initCustomSettings();
+		applyColorMap();                // apply spectrum to mapImage and baseImage
+		showHelp();                     // print key commands to console
+	}
+	
+	/**
+	 * turn off audio processing when we exit
+	 */
+	public void stop() {
+		if (pool != null) pool.close();
+		if (minim != null) minim.stop();
+		super.stop();
+	}
+	
+	/**
+	 * Generates an array of rainbow colors using the HSB color space.
+	 * @param size    the number of entries in the colors array
+	 * @return an array of RGB colors ordered by hue
+	 */
+	public int[] getColors(int size) {
+		int[] colorWheel = new int[size]; // an array for our colors
+		pushStyle(); // save styles
+		colorMode(HSB, colorWheel.length, 100, 100); // pop over to the HSB color space and give hue a very wide range
+		for (int i = 0; i < colorWheel.length; i++) {
+			colorWheel[i] = color(i, 30, 50); // fill our array with colors, gradually changing hue
+		}
+		popStyle(); // restore styles, including the default RGB color space
+		return colorWheel;
+	}
+
+	/**
+	 * Initializes {@code mapImage} with the colors array. 
+	 * {@code mapImage} handles the color data for {@code mapper} and also serves as our display image.
+	 * {@code baseImage} is a reference image that usually only changes when you open a new image file.
+	 */
+	public void initImages() {
+		mapImage = createImage(width, height, ARGB);
+		mapImage.loadPixels();
+		mapper.plantPixels(colors, mapImage.pixels, 0, mapper.getSize()); // load colors to mapImage following signal path
+		mapImage.updatePixels();
+		baseImage = mapImage.copy();
+	}
+	
+	/**
+	 * Initializes drawing and drawing interaction variables. 
+	 */
+	public void initDrawing() {
+	    currentPoint = new PVector(-1, -1);    // used for drawing to the display
+	    granularBrushes = new ArrayList<>();
+	    samplerBrushes = new ArrayList<>();
+	    hoverBrush = null;                     
+	    hoverIndex = -1;
+	    activeBrush = null;
+	}
+	
+	/**
+	 * Initializes default settings for granular synthesis, defaultGranConfig, 
+	 * and for sampler synthesis, defaultSampConfig.
+	 */
+	public void initConfig() {
+		granularEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.975f, 0.025f);
+		defaultGranConfig.grainLengthSamples = granLength;
+		defaultGranConfig.hopLengthSamples = granHop;
+		defaultGranConfig.curveSteps = curveSteps;
+		defaultGranConfig.granularEnvelope(granularEnv);
+		defaultGranConfig.wrapAround(true);
+		samplerEnv = envPreset("Soft");
+		defaultSampConfig.samplerEnvelope(samplerEnv);
+		defaultSampConfig.rdpEpsilon = 8.0f;
+		defaultSampConfig.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
+	}
+	
+	/**
+	 * Initializes the control palette.
+	 */
+	public void initGUI() {
+		createGUI();
+		controlWindow.loop();
+	}
+	
+	/**
+	 * @return the default signal-path generator for the performance model
+	 */
+	MultiGen loadPerformanceGen() {
+		return BoustropheGen.boustrophRowOriented(3, 2, width/3, height/2, PixelMapGen.nada);
+	}
+	
+	/**
+	 * Initializes performance presets and cues, including path to performance files, and loads
+	 * initial audio image files. 
+	 */
+	void initCustomSettings() {
+		performanceBasePath = sketchPath("examples/examples_data") + File.separator;
+		println("-- performanceBasePath = "+ performanceBasePath);
+		daPath = performanceBasePath;
+		daFilename = "Schumann_Carnaval_-6dBNorm.wav";
+		preloadFiles(daPath, daFilename);
+	}
+	
+	/**
+	 * Sets up network for UDP communication.
+	 */
+	void initNetwork() {
+	    // *****]]] NETWORKING [[[***** //
+		if (isUseNetworkDelegate) {
+			String remoteAddress = "127.0.0.1";
+			nd = new NetworkDelegate(this, remoteAddress, remoteAddress, 7401, 7400);
+			nd.oscSendClear();
+		}
+	}
+	
+	/**
+	 * Preload an audio file using a file path and a filename.
+	 * @param path        the fully qualified path to the file's directory, ending with a '/' 
+	 * @param fileName    the name of the file
+	 */
+	public void preloadFiles(String path, String fileName) {
+		// the audio file we want to open on startup
+		File sourceFile = new File(path + fileName);
+		// load the file into audio buffer and Brightness channel of display image (mapImage)
+		// if audio is also loaded to the image, will set baseImage to the new image 
+		fileSelected(sourceFile);
+		// overlay colors on mapImage
+		mapImage.loadPixels();
+		applyColor(colors, mapImage.pixels, mapper.getImageToSignalLUT());
+		mapImage.updatePixels();
+		// write mapImage to baseImage
+		commitMapImageToBaseImage();
+	}
+
+	
+	public void draw() {
+		// *** WindowedBuffer support *** //
+		if (isWindowing && windowBuff != null) {
+			refreshWindowFromBacking(true);
+			if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+		}
+		image(mapImage, 0, 0);
+		handleDrawing();          // handle interactive drawing and audio events created by drawing
+	}
+	
+	// ANIMATION METHODS //
+	
+	public void animate() {
+		stepAnimation();
+		renderFrame(step);
+	}
+	
+	/**
+	 * Step through the animation, called by the draw() method.
+	 * Will also record a frame of video, if we're recording.
+	 */
+	public void stepAnimation() {
+		if (step >= videoSteps) {
+			if (isRecordingVideo) {
+				isRecordingVideo = false;
+				videx.endMovie();
+				isAnimating = oldIsAnimating;
+				println("--- Completed video at frame " + videoSteps);
+			}
+			step = 0;
+		} 
+		else {
+			step += 1;
+			if (isRecordingVideo) {
+				if (videx == null) {
+					println("----->>> start video recording ");
+					videx = new VideoExport(this, "TutorialOneVideo.mp4");
+					videx.setFrameRate(videoFrameRate);
+					videx.startMovie();
+				}
+				videx.saveFrame();
+				println("-- video recording frame " + step + " of " + videoSteps);
+			}
+		}
+	}
+	
+	/**
+	 * Renders a frame of pixel-shifting animation: moving along the signal path, copies baseImage
+	 * pixels to mapImage pixels, adjusting the index position of the copy using totalShift --
+	 * i.e. we don't actually rotate the pixels, we just shift the position they're copied to.
+	 * 
+	 * @param step   current animation step
+	 */
+	public void renderFrame(int step) {
+		// keep track of how much the pixel array is shifted
+		totalShift = PixelAudioMapper.wrap(totalShift + shift, mapSize);
+		// write the pixels in rgbSignal to mapImage, following the signal path
+		mapImage.loadPixels();
+		mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
+		mapImage.updatePixels();
+	}
+	
+	/**
+	 * Handles user's drawing actions, draws previously recorded brushstrokes, 
+	 * tracks and generates animation and audio events. 
+	 */
+	public void handleDrawing() {	
+		// 0) any animation of brushes goes first
+	    updateAnimatedBrushes();  
+	    // 1) draw existing brushes
+		drawBrushShapes();
+	    // 2) update hover state (pure state update, no action)
+		updateHover();
+	    // 3) if in the process of drawing, accumulate points while mouse is held down
+		if (isEditable()) {
+			if (mousePressed) {
+	            addDrawingPoint(clipToWidth(mouseX), clipToHeight(mouseY));
+			}
+			if (allPoints != null && allPoints.size() > 2) {
+				PACurveUtility.lineDraw(this, allPoints, dragColor, dragWeight);
+			}
+		}
+		// 4) loooooooping of various sorts
+		updateInstrumentLoops();
+		if (isRaining) {
+			// animation slows the frame rate, so we change the threshold when animating
+		    float thresh = 0.05f;
+		    if (random(0,1) < thresh) {
+		      raindrops();							// trigger random audio events
+		    }
+		}
+		if (isAnimating) animate();
+		// 5) depending on your event dispatching model, run scheduled events
+	    runBrushPlaybackEvents();   // automated replay of brushes
+	    runSamplerBrushEvents();    // sampler synth events
+	    runPointEvents();           // point events, usually audio + animation
+	    runGrainEvents();           // granular synth events
+	}
+
+	/**
+	 * @return a reference to the brushstroke the mouse is over, or null if there's no brushstroke. 
+	 */
+	BrushHit findHoverHit() {
+		// Decide z-order: check the list you draw last *first*,
+		// so topmost brushes win.
+		// granular on top here, descending for loop means most recent brushes are on top
+		/* MODAL SELECTION */
+		if (isBrushSelectionModal) {
+			if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER || drawingMode == DrawingMode.PLAY_ONLY) {
+				for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+					SamplerBrush b = samplerBrushes.get(i);
+					if (mouseInPoly(b.curve().getBrushPoly())) {
+						return new BrushHit(b, i);
+					}
+				}
+			}
+			if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
+				for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+					GranularBrush b = granularBrushes.get(i);
+					if (mouseInPoly(b.curve().getBrushPoly())) {
+						return new BrushHit(b, i);
+					}
+				}
+			}
+		} 
+		else {
+			for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+				SamplerBrush b = samplerBrushes.get(i);
+				if (mouseInPoly(b.curve().getBrushPoly())) {
+					return new BrushHit(b, i);
+				}
+			}
+			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+				GranularBrush b = granularBrushes.get(i);
+				if (mouseInPoly(b.curve().getBrushPoly())) {
+					return new BrushHit(b, i);
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Update the hoverBrush and hoverIndex global variables.
+	 */
+	void updateHover() {
+	    BrushHit hit = findHoverHit();
+	    if (hit != null) {
+	        hoverBrush = hit.brush;
+	        hoverIndex = hit.index;
+	    } 
+	    else {
+	        hoverBrush = null;
+	        hoverIndex = -1;
+	    }
+	}
+	
+	/**
+	 * Tests whether a supplied coordinate pair is within a rectangular tile that contains 
+	 * a brush, if so, returns the brush in a BrushHit object.
+	 * 
+	 * @param x        x-coordinate to test
+	 * @param y        y-coordinate to test
+	 * @param wStep    tiling rectangle offset on x-axis
+	 * @param hStep    tiling rectangle offset on y-axis
+	 * @return a BrushHit object or null, if no brush was selected
+	 */
+	BrushHit getBrushInRect(int x, int y, int wStep, int hStep) {
+		float[] r = new float[4];
+		int x1 = (x / wStep) * wStep;
+		int y1 = (y / hStep) * hStep;
+		int x2 = x1 + wStep;
+		int y2 = y1 + hStep;
+		r[0] = x1;
+		r[1] = y1;
+		r[2] = x2;
+		r[3] = y2;
+		// println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
+			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+				GranularBrush b = granularBrushes.get(i);
+				PVector v = b.curve().getDragPoints().get(0);
+				if (containsPoint(v.x, v.y, r)) {
+					return new BrushHit(b, i);
+				}
+			}
+		}
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER || drawingMode == DrawingMode.PLAY_ONLY) {
+			for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+				SamplerBrush b = samplerBrushes.get(i);
+				PVector v = b.curve().getDragPoints().get(0);
+				if (containsPoint(v.x, v.y, r)) {
+					return new BrushHit(b, i);
+				}
+			}
+		}
+		return null;
+	}
+	
+	/**
+     * @param x   x-coordinate of point to test
+     * @param y   y-coordinate of point to test
+     * @param r   rectangle to test
+     * @return    {@code true} if r contains the specified point
+     */
+    public static boolean containsPoint(float x, float y, float[] r) {
+        return (    x >= r[0] && x <= r[2]
+                 && y >= r[1] && y <= r[3]);
+    }
+
+
+	/**
+	 * Displays a line of text to the screen, usually in the draw loop. Handy for debugging.
+	 * typical call: writeToScreen("When does the mind stop and the world begin?", 64, 1000, 24, true);
+	 * 
+	 * @param msg     message to write
+	 * @param x       x coordinate
+	 * @param y       y coordinate
+	 * @param weight  font weight
+	 * @param isWhite if true, white text, otherwise, black text
+	 */
+	public void writeToScreen(String msg, int x, int y, int weight, boolean isWhite) {
+		int fill1 = isWhite? 0 : 255;
+		int fill2 = isWhite? 255 : 0;
+		pushStyle();
+		textSize(weight);
+		float tw = textWidth(msg);
+		int pad = 4;
+		fill(fill1);
+		rect(x - pad, y - pad - weight, x + tw + pad, y + weight/2 + pad);
+		fill(fill2);
+		text(msg, x, y);
+		popStyle();
+	}
+
+
+	/**
+	 * The built-in mousePressed handler for Processing, used to begin drawing.
+	 */
+	public void mousePressed() {
+		if (isEditable()) {
+			initAllPoints();
+	        lastDrawTasteMs = -100000;
+	        lastDrawTastePoint = null;
+		} 
+		// expand here to call a handler for mousePressed when editing is not on (mode == PLAY_ONLY)
+	}
+	
+	public void mouseDragged() {
+		// we don't need to handle dragging -- the draw() loop takes care of drawing to the display
+	}
+	
+	public void mouseReleased() {
+		// if (!(isEditable() && allPoints != null)) return; // EDIT to go ahead in all modes
+		if (allPoints != null && allPoints.size() > 2) {	
+			initCurveMakerAndAddBrush();    // create a new brush
+			allPoints.clear();
+			// possible preview action, play on draw
+		}
+		else {	// handle the event as a click in mouseClicked()
+			if (allPoints != null) allPoints.clear();
+		}
+	}
+	
+	public void mouseClicked() {
+		int x = this.clipToWidth(mouseX);
+		int y = this.clipToHeight(mouseY);
+		BrushHit hit = findHoverHit();
+		if (hit != null) {
+			openBrushEditor(hit.brush);      // flag the hit brush as the activeBrush
+			PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
+			if (hit.brush instanceof SamplerBrush sb) {
+				scheduleSamplerBrushClick(sb, x, y, gainCurve);
+			}
+			else if (hit.brush instanceof GranularBrush gb) {
+				scheduleGranularBrushClick(gb, x, y, gainCurve);
+			}
+			return;
+		}
+		// in other sketches we called audioMousePressed(), handleClickOutsideBrush() does the same sort of things
+		if (isDebugging) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
+		handleClickOutsideBrush(x, y);
+	}
+	
+	
+	/**
+     * built-in keyPressed handler, forwards events to parseKey.
+     */
+    @Override
+    public void keyPressed() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = true;
+            // println("-->> shiftIsDown " + shiftIsDown);
+            return;
+        }
+    	if (key != CODED) {
+    		parseKey(key, keyCode);
+    	}
+    	else {
+			if (keyCode == UP) {
+				adjustAudioGain(shiftIsDown ? 3.0f : 1.0f);
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
+			}
+			else if (keyCode == DOWN) {
+				adjustAudioGain(shiftIsDown ? -3.0f : -1.0f);
+				println("---- audio gain is "+ nf(audioOut.getGain(), 0, 2) +"dB");
+			}
+			else if (keyCode == RIGHT) {				
+				adjustInstrumentGain(3.0f);
+				float newGain = (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) ? 
+						pool.getGainDb() : gDir.getInstrument().getGlobalGainDb();
+				println("---- configuration gain is "+ nf(newGain, 0, 2) +"dB");
+			}
+			else if (keyCode == LEFT) {
+				adjustInstrumentGain(-3.0f);
+				float newGain = (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) ? 
+						pool.getGainDb() : gDir.getInstrument().getGlobalGainDb();
+				println("---- configuration gain is "+ nf(newGain, 0, 2) +"dB");
+			}
+    	}
+    }
+
+    @Override
+    public void keyReleased() {
+        if (key == CODED && keyCode == SHIFT) {
+            shiftIsDown = false;
+            // println("-->> shiftIsDown " + shiftIsDown);
+        }
+    }
+
+    /**
+	 * Handles key press events passed on by the built-in keyPressed method. 
+	 * By moving key event handling outside the built-in keyPressed method, 
+	 * we make it possible to post key commands without an actual key event.
+	 * Methods and interfaces and even other threads can call parseKey(). 
+	 * This opens up many possibilities and a some risks, too.  
+	 * 
+	 * @param key        {@code char} for key that was pressed 
+	 * @param keyCode    numeric code for key that was pressed
+	 */
+	public void parseKey(char key, int keyCode) { // TODO create auto-adjust Sampler note duration toggle
+		String msg;
+		if ("0123456789".contains("" + key)) {numericKey(key);}
+		switch(key) {
+		case TAB: // set brush to active, if cursor is over a brush
+			if (isEditable() && hoverBrush !=  null) openBrushEditor(hoverBrush);
+			break;
+		case ' ': // (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event
+			if (doMagicClick) {
+				BrushHit hit = getBrushInRect(clipToWidth(mouseX), clipToHeight(mouseY), genWidth, genHeight/4);
+				if (hit != null) {
+					hoverBrush = hit.brush;
+					hoverIndex = hit.index;
+					setActiveBrush(hoverBrush);
+				}
+			}
+			if (hoverBrush != null) {
+				PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
+				if (hoverBrush instanceof SamplerBrush sb) {
+					scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve); 
+				}
+				else if (hoverBrush instanceof GranularBrush gb) {
+					scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
+				}
+			}
+			else {				
+				handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+			}
+			break;
+		case 'a': // toggle animation
+			isAnimating = !isAnimating;
+			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
+			break;
+		case 'A': // change animation shift  or automatic window traversal rate
+			// animation is synchronized with the audio when we trigger an audio event once every frame
+			// we can calculate with the actual rate, frameRate, or our requested rate, videoFrameRate
+			float rate = this.frameRate;    
+			shift = (shift == defaultShift) 
+				? Math.round(audioOut.sampleRate() / rate)
+				: defaultShift;
+			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
+			if (isWindowing) {
+				windowHopSize = (int) shift;
+				windowBuff.setHopSize(windowHopSize);
+			}
+			break;
+		case 'c': case 'C': // print the current configuration status to the console
+			printGConfigStatus();
+			if (activeBrush != null) {
+				println("-- "+ activeBrush.curve().curveInfo());
+			}
+			break;
+		case 't': // switch between Granular, Sampler, and Play Only modes
+			if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+				setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+				controlWindow.setTitle("Sampler Synth");				
+			}
+			else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+				setMode(DrawingMode.PLAY_ONLY);
+				controlWindow.setTitle("Play Only: Both Synths");
+			}
+			else if (drawingMode == DrawingMode.PLAY_ONLY) {
+				setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+				controlWindow.setTitle("Granular Synth");
+			}
+			println("---> mode is "+ drawingMode.toString());			
+			break;
+		case 'z': // change the drawing mode of the hover brush
+		    AudioBrush changed = null;
+		    if (hoverBrush != null) {
+		        changed = toggleHoveredBrushType();
+			    syncDrawingModeToBrush(changed);
+		    }
+		    else if (activeBrush != null) {
+		        changed = toggleActiveBrushType();
+			    syncDrawingModeToBrush(changed);
+		    }
+		    else {
+		        // handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+		    }
+		    break;
+		case 'd': // toggle doPlayOnNewBrush: if true, audio plays when a new brush is created
+			doPlayOnNewBrush = !doPlayOnNewBrush;
+			println("-- play on new brush is "+ doPlayOnNewBrush);
+			break;
+		case 'D': // toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse
+			doPlayWhileDrawing = !doPlayWhileDrawing;
+			println("-- play while drawing is "+ doPlayWhileDrawing);
+			break;
+		case 'p': // jitter the pitch of granular gestures and point events
+			usePitchedGrains = !usePitchedGrains;
+			msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
+			println("-- Play granular synth with "+ msg);
+			println("-- usePitchedGrains = " + usePitchedGrains + ", pitchJitter = " + pitchJitter);
+			break;
+		case 'P': // toggle useLinearPointTraversal (granular click event behavior)
+			useLinearPointTraversal = !useLinearPointTraversal;
+			println("-- useLinearPointTraversal = "+ useLinearPointTraversal);
+			break;
+		case 'k': // apply the hue and saturation in the colors array to mapImage (not to baseImage)
+			applyColorMapToDisplay(false);
+			break;
+		case 'K': // apply hue and saturation in colors to baseImage and mapImage
+			applyColorMapToDisplay(true);
+			break;
+		case 'b': case 'B': // toggle loading data to both image and audio buffers when you open either an image or an audio file
+			isLoadToBoth = !isLoadToBoth;
+			println(isLoadToBoth ? "-- load to both image and audio" : "-- load only to image or audio");
+			break;
+		case 'f': case 'F': // open a folder with JSON brush data and load all files
+			chooseGestureLibraryFolder();
+			break;
+		case 'j': // save the active brush curve and config to JSON files
+			isSaveSession = false;
+			this.saveGestureJSON(isSaveSession);
+			break;
+		case 'J': // save all brushes curve and config to JSON Session file
+			isSaveSession = true;
+			this.saveGestureJSON(isSaveSession);
+			break;
+		case 'o': // open an audio file, image file, or JSON file
+			chooseFile();
+			break;
+		case 'w': // write the map image to the audio buffer
+			renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+			updateAudioChain(audioSignal);
+			break;
+		case 'W': // write the audio buffer to the display image
+			writeAudioToImage(audioSignal, mapper, mapImage, PixelAudioMapper.ChannelNames.L);
+			commitMapImageToBaseImage();
+			if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+			break;
+		case 'm': // toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar
+			doMagicClick = !doMagicClick;
+			println(doMagicClick ? "-- doMagicClick is true" : "-- doMagicClick is false");
+			break;
+		case 'n': // set noise reduction policy for Sampler instrument audio mix
+			pool.cycleMixProfile();
+			println("-- mix profile is "+ pool.getMixProfile().name());
+			break;
+		case 'R': // reset active AudioBrush's transformState to unity, or fall through to reset instrument config
+		    if (activeBrush != null && activeBrush.hasTransform()) {
+		        activeBrush.restoreTransform();
+		        activeBrush.transform().resetTransform();
+		        println("-- restored hover brush transform");
+		    }
+		    else {
+		    	resetConfigToDefaults(); 
+		    }
+			break;
+		case 'r': // reset instrument configuration to defaults in GUI
+			resetConfigToDefaults(); 
+			break;
+		case 'q': // automatically set an active GRANULAR brush to have an optimized number of samples
+			if (activeBrush instanceof SamplerBrush) {
+				println("-- please choose a Granular Brush to adjust resampling and duration values.");
+				return;
+			}
+			optimizeActiveBrush();
+			break;
+		case 'u': // toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation
+			isAutoOptimize = !isAutoOptimize;
+			println("-- isAutoOptimize is "+ isAutoOptimize);
+			break;
+		case 'E': // toggle calculating envelope duration from brush points or setting it to envDurationMs
+			isAdjustEnvelope = !isAdjustEnvelope;
+			if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) envFitToBrushCheck.setSelected(isAdjustEnvelope);
+			println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+			break;
+		case 'g': // toggle use of dynamics in gainCurve with gesture 
+			isAddDynamics = !isAddDynamics;
+			println("-- isAddDynamics = "+ isAddDynamics);
+			break;
+		// LOOPING
+		case 'G': // create a beatBrush
+			if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+				GranularBrush gBeatBrush = generateGranularBeatBrush(256, 117);
+				this.granularBrushes.add(gBeatBrush);
+				setActiveBrush(gBeatBrush);
+			} else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+				SamplerBrush sBeatBrush = generateSamplerBeatBrush(256, 117);
+				this.samplerBrushes.add(sBeatBrush);
+				setActiveBrush(sBeatBrush);
+			} // for PLAY_ONLY, do nothing
+			break;
+		case 'l': // loop hovered brush 4 times
+			int loops = 4;
+		    if (hoverBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, loops, 150);
+		        println("-- started granular loop x4");
+		    }
+		    else if (hoverBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, loops, 150);
+		        println("-- started sampler loop x4");
+		    }
+		    else if (activeBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, loops, 150);
+		        println("-- started granular loop x4");
+		    }
+		    else if (activeBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, loops, 150);
+		        println("-- started sampler loop x4");
+		    }
+			break;
+		case 'L': // run an infinite loop on hovered brush
+		    if (hoverBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, -1, 150);
+		        println("-- started infinite granular loop");
+		    }
+		    else if (hoverBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, -1, 150);
+		        println("-- started infinite sampler loop");
+		    }
+		    else if (activeBrush instanceof GranularBrush gb) {
+		        loopGranularBrush(gb, -1, 150);
+		        println("-- started infinite granular loop");
+		    }
+		    else if (activeBrush instanceof SamplerBrush sb) {
+		        loopSamplerBrush(sb, -1, 150);
+		        println("-- started infinite sampler loop");
+		    }
+			break;
+		case ';': // stop loop for hovered brush
+			if (hoverBrush != null) {
+				stopLoopsForBrush(hoverBrush);
+				println("-- stopped loops for hover brush");
+			}
+			else if (activeBrush != null) {
+				stopLoopsForBrush(activeBrush);
+				println("-- stopped loops for active brush");
+			}
+			break;
+		case ':': // stop all loops
+			stopAllLoops();
+			println("-- stopped all loops");
+			break;		
+		case 'y': // toggle transform animation test
+		    isBrushTransformTest = !isBrushTransformTest;
+		    if (isBrushTransformTest) {
+		        if (activeBrush != null) {
+		            initBrushTransform(activeBrush);
+		        }
+		        println("-- brush transform test ON");
+		    } else {
+		        if (activeBrush != null && activeBrush.hasTransform()) {
+		            activeBrush.restoreTransform();
+		        }
+		        println("-- brush transform test OFF");
+		    }
+		    break;
+		// BRUSH ANIMATON
+		case 'Y': // freeze / unfreeze brush geometric transform animation
+		    isBrushTransformFrozen = !isBrushTransformFrozen;
+		    println("-- brush transform frozen = " + isBrushTransformFrozen);
+		    break;
+		case 'x': // delete the current active brush shape or the oldest brush shape
+			if (hoverBrush != null) {
+				removeHoverBrush();
+			}
+			else {
+				removeOldestBrush();
+			}
+			break;
+		case 'X': // delete the most recent brush shape
+			removeNewestBrush();
+			break;
+		case '.': // turn random raindrops audio events on or off
+			isRaining = !isRaining;
+			println(isRaining ? "-- rain, rain" : "-- not a drop");
+			break;
+		case '≈': // option-x on MacOS keyboard, clear all brushes
+			granularBrushes.clear();
+			samplerBrushes.clear();
+			break;
+		case '`': // fade out all instruments, does not cancel loops
+			suspendScheduledEvents();
+			if (pool != null) pool.fadeOutAll();
+			if (gDir != null) gDir.cancelAndReleaseAll();
+			println("-- fade out all");
+			break;
+		case '&': // clear events in granular and sample synths
+			clearSynthEvents();
+		    break;
+		// *** WindowedBuffer support *** //
+		case ']': // move forward one half window
+			moveAudioWindow(windowSizeOrMapSize() / 2);
+			break;
+		case '[': // move backward one half window
+			moveAudioWindow(-windowSizeOrMapSize() / 2);
+			break;
+		case '}': // move forward one full window
+			moveAudioWindow(windowSizeOrMapSize());
+			break;
+		case '{': // move backward one full window
+			moveAudioWindow(-windowSizeOrMapSize());
+			break;
+		case '\\': // rewind the WindowedBuffer
+			resetAudioWindow();
+			break;
+		case '|': // toggle automatic WindowedBuffer traversal
+			isWindowing = !isWindowing;
+			if (isWindowing) isAnimating = false;
+			totalShift = 0;
+			println("---- WindowBuffer traversal is " + (isWindowing ? "ON" : "OFF"));
+			break;
+		case '=': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
+			if (nd != null) nd.oscSendOnOff(1, true);
+			break;
+		case '-': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
+			if (nd != null) nd.oscSendOnOff(1, false);
+			break;
+		case '+': // send UDP message to Max (simpleAudioIO.maxpat): unused
+			if (nd != null) nd.oscSendOnOff(2, true);
+			break;
+		case '_': // send UDP message to Max (simpleAudioIO.maxpat): unused
+			if (nd != null) nd.oscSendOnOff(2, false);
+			break;
+		case 'v': // send UDP message to Max (simpleAudioIO.maxpat): small reverb settings
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.125f);
+				nd.oscSendSetnum(2, 2048.0f);
+				nd.oscSendSetnum(3, 0.125f);
+				nd.oscSendSetnum(4, 2560.0f);
+			}
+			break;
+		case 'V': // send UDP message to Max (simpleAudioIO.maxpat): big reverb settings
+			if (nd != null) {
+				nd.oscSendSetnum(1, 0.3f);
+				nd.oscSendSetnum(2, 4096.0f);
+				nd.oscSendSetnum(3, 0.3f);
+				nd.oscSendSetnum(4, 5120.0f);
+			}
+			break;
+		case '*':
+			applyColorMapOnLoad = !applyColorMapOnLoad;
+			println("-- applyColorMapOnLoad = "+ applyColorMapOnLoad);
+			break;
+		case 'h': // show help message
+			showHelp();
+			break; 
+		case 'H': // for testing
+			float[] values = ((PAKeyframeControlCurve) dynamics).getValues();
+			float[] times = ((PAKeyframeControlCurve) dynamics).getTimes01();
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < times.length; i++) {
+				sb.append(times[i]+": "+values[i]+"; ");
+			}
+    		println("---- dynamics = "+ sb.toString());
+			break;
+		default:
+			break;
+		}
+	}
+
+	/**
+	 * to generate help output, run RegEx search/replace on parseKey case lines with:
+	 * // case ('.'): // (.+)
+	 * // println(" * Press $1 to $2.");
+	 */
+	public void showHelp() {
+		println(" * ----- Audio Gain -----");
+		println(" * Press UP ARROW to increase audio output volume by 1.0 or 3.0 dB (+shift).");
+		println(" * Press DOWN ARROW to decrease audio output volume by 1.0 or 3.0 dB (+shift).");
+		println(" * Press RIGHT ARROW to increase current instrument gain by 3.0 dB.");
+		println(" * Press LEFT ARROW to decrease current instrument gain by 3.0 dB.");
+		println(" * Press '`' to fade out all instruments.");
+
+		println(" * ----- Presets and Cues -----");
+		println(" * Keys 1 through 9 are reserved for triggering Performance Presets 1-9, '0' will clear all presets.");
+
+		println(" * ----- Drawing, Audio Settings, Playback -----");
+		println(" * Press TAB to set brush to active, if cursor is over a brush.");
+		println(" * Press ' ' to (spacebar) trigger a brush if we're hovering over a brush, otherwise trigger a point event.");
+		println(" * Press 'm' to toggle doMagicClick, play brushstroke in same rectangle as mouse on click or spacebar.");
+		println(" * Press 'a' to toggle animation.");
+		println(" * Press 'A' to change animation shift  or automatic window traversal rate.");
+		println(" * Press 't' to switch between Granular, Sampler, and Play Only modes.");
+		println(" * Press 'z' to change the drawing mode of the hover brush.");
+		println(" * Press 'q' to automatically set an active GRANULAR brush to have an optimized number of samples.");
+		println(" * Press 'u' to toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation.");
+		println(" * Press 'd' to toggle doPlayOnNewBrush: if true, audio plays when a new brush is created.");
+		println(" * Press 'D' to toggle doPlayOnDraw: if true, drawing triggers audio while you drag the mouse.");
+		println(" * Press 'p' to jitter the pitch of granular gestures and point events.");
+		println(" * Press 'P' to toggle useLinearPointTraversal (granular click event behavior).");
+		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
+		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
+		println(" * Press '*' to turn automatic audio path coloring on file load on and off.");
+		println(" * Press 'r' to reset instrument configuration to defaults in GUI.");
+		println(" * Press 'c' or 'C' to print the current configuration status to the console.");
+		
+		println(" * ----- File IO and Mapping -----");
+		println(" * Press 'f' or 'F' to open a folder with JSON brush data and load all files.");
+		println(" * Press 'j' to save the active brush curve and config to JSON files.");
+		println(" * Press 'J' to save all brushes curve and config to JSON Session file.");
+		println(" * Press 'o' to open an audio file, image file, or JSON file.");
+		println(" * Press 'b' or 'B' to toggle loading data to both image and audio buffers when you open a file.");
+		println(" * Press 'w' to write the display image to the audio buffer.");
+		println(" * Press 'W' to write the audio buffer to the display image.");
+		
+		println(" * ----- Audio Mix Dynamics -----");
+		println(" * Press 'n' to set noise reduction policy for Sampler instrument audio mix.");
+		println(" * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.");
+		println(" * Press 'g' to toggle use of dynamics in gainCurve with gesture .");
+		
+		println(" * ----- Special FX -----");
+		println(" * Press 'l' to loop the hovered brush 4 times.");
+		println(" * Press 'L' to run an infinite loop on the hovered brush.");
+		println(" * Press ';' to stop loop for the hovered brush.");
+		println(" * Press ':' to stop all loops.");
+		println(" * Press 'y' to toggle transform animation test.");
+		println(" * Press 'Y' to freeze / unfreeze brush geometric transform animation.");
+		println(" * Press 'R' to reset geometric transform of active brush, if it has a transform.");    
+		println(" * Press 'G' to create a beatBrush.");
+		println(" * Press '.' to turn random raindrops audio events on or off.");
+		println(" * Press '`' to fade out all instruments.");
+		println(" * Press '&' to clear events in granular and sample synths.");
+
+		println(" * ----- Windowed Buffer -----");
+		println(" * Press '[' or ']' to move backward or forward one half window.");
+		println(" * Press '{' or '}' to move backward or forward one full window.");
+		println(" * Press '\\' to rewind the WindowedBuffer.");
+		println(" * Press '|' to toggle automatic WindowedBuffer traversal.");
+		
+		println(" * ----- Brush Deletion -----");
+		println(" * Press 'x' to delete the current active brush shape or the oldest brush shape.");
+		println(" * Press 'X' to delete the most recent brush shape.");
+		println(" * Press '≈' to option-x on MacOS keyboard, clear all brushes.");
+		
+		println(" * ----- Network -----");		
+		println(" * Press '=' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
+		println(" * Press '-' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
+		println(" * Press '+' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press '_' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+		println(" * Press 'v' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.");
+		println(" * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
+		
+		println(" * ----- Help -----");
+		println(" * Press 'h' or 'H' to show help message.");
+	}
+
+	
+	/*----------------------------------------------------------------*/
+	/*                  BEGIN PERFORMANCE METHODS                     */
+	/*----------------------------------------------------------------*/
+	
+	/**
+	 * @param key    key that was pressed (should be a number key)
+	 */
+	void numericKey(char key) {
+		runOK_PerformancePreset(OK_PerformancePreset.fromKey(key), key);
+	}
+	
+	/** Toggle a user preset, or clear all presets when {@code key} is {@code '0'}. */
+	public void runOK_PerformancePreset(OK_PerformancePreset cue, char key) {
+		boolean changed = false;
+		if (cue != null) {
+			if (ok_presetStack.contains(cue)) {
+				ok_presetStack.remove(cue);
+			} else {
+				ok_presetStack.add(cue);
+				runPerformanceCue(key);
+			}
+			changed = true;
+		} else if (key == '0') {
+	        ok_presetStack.clear();
+	        changed = true;
+		}
+	    if (changed) println("-- cues: " + ok_presetStack);		
+	}
+
+	
+	/** Runs the application-level cue associated with a preset key. */
+	void runPerformanceCue(char key) {
+		switch(key) {
+			case '1':   // NEW_DURATION
+				isLoadToBoth = true;
+				applyColorMapOnLoad = true;
+				doPlayOnNewBrush = true;
+				break;
+			case '2': // WEIRD
+				break;
+			case '3': // RANDOM_DYNAMICS
+				isAddDynamics = true;
+				break;
+			case '4': // BLANK
+				// an odd way to give a command, but possible
+				this.playBrushstrokes(BrushPlaybackMode.BOTH, 10, true);
+				break;
+		}
+	}
+
+	/**
+	 * 
+	 */
+	public void setPoolAttributes(int size, int maxVoices) {
+		pool.setPoolSize(size);           // testing
+		pool.setMaxVoices(maxVoices);     // testing
+	}
+	
+	/**
+	 * Resets variables that may have been altered from expected base states by performance cues and presets.
+	 */
+	void resetPerformanceState() {
+		doPlayOnNewBrush = false;    // play audio when a curve is drawn
+		doPlayWhileDrawing = false;  // play audio events while drawing, or not
+		isAutoOptimize = false;      // optimize the freshly drawn curve before playing it 
+		doMagicClick = false;        // find a brush that starts in a selected rectangle and play it
+		usePitchedGrains = false;    // jitter granular pitch if true
+		pitchJitter = 0.0167f;       // amount of jitter
+		applyColorMapOnLoad = true;  // if true, apply the color map when a file is loaded
+		isReplaceBrushes = true;     // if true, replace current brushes when we load a session or library folder
+		isSaveSession = true;        // save the session brushes ('J' key commend)	
+		isRaining = false;           // if true, run random audio/animation point events
+
+		isAddDynamics = false;       // add dynamics curve to gestures
+		// dynamics for sampler and granular gestures
+		dynamics = new PAKeyframeControlCurve (
+				new float[] {0.0f, 0.5f, 1.0f},      // times
+				new float[] {0.1f, 1.0f, 0.1f} );    // values
+
+		isBrushTransformTest = false;      // testing animation feature (key 'y')
+		isBrushTransformFrozen = false;    // freeze animation (key 'Y')
+
+		isBrushSelectionModal = false;     // if false, select all brushes, otherwise, select by active mode		
+	}
+	
+	void clearGranularActivity() {
+	    if (gDir != null) gDir.cancelAndReleaseAll();
+	}
+
+	void clearSynthEvents() {
+	    suspendScheduledEvents();
+	    stopAllLoops();
+	    if (pool != null) pool.releaseAll();
+	    if (gDir != null) gDir.cancelAndReleaseAll();
+	    println("-- released all audio events in queue");
+	}
+	
+	/*----------------------------------------------------------------*/
+	/*                   END PREFORMANCE METHODS                      */
+	/*----------------------------------------------------------------*/
+	
+		
+	/**
+	 * Apply color map hue and saturation to mapImage or baseImage.
+	 */
+	public void applyColorMapToDisplay(boolean updateBaseImage) {
+		if (updateBaseImage) {
+			baseImage.loadPixels();
+			applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
+			baseImage.updatePixels();
+			refreshMapImageFromBase();
+		} else {
+			refreshMapImageFromBase();
+			mapImage.loadPixels();
+			applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
+			mapImage.updatePixels();
+		}
+	}
+
+	// *** WindowedBuffer support *** //
+	/** @return the active window size, or the mapper size before initialization */
+	int windowSizeOrMapSize() {
+		return (windowBuff != null) ? windowBuff.getWindowSize() : mapper.getSize();
+	}
+
+	// *** WindowedBuffer support *** //
+	/** Rewinds the visible audio window to the beginning of the backing source. */
+	public void resetAudioWindow() {
+		if (windowBuff == null) return;
+		windowBuff.reset();
+		refreshWindowFromBacking(false);
+		if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+	}
+
+	// *** WindowedBuffer support *** //
+	/** @param delta signed number of backing-source samples to move the window */
+	public void moveAudioWindow(int delta) {
+		if (windowBuff == null || backingSignal == null || backingSignal.length == 0) return;
+		int next = PixelAudioMapper.wrap(windowBuff.getIndex() + delta, backingSignal.length);
+		windowBuff.setIndex(next);
+		refreshWindowFromBacking(false);
+		if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+	}
+	
+	/**
+	 * Sets GUI to edit a brush.
+	 * @param brush    the AudioBrush to accept for editing
+	 */
+	public void openBrushEditor(AudioBrush brush) {
+		setActiveBrush(brush);
+		syncDrawingModeToBrush(activeBrush);
+	}
+
+	/**
+	 * Sets audioOut.gain.
+	 * @param g    new value for audioOut, in decibels
+	 */
+	public void setAudioGain(float g) {
+		audioOut.setGain(g);
+		outputGain = audioOut.getGain();
+	}
+
+	/**
+	 * Adjusts audioOut.gain.
+	 * @param g   value to add to audioOut.gain, in decibels
+	 */
+	public void adjustAudioGain(float g) {
+		float ag = audioOut.getGain();
+		ag += g;
+		if (ag > 12.0f || ag < -64.0f) return;
+		audioOut.setGain(ag);
+		outputGain = audioOut.getGain();
+	}
+
+	/**
+	 * Adjusts current instrument gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustInstrumentGain(float g) {
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			adjustSamplerGain(g);
+        } else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+        	adjustGranGain(g);
+        } else {
+            return;
+        }
+    }
+
+	/**
+	 * Adjusts Sampler instrument {@code pool} gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustSamplerGain(float g) {
+		float pg = pool.getGainDb();
+		pg += g;
+		if (pg > 12.0f || pg < -64.0f) return;
+		pool.setGainDb(pg);
+		gainSlider.setValue(pg);
+	}
+	
+	/**
+	 * Adjusts Granular instrument gain in dB.
+	 * @param g   gain increment or decrement, in decibels
+	 */
+	public void adjustGranGain(float g) {		
+		float gg = gDir.getInstrument().getGlobalGainDb();
+		gg += g;
+		if (gg > 12.0f || gg < -64.0f) return;
+		gDir.getInstrument().setGlobalGainDb(gg);
+		gainSlider.setValue(gg);
+	}
+		
+	
+	/**
+	 * Sets the drawing mode to one of {DRAW_EDIT_GRANULAR, DRAW_EDIT_SAMPLER, PLAY_ONLY}.
+	 * @param newMode
+	 */
+	void setMode(DrawingMode newMode) {
+		if (newMode == drawingMode) return;
+		drawingMode = newMode;
+		// Clear hover because the hover rules changed
+		hoverBrush = null;
+		hoverIndex = -1;
+		// Choose what should be "active" in the new mode
+		AudioBrush nextActive = null;
+		switch (drawingMode) {
+		case DRAW_EDIT_GRANULAR: 
+			nextActive = activeGranularBrush;
+    		break;
+		case DRAW_EDIT_SAMPLER:  
+			nextActive = activeSamplerBrush;
+			break;
+		case PLAY_ONLY:
+			nextActive = (activeBrush != null) ? activeBrush
+					: (activeGranularBrush != null ? activeGranularBrush : activeSamplerBrush);
+			break;
+		default: {}
+		}
+		if (nextActive != null) {
+			// Keep indices consistent: use stored index for the corresponding type
+			int idx = (nextActive instanceof GranularBrush) ? activeGranularIndex : activeSamplerIndex;
+			setActiveBrush(nextActive, idx);     // this also syncs GUI
+		} 
+		else {
+			// No selection for this mode
+			activeBrush = null;
+			resetConfigForMode();    // reset the GUI control palette
+		}
+		setControlsEnabled();        // enable or disable controls, depending on the drawing mode
+	}
+	
+	/**
+	 * optimize grainCount for the activeBrush, most useful for granular brushes
+	 */
+	public void optimizeActiveBrush() {
+		printGOptHints(hopScale);
+		if (activeBrush != null) {
+			activeBrush.cfg().resampleCount = optGrainCount;
+			syncGuiFromConfig();
+		}
+	}
+
+	/**
+	 * Reset tool config to defaults (copy, so default config never mutates).
+	 */
+	void resetConfigForMode() {
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			gConfig = defaultGranConfig.copy();
+		} 
+		else if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			gConfig = defaultSampConfig.copy();
+		} 
+		else {
+			// PLAY_ONLY: choose what you want the GUI to show
+			// Option: keep last gConfig; or keep a neutral preset:
+			// gConfig = defaultGranularConfig.copy();
+		}
+		syncGuiFromConfig();    // enable or disable controls, depending on the drawing mode
+	}
+	
+	public synchronized void fadeOutGranularNow() {
+		if (gDir != null) gDir.cancelAndReleaseAll();
+	}
+
+	public synchronized void stopGranularNow() {
+		if (gDir != null) gDir.cancelAndStopAll();
+	}
+	
+	public synchronized void suspendScheduledEvents() {
+		synchronized (pointTimeLocsLock) {
+			for (TimedLocation tl : this.pointTimeLocs) {
+				tl.setStale(true);
+			}
+		}
+		synchronized (samplerBrushEventsLock) {
+			samplerBrushEvents.clear();
+		}
+		synchronized (grainTimeLocsLock) {
+			for (TimedLocation tl : this.grainTimeLocs) {
+				tl.setStale(true);
+			}
+			grainTimeLocs.removeIf(TimedLocation::isStale);		// necessary on fade-out
+		}
+	}
+
+	
+	/**
+	 * Generates a {@code SamplerBrush} in code.
+	 * @param count         number of points to draw
+	 * @param intervalMs    interval between points (milliseconds)
+	 * @return a SamplerBrush with requested characteristics
+	 */
+	public SamplerBrush generateSamplerBeatBrush(int count, int intervalMs) {
+		ArrayList<Integer> times = new ArrayList<>();
+		ArrayList<PVector> points = new ArrayList<>();
+		int xCtr = width/2;
+		int yCtr = height/2;
+		int rad = height/2 - 32;
+		float theta = PI/64.0f;
+		float dec = (rad * 0.5f)/count;
+		PVector p0 = new PVector(xCtr, yCtr + rad);
+		points.add(p0);
+		times.add(0);
+		for (int i = 1; i < count; i++) {
+			times.add(i * intervalMs);
+			PVector nextPoint = PACurveUtility.rotateCoordAroundPoint(xCtr, yCtr + rad, xCtr, yCtr, theta * i);
+			points.add(nextPoint);
+			rad -= dec;
+		}
+		PACurveMaker curve = PACurveMaker.buildCurveMaker(points, times, millis());
+		GestureGranularConfig.Builder cfg = new GestureGranularConfig.Builder().gainDb(-12.0f);
+		cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+		cfg.rdpEpsilon = 8.0f;
+		cfg.curveSteps = 8;
+		ADSRParams env = new ADSRParams(1.0f, 0.025f, 0.02f, 0.025f, 0.05f);
+		cfg.env = env;
+		SamplerBrush beatBrush = new SamplerBrush(curve, cfg);
+		return beatBrush;
+	}
+	
+	/**
+	 * Generates a {@code GranularBrush} in code.
+	 * @param count         number of points to draw
+	 * @param intervalMs    interval between points (milliseconds)
+	 * @return a GranularBrush with requested characteristics
+	 */
+	public GranularBrush generateGranularBeatBrush(int count, int intervalMs) {
+		ArrayList<Integer> times = new ArrayList<>();
+		ArrayList<PVector> points = new ArrayList<>();
+		int xCtr = width/2;
+		int yCtr = height/2;
+		int rad = height/2 - 32;
+		float theta = PI/64.0f;
+		float dec = (rad * 0.5f)/count;
+		PVector p0 = new PVector(xCtr, yCtr + rad);
+		points.add(p0);
+		times.add(0);
+		for (int i = 1; i < count; i++) {
+			times.add(i * intervalMs);
+			PVector nextPoint = PACurveUtility.rotateCoordAroundPoint(xCtr, yCtr + rad, xCtr, yCtr, theta * i);
+			points.add(nextPoint);
+			rad -= dec;
+		}
+		PACurveMaker curve = PACurveMaker.buildCurveMaker(points, times, millis());
+		GestureGranularConfig.Builder cfg = new GestureGranularConfig.Builder().gainDb(-3.0f);
+		cfg.hopLengthSamples = 512;
+		cfg.grainLengthSamples = 2048;
+		cfg.burstGrains = 4;
+		cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+		cfg.rdpEpsilon = 8.0f;
+		cfg.curveSteps = 8;
+		// we can use the default envelope,
+		// granularEnv: ADSRParams(1.0f, 0.005f, 0.02f, 0.9f, 0.025f);
+		cfg.env = granularEnv;
+		// or not
+		// ADSRParams env = new ADSRParams(1.0f, 0.025f, 0.25f, 1.0f, 0.25f);
+		// cfg.env = env;
+		GranularBrush beatBrush = new GranularBrush(curve, cfg);
+		return beatBrush;
+	}
+
+	/**
+	 * Triggers a sample at a random location.
+	 */
+	public void raindrops() {
+	  int signalPos = (int) random(samplelen, mapSize - samplelen - 1);
+	  int[] coords = mapper.lookupImageCoordShifted(signalPos, totalShift);
+	  this.runRaindropPointEvent(coords[0], coords[1]);  
+	}
+	
+	/**
+	 * Plays a sample and animates a point
+	 * @param x    x-coordinate of event
+	 * @param y    y-coordinate of event
+	 */
+	void runRaindropPointEvent(int x, int y) {
+		if (random(1.0f) > 0.5f) {
+			ensureGranularReady();
+			runGranularPointEvent(x, y);
+			return;
+		}
+		ensureSamplerReady();
+		int signalPos = getSamplePos(x, y);
+		float panning = map(x, 0, width, -0.875f, 0.875f);
+		int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
+		// playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan)
+		// TODO vary gain and pitch, combine with granular jitter point events (eerie)
+		float pitchRatio = AudioUtility.semitonesToRatio(-9.0f);
+		samplelen = playSample(signalPos, len, samplerPointGain, envPreset("Pluck"), pitchRatio, panning);
+		int durationMS = (int)(samplelen / sampleRate * 1000);
+		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
+		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
+	}
+
+	
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                       FILE I/O METHODS                         */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+	
+	/**
+	 * Wrapper method for Processing's selectInput command
+	 */
+	public void chooseFile() {
+		oldIsAnimating = isAnimating;
+		oldIsWindowing = isWindowing;
+		isAnimating = false;
+		isWindowing = false;
+		selectInput("Choose an audio, image, or JSON file: ", "fileSelected");
+	}
+	
+	/**
+	 * callback method for chooseFile(), handles standard audio and image formats for Processing.
+	 * If a file has been successfully selected, continues with a call to loadAudioFile() or loadImageFile().
+	 * 
+	 * @param selectedFile    the File the user selected
+	 */
+	public void fileSelected(File selectedFile) {
+		if (null != selectedFile) {
+			String filePath = selectedFile.getAbsolutePath();
+			String fileName = selectedFile.getName();
+			String fileTag = fileName.substring(fileName.lastIndexOf('.') + 1);
+			fileName = fileName.substring(0, fileName.lastIndexOf('.'));
+			if (fileTag.equalsIgnoreCase("json")) {
+				jsonFileSelectedRead(selectedFile);
+			}
+			else if (fileTag.equalsIgnoreCase("mp3") || fileTag.equalsIgnoreCase("wav") || fileTag.equalsIgnoreCase("aif")
+					|| fileTag.equalsIgnoreCase("aiff")) {
+				// we chose an audio file
+				audioFile = selectedFile;
+				audioFilePath = filePath;
+				audioFileName = fileName;
+				audioFileTag = fileTag;
+				println("----- Selected file " + fileName + "." + fileTag + " at "
+						+ filePath.substring(0, filePath.length() - fileName.length()));
+				loadAudioFile(audioFile);
+				// *****]]] NETWORKING [[[***** //
+			    if (nd != null && isNetSendFileInfo) nd.oscSendFileInfo(filePath, fileName, fileTag);
+			} 
+			else if (fileTag.equalsIgnoreCase("png") || fileTag.equalsIgnoreCase("jpg")
+					|| fileTag.equalsIgnoreCase("jpeg")) {
+				// we chose an image file
+				imageFile = selectedFile;
+				imageFilePath = filePath;
+				imageFileName = fileName;
+				imageFileTag = fileTag;
+				loadImageFile(imageFile);
+			} 
+			else {
+				println("----- File is not a recognized format ending with" 
+			            +"\"mp3\", \"wav\", \"aif\", \"aiff\", \"png\", \"jpg\", \"jpeg\" or \"json\" .");
+			}
+		} 
+		else {
+			println("----- No audio, image, or JSON file was selected.");
+		}
+		isAnimating = oldIsAnimating;
+		isWindowing = oldIsWindowing;
+	}
+
+	/**
+	 * Attempts to load audio data from a selected file into playBuffer, then calls
+	 * writeAudioToImage() to transcode audio data and write it to mapImage.
+	 * If doResample is true, resamples files whose sample rate differs from the current audio output.
+	 * If you want to load the image file and audio file separately, comment out writeAudioToImage(). 
+	 * 
+	 * @param audFile    an audio file
+	 */
+	public void loadAudioFile(File audFile) {
+		MultiChannelBuffer buff = new MultiChannelBuffer(1024, 1);
+		fileSampleRate =  minim.loadFileIntoBuffer(audFile.getAbsolutePath(), buff);
+		if (fileSampleRate <= 0) {
+			println("-- Unable to load file. File may be empty, wrong format, or damaged.");
+			return;
+		}
+		float sig[];
+		if (fileSampleRate != audioOut.sampleRate() && doResample) {
+			sig = AudioUtility.resampleMonoToOutput(buff.getChannel(0), fileSampleRate, audioOut);
+			bufferSampleRate = audioOut.sampleRate();
+		}
+		else {
+	        sig = Arrays.copyOf(buff.getChannel(0), buff.getBufferSize());
+	        bufferSampleRate = fileSampleRate;
+		}		
+		this.audioFileLength = sig.length;
+		println("---- file sample rate = "+ this.fileSampleRate 
+				+", buffer sample rate = "+ bufferSampleRate
+				+", audio output sample rate = "+ audioOut.sampleRate());
+		updateAudioChain(sig, bufferSampleRate);
+		if (isLoadToBoth) {
+			println("---- loading to both ----");
+			writeAudioToImage(audioSignal, mapper, mapImage, chan);
+			commitMapImageToBaseImage();
+			if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+		}
+		totalShift = 0;    // reset animation shift when audio is reloaded
+	}
+
+	/**
+	 * Attempts to load image data from a selected file into mapImage, then calls writeImageToAudio() 
+	 * to transcode HSB brightness channel to audio and writes it to playBuffer and audioSignal.
+	 * 
+	 * @param imgFile    an image file
+	 */
+	public void loadImageFile(File imgFile) {
+		PImage img = loadImage(imgFile.getAbsolutePath());
+		// stash information about the image in imgFileWidth, imageFileHeight for future use
+		imageFileWidth = img.width;
+		imageFileHeight = img.height;
+		// calculate w and h for copying image to display (mapImage)
+		int w = img.width > mapImage.width ? mapImage.width : img.width;
+		int h = img.height > mapImage.height ? mapImage.height : img.height;
+		if (chan == PixelAudioMapper.ChannelNames.ALL) {
+			if (isBlending) {
+				PImage dest = mapImage;
+				PImage src = img;
+				src.loadPixels();
+				for (int i = 0; i < src.pixels.length; i++) {
+					int pixel = src.pixels[i];
+					src.pixels[i] = setAlphaWithBlack(pixel, 96);
+				}
+				src.updatePixels();
+				dest.blend(src, 0, 0, src.width, src.height, 0, 0, dest.width, dest.height, BLEND);
+			}
+			else {
+				// copy the image directly using Processing copy command
+				mapImage.copy(img, 0, 0, w, h, 0, 0, w, h);
+			}
+		} 
+		else {
+			// copy only specified channels of the new image
+			PImage mixImage = createImage(w, h, RGB);
+			mixImage.copy(mapImage, 0, 0, w, h, 0, 0, w, h);
+			img.loadPixels();
+			mixImage.loadPixels();
+			mixImage.pixels = PixelAudioMapper.pushChannelToPixel(img.pixels, mixImage.pixels, chan);
+			mixImage.updatePixels();
+			mapImage.copy(mixImage, 0, 0, w, h, 0, 0, w, h);
+		}
+		if (isLoadToBoth) {
+		    commitMapImageToAudio();
+		}
+		else {
+			commitMapImageToBaseImage();
+		}
+		if (applyColorMapOnLoad) applyColorMapToDisplay(true);
+	}
+
+
+	/**
+	 * Transcodes audio data in sig[] and writes it to color channel chan of mapImage 
+	 * using the lookup tables in mapper to redirect indexing. Calls mapper.mapSigToImg(), 
+	 * which will throw an IllegalArgumentException if sig.length != img.pixels.length
+	 * or sig.length != mapper.getSize(). 
+	 * We typically use PixelAudioMapper.ChannelNames.ALL or PixelAudioMapper.ChannelNames.L
+	 * as the chan value. Both result in gray values, with PixelAudioMapper.ChannelNames.L
+	 * maintaining previous hue and saturation color values in the image.
+	 * 
+	 * @param sig         an array of float, should be audio data in the range [-1.0, 1.0]
+	 * @param mapper      a PixelAudioMapper
+	 * @param img         a PImage
+	 * @param chan        a color channel
+	 */
+	public void writeAudioToImage(float[] sig, PixelAudioMapper mapper, PImage img, PixelAudioMapper.ChannelNames chan) {
+		// If sig.length == mapper.getSize() == mapImage.width * mapImage.height, we can call safely mapper.mapSigToImg()	
+		img.loadPixels();
+		mapper.mapSigToImg(sig, img.pixels, chan);
+		img.updatePixels();
+	}
+		
+	/**
+	 * Sets the alpha channel of an RGBA color, conditionally setting alpha = 0 if all other channels = 0.
+	 * 
+	 * @param argb     an RGBA color value
+	 * @param alpha    the desired alpha value to apply to argb
+	 * @return         the argb color with changed alpha channel value
+	 */
+	public int setAlphaWithBlack(int argb, int alpha) {
+		int[] c = PixelAudioMapper.rgbaComponents(argb);
+		if (c[0] == c[1] && c[1] == c[2] && c[2] == 0) {
+			alpha = 0;
+		}
+		return alpha << 24 | c[0] << 16 | c[1] << 8 | c[2];
+	}
+	
+	/**
+	 * Sets the alpha channel of an RGBA color.
+	 * 
+	 * @param argb     an RGBA color value
+	 * @param alpha    the desired alpha value to apply to argb
+	 * @return         the argb color with changed alpha channel value
+	 */
+	public static int setAlpha(int argb, int alpha) {
+		 return (argb & 0x00FFFFFF) | (alpha << 24);
+	}
+
+	/**
+	 * This method writes a color channel from an image to playBuffer, fulfilling a 
+	 * central concept of the PixelAudio library: image is sound. Calls mapper.mapImgToSig(), 
+	 * which will throw an IllegalArgumentException if img.pixels.length != sig.length or 
+	 * img.width * img.height != mapper.getWidth() * mapper.getHeight(). 
+	 * Sets totalShift = 0 on completion: the image and audio are now in sync.
+	 * 
+	 * @param img       a PImage, a source of data
+	 * @param mapper    a PixelAudioMapper, handles mapping between image and audio signal
+	 * @param sig       a target array of float in audio format
+	 * @param chan      a color channel
+	 * @param shift     number of indices to shift 
+	 */
+	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan, int shift) {
+		// If img is the *display* (shifted) image, commit its phase into audio:
+		sig = mapper.mapImgToSigShifted(img.pixels, sig, chan, shift);
+	}
+	
+	/**
+	 * Writes a specified channel of mapImage to audioSignal.
+	 *
+	 * @param chan    the selected color channel
+	 */
+	public void renderMapImageToAudio(PixelAudioMapper.ChannelNames chan) {
+		writeImageToAudio(mapImage, mapper, audioSignal, chan, totalShift);
+	}
+
+	/**
+	 * Writes mapImage to the audio chain and makes the displayed image the new base image.
+	 */
+	public void commitMapImageToAudio() {
+		float[] sig = new float[mapper.getSize()];
+		audioSignal = sig;
+		renderMapImageToAudio(PixelAudioMapper.ChannelNames.L);
+		updateAudioChain(sig, audioOut.sampleRate());
+		commitMapImageToBaseImage();
+	}
+	
+	/**
+	 * Writes the mapImage, which may change with animation, to the baseImage, a reference image
+	 * that usually only changes when a new file is loaded.
+	 */
+	public void commitMapImageToBaseImage() {
+		baseImage = mapImage.copy();
+		totalShift = 0;
+	}
+	
+	/**
+	 * Copies the supplied PImage to mapImage and baseImage, sets totalShift to 0 (the images are identical).
+	 * @param img
+	 */
+	public void commitNewBaseImage(PImage img) {
+		baseImage = img.copy();
+		mapImage = img.copy();
+		totalShift = 0;
+	}
+	
+	/**
+	 * Writes baseImage to mapImage with an index position offset of totalShift.
+	 */
+	public void refreshMapImageFromBase() {
+	    mapImage.loadPixels();
+	    mapper.copyPixelsAlongPathShifted(baseImage.pixels, mapImage.pixels, totalShift);
+	    mapImage.updatePixels();
+	}
+	
+
+	// ------------- JSON FILE I/O ------------- 
+	
+	void saveGestureJSON(boolean saveSession) {
+		if (saveSession) selectOutput("Select a JSON Session file to write to:", "jsonFileSelectedWrite");
+		else selectOutput("Select a JSON Brush file to write to:", "jsonFileSelectedWrite");
+	}
+	
+	/**
+	 * Save the curve and config data from  the current activeBrush.
+	 * 
+	 * @param jsonFile    initially, the file to save to (naming conventions may change the full name)
+	 */
+	public void jsonFileSelectedWrite(File jsonFile) {
+	    if (jsonFile == null) {
+	        println("Window was closed or cancelled.");
+	        return;
+	    }
+	    if (isSaveSession) {
+	    	saveSessionJSON(jsonFile);
+	    	return;
+	    }
+	    if (activeBrush == null) {
+	        println("-- No active brush found.");
+	        return;
+	    }
+	    AudioBrushFileNamer.Result files = AudioBrushFileNamer.build(jsonFile);
+	    File gestureFile = files.gestureFile;
+	    File configFile  = files.configFile;
+	    try {
+	    	// ---------- config ----------
+	    	GestureGranularConfig.Builder cfg = activeBrush.cfg().copy();
+	    	GestureGranularConfigIO.Meta configMeta = new GestureGranularConfigIO.Meta();
+	    	configMeta.id = "1";
+	    	configMeta.linkedGesturePath = files.linkedGesturePath;
+	    	if (activeBrush instanceof GranularBrush)
+	    		configMeta.instrumentType =
+	    		GestureGranularConfigIO.InstrumentType.GRANULAR;
+	    	else
+	    		configMeta.instrumentType =
+	    		GestureGranularConfigIO.InstrumentType.SAMPLER;
+	    	GestureGranularConfigIO.write(configFile, cfg, configMeta);
+	    	// ---------- gesture ----------
+	    	PACurveMakerIO.Meta meta = new PACurveMakerIO.Meta();
+	    	meta.id = "1";
+	    	meta.name = files.baseName;
+	    	meta.includeStyle = false;
+	    	meta.linkedConfigPath = files.linkedConfigPath;
+	    	PACurveMakerIO.write(gestureFile, activeBrush.curve(), meta);
+	    }
+	    catch (Exception e) {
+	    	println("--->> Error writing JSON: " + e.getMessage());
+	    }
+	}
+	
+	public void saveSessionJSON(File jsonFile) {
+	    if (jsonFile == null) {
+	        println("Window was closed or cancelled.");
+	        return;
+	    }
+	    AudioBrushFileNamer.Result files = AudioBrushFileNamer.build(jsonFile);
+	    File sessionFile = files.sessionFile;
+	    List<AudioBrush> allBrushes = new ArrayList<>();
+	    allBrushes.addAll(granularBrushes);
+	    allBrushes.addAll(samplerBrushes);
+	    allBrushes.sort((a, b) -> Integer.compare(a.curve().timeStamp, b.curve().timeStamp));
+	    if (allBrushes.isEmpty()) {
+	        println("-- No brushes to save.");
+	        return;
+	    }
+	    AudioBrushSessionIO.SessionMeta meta = new AudioBrushSessionIO.SessionMeta();
+	    meta.id = files.baseName;
+	    meta.name = files.baseName;
+	    meta.description = "PixelAudio PerformanceModel session";
+	    meta.audioFilePath = audioFilePath;
+	    meta.audioFileName = audioFileName;
+	    meta.audioFileTag = audioFileTag;
+
+	    AudioBrushSessionIO.BrushAdapter<AudioBrush> adapter =
+	        new AudioBrushSessionIO.BrushAdapter<>() {
+
+	            @Override
+	            public PACurveMaker curveOf(AudioBrush b) {
+	                return b.curve();
+	            }
+
+	            @Override
+	            public GestureGranularConfig.Builder configOf(AudioBrush b) {
+	                return b.cfg();
+	            }
+
+	            @Override
+	            public GestureGranularConfigIO.InstrumentType instrumentTypeOf(AudioBrush b) {
+	                return (b instanceof GranularBrush)
+	                    ? GestureGranularConfigIO.InstrumentType.GRANULAR
+	                    : GestureGranularConfigIO.InstrumentType.SAMPLER;
+	            }
+
+	            @Override
+	            public String idOf(AudioBrush b) {
+	                int idx;
+	                if (b instanceof GranularBrush) {
+	                    idx = granularBrushes.indexOf(b);
+	                    return "granular_" + idx;
+	                } else {
+	                    idx = samplerBrushes.indexOf(b);
+	                    return "sampler_" + idx;
+	                }
+	            }
+
+	            @Override
+	            public String nameOf(AudioBrush b) {
+	                return idOf(b);
+	            }
+
+	            @Override
+	            public boolean includeStyle(AudioBrush b) {
+	                return false;
+	            }
+	        };
+
+	    try {
+	        AudioBrushSessionIO.writeSession(
+	            sessionFile,
+	            allBrushes,
+	            adapter,
+	            meta,
+	            "gestures",
+	            "configs"
+	        );
+	        println("-- Saved session to " + sessionFile.getAbsolutePath());
+	    }
+	    catch (IOException e) {
+	        println("--->> Error writing session JSON: " + e.getMessage());
+	    }
+	}
+	
+	void loadGestureJSON() {
+		oldIsAnimating = isAnimating;
+		isAnimating = false;
+		selectInput("Choose a JSON file: ", "jsonFileSelectedRead");
+	}
+	
+	public void jsonFileSelectedRead(File jsonFile) {
+		if (jsonFile == null) return;
+		try {
+			AudioBrushSessionLoader.LoadResult result = AudioBrushSessionLoader.load(jsonFile);
+			switch (result.type) {
+			case GESTURE:
+			case CONFIG: {
+				PACurveMaker curve = result.brush.curve;
+				GestureGranularConfig.Builder cfg = 
+						(result.brush.config != null) ? result.brush.config : gConfig.copy();
+				if (curve == null) {
+					println("-- No gesture data found in selected file or linked file.");
+					return;
+				}
+				makeBrush(curve, cfg, result.brush.instrumentType);
+				break;
+			}
+			case SESSION: {
+			    if (isReplaceBrushes) {
+			        granularBrushes.clear();
+			        samplerBrushes.clear();
+			    }
+				for (AudioBrushSessionLoader.BrushData bd : result.brushes) {
+					if (bd.curve == null) continue;
+					GestureGranularConfig.Builder cfg =
+							(bd.config != null) ? bd.config : gConfig.copy();
+					makeBrush(bd.curve, cfg, bd.instrumentType);
+				}
+				if (result.sessionMeta != null) {
+					audioFilePath = result.sessionMeta.audioFilePath;
+					audioFileName = result.sessionMeta.audioFileName;
+					audioFileTag = result.sessionMeta.audioFileTag;
+					println("----->>> Audio file for "+ jsonFile.getName() +" is "+ audioFileName +"."+ audioFileTag);
+				}
+				break;
+			}
+			default:
+				println("-- Unsupported JSON type.");
+			}
+			if (activeBrush != null) {
+				if (activeBrush instanceof GranularBrush) {
+					setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+					controlWindow.setTitle("Granular Synth");	
+				}
+				else {
+					setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+					controlWindow.setTitle("Sampler Synth");				
+				}
+			}
+			activeBrush = null;
+		}
+		catch (IOException e) {
+			println("--->> There was an error reading the JSON file " + jsonFile + ", " + e.getMessage());
+		}
+	}
+	
+	void chooseGestureLibraryFolder() {
+	    selectFolder("Choose a gesture library folder:", "gestureLibraryFolderSelected");
+	}
+	
+	public void gestureLibraryFolderSelected(File folder) {
+	    if (folder == null) {
+	        println("Folder selection cancelled.");
+	        return;
+	    }
+	    if (isReplaceBrushes) {
+	        granularBrushes.clear();
+	        samplerBrushes.clear();
+	    }
+	    AudioBrushLibraryLoader.LoadResult result =
+	        AudioBrushLibraryLoader.loadGestureLibrary(folder);
+	    int loadedCount = 0;
+	    for (AudioBrushLibraryLoader.BrushData bd : result.brushes) {
+	        if (bd.curve == null) continue;
+	        GestureGranularConfig.Builder cfg =
+	            (bd.config != null) ? bd.config : gConfig.copy();
+	        GestureGranularConfigIO.InstrumentType type =
+	            (bd.instrumentType != null)
+	                ? bd.instrumentType : GestureGranularConfigIO.InstrumentType.GRANULAR;
+	        makeBrush(bd.curve, cfg, type);
+	        loadedCount++;
+	    }
+	    println("-- Loaded " + loadedCount + " brush(es) from library folder: " + folder.getAbsolutePath());
+	    for (String msg : result.messages) {
+	        println("-- " + msg);
+	    }
+	}
+	
+	
+
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                        AUDIO METHODS                           */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+	
+	/**
+	 * CALL THIS METHOD IN SETUP()
+	 * Initializes Minim audio library and audio variables.
+	 */
+	public void initAudio() {
+		// *** WindowedBuffer support *** //
+		windowAudioReady = false;
+		// initialize the MInim library
+		minim = new Minim(this);
+		// use the getLineOut method of the Minim object to get an AudioOutput object
+		this.audioOut = minim.getLineOut(Minim.STEREO, 1024, sampleRate);
+		// set the gain lower to avoid clipping from multiple voices (UP and DOWN arrow keys adjust)
+		audioOut.setGain(outputGain); 
+		println("---- audio out gain is "+ nf(audioOut.getGain(), 0, 2) +", sample rate is "+ sampleRate);
+		// create a Minim MultiChannelBuffer with one channel, buffer size equal to mapSize
+		// the buffer will not have any audio data -- you'll need to open a file for that
+		mapSize = mapper.getSize();
+		this.playBuffer = new MultiChannelBuffer(mapSize, 1);
+		audioSignal = Arrays.copyOf(playBuffer.getChannel(0), mapSize);
+		granSignal = audioSignal;
+		this.audioLength = audioSignal.length;
+		// precautionary measure
+		samplerEnv = envPreset("Soft");
+		// initialize event animation tracking arrays
+		initTimedEventLists();
+		installBackingSource(audioSignal, audioOut.sampleRate());
+		refreshWindowFromBacking(false);
+		windowAudioReady = true;
+		ensureGranularReady();
+		ensureSamplerReady();
+	}
+
+	/**
+	 * Initialize lists of TimedLocation objects, used for animated response to mouse clicks
+	 * on brushstrokes and outside brushstrokes.
+	 */
+	public void initTimedEventLists() {
+		pointTimeLocs = new ArrayList<TimedLocation>();      // events outside a brush
+		samplerBrushEvents = new ArrayList<SamplerBrushEvent>();    // events in a Sampler brush
+		grainTimeLocs = new ArrayList<TimedLocation>();      // events in a Granular brush
+	}
+
+	// *** WindowedBuffer support *** //
+	/** Installs a full-file backing source and a mapper-sized moving window. */
+	void installBackingSource(float[] sig, float sourceSampleRate) {
+		int windowSize = (mapper != null) ? mapper.getSize() : mapSize;
+		if (windowSize <= 0) return;
+		int backingSize = Math.max(windowSize, (sig != null) ? sig.length : 0);
+		backingSignal = new float[backingSize];
+		if (sig != null) {
+			System.arraycopy(sig, 0, backingSignal, 0, Math.min(sig.length, backingSignal.length));
+		}
+		backingBuffer = new MultiChannelBuffer(backingSignal.length, 1);
+		backingBuffer.setChannel(0, backingSignal);
+		bufferSampleRate = sourceSampleRate;
+		audioFileLength = backingSignal.length;
+		windowBuff = new WindowedBuffer(backingSignal, windowSize, windowHopSize);
+		granSignal = backingSignal;
+		println("---- WindowBuffer backing source length = " + backingSignal.length
+				+ ", window size = " + windowBuff.getWindowSize()
+				+ ", hop size = " + windowBuff.getHopSize());
+	}
+
+	// *** WindowedBuffer support *** //
+	/** Copies the current backing-source window into the display and visible audio buffer. */
+	void refreshWindowFromBacking(boolean advance) {
+		if (windowBuff == null || backingSignal == null || backingSignal.length == 0) return;
+		if (advance) windowBuff.nextWindow();
+		int targetSize = mapper.getSize();
+		int start = PixelAudioMapper.wrap(windowBuff.getIndex(), backingSignal.length);
+		if (audioSignal == null || audioSignal.length != targetSize) audioSignal = new float[targetSize];
+		for (int i = 0; i < targetSize; i++) {
+			audioSignal[i] = backingSignal[(start + i) % backingSignal.length];
+		}
+		audioLength = audioSignal.length;
+		if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
+			playBuffer = new MultiChannelBuffer(targetSize, 1);
+		}
+		playBuffer.setChannel(0, audioSignal);
+		totalShift = 0;
+		writeAudioToImage(audioSignal, mapper, mapImage, chan);
+		commitMapImageToBaseImage();
+	}
+
+	// *** WindowedBuffer support *** //
+	/** Stops events and releases source bindings before installing a new backing buffer. */
+	void suspendWindowAudio() {
+		windowAudioReady = false;
+		suspendScheduledEvents();
+		stopAllLoops();
+		if (pool != null && !pool.isClosed()) {
+			pool.stopAll();
+			pool.close();
+		}
+		pool = null;
+		samplerSourceRef = null;
+		samplerSourceRateRef = -1;
+		if (gDir != null) gDir.cancelAndReleaseAll();
+	}
+
+	/**
+	 * Calculates the index of the image pixel within the signal path,
+	 * taking the shifting of pixels and audioSignal into account.
+	 * See MusicBoxBuffer for use of a windowed buffer in this calculation. 
+	 * 
+	 * @param x    an x coordinate within mapImage and display bounds
+	 * @param y    a y coordinate within mapImage and display bounds
+	 * @return     the index of the sample corresponding to (x,y) on the signal path
+	 */
+	public int getSamplePos(int x, int y) {
+		int local = mapper.lookupSignalPosShifted(x, y, totalShift);
+		return backingIndexFromLocal(local);
+	}
+
+	/**
+	 * Calculates the display image coordinates corresponding to a specified audio sample index.
+	 * @param pos    an index into an audio signal, must be between 0 and width * height - 1.
+	 * @return       a PVector with the x and y coordinates
+	 */
+	public PVector getCoordFromSignalPos(int pos) {
+		int[] xy = this.mapper.lookupImageCoordShifted(pos, totalShift);
+		return new PVector(xy[0], xy[1]);
+	}
+
+	// *** WindowedBuffer support *** //
+	int backingIndexFromLocal(int localIndex) {
+		if (windowBuff == null || backingSignal == null || backingSignal.length == 0) {
+			return PixelAudioMapper.wrap(localIndex, Math.max(1, mapper.getSize()));
+		}
+		int local = PixelAudioMapper.wrap(localIndex, mapper.getSize());
+		return PixelAudioMapper.wrap(windowBuff.getIndex() + local, backingSignal.length);
+	}
+
+	// *** WindowedBuffer support *** //
+	float[] backingGranularSignal() {
+		return (backingSignal != null && backingSignal.length > 0) ? backingSignal : audioSignal;
+	}
+		
+	// -------------- METHODS TO PLAY SAMPLING OR GRANULAR SYNTH ------------- //
+		
+	/**
+	 * Plays a sample and animates a point
+	 * @param x    x-coordinate of event
+	 * @param y    y-coordinate of event
+	 */
+	void runSamplerPointEvent(int x, int y) {
+		ensureSamplerReady();
+		int signalPos = getSamplePos(x, y);
+		float panning = map(x, 0, width, -0.875f, 0.875f);
+		int len = calcSampleLen(envDurationMs, 1.0f, 0.0625f);
+		samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
+		int durationMS = (int)(samplelen / sampleRate * 1000);
+		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
+		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
+	}
+	
+	/**
+	 * Plays a sample and animates a point
+	 * @param x    x-coordinate of event
+	 * @param y    y-coordinate of event
+	 */
+	void runSamplerDrawEvent(int x, int y) {
+		ensureSamplerReady();
+		int signalPos = getSamplePos(x, y);
+		float panning = map(x, 0, width, -0.875f, 0.875f);
+		int len = calcSampleLen(envDurationMs, 1.0f, 0.0625f)/4;
+		ADSRParams env = envPreset("Pluck");
+		samplelen = playSample(signalPos, len, 0.5f, env, panning);
+		int durationMS = (int)(samplelen / sampleRate * 1000);
+		pointTimeLocsAddPoint(new TimedLocation(x, y, durationMS + millis() + 50));		
+		// if (isVerbose) println("----- sampler point event, signalPos = "+ signalPos);
+	}
+
+
+	/**
+	 * Plays a granular burst and animates a point.
+	 * 
+	 * @param x    x-coordinate of event
+	 * @param y    y-coordinate of event
+	 */
+	void runGranularPointEvent(int x, int y) {
+		ensureGranularReady();
+		float hopMsF = (float) AudioUtility.samplesToMillis(hopSamples, sampleRate);
+		int dur = granPointDurationMs;
+		// useLinearPointTraversal determine grain advancement
+		final int grainCount = Math.max(
+			1,
+			useLinearPointTraversal
+				? (int) Math.round(dur / hopMsF)
+				: (int) Math.round(dur / hopMsF)
+		);
+		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
+		int startTime = millis() + 10;
+		float[] buf = (granSignal != null) ? granSignal : audioSignal;
+
+		if (useLinearPointTraversal) {
+			/*
+			 * Audio: one scheduled event containing the complete burst.
+			 */
+			ArrayList<PVector> audioPath = new ArrayList<>(1);
+			audioPath.add(getCoordFromSignalPos(signalPos));
+			PACurveMaker audioCurve = PACurveMaker.buildCurveMaker(audioPath);
+			audioCurve.setDragTimes(new int[] { 0 });
+			audioCurve.setTimeStamp(startTime);
+			// create a GestureSchedule for audioCurve
+			GestureSchedule audioSchedule = audioCurve.getAllPointsSchedule();
+
+			GestureGranularParams pointBurstParams =
+				GestureGranularParams.builder()
+					.grainLengthSamples(granSamples)
+					.hopLengthSamples(hopSamples)
+					.burstTimeHopOutputFrames(hopSamples)
+					.burstSourceIndexHopSamples(hopSamples)
+					.burstGrains(grainCount)
+					.gainLinear(granularPointGain)
+					.looping(false)
+					.env(gParamsFixed.env)
+					.hopMode(GestureGranularParams.HopMode.FIXED)
+					.build();
+
+			playGranularGesture(buf, audioSchedule, pointBurstParams);
+
+			/*
+			 * Animation: trace the burst independently of the audio schedule.
+			 * Schedule at most one circle every four grains, or use the
+			 * configured burst size when it is larger.
+			 */
+			int animationStride = Math.max(4, burstGrains); // okay to hard code
+			int animationCount = (grainCount + animationStride - 1) / animationStride;
+			ArrayList<PVector> animationPath = new ArrayList<>(animationCount);
+			int[] animationTiming = new int[animationCount];
+			for (int i = 0; i < animationCount; i++) {
+				int grainIndex = i * animationStride;
+				animationPath.add(
+					getCoordFromSignalPos(
+						signalPos + hopSamples * grainIndex
+					)
+				);
+				animationTiming[i] = Math.round(grainIndex * hopMsF);
+			}
+			PACurveMaker animationCurve = PACurveMaker.buildCurveMaker(animationPath);
+			animationCurve.setDragTimes(animationTiming);
+			animationCurve.setTimeStamp(startTime);
+			GestureSchedule animationSchedule = animationCurve.getAllPointsSchedule();
+			storeGranularCurveTL(animationSchedule, startTime, false);
+		}
+		else {
+			/*
+			 * Preserve the existing short/jittered point behavior.
+			 */
+			ArrayList<PVector> path = new ArrayList<>(grainCount);
+			int[] timing = new int[grainCount];
+			for (int i = 0; i < grainCount; i++) {
+				path.add(jitterCoord(x, y, 3));
+				timing[i] = Math.round(i * hopMsF);
+			}
+			PACurveMaker curve = PACurveMaker.buildCurveMaker(path);
+			curve.setDragTimes(timing);
+			curve.setTimeStamp(startTime);
+			GestureSchedule schedule = curve.getAllPointsSchedule();
+			playGranularGesture(buf, schedule, gParamsFixed);
+			storeGranularCurveTL(schedule, startTime, false);
+		}
+	}
+
+	
+	/**
+	 * Primary method for playing a granular synthesis audio event.
+	 * 
+	 * @param buf       an audio signal as a array of float
+	 * @param sched     GestureSchedule (points + times) for grains
+	 * @param params    core parameters for granular synthesis
+	 */
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
+		GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+		playGranularGesture(buf, sched, params, eventParams);
+	}
+	
+	/**
+	 * Primary method for playing a granular synthesis audio event.
+	 * 
+	 * @param buf            an audio signal as a array of float
+	 * @param sched          GestureSchedule (points + times) for grains
+	 * @param params         core parameters for granular synthesis
+	 * @param eventParams    event parameters for granular synthesis
+	 */
+	public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params, GestureEventParams eventParams) {       
+		gDir.playGestureNow(buf, sched, params, eventParams);
+	}
+
+	public GestureEventParams prepareGranularGesture(float buf[], GestureSchedule sched, GestureGranularParams params) {
+		return prepareGranularGesture(buf, sched, params, null);
+	}
+	
+	public GestureEventParams prepareGranularGesture(float buf[], GestureSchedule sched, 
+			GestureGranularParams params, PAControlCurve gainCurve) {
+		GestureEventParams eventParams;
+		// map gesture points to array of indices into the audio buffer
+		int[] localIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
+		int sourceLength = (buf != null && buf.length > 0) ? buf.length : mapper.getSize();
+		int[] startIndices = new int[localIndices.length];
+		for (int i = 0; i < localIndices.length; i++) {
+			startIndices[i] = (windowBuff != null)
+					? PixelAudioMapper.wrap(windowBuff.getIndex() + localIndices[i], sourceLength)
+					: PixelAudioMapper.wrap(localIndices[i], sourceLength);
+		}
+		float[] panPerGrain = new float[sched.size()];
+		for (int i = 0; i < sched.size(); i++) {
+			PVector p = sched.points.get(i);
+			// use the x-coordinate for left to right stereo field mapping
+			panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
+		}
+		// optional per-grain dynamics
+		float[] gainPerGrain = null;
+		if (gainCurve != null) {
+			gainPerGrain = PAKeyframeControlCurve.expandToSchedule(gainCurve, sched);
+		}
+		GestureEventParams.Builder builder = GestureEventParams.builder(sched.size())
+				.startIndices(startIndices)
+				.pan(panPerGrain);
+		if (gainPerGrain != null) {
+			builder.gain(gainPerGrain);
+		}
+		if (usePitchedGrains) {
+			float[] pitch = generateJitterPitch(sched.size(), params.pitchRatio, pitchJitter);
+			builder.pitchRatio(pitch);
+		}
+		eventParams = builder.build();
+		return eventParams;	
+	}
+	
+	float[] generateJitterPitch(int length, float basePitch, float deviationPitch) {
+		float[] pitch = new float[length];
+		double variance = deviationPitch * deviationPitch;
+		for (int i = 0; i < pitch.length; i++) {
+			pitch[i] = basePitch * (float) PixelAudio.gauss(1, variance);
+		}
+		return pitch;
+	}
+	
+	/**
+	 * Calculate an envelope of length totalSamples. 
+	 * @param gainDb          desired gain in dB, currently ignored
+	 * @param totalSamples    number of samples the envelope should cover
+	 * @param sampleRate      sample rate of the audio buffer the envelope is applied to
+	 * @return and ADSRParams envelope
+	 */
+	public ADSRParams calculateEnvelopeDb(float gainDb, int totalSamples, float sampleRate) {
+		float linear = AudioUtility.dbToLinear(gainDb);
+		return calculateEnvelopeLinear(linear, totalSamples * 1000f / sampleRate);
+	}
+
+	/**
+	 * Calculate an envelope of length totalSamples. 
+	 * @param linear     desired gain as a linear ratio, currently ignored
+	 * @param totalMs    desired duration of the envelope in milliseconds
+	 * @return an ADSRParams envelope
+	 */
+	public ADSRParams calculateEnvelopeLinear(float linear, float totalMs) {
+		float attackMS = Math.min(50, totalMs * 0.1f);
+		float releaseMS = Math.min(200, totalMs * 0.3f);
+		float envGain = 1.0f;    // or = linear;
+		ADSRParams env = new ADSRParams(envGain, attackMS / 1000f, 0.01f, 0.8f, releaseMS / 1000f);
+		return env;
+	}
+
+	
+	/*----------------------------------------------------------------*/
+	/*       See PASamplerInstrument and PASamplerInstrumentPool      */
+	/*       for all the ways you can play a Sampler instrument.      */
+	/*       The ones listed here are the most useful of them.        */
+	/*----------------------------------------------------------------*/
+
+	/**
+	 * Plays an audio sample with default envelope and stereo pan.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param pan          stereo pan [-1.0, 1.0] for sample
+	 * @return the calculated sample length in samples
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude, float pan) {
+		return playSample(samplePos, samplelen, amplitude, samplerEnv, 1.0f, pan);
+	}
+
+	/**
+	 * Plays an audio sample with a custom envelope and stereo pan.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param env          an ADSR envelope for the sample
+	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
+	 * @return the calculated sample length in samples
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
+		return playSample(samplePos, samplelen, amplitude, env, 1.0f, pan);
+	}
+	
+	/**
+	 * Plays an audio sample with  with a custom envelope, pitch and stereo pan.
+	 * 
+	 * @param samplePos    position of the sample in the audio buffer
+	 * @param samplelen    length of the sample (will be adjusted)
+	 * @param amplitude    amplitude of the sample on playback
+	 * @param env          an ADSR envelope for the sample
+	 * @param pitch        pitch scaling as deviation from default (1.0), where 0.5 = octave lower, 2.0 = oactave higher 
+	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
+	 * @return the calculated sample length in samples
+	 */
+	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
+		int beforeCount = 0;
+		int afterCount = 0;
+    	int voiceCount = 0;
+		// tracking Sampler voice count for possible problems, which we discovered and fixed
+		if (isTrackSamplerVoices) {
+			voiceCount = gDir.activeOrReleasingVoiceCount();
+	    	println("-- gDir voice count = "+ voiceCount);
+			// println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
+			beforeCount = pool.samplerActiveVoiceCount();
+			// println("-- sampler voices BEFORE: "+ beforeCount);
+		}
+		int sampleLen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
+		if (isTrackSamplerVoices) {
+			afterCount = pool.samplerActiveVoiceCount();
+			if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
+			if (afterCount > 256) println("-- high sampler voice count "+ afterCount);
+			// println("-- sampler voices AFTER: "+ afterCount);
+		}
+		return sampleLen;
+	}
+
+	/**
+	 * @param dur         sample duration in milliseconds
+	 * @param mean        multiplier for duration, 1.0 leaves duration as mean value
+	 * @param variance    variance from mean value
+	 * @return a length in samples with some Gaussian variation
+	 */
+	public int calcSampleLen(int dur, float mean, float variance) {
+		float vary = 0; 
+		// skip the fairly rare negative numbers
+		while (vary <= 0) {
+			vary = (float) PixelAudio.gauss(mean, variance);
+		}
+		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
+		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		return samplelen;
+	}
+	
+	/**
+	 * Convenience method for calcSampleLen(envDuration, 1.0f, 0.0625f).
+	 * @return calculated sample length in samples of an envelope
+	 */
+	public int calcSampleLen() {
+		return calcSampleLen(envDurationMs, 1.0f, 0.0625f);
+	}
+
+	/**
+	 * @param sched         a {@code GestureSchedule} to access for calculating an envelope duration
+	 * @param envName       name of an envelope preset
+	 * @param fallbackMs    default duration in milliseconds
+	 * @return calculated sample length in samples of an envelope
+	 */
+	int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+	    int n = sched.points.size();
+	    if (n < 2) return fallbackMs;
+	    float avgStepMs = sched.durationMs() / (float)(n - 1);
+	    float factor;
+	    switch (envName) {
+	        case "Pluck":
+	        case "Percussion":
+	            factor = 4.0f;
+	            break;
+	        case "Soft":
+	        case "Fade":
+	            factor = 3.0f;
+	            break;
+	        case "Swell":
+	        case "Pad":
+	            factor = 2.0f;
+	            break;
+	        default:
+	            factor = 3.0f;
+	    }
+	    int minEnvMs = envMinDurationMs;
+	    int maxEnvMs = envMaxDurationMs;
+	    return PApplet.constrain(Math.round(avgStepMs * factor), minEnvMs, maxEnvMs);
+	}
+
+	/**
+	 * Prepares Sampler instruments and assets
+	 */
+	void ensureSamplerReady() {
+		// *** WindowedBuffer support *** //
+		if (!windowAudioReady) return;
+		MultiChannelBuffer source = (backingBuffer != null) ? backingBuffer : playBuffer;
+		float sourceRate = (bufferSampleRate > 0) ? bufferSampleRate : sampleRate;
+		if (source == null) return;
+		boolean needsRebuild = pool == null
+				|| pool.isClosed()
+				|| source != samplerSourceRef
+				|| sourceRate != samplerSourceRateRef;
+		if (needsRebuild) {
+			if (pool != null && !pool.isClosed()) {
+				pool.stopAll();
+				pool.close();
+			}
+			pool = new PASamplerInstrumentPool(source, sourceRate, poolSize, sMaxVoices, audioOut, samplerEnv);
+			pool.setWrapAround(true);
+			samplerSourceRef = source;
+			samplerSourceRateRef = sourceRate;
+			println("-- initialized pool sampler synth");
+		}
+		else {
+			pool.setBuffer(source, sourceRate);
+		}
+		pool.setGain(samplerGain);
+	}
+	
+	/**
+	 * Prepares Granular instruments and assets
+	 */
+	void ensureGranularReady() {
+	    if (gSynth == null) {
+	    	ADSRParams granEnv = new ADSRParams(1.0f, 0.005f, 0.02f, 0.875f, 0.025f);
+	    	gSynth = buildGranSynth(audioOut, granEnv, gMaxVoices);
+	    }
+	    if (backingSignal != null) granSignal = backingSignal;
+	    else if (granSignal == null) granSignal = (audioSignal != null) ? audioSignal : playBuffer.getChannel(0);
+	    if (gParamsFixed == null) {
+	    	initGranularParams();
+	    }
+	    if (gDir == null) {
+	    	gDir = new PAGranularInstrumentDirector(gSynth);
+	    }
+	}
+	
+	/**
+	 * Initializes a PAGranularInstrument.
+	 * @param out          AudioOutput for this application
+	 * @param env          an ADSRParams envelope
+	 * @param numVoices    number of voices for the synth
+	 * @return a PAGranularInstrument
+	 */
+	public PAGranularInstrument buildGranSynth(AudioOutput out, ADSRParams env, int numVoices) {
+		PAGranularInstrument inst = new PAGranularInstrument(out, env, numVoices);
+		return inst;
+	}
+
+	/**
+	 * Initializes gParamsFixed, a GestureGranularParams instances used for granular point events.
+	 */
+	public void initGranularParams() {
+		ADSRParams env = this.calculateEnvelopeLinear(granularGain, 1000);
+		gParamsFixed = GestureGranularParams.builder()
+				.grainLengthSamples(granSamples)
+				.hopLengthSamples(hopSamples)
+				.gainLinear(granularPointGain)
+				.looping(false)
+				.env(env)
+				.hopMode(GestureGranularParams.HopMode.FIXED)
+				.burstGrains(burstGrains)
+				.build();
+		gParamsDraw = GestureGranularParams.builder()
+				.grainLengthSamples(512)
+				.hopLengthSamples(128)
+				.gainLinear(0.02f)
+				.looping(false)
+				.env(granularEnv)
+				.hopMode(GestureGranularParams.HopMode.FIXED)
+				.burstGrains(4)
+				.build();
+	}
+
+		
+	/**
+	 * Bottleneck "commit" method for audio state. 
+     * 
+     * Takes an arbitrary input signal and installs it as the canonical audio signal
+     * used by the system. This method:
+     *
+     *  - Resizes/pads/truncates the input to mapper.getSize()
+     *  - Copies the data to ensure no external aliasing
+     *  - Updates audioSignal (canonical signal handled by application code)
+     *  - Updates playBuffer (audio buffer used by Minim audio library methods)
+     *  - Propagates the buffer to active instruments: edit this part for your own code
+     * 
+     * This is the ONLY method that should mutate the global audio signal state.
+     * 
+     * In PixelAudio examples, the signal is typically loaded from a file, but
+     * it could also be signal cached in memory, a signal generated by code, audio
+     * captured live, etc. 
+	 * 
+	 * @param sig                 an audio signal
+	 * @param bufferSampleRate    audio sample rate for sig,
+	 *                            usually obtained when reading from an audio file
+	 */
+	void updateAudioChain(float[] sig, float bufferSampleRate) {
+		// *** WindowedBuffer support *** //
+		suspendWindowAudio();
+		installBackingSource(sig, bufferSampleRate);
+		refreshWindowFromBacking(false);
+		windowAudioReady = true;
+		ensureSamplerReady();
+		ensureGranularReady();
+	}
+
+	void updateAudioChain(float[] sig) {
+	    updateAudioChain(sig, audioOut.sampleRate());
+	}
+	
+	
+	// ------------- LOOPING ------------- //
+	
+	/**
+	 * Updates looping instruments.
+	 */
+	public synchronized void updateInstrumentLoops() {
+		if (activeLoops.isEmpty()) return;
+		long now = millis();
+		for (InstrumentLoop loop : activeLoops) {
+			if (!loop.active) continue;
+			if (now >= loop.nextStartMillis) {
+				loop.playAction.run();
+				if (loop.repeatsRemaining > 0) {
+					loop.repeatsRemaining--;
+					if (loop.repeatsRemaining == 0) {
+						loop.active = false;
+						continue;
+					}
+				}
+				loop.nextStartMillis = now + loop.durationMs + loop.gapMs;
+			}
+		}
+		activeLoops.removeIf(loop -> !loop.active);
+	}
+
+	/**
+	 * Stops all loops.
+	 */
+	public synchronized void stopAllLoops() {
+		for (InstrumentLoop loop : activeLoops) {
+			loop.stop();
+		}
+		activeLoops.clear();
+	}
+
+	/**
+	 * Stop looping for a specified brush
+	 * @param brush    AudioBrush whose looping will end
+	 */
+	public synchronized void stopLoopsForBrush(AudioBrush brush) {
+		if (brush == null || activeLoops.isEmpty()) return;
+		for (InstrumentLoop loop : activeLoops) {
+			if (loop.brush == brush) {
+				loop.stop();
+			}
+		}
+		activeLoops.removeIf(loop -> !loop.active);
+	}
+
+	/**
+	 * Prevents future loop iterations for a brush without interrupting the iteration
+	 * that is already playing.
+	 * @param brush    AudioBrush whose looping will finish after the current iteration
+	 */
+	public synchronized void finishLoopsForBrush(AudioBrush brush) {
+		if (brush == null || activeLoops.isEmpty()) return;
+		for (InstrumentLoop loop : activeLoops) {
+			if (loop.brush == brush) {
+				loop.active = false;
+			}
+		}
+		activeLoops.removeIf(loop -> !loop.active);
+	}
+
+	public synchronized boolean hasLoopForBrush(AudioBrush brush) {
+		if (brush == null) return false;
+		for (InstrumentLoop loop : activeLoops) {
+			if (loop.active && loop.brush == brush) return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Estimate loop duration for a Granular instrument.
+	 * @param sched     a GestureSchedule associated with a brush
+	 * @param params    a GestureGranularParams object 
+	 * @return expected duration of a loop
+	 */
+	public int estimateLoopDurationMs(GestureSchedule sched, GestureGranularParams params) {
+		if (sched == null || sched.size() == 0) return 1;
+		int schedMs = Math.max(1, Math.round(sched.durationMs()));
+		int grainTailMs = 0;
+		if (params != null) {
+			grainTailMs = (int) Math.max(0, Math.round(AudioUtility.samplesToMillis(params.grainLengthSamples, sampleRate)));
+		}
+		return schedMs + grainTailMs;
+	}
+	
+	/**
+	 * Estimate loop duration for a Sampler instrument.
+	 * @param sched             a GestureSchedule associated with a brush
+	 * @param env               an ADSRParams envelope
+	 * @param noteLenSamples    number of samples in audio event ("note")
+	 * @return expected duration of a loop
+	 */
+	public int estimateLoopDurationMs(GestureSchedule sched, ADSRParams env, int noteLenSamples) {
+	    if (sched == null || sched.size() == 0) return 1;
+	    int schedMs = Math.max(1, Math.round(sched.durationMs()));
+	    int tailMs = 0;
+	    if (noteLenSamples > 0) {
+	        tailMs = (int) Math.max(tailMs, Math.round(AudioUtility.samplesToMillis(noteLenSamples, sampleRate)));
+	    }
+	    if (env != null) {
+	        int envMs = Math.round((env.getAttack() + env.getDecay() + env.getRelease()) * 1000f);
+	        tailMs = Math.max(tailMs, envMs);
+	    }
+	    return schedMs + tailMs;
+	}
+	
+	/**
+	 * @param gb            a GranularBrush to loop
+	 * @param buf           buffer to play from
+	 * @param sched         a GestureSchedule
+	 * @param params        runtime parameters for gesture playback
+	 * @param eventParams   optional pan, gain, and pitch modifiers per grain
+	 * @param repeats       number of times to loop
+	 * @param gapMs         time between loop events
+	 * @param animate       use TimedLocation animation (not used in method, true by default, TODO clarify)
+	 * @return              an InstrumentLoop object
+	 */
+	public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
+			float[] buf, 
+			GestureSchedule sched,
+			GestureGranularParams params,
+			GestureEventParams eventParams,
+			int repeats,
+			int gapMs,
+			boolean animate) {
+		if (gb == null || buf == null || sched == null || params == null || eventParams == null) return null;
+		int durationMs = estimateLoopDurationMs(sched, params);
+		long startMs = millis();
+
+		Runnable playAction = () -> {
+			playGranularGesture(buf, sched, params, eventParams);
+			if (animate) {
+				storeGranularCurveTL(sched, millis() + 10, false);
+			}
+		};
+
+		Runnable stopAction = () -> {
+			if (grainTimeLocs != null) {
+				for (TimedLocation tl : grainTimeLocs) {
+					tl.setStale(true);
+				}
+				grainTimeLocs.removeIf(TimedLocation::isStale);
+			}
+			if (gDir != null) {
+				gDir.cancelAndReleaseAll();
+			}
+		};
+
+		InstrumentLoop loop = new InstrumentLoop(gb, playAction, stopAction, 
+				durationMs, gapMs, repeats, startMs);
+		activeLoops.add(loop);
+		return loop;
+	}
+	
+	/**
+	 * @param gb        a GranularBrush
+	 * @param repeats   number of times to repeat loop
+	 * @param gapMs     time between repetitions, ms
+	 * @return          an InstrumentLoop object
+	 */
+	public InstrumentLoop loopGranularBrush(GranularBrush gb, int repeats, int gapMs) {
+	    if (gb == null) return null;
+	    ensureGranularReady();
+	    GestureGranularConfig.Builder cfg = gb.cfg().copy();
+	    CueResult result = applyPerformancePresets(cfg, gb.curve());
+	    PACurveMaker curve = result.curve;
+	    GestureGranularConfig snap = result.cfg.build();
+	    GestureSchedule sched = scheduleBuilder.build(curve, snap, audioOut.sampleRate());
+	    if (sched == null || sched.size() == 0) return null;
+	    GestureGranularParams params = snap.toParams();
+	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
+	    GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
+	}
+	
+	/**
+	 * @param sb               a SamplerBrush
+	 * @param sched            GestureSchedule for brush events
+	 * @param env              ADSRParams envelope for each Sampler event in schedule
+	 * @param noteLenSamples   length of a note in samples
+	 * @param repeats          number of times to repeat loop
+	 * @param gapMs            time between loop repetitions, ms
+	 * @param animate          use TimedLocation animation (not used in method, true by default, TODO clarify)
+	 * @return                 an InstrumentLoop object
+	 */
+	public synchronized InstrumentLoop startSamplerLoop(SamplerBrush sb, GestureSchedule sched,
+	        ADSRParams env, int noteLenSamples, int repeats, int gapMs, boolean animate) {
+	    if (sb == null || sched == null || sched.size() == 0) return null;
+	    int durationMs = estimateLoopDurationMs(sched, env, noteLenSamples);
+	    durationMs = (int)(durationMs * 0.8f);
+	    long startMs = millis();
+		PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
+		
+	    Runnable playAction = () -> {
+	        storeSamplerBrushEvents(sched, sb.snapshot(), millis() + 10, gainCurve);
+	    };
+
+	    Runnable stopAction = () -> {
+	    	synchronized (samplerBrushEventsLock) {
+	    		if (samplerBrushEvents != null) {
+	    			samplerBrushEvents.clear();
+	    		}
+	    	}
+	    	synchronized (pointTimeLocsLock) {
+	    		if (pointTimeLocs != null) {
+	    			for (TimedLocation tl : pointTimeLocs) {
+	    				tl.setStale(true);
+	    			}
+	    			pointTimeLocs.removeIf(TimedLocation::isStale);
+	    		}
+	    	}
+	    	if (pool != null) {
+	    		pool.fadeOutAll();
+	    	}
+	    };
+
+	    InstrumentLoop loop = new InstrumentLoop(sb, playAction, stopAction, durationMs, gapMs, repeats, startMs);
+	    activeLoops.add(loop);
+	    return loop;
+	}
+
+	/**
+	 * @param sb        a SamplerBrush instance
+	 * @param repeats   number of times to repeat
+	 * @param gapMs     time between loop repetitions, ms
+	 * @return
+	 */
+	public InstrumentLoop loopSamplerBrush(SamplerBrush sb, int repeats, int gapMs) {
+	    if (sb == null) return null;
+	    ensureSamplerReady();
+
+	    GestureGranularConfig snap = sb.snapshot();
+	    GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
+	    if (sched == null || sched.size() == 0) return null;
+
+	    ADSRParams env = (snap.env != null) ? snap.env : samplerEnv;
+	    int noteLenSamples = calcSampleLen();
+
+	    return startSamplerLoop(sb, sched, env, noteLenSamples, repeats, gapMs, true);
+	}
+	
+
+
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                        DRAWING METHODS                         */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+	
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing.
+	 * 
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
+	public int[] applyColor(int[] colorSource, int[] graySource, int[] lut) {
+		if (colorSource == null || graySource == null || lut == null) 
+			throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
+		if (colorSource.length != graySource.length || colorSource.length != lut.length) 
+			throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
+		// initialize a reusable array for HSB color data -- this is a way to speed up the applyColor() method
+		float[] hsbPixel = new float[3];
+		for (int i = 0; i < graySource.length; i++) {
+			graySource[i] = PixelAudioMapper.applyColor(colorSource[lut[i]], graySource[i], hsbPixel);
+		}
+		return graySource;
+	}
+
+	/**
+	 * Utility method for applying hue and saturation values from a source array of RGB values
+	 * to the brightness values in a target array of RGB values, using a lookup table to redirect indexing,
+	 * taking into account any pixels that were shifted.
+	 *
+	 * @param colorSource    a source array of RGB data from which to obtain hue and saturation values
+	 * @param graySource     a target array of RGB data from which to obtain brightness values
+	 * @param lut            a lookup table, must be the same size as colorSource and graySource
+	 * @param shift          pixel shift from array rotation, windowed buffer, etc.
+	 * @return the graySource array of RGB values, with hue and saturation values changed
+	 * @throws IllegalArgumentException if array arguments are null or if they are not the same length
+	 */
+	public int[] applyColorShifted(int[] colorSource, int[] graySource, int[] lut, int shift) {
+	    if (colorSource == null || graySource == null || lut == null)
+	        throw new IllegalArgumentException("colorSource, graySource and lut cannot be null.");
+	    if (colorSource.length != graySource.length || colorSource.length != lut.length)
+	        throw new IllegalArgumentException("colorSource, graySource and lut must all have the same length.");
+	    int n = graySource.length;
+	    int s = ((shift % n) + n) % n; // wrap + allow negative shifts
+	    float[] hsbPixel = new float[3];
+	    for (int i = 0; i < n; i++) {
+	        int srcIdx = lut[i] + s;
+	        if (srcIdx >= n) srcIdx -= n; // faster than % in tight loop
+	        graySource[i] = PixelAudioMapper.applyColor(colorSource[srcIdx], graySource[i], hsbPixel);
+	    }
+	    return graySource;
+	}	
+
+	/**
+	 * Applies the Hue and Saturation of pixel values in the colors[] array to mapImage and baseImage. 
+	 */
+	public void applyColorMap() {
+		mapImage.loadPixels();
+		applyColorShifted(colors, mapImage.pixels, mapper.getImageToSignalLUT(), totalShift);
+		mapImage.updatePixels();
+		baseImage.loadPixels();
+		applyColor(colors, baseImage.pixels, mapper.getImageToSignalLUT());
+		baseImage.updatePixels();
+	}
+	
+	/**
+	 * Initializes allPoints and adds the current mouse location to it. 
+	 */
+	public void initAllPoints() {
+		allPoints = new ArrayList<PVector>();
+		allTimes = new ArrayList<Integer>();
+		startTime = millis();
+		int x = clipToWidth(mouseX);
+		int y = clipToHeight(mouseY);
+		addDrawingPoint(x, y);
+	}
+	
+	/**
+	 * Respond to mousePressed events, usually by triggering an event
+	 */
+	public int handleClickOutsideBrush(int x, int y) {
+		int pos = getSamplePos(x, y);
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			runSamplerPointEvent(x, y);
+		}
+		else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			runGranularPointEvent(x, y);
+		}
+		else if (drawingMode == DrawingMode.PLAY_ONLY) {
+			// In play-only, play what user clicked/hovered, otherwise fall back to selected
+			if (pointEventUseSampler) {
+				runSamplerPointEvent(x, y);
+			}
+			else {
+				runGranularPointEvent(x, y);
+			}
+		}
+		else {
+			
+		}
+		// *****]]] NETWORKING [[[***** //
+	    if (nd != null && isNetSendOutsideBrushPoints) nd.oscSendMouseClicked(x, y, pos);
+		return pos;
+	}
+	
+	/**
+	 * Dispatches lightweight "taste" audio while drawing.
+	 * Call this only after a new drawing point has been accepted.
+	 */
+	void handlePlayOnDraw(int x, int y) {
+	    if (!doPlayWhileDrawing) return;
+
+	    int nowMs = millis();
+	    if (!shouldTriggerDrawTaste(x, y, nowMs)) return;
+
+	    switch (drawingMode) {
+	    case DRAW_EDIT_SAMPLER:
+	        runSamplerDrawTaste(x, y);
+	        break;
+	    case DRAW_EDIT_GRANULAR:
+	        runGranularDrawTaste(x, y);
+	        break;
+	    case PLAY_ONLY:
+	    default:
+	        break;
+	    }
+	}
+
+	/**
+	 * Shared thinning logic for draw-time tasting.
+	 * Requires both:
+	 *   1) enough time since the last taste
+	 *   2) enough mouse movement since the last taste point
+	 */
+	boolean shouldTriggerDrawTaste(int x, int y, int nowMs) {
+	    if (nowMs - lastDrawTasteMs < drawTasteIntervalMs) return false;
+
+	    if (lastDrawTastePoint != null) {
+	        float dx = x - lastDrawTastePoint.x;
+	        float dy = y - lastDrawTastePoint.y;
+	        float distSq = dx * dx + dy * dy;
+	        float minDistSq = drawTasteMinDist * drawTasteMinDist;
+	        if (distSq < minDistSq) return false;
+	    }
+
+	    lastDrawTasteMs = nowMs;
+	    if (lastDrawTastePoint == null) {
+	        lastDrawTastePoint = new PVector(x, y);
+	    } else {
+	        lastDrawTastePoint.set(x, y);
+	    }
+	    return true;
+	}
+
+	/**
+	 * Lightweight Sampler "taste" while drawing.
+	 * Short, percussive, cheap to trigger.
+	 */
+	void runSamplerDrawTaste(int x, int y) {
+	    ensureSamplerReady();
+
+	    int signalPos = getSamplePos(x, y);
+	    float pan = map(x, 0, width, -0.875f, 0.875f);
+
+	    // Keep the taste short and light.
+	    int len = calcSampleLen(envDurationMs, 1.0f, 0.0625f) / 4;
+	    ADSRParams env = envPreset("Percussion");
+
+	    samplelen = playSample(signalPos, len, 0.125f, env, pan);
+
+	    int durationMs = (int) (samplelen / sampleRate * 1000.0f);
+	    pointTimeLocsAddPoint(new TimedLocation(x, y, millis() + durationMs + 50));
+
+	    // if (isVerbose) println("----- sampler draw taste, signalPos = " + signalPos);
+	}
+
+	/**
+	 * Lightweight Granular "taste" while drawing.
+	 * Uses a very small fixed-hop burst gesture so the result is textured
+	 * but inexpensive compared to full gesture playback.
+	 */
+	void runGranularDrawTaste(int x, int y) {
+		ensureGranularReady();
+	    if (granSignal == null || gDir == null) return;
+
+	    // Build a tiny local gesture around the current point.
+	    ArrayList<PVector> pts = new ArrayList<>();
+	    ArrayList<Integer> times = new ArrayList<>();
+
+	    // Two-point micro gesture: same point, short duration.
+	    // This gives the director a valid schedule without pulling in full current-brush logic.
+	    pts.add(new PVector(x, y));
+	    pts.add(new PVector(x, y));
+	    times.add(0);
+	    times.add(drawTasteDurationMs);
+
+	    PACurveMaker cm = PACurveMaker.buildCurveMaker(pts, times, millis());
+	    GestureSchedule sched = scheduleBuilder.build(cm, defaultGranConfig.build(), audioOut.sampleRate());
+	    if (sched == null || sched.isEmpty()) return;
+
+	    // Limit cost aggressively.
+	    int n = Math.min(sched.size(), drawTasteMaxGrains);
+	    if (n <= 0) return;
+
+	    // If the schedule builder returned more than we want, trim it.
+	    if (sched.size() > n) {
+	        ArrayList<PVector> shortPts = new ArrayList<>(n);
+	        float[] shortTimes = new float[n];
+	        for (int i = 0; i < n; i++) {
+	            shortPts.add(sched.points.get(i));
+	            shortTimes[i] = sched.timesMs[i];
+	        }
+	        sched = new GestureSchedule(shortPts, shortTimes);
+	    }
+	    
+	    float pan = map(x, 0, width, -0.875f, 0.875f);
+	    GestureGranularParams params = GestureGranularParams.builder()
+	            .grainLengthSamples(granSamples)
+	            .hopLengthSamples(hopSamples)
+	            .burstGrains(drawTasteBurstGrains)
+	            .gainLinear(granularPointGain)
+	            .pan(pan)
+	            .env(granularEnv)
+	            .hopMode(GestureGranularParams.HopMode.FIXED)
+	            .timeTransform(GestureGranularParams.TimeTransform.RAW_GESTURE)
+	            .build();
+
+	    int[] localIndices = mapper.lookupSignalPosArray(sched.points, totalShift, mapper.getSize());
+	    int[] startIndices = new int[localIndices.length];
+	    for (int i = 0; i < localIndices.length; i++) {
+	    	startIndices[i] = backingIndexFromLocal(localIndices[i]);
+	    }
+
+	    gDir.playGestureNow(granSignal, sched, params, startIndices);
+
+	    // Simple UI dot, parallel to sampler taste.
+	    pointTimeLocsAddPoint(new TimedLocation(x, y, millis() + drawTasteDurationMs + 50));
+
+	    // if (isVerbose) println("----- granular draw taste, grains = " + n + ", x = " + x + ", y = " + y);
+	}	
+	
+	// NOT USED -- TODO decide it we want to keep this method
+	boolean isOverAnyBrush(int x, int y) {
+	    // optionally gate by mode; or check both lists always
+	    for (int i = granularBrushes.size() - 1; i >= 0; i--) {
+	        AudioBrush b = granularBrushes.get(i);
+	        if (pointInPoly(b.curve().getBrushPoly(), x, y)) return true;
+	    }
+	    for (int i = samplerBrushes.size() - 1; i >= 0; i--) {
+	        AudioBrush b = samplerBrushes.get(i);
+	        if (pointInPoly(b.curve().getBrushPoly(), x, y)) return true;
+	    }
+	    return false;
+	}
+
+	/**
+	 * While user is dragging the mouse and mode == Mode.DRAW_EDIT_GRANULAR or DRAW_EDIT_SAMPLER, 
+	 * accumulates new points to allPoints and event times to allTimes. Coordinates should be 
+	 * constrained to display window bounds. 
+	 *
+	 * @param x    x-coordinate 
+	 * @param y    y-coordinate
+	 */
+	public void addDrawingPoint(int x, int y) {
+	    if (allPoints == null || allTimes == null) return;
+	    // basic point thinning: skip duplicate successive points
+	    if (x == (int)currentPoint.x && y == (int)currentPoint.y) return;
+	    currentPoint = new PVector(x, y);
+	    allPoints.add(currentPoint);
+	    allTimes.add(millis() - startTime);   // store time offset, not absolute time
+
+	    // *****]]] NETWORKING [[[***** //
+		if (nd != null && isNetSendDrawingPoints) nd.oscSendMouseClicked(x, y, getSamplePos(x, y));	    
+	    
+	    if (!doPlayWhileDrawing) return;	    
+	    // preview only while drawing in editable synth modes
+	    if (!(drawingMode == DrawingMode.DRAW_EDIT_GRANULAR
+	            || drawingMode == DrawingMode.DRAW_EDIT_SAMPLER)) {
+	        return;
+	    }
+	    handlePlayOnDraw(x, y);
+	}
+	
+	
+	/**
+	 * @param x    a value to constrain to the current window width
+	 * @return the constrained value
+	 */
+	public int clipToWidth(int x) {
+		return min(max(0, x), width - 1);
+	}
+	/**
+	 * @param y    a value to constrain to the current window height
+	 * @return the constrained value
+	 */
+	public int clipToHeight(int y) {
+		return min(max(0, y), height - 1);
+	}
+	
+	/**
+	 * Displaces a supplied point by a random Gaussian variable.
+	 * @param x              x-coordinate
+	 * @param y              y-coordinate
+	 * @param deviationPx    average deviation, in pixels
+	 * @return a displaced coordinate point as a PVector
+	 */
+	public PVector jitterCoord(int x, int y, int deviationPx) {
+	    double variance = deviationPx * deviationPx;
+	    int jx = (int)Math.round(PixelAudio.gauss(0, variance));
+	    int jy = (int)Math.round(PixelAudio.gauss(0, variance));
+	    int nx = clipToWidth(x + jx);
+	    int ny = clipToHeight(y + jy);
+	    return new PVector(nx, ny);
+	}
+	
+	/**
+	 * Builds a {@code GestureSchedule} for a {@code PACurveMaker} brush and a snapshot of a {@code GestureGranularConfig}
+	 * @param brush    a {@code PACurveMaker} brush
+	 * @param snap     a snapshot of a {@code GestureGranularConfig}
+	 * @return a {@code GestureSchedule}
+	 */
+	public GestureSchedule loadGestureSchedule(PACurveMaker brush, GestureGranularConfig snap) {
+	    if (brush == null || snap == null) return null;
+	    GestureSchedule schedule = scheduleBuilder.build(brush, snap, audioOut.sampleRate());
+	    if (schedule == null || schedule.isEmpty()) return null;
+	    // we could set a global variable, this.currentSchedule
+	    return schedule;
+	}
+
+	/**
+	 * Initializes a PACurveMaker instance with allPoints as an argument to the factory method 
+	 * PACurveMaker.buildCurveMaker() and then fills in PACurveMaker instance variables. 
+	 */
+	public AudioBrush initCurveMakerAndAddBrush() {
+		if (gConfig == null) {
+		    throw new IllegalStateException("gConfig is null: you probably need to initialize it.");
+		}
+		curveMaker = PACurveMaker.buildCurveMaker(allPoints, allTimes, startTime);
+		curveMaker.setBrushColor(readyGranColor);
+		curveMaker.setActiveBrushColor(hoverGranColor);
+		curveMaker.setEpsilon(epsilon);                   // control resolution of reduced points
+		curveMaker.setTimeOffset(millis() - startTime);   // time between first point and last point
+		curveMaker.calculateDerivedPoints();              // initialize all the useful structures up front
+		AudioBrush brush = makeBrushFromCurveMaker();
+		PAControlCurve gainCurve = isAddDynamics ? dynamics : null;
+		if (doPlayOnNewBrush && brush instanceof SamplerBrush sb) {
+			scheduleSamplerBrushClick(sb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
+		}
+		if (doPlayOnNewBrush && brush instanceof GranularBrush gb) {
+			scheduleGranularBrushClick(gb, clipToWidth(mouseX), clipToHeight(mouseY), gainCurve);
+		}
+		// *****]]] NETWORKING [[[***** //
+		if (nd != null && isNetSendGestures) {
+			int x = clipToWidth(mouseX);
+			int y = clipToHeight(mouseY);
+			nd.oscSendMouseClicked(x, y, getSamplePos(x, y));
+			nd.oscSendDrawPoints(curveMaker.getRdpPoints());
+			nd.oscSendTimeStamp(curveMaker.timeStamp, curveMaker.timeOffset);
+		}
+		return brush;
+	}
+
+	/**
+	 * @return an AudioBrush generated from the current GUI configuration and {@code PACurveMaker} object {@code curveMaker}.
+	 */
+	public AudioBrush makeBrushFromCurveMaker() {
+		// reset some fields in gConfig
+		GestureGranularConfig.Builder cfg = gConfig.copy();
+		cfg.resampleCount = 0;
+		cfg.targetDurationMs = 0;
+		cfg.pitchSemitones = 0.0f;
+		return makeBrush(curveMaker, cfg);
+	}
+	
+	/**
+	 * @param curve     a PACurveMaker instance
+	 * @param config    a GestureGranularConfig.Builder
+	 * @return an AudioBrush generated from the supplied {@code GestureGranularConfig} and {@code PACurveMaker}
+	 */
+	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config) {
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {             
+			return makeBrush(curve, config, GestureGranularConfigIO.InstrumentType.SAMPLER);
+		}
+		else {
+			return makeBrush(curve, config, GestureGranularConfigIO.InstrumentType.GRANULAR);
+		}
+	}
+	
+	/**
+	 * End point for all makeBrush(...) calls, applies cues and special fx.
+	 * 
+	 * @param curve
+	 * @param config
+	 * @param instrumentType
+	 * @return
+	 */
+	public AudioBrush makeBrush(PACurveMaker curve, GestureGranularConfig.Builder config,
+	        GestureGranularConfigIO.InstrumentType instrumentType) {
+		// prepare
+        GestureGranularConfig.Builder cfg = config.copy();
+		PACurveMaker useCurve = curve;
+		// handle cues
+	    CueResult result = applyPerformancePresets(cfg, curve);
+		cfg = result.cfg;
+		useCurve = result.curve;
+		// now make brushes
+	    if (instrumentType == GestureGranularConfigIO.InstrumentType.SAMPLER) {
+	        SamplerBrush sb = new SamplerBrush(useCurve, cfg);
+	        samplerBrushes.add(sb);
+	        setActiveBrush(sb, samplerBrushes.size() - 1);
+	        if (this.isAutoOptimize) optimizeActiveBrush();
+	        syncEnvelopeMenu(cfg.env);
+	        if (isVerbose) println("----- new sampler brush created");
+	        return sb;
+	    } else {
+	        cfg.curveSteps = Math.min(cfg.curveSteps, 32);
+	        // Granular events use a stable envelope profile.
+	        // We do not fit ADSR to gesture duration; onset shape matters more than total span.
+	        cfg.env = granularEnv;
+	        GranularBrush gb = new GranularBrush(useCurve, cfg);
+	        granularBrushes.add(gb);
+	        setActiveBrush(gb, granularBrushes.size() - 1);
+	        if (this.isAutoOptimize) optimizeActiveBrush();
+	        if (isVerbose) println("----- new granular brush created, framerate = "+ frameRate);
+	        return gb;
+	    }
+	}
+
+//	public void applyCue(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+//	    if (dbCue != null) dbCue.apply(cfg, curve, this);
+//	}
+	
+	/**
+	 * Apply the active user presets in stack order.
+	 * @param cfg     audio and curve configuration
+	 * @param curve   PACurveMaker instance for brush
+	 * @return gesture and audio configuration determined by preset
+	 */
+	public CueResult applyPerformancePresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+		return applyOKPresets(cfg, curve);
+	}
+	
+	/**
+	 * Apply performance presets from {@code ok_presetStack} in activation order.
+	 * @param cfg     audio and curve configuration
+	 * @param curve   PACurveMaker instance for brush
+	 * @return gesture and audio configuration determined by preset
+	 */
+	public CueResult applyOKPresets(GestureGranularConfig.Builder cfg, PACurveMaker curve) {
+		if (ok_presetStack == null || ok_presetStack.isEmpty()) {
+			return new CueResult(curve, cfg);
+		}
+		PACurveMaker curCurve = curve;
+		GestureGranularConfig.Builder curCfg = cfg;
+		for (OK_PerformancePreset cue : ok_presetStack) {
+			CueResult r = cue.apply(curCfg, curCurve, this);
+			if (r != null) {
+				if (r.cfg != null) curCfg = r.cfg;
+				if (r.curve != null) curCurve = r.curve;
+			}
+		}
+		return new CueResult(curCurve, curCfg);
+	}
+	
+	
+	/**
+	 * @param b   an AudioBrush instance
+	 * @return    return true if brush aligns with current drawingMode
+	 */
+	boolean isBrushInteractable(AudioBrush b) {
+	    switch (drawingMode) {
+	        case DRAW_EDIT_SAMPLER: return b instanceof SamplerBrush;
+	        case DRAW_EDIT_GRANULAR: return b instanceof GranularBrush;
+	        case PLAY_ONLY: return true; // both playable  
+	        default: return false;
+	    }
+	}
+
+	/**
+	 * Assigns a brush to be the current active brush, accessible for editing and other options.
+	 * @param brush   an AudioBrush to assign
+	 */
+	void setActiveBrush(AudioBrush brush) {
+		setActiveBrush(brush, hoverIndex);
+	}
+
+	/**
+	 * Assigns a brush to be the current active brush, accessible for editing and other options.
+	 * @param brush   an AudioBrush to assign
+	 * @param idx     index with a list of brushes of a particular type
+	 */
+	void setActiveBrush(AudioBrush brush, int idx) {
+		if (brush == null) return;
+		activeBrush = brush;
+		gConfig = brush.cfg();
+		if (brush instanceof GranularBrush gb) {
+			activeGranularBrush = gb;
+			activeGranularIndex = idx;
+			activeSamplerBrush = null;
+			activeSamplerIndex = -1;
+		}
+		else if (brush instanceof SamplerBrush sb) {
+			activeSamplerBrush = sb;
+			activeSamplerIndex = idx;
+			// samplerEnv = (gConfig.env != null) ? gConfig.env : defaultSampConfig.env;
+			samplerEnv = (gConfig.env != null) ? gConfig.env : envPreset("Soft");
+			activeGranularBrush = null;
+			activeGranularIndex = -1;
+		}
+		recomputeUIBaselinesFromActiveBrush();
+		syncGuiFromConfig();
+	}
+	
+	/**
+	 * Caching for UI settings, may be superfluous. 
+	 */
+	void recomputeUIBaselinesFromActiveBrush() {
+		if (activeBrush == null) {
+			baselineCount = 0;
+			baselineDurationMs = 0;
+			return;
+		}
+		// 1) Count: based on the point set implied by current PathMode
+		PACurveMaker curve = activeBrush.curve();
+		List<PVector> pts;
+		switch (gConfig.pathMode) {
+		  case REDUCED_POINTS:
+		    pts = curve.getReducedPoints();
+		    break;
+		  case CURVE_POINTS:
+		    pts = curve.getCurvePoints();
+		    break;
+		  case ALL_POINTS:
+		  default:
+		    pts = curve.getAllPoints();
+		    break;
+		}
+		baselineCount = (pts == null) ? 0 : pts.size();
+		// 2) Duration: depends on HopMode (baseline has resample/duration/warp off)
+		if (baselineCount <= 1) {
+			baselineDurationMs = 0;
+			return;
+		}
+		if (gConfig.hopMode == GestureGranularConfig.HopMode.FIXED) {
+			// Baseline FIXED duration = hop * (n - 1), excludes last grain length by design
+			int hop = Math.max(1, gConfig.hopLengthSamples);
+			double hopMs = 1000.0 * hop / audioOut.sampleRate();
+			baselineDurationMs = (int) Math.round((baselineCount - 1) * hopMs);
+		} 
+		else {
+			// Gesture-timed baseline duration: use the curve's own recorded timing if available.
+			// PACurveMaker already tracks "timeOffset" between first and last point.
+			baselineDurationMs = Math.max(0, curve.getTimeOffset()); // int ms (adjust if getter differs)
+		}
+		if (isVerbose) {
+			println("-- baseLineCount = "+ baselineCount +"; baseLineDurationMs = "+ baselineDurationMs);
+		}
+	}
+
+	
+	/**
+	 * Draws brushes in available brush lists, calls {@code drawBrushes(List<? extends AudioBrush>, int, int, int)},
+	 * passing each list and colors for flagging its UI status. 
+	 */
+	public void drawBrushShapes() {
+		drawBrushes(granularBrushes, readyGranColor, hoverGranColor, activeGranColor);
+		drawBrushes(samplerBrushes, readySamplerColor, hoverSamplerColor, activeSamplerColor);
+	}
+	
+	/**
+	 * Iterates over a brush list and draws the brushstrokes stored in each PACurveMaker in the list. 
+	 * @param brushes      
+	 * @param readyColor
+	 * @param hoverColor
+	 * @param selectedColor
+	 */
+	public void drawBrushes(List<? extends AudioBrush> brushes, int readyColor, int hoverColor, int selectedColor) {
+		if (brushes.isEmpty()) return;
+		for (int i = 0; i < brushes.size(); i++) {
+			AudioBrush b = brushes.get(i);
+			PACurveMaker brush = b.curve();
+			boolean isHover = (b == hoverBrush);
+			boolean isSelected = (b == activeBrush);
+			int fill = readyColor;
+			if (isSelected) {
+				fill = selectedColor;
+				brush.setEpsilon(b.cfg().rdpEpsilon);
+				brush.setCurveSteps(b.cfg().curveSteps);
+			} 
+			else if (isHover) {
+				fill = hoverColor;
+			}
+			GestureGranularConfig.PathMode pm = b.cfg().pathMode;
+			PACurveUtility.shapeDraw(this, brush.getBrushShape(), fill, fill, 2);
+			int w = 1, d = 5;
+			int lc = isSelected ? lineColor : dimLineColor;
+			int cc = isSelected ? circleColor : dimCircleColor;
+			switch (pm) {
+			case REDUCED_POINTS:
+				PACurveUtility.lineDraw(this, brush.getReducedPoints(), lc, w);
+				PACurveUtility.pointsDraw(this, brush.getReducedPoints(), cc, d);
+				break;
+			case CURVE_POINTS:
+				PACurveUtility.lineDraw(this, brush.getCurvePoints(), lc, w);
+				PACurveUtility.pointsDraw(this, brush.getCurvePoints(), cc, d);
+				break;
+			case ALL_POINTS:
+				PACurveUtility.lineDraw(this, brush.getAllPoints(), lc, w);
+				PACurveUtility.pointsDraw(this, brush.getAllPoints(), cc, d);
+				break;
+			default: {
+				PACurveUtility.lineDraw(this, brush.getAllPoints(), lc, w);
+				PACurveUtility.pointsDraw(this, brush.getAllPoints(), cc, d);
+			}
+			}
+		}
+		if (activeBrush == null) {
+			currentGranStatus = "Draw or select a brushstroke.";
+		}
+	}
+	
+	/**
+	 * Provides the list of points for a brush in its assigned PathMode representation. 
+	 * @param b   an AudioBrush
+	 * @return points in the path associated with the brush, as a list of PVector
+	 */
+	ArrayList<PVector> getPathPoints(AudioBrush b) {
+		PACurveMaker cm = b.curve();
+		switch (b.cfg().pathMode) {
+			case ALL_POINTS: return cm.getAllPoints();
+			case REDUCED_POINTS: return cm.getReducedPoints();
+			case CURVE_POINTS: return cm.getCurvePoints();
+			default: return cm.getAllPoints();
+		}
+	}
+
+	/**
+	 * Provides the times associated with a brush in its assigned PathMode representation.
+	 * @param b    an AudioBrush instance
+	 * @return     GestureSchedule for the current pathMode of the brush
+	 */
+	public GestureSchedule getScheduleForBrush(AudioBrush b) {
+		switch (b.cfg().pathMode) {
+			case REDUCED_POINTS: return b.curve().getReducedSchedule(b.cfg().rdpEpsilon);
+			case CURVE_POINTS: return b.curve().getCurveSchedule(b.cfg().rdpEpsilon, curveSteps, isAnimating);
+			case ALL_POINTS: default: return b.curve().getAllPointsSchedule();
+		}
+	}
+
+	/**
+	 * Provides a GestureSchedule associated with a brush, applying the {@code boundsPolicy} 
+	 * to bring all points in bounds.
+	 * @param b    an AudioBrushLIte instance
+	 * @return     a GestureSchedule filtered by boundsPolicy to provide only in-bounds points
+	 */
+	GestureSchedule getPlaybackScheduleForBrush(AudioBrush b) {
+	    GestureSchedule sched = getScheduleForBrush(b);
+	    return boundsPolicy.applySchedule(sched);
+	}	
+
+	
+	// ------------- TRANSFORMS ------------- //
+	
+	/**
+	 * Initializes a brush to apply a geometric transform. 
+	 * @param b   an AudioBrush instance
+	 */
+	void initBrushTransform(AudioBrush b) {
+	    if (b == null) return;
+	    GestureTransformState st = b.ensureTransform();
+	    st.enabled = true;
+	    st.captureRestPoints(b.curve().copyAllPoints());
+	    st.resetTransform();
+	}
+	
+	/**
+	 * Test code to apply a geometric transform to the active brush, a form of animation
+	 * when repeatedly applied over time. 
+	 */
+	void updateAnimatedBrushes() {
+	    if (!isBrushTransformTest) return;
+	    if (isBrushTransformFrozen) return;
+	    if (activeBrush == null) return;
+
+	    GestureTransformState st = activeBrush.ensureTransform();
+	    if (!st.hasRestPoints()) {
+	        st.captureRestPoints(activeBrush.curve().copyAllPoints());
+	    }
+	    st.enabled = true;
+
+	    float t = millis() * 0.001f;
+
+	    // --- simple first test: pulse + spin + small orbit ---
+	    st.rotation = 0.6f * t;
+
+	    float pulse = 1.0f + 0.18f * sin(2.0f * t);
+	    st.scaleX = pulse;
+	    st.scaleY = pulse;
+
+	    st.translateX = 28.0f * cos(0.8f * t);
+	    st.translateY = 18.0f * sin(1.1f * t);
+
+	    // Optional reflection test every few seconds
+	    //st.flipHorizontal = ((int)(t * 0.25f) % 2) == 1;
+	    //st.flipVertical = false;
+
+	    activeBrush.applyTransform();
+	}
+
+	/*             END DRAWING METHODS              */
+	
+	/**
+	 * @param poly    a polygon described by an ArrayList of PVector
+	 * @return        true if the mouse is within the bounds of the polygon, false otherwise
+	 */
+	public boolean mouseInPoly(ArrayList<PVector> poly) {
+		return pointInPoly(poly, mouseX, mouseY);
+	}
+
+	/**
+	 * @param poly    a polygon described by an ArrayList of PVector
+	 * @param x       x-coordinate
+	 * @param y       y-coordinate
+	 * @return        true if the mouse is within the bounds of the polygon, false otherwise
+	 */
+	public boolean pointInPoly(ArrayList<PVector> poly, int x, int y) {
+		return PABezShape.pointInPoly(poly, x, y);
+	}
+
+	/**
+	 * Reinitializes audio and clears event lists. If isClearCurves is true, clears brushShapesList.
+	 * There's no key command to trigger this, yet. TODO decide if you want a key command. 
+	 * 
+	 * @param isClearCurves
+	 */
+	public void reset(boolean isClearCurves) {
+		if (pool != null) {
+		    pool.close();
+		    pool = null;
+		}
+		// note that initAudio also clears TimedLocation event lists
+		initAudio();
+		if (audioFile != null)
+			loadAudioFile(audioFile);
+		if (this.curveMaker != null) this.curveMaker = null;
+		this.activeSamplerIndex = 0;
+		if (isClearCurves) {
+			if (this.samplerBrushes != null) this.samplerBrushes.clear();
+			if (this.granularBrushes != null) this.granularBrushes.clear();
+			println("----->>> RESET audio, event points and brushes <<<------");
+		}
+		else {
+			println("----->>> RESET audio and event points <<<------");
+		}
+	}
+	
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                   BRUSH INTERACTION METHODS                    */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+
+	//------------- REMOVE BRUSHES -------------//
+	
+	// TODO verify correct action -- active brush is not always getting set
+	
+	/**
+	 * Removes the current active PACurveMaker instance, flagged by a highlighted brush stroke,
+	 * from brushShapesList, if there is one.
+	 */
+	public void removeActiveBrush() {
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			if (activeBrush instanceof SamplerBrush) removeSamplerBrush(activeBrush, activeSamplerIndex);
+		}
+		else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			if (activeBrush instanceof GranularBrush) removeGranularBrush(activeBrush, activeGranularIndex);
+		}
+		else {
+			// play mode, no edting
+		}
+	}
+
+	/**
+	 * Removes the current active PACurveMaker instance, flagged by a highlighted brush stroke,
+	 * from brushShapesList, if there is one.
+	 */
+	public void removeHoverBrush() {
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			if (hoverBrush instanceof SamplerBrush) removeSamplerBrush(hoverBrush, activeSamplerIndex);
+		}
+		else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			if (hoverBrush instanceof GranularBrush) removeGranularBrush(hoverBrush, activeGranularIndex);
+		}
+		else {
+			// play mode, no edting
+		}
+	}
+
+	/**
+	 * Removes the newest PACurveMaker instance, shown as a brush stroke
+	 * in the display, from brushShapesList.
+	 */
+	public void removeNewestBrush() {
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			if (samplerBrushes != null && !samplerBrushes.isEmpty()) {
+				int idx = samplerBrushes.size() - 1;
+				removeSamplerBrush(samplerBrushes.get(idx), idx);
+				if (isVerbose) println("-->> removed newest brush");
+				curveMaker = null;
+			}
+		}
+		else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			if (granularBrushes != null && !granularBrushes.isEmpty()) {
+				int idx = granularBrushes.size() - 1;
+				removeGranularBrush(granularBrushes.get(idx), idx);
+				if (isVerbose) println("-->> removed newest brush");
+				curveMaker = null;
+			}
+		}
+		else {
+
+		}
+	}
+
+	/**
+	 * Removes the oldest brush in brushShapesList.
+	 */
+	public void removeOldestBrush() {
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) {
+			if (samplerBrushes != null && !samplerBrushes.isEmpty()) {
+				removeSamplerBrush(samplerBrushes.get(0), 0);
+				if (isVerbose) println("-->> removed oldest brush");
+				if (samplerBrushes.isEmpty()) curveMaker = null;
+			}
+		}
+		else if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			if (granularBrushes != null && !granularBrushes.isEmpty()) {
+				removeGranularBrush(granularBrushes.get(0), 0);
+				if (isVerbose) println("-->> removed oldest brush");
+				if (granularBrushes.isEmpty()) curveMaker = null;
+			}
+		}
+		else {
+
+		}
+	}
+	
+	
+	// -------------- CONVERT BRUSH TYPES ------------- //
+	
+	/**
+	 * Convert a brush to the opposite type, reusing the same PACurveMaker
+	 * and the same GestureGranularConfig.Builder instance.
+	 *
+	 * This is a replacement operation: the old brush should be removed
+	 * from its list immediately after conversion.
+	 * 
+	 * @param brush    AudioBrush to convert, GranularBrush to/from SamplerBrush
+	 */
+	AudioBrush toggleBrushType(AudioBrush brush) {
+	    if (brush == null) return null;
+
+	    PACurveMaker curve = brush.curve();
+	    GestureGranularConfig.Builder cfg = brush.cfg();   // reuse same builder intentionally
+
+	    if (brush instanceof SamplerBrush) {
+	        normalizeConfigForGranular(cfg);
+	        return new GranularBrush(curve, cfg);
+	    }
+	    else if (brush instanceof GranularBrush) {
+	        normalizeConfigForSampler(cfg);
+	        return new SamplerBrush(curve, cfg);
+	    }
+
+	    return brush;
+	}
+
+	/**
+	 * Convert a brush explicitly to SamplerBrush.
+	 * @param brush   an AudioBrush instance
+	 * @return the brush reconfigured as a SamplerBrush
+	 */
+	SamplerBrush toSamplerBrush(AudioBrush brush) {
+	    if (brush == null) return null;
+	    if (brush instanceof SamplerBrush sb) return sb;
+	    PACurveMaker curve = brush.curve();
+	    GestureGranularConfig.Builder cfg = brush.cfg();   // reuse same builder intentionally
+	    normalizeConfigForSampler(cfg);
+	    return new SamplerBrush(curve, cfg);
+	}
+
+	/**
+	 * Convert a brush explicitly to GranularBrush.
+	 * @param brush   an AudioBrush instance
+	 * @return the brush reconfigured as a GranularBrush
+	 */
+	GranularBrush toGranularBrush(AudioBrush brush) {
+	    if (brush == null) return null;
+	    if (brush instanceof GranularBrush gb) return gb;
+	    PACurveMaker curve = brush.curve();
+	    GestureGranularConfig.Builder cfg = brush.cfg();   // reuse same builder intentionally
+	    normalizeConfigForGranular(cfg);
+	    return new GranularBrush(curve, cfg);
+	}
+
+	/**
+	 * Remove oldBrush from its current typed list, insert newBrush into
+	 * the opposite typed list, and preserve hover/active state.
+	 *
+	 * oldIndex should be the index in the old brush's own list.
+	 */
+	void replaceBrush(AudioBrush oldBrush, AudioBrush newBrush, int oldIndex) {
+	    if (oldBrush == null || newBrush == null || oldBrush == newBrush) return;
+	    boolean wasHover  = (hoverBrush == oldBrush);
+	    boolean wasActive = (activeBrush == oldBrush);
+	    // 1) Remove from old typed list
+	    if (oldBrush instanceof GranularBrush gbOld) {
+	        removeGranularBrush(gbOld, oldIndex);
+	    }
+	    else if (oldBrush instanceof SamplerBrush sbOld) {
+	        removeSamplerBrush(sbOld, oldIndex);
+	    }
+	    // 2) Add to new typed list
+	    int newIndex = -1;
+	    if (newBrush instanceof GranularBrush gbNew) {
+	        newIndex = appendGranularBrush(gbNew);
+	    }
+	    else if (newBrush instanceof SamplerBrush sbNew) {
+	        newIndex = appendSamplerBrush(sbNew);
+	    }
+	    // 3) Restore hover state
+	    if (wasHover) {
+	        hoverBrush = newBrush;
+	        hoverIndex = newIndex;
+	    }
+	    // 4) Restore active state
+	    if (wasActive) {
+	        setActiveBrush(newBrush, newIndex);
+	    }
+	    if (isVerbose) {
+	        println("-- converted " 
+	            + oldBrush.getClass().getSimpleName()
+	            + " -> "
+	            + newBrush.getClass().getSimpleName()
+	            + " at index " + newIndex);
+	    }
+	}
+
+	/**
+	 * Append a granular brush and return its new index.
+	 * @param gb   a GranularBrush instance
+	 * @return the index of the brush in the {@code granularBrushes} list
+	 */
+	int appendGranularBrush(GranularBrush gb) {
+	    if (gb == null) return -1;
+	    granularBrushes.add(gb);
+	    return granularBrushes.size() - 1;
+	}
+
+	/**
+	 * Append a sampler brush and return its new index.
+	 * @param sb   a SamplerBrush instance
+	 * @return the index of the brush in the {@code samplerBrushes} list
+	 */
+	int appendSamplerBrush(SamplerBrush sb) {
+	    if (sb == null) return -1;
+	    samplerBrushes.add(sb);
+	    return samplerBrushes.size() - 1;
+	}
+
+	/**
+	 * Remove a granular brush using index when reliable, else by object.
+	 * @param gb    an AudioBrush expected to be a GranularBrush
+	 * @param idx   index in the granular brush list, or a negative value when unknown
+	 */
+	void removeGranularBrush(AudioBrush gb, int idx) {
+		if (gb instanceof SamplerBrush) return;
+	    if (gb == null || granularBrushes == null || granularBrushes.isEmpty()) return;
+	    boolean removed;
+	    if (idx >= 0 && idx < granularBrushes.size() && granularBrushes.get(idx) == gb) {
+	        removed = granularBrushes.remove(idx) == gb;
+	    }
+	    else {
+	        removed = granularBrushes.remove(gb);
+	    }
+	    if (!removed) return;
+	    finishLoopsForBrush(gb);
+	    if (activeGranularBrush == gb) {
+	        activeGranularBrush = null;
+	        activeGranularIndex = -1;
+	    }
+	}
+
+	/**
+	 * Remove a sampler brush using index when reliable, else by object.
+	 * @param sb    an AudioBrush expected to be a SamplerBrush
+	 * @param idx   index in the sampler brush list, or a negative value when unknown
+	 */
+	void removeSamplerBrush(AudioBrush sb, int idx) {
+		if (sb instanceof GranularBrush) return;
+	    if (sb == null || samplerBrushes == null || samplerBrushes.isEmpty()) return;
+	    boolean removed;
+	    if (idx >= 0 && idx < samplerBrushes.size() && samplerBrushes.get(idx) == sb) {
+	        removed = samplerBrushes.remove(idx) == sb;
+	    }
+	    else {
+	        removed = samplerBrushes.remove(sb);
+	    }
+	    if (!removed) return;
+	    finishLoopsForBrush(sb);
+	    if (activeSamplerBrush == sb) {
+	        activeSamplerBrush = null;
+	        activeSamplerIndex = -1;
+	    }
+	}
+
+	/**
+	 * Normalize config values when converting to SamplerBrush. Keep most gesture/path information intact.
+	 * @param cfg   a GestureGranularConfig.Builder instance
+	 */
+	void normalizeConfigForSampler(GestureGranularConfig.Builder cfg) {
+	    if (cfg == null) return;
+	    // Sampler is point-oriented; FIXED hop is not very meaningful there.
+	    cfg.hopMode = GestureGranularConfig.HopMode.GESTURE;
+	    // Keep curve/path settings as-is.
+	    // Keep resampleCount / targetDurationMs / pitchSemitones 
+	    // Envelope: supply a default if missing.
+	    if (cfg.env == null) {
+	        cfg.env = envPreset("Soft");
+	    }
+	    
+	}
+
+	/**
+	 * Normalize config values when converting to GranularBrush.
+	 * Keep most gesture/path information intact, but make a few granular-friendly adjustments.
+	 * @param cfg   a GestureGranularConfig.Builder instance
+	 */
+	void normalizeConfigForGranular(GestureGranularConfig.Builder cfg) {
+	    if (cfg == null) return;
+	    // Granular can use either hop mode, so keep current hopMode.
+	    // But ensure warp shape has a valid default.
+	    if (cfg.warpShape == null) {
+	        cfg.warpShape = GestureGranularConfig.WarpShape.LINEAR;
+	    }
+	    // Granular rendering gets unwieldy with huge curveSteps in your sketch;
+	    // your init path already clamps this for newly-created granular brushes.
+	    cfg.curveSteps = Math.min(cfg.curveSteps, 32);
+	    // Envelope: supply a default if missing.
+	    if (cfg.env == null) {
+	        cfg.env = envPreset("Fade");
+	    }
+	}
+
+	/**
+	 * Toggle the currently hovered brush between SamplerBrush and GranularBrush.
+	 */
+	AudioBrush toggleHoveredBrushType() {
+	    if (hoverBrush == null) return null;
+	    AudioBrush oldBrush = hoverBrush;
+	    AudioBrush newBrush = toggleBrushType(oldBrush);
+	    replaceBrush(oldBrush, newBrush, hoverIndex);
+	    return newBrush;
+	}
+
+	/**
+	 * Toggle the currently active brush between SamplerBrush and GranularBrush.
+	 */
+	AudioBrush toggleActiveBrushType() {
+	    if (activeBrush == null) return null;
+	    AudioBrush oldBrush = activeBrush;
+	    int oldIndex = (oldBrush instanceof GranularBrush) ? activeGranularIndex : activeSamplerIndex;
+	    AudioBrush newBrush = toggleBrushType(oldBrush);
+	    replaceBrush(oldBrush, newBrush, oldIndex);
+	    return newBrush;
+	}	
+	
+	/**
+	 * Change the current DrawingMode to suit the brush passed as an argument.
+	 * 
+	 * @param brush    an AudioBrush instance
+	 */
+	void syncDrawingModeToBrush(AudioBrush brush) {
+	    if (brush instanceof GranularBrush) {
+	        setMode(DrawingMode.DRAW_EDIT_GRANULAR);
+			controlWindow.setTitle("Granular Synth");				
+	    }
+	    else if (brush instanceof SamplerBrush) {
+	        setMode(DrawingMode.DRAW_EDIT_SAMPLER);
+			controlWindow.setTitle("Sampler Synth");				
+	    }
+	}
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                 TIME/LOCATION/ACTION METHODS                   */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+
+	
+	// ------------- STANDARD SAMPLER AND GRANULAR BRUSH SCHEDULING ------------- //
+
+	/**
+	 * Schedule a simple animation to mark the activation of Sampler audio events at display locations.
+	 * @param sb       a SamplerBrush instance
+	 * @param clickX   x-coordinate
+	 * @param clickY   y-coordinate
+	 */
+	void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
+		scheduleSamplerBrushClick(sb, clickX, clickY, null);
+	}
+
+	/**
+	 * Schedule a simple animation to mark the activation of Sampler audio events at a display locations.
+	 * @param sb          a SamplerBrush instance
+	 * @param clickX      x-coordinate
+	 * @param clickY      y-coordinate
+	 * @param gainCurve   PAControlCurve for gain dynamics
+	 */
+	void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY, PAControlCurve gainCurve) {
+	    if (sb == null) return;
+	    ArrayList<PVector> pts = getPathPoints(sb);
+	    if (pts == null || pts.size() < 2) return;
+	    ensureSamplerReady();
+	    GestureGranularConfig snap = sb.snapshot();
+	    GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
+	    // ***** LIMIT SCHED TO IN-BOUNDS POINTS ***** TODO cache GestureSchedule
+	    sched = boundsPolicy.applySchedule(sched);
+	    if (sched == null || sched.isEmpty()) return;
+	    storeSamplerBrushEvents(sched, snap, millis() + 10, gainCurve);
+		// *****]]] NETWORKING [[[***** //
+		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(samplerBrushes.indexOf(sb)); 
+	    if (isDebugging) {
+	    	PVector startPoint = sched.points.get(0);
+	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
+	    	int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+	    	println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
+	    }
+	}
+	
+	void debugSched(GestureSchedule sched) {
+		println("-- schedule number of points= "+ sched.points.size());
+	}
+	
+	/**
+	 * Adds audio/animation events to {@code samplerBrushEvents}
+	 * @param sched       schedule of audio/animation events
+	 * @param snap        snapshot of audio and curve configuration settings
+	 * @param startTime   time to start events, milliseconds
+	 * @param gainCurve   optional control curve for gain dynamics
+	 */
+	public void storeSamplerBrushEvents(GestureSchedule sched, GestureGranularConfig snap, int startTime, PAControlCurve gainCurve) {
+	    if (sched == null || sched.points == null || sched.timesMs == null) return;
+	    if (samplerBrushEvents == null) samplerBrushEvents = new ArrayList<>();
+	    // check sizes
+	    final int pointCount = sched.points.size();
+	    final int timeCount = sched.timesMs.length;
+	    final int n = Math.min(pointCount, timeCount);
+	    if (n == 0) return;
+	    if (pointCount != timeCount) {
+	        System.err.println("storeSamplerBrushEvents(): point/time mismatch: points="
+	                + pointCount + ", times=" + timeCount + ", using n=" + n);
+	    }
+	    // good to go
+	    final float baseGain = snap.gainLinear();
+	    final float[] gainPerEvent =
+	            (gainCurve != null) ? PAKeyframeControlCurve.expandToSchedule(gainCurve, sched) : null;
+	    final float pitch = snap.pitchRatio();
+	    final ADSRParams baseEnv = (snap.env != null) ? snap.env.copy() : samplerEnv;
+        float lenSum = 0;
+        isDebugging = true;
+	    synchronized (samplerBrushEventsLock) {
+	        for (int i = 0; i < n; i++) {
+	            PVector loc = sched.points.get(i);
+	            int x = Math.round(loc.x);
+	            int y = Math.round(loc.y);
+	            int pos = backingIndexFromLocal(mapper.lookupSignalPos(x, y));
+	            int eventDuration = isAdjustEnvelope
+	                    ? computeEnvDurationMs(sched, envNameFor(baseEnv), noteDuration)
+	                    : snap.envDurationMs;
+	            int len = calcSampleLen(eventDuration, 1.0f, 0.0625f);
+	            int t = startTime + Math.round(sched.timesMs[i]);
+	            float pan = map(x, 0, width - 1, -0.875f, 0.875f);
+	            float gain = baseGain;
+	            if (gainPerEvent != null && i < gainPerEvent.length) {
+	                gain *= gainPerEvent[i];
+	            }
+	            samplerBrushEvents.add(
+	                new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, baseEnv.copy(), pan)
+	            );
+	            if (isDebugging) {
+	            	/*
+	                println("-- sampler evt i=" + i
+	                    + " dt=" + sched.timesMs[i]
+	                    + " eventTime=" + t
+	                    + " pos=" + pos
+	                    + " len=" + len
+	                    + " gain=" + gain
+	                    + " pitch=" + pitch
+	                    + " pan=" + pan);
+	            	*/
+	            	lenSum += len;
+	            }
+	        }
+	        if (isDebugging) {
+	        	double durMs = AudioUtility.samplesToMillis((Math.round(lenSum)/n), sampleRate);
+	        	println("average length = "+ durMs +" mS for "+ (n) +" events, gain = "+ baseGain);
+	        }
+	        isDebugging = false;
+	        samplerBrushEvents.sort((a, b) -> Integer.compare(a.eventTimeMs, b.eventTimeMs));
+	    }
+	}
+	
+	/**
+	 * Runs sampler brush events in the samplerTimeLocs list.
+	 */
+	public void runSamplerBrushEvents() {
+	    if (samplerBrushEvents == null || samplerBrushEvents.isEmpty()) return;
+	    int currentTime = millis();
+	    synchronized (samplerBrushEventsLock) {
+	        Iterator<SamplerBrushEvent> it = samplerBrushEvents.iterator();
+	        while (it.hasNext()) {
+	            SamplerBrushEvent evt = it.next();
+	            if (evt.eventTimeMs > currentTime) {
+	                // list is sorted, so we can stop early
+	                break;
+	            }
+	            playSample(evt.samplePos, evt.durationSamples, evt.gain, evt.env, evt.pitchRatio, evt.pan);
+	            int sampleX = PixelAudio.constrain(evt.x, 0, width - 1);
+	            int sampleY = PixelAudio.constrain(evt.y, 0, height - 1);
+	            pointTimeLocsAddPoint(new TimedLocation(sampleX, sampleY, 200 + millis()));
+	            it.remove();
+	        }
+	    }
+	}
+	
+	/**
+	 * Convenience method when gain dynamics are not applied to a brush. 
+	 * 
+	 * @param gb        a GranularBrush
+	 * @param clickX    x-coordinate of point of activation
+	 * @param clickY    y-coordinate of point of activation
+	 */
+	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY) {
+		scheduleGranularBrushClick(gb, clickX, clickY, null);
+	}
+
+	
+	/**
+	 * Schedules a response to a mouse click or hover + spacebar on a granular brush.
+	 * 
+	 * @param gb          a GranularBrush
+	 * @param clickX      x-coordinate of point of activation
+	 * @param clickY      y-coordinate of point of activation
+	 * @param gainCurve   a control curve for gain dynamics
+	 */
+	public void scheduleGranularBrushClick(GranularBrush gb, int clickX, int clickY, PAControlCurve gainCurve) {
+	    if (gb == null) return;
+	    ArrayList<PVector> pts = getPathPoints(gb);
+	    if (pts == null || pts.size() < 2) return;
+	    ensureGranularReady();
+	    float[] buf = (granSignal != null) ? granSignal : audioSignal;	    
+	    // Snapshot config ONCE so schedule + params are consistent
+	    GestureGranularConfig snap = gb.snapshot();
+		// TODO:
+		// Define explicit semantics for cfg.resampleCount <= 0 and cfg.targetDurationMs <= 0.
+		// Current assumption:
+		//   resampleCount <= 0 → keep original gesture timing
+		//   targetDurationMs <= 0 → keep natural duration
+	    // apply resample/duration/warp via scheduleBuilder
+	    GestureSchedule sched = scheduleBuilder.build(gb.curve(), snap, audioOut.sampleRate());
+	    if (sched == null || sched.isEmpty()) return;
+	    // ***** LIMIT SCHED TO IN-BOUNDS POINTS ***** TODO cache GestureSchedule
+	    sched = boundsPolicy.applySchedule(sched);
+	    if (isDebugging) {
+		    println("sched.size=" + sched.size()
+		    + " durationMs=" + sched.durationMs()
+		    + " cfg.resampleCount=" + snap.resampleCount
+		    + " cfg.targetDurationMs=" + snap.targetDurationMs
+		    + " cfg.pathMode=" + snap.pathMode
+		    + " warp=" + snap.warpShape);
+	    }
+	    boolean isGesture = gb.cfg().hopMode == HopMode.GESTURE;
+		GestureGranularParams gParams = gb.cfg().build().toParams();
+		GestureEventParams eventParams = prepareGranularGesture(buf, sched, gParams, gainCurve);
+		playGranularGesture(buf, sched, gParams, eventParams);
+		storeGranularCurveTL(sched, millis() + 10, isGesture);
+		// *****]]] NETWORKING [[[***** //
+		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(granularBrushes.indexOf(gb)); 
+	    if (isDebugging) {
+	    	PVector startPoint = sched.points.get(0);
+	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
+	    	int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+	    	println("-- granular brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
+	    }
+	}	
+
+	/**
+	 * Stores granular gesture time/location events in grainTimeLocs. 
+	 * 
+	 * @param sched        a GestureSchedule, the times when things happen and where they happen
+	 * @param startTime    time when a gesture starts
+	 * @param isGesture    is the timing gesture-based or fixed? ignored, for now
+	 */
+	public void storeGranularCurveTL(GestureSchedule sched, int startTime, boolean isGesture) {
+	    if (sched == null || sched.points == null || sched.timesMs == null) return;
+	    if (this.grainTimeLocs == null) grainTimeLocs = new ArrayList<>();
+	    int pointCount = sched.points.size();
+	    int timeCount = sched.timesMs.length;
+	    int n = Math.min(pointCount, timeCount);
+	    if (n == 0) return;
+	    if (pointCount != timeCount) {
+	        System.err.println("storeGranularCurveTL(): point/time mismatch: points="
+	                + pointCount + ", times=" + timeCount + ", using n=" + n);
+	    }
+	    synchronized (grainTimeLocsLock) {
+	        for (int i = 0; i < n; i++) {
+	            PVector loc = sched.points.get(i);
+	            int x = Math.round(loc.x);
+	            int y = Math.round(loc.y);
+	            int t = startTime + Math.round(sched.timesMs[i]);
+	            int d = 200;
+	            this.grainTimeLocs.add(new TimedLocation(x, y, t, d));
+	        }
+	        Collections.sort(grainTimeLocs);
+	    }
+	}		
+	
+	/**
+	 * Tracks and runs TimedLocation events in the grainLocsArray list, which is 
+	 * associated with granular synthesis gestures.
+	 */
+	public void runGrainEvents() {
+		if (grainTimeLocs == null || grainTimeLocs.isEmpty()) return;	
+		int t = millis();
+		synchronized (grainTimeLocsLock) {
+			for (Iterator<TimedLocation> iter = grainTimeLocs.iterator(); iter.hasNext();) {
+				TimedLocation tl = iter.next();
+				int low = tl.eventTime();
+				int high = (tl.eventTime() + tl.getDurationMs());
+				if (t >= low && t < high) { // event in the interval between low and high
+					drawCircle(tl.getX(), tl.getY());
+				}
+				else {
+					if (t >= high) {        // event in the past
+						tl.setStale(true);
+						iter.remove();
+					}
+					if (t < low) {          // event in the future
+						break;
+					}
+				}
+			}
+		}
+		// grainTimeLocs.removeIf(TimedLocation::isStale);		// necessary on fade-out, otherwise iteration does pruning
+	}
+
+	/**
+	 * Tracks and runs TimedLocation events in the timeLocsArray list, which is 
+	 * associated with mouse clicks that trigger audio a the click point.
+	 */
+	public void runPointEvents() {
+		int currentTime = millis();
+		synchronized (pointTimeLocsLock) {
+			for (Iterator<TimedLocation> iter = pointTimeLocs.iterator(); iter.hasNext();) {
+				TimedLocation tl = iter.next();
+				tl.setStale(tl.eventTime() < currentTime);
+				if (!tl.isStale()) {
+					drawCircle(tl.getX(), tl.getY());
+				}
+			}
+			pointTimeLocs.removeIf(TimedLocation::isStale);
+		}	
+	}
+	
+	/**
+	 * Adds a TimedLocation to the pointTimeLocs list. 
+	 * @param tl    a TimedLocation
+	 */
+	public void pointTimeLocsAddPoint(TimedLocation tl) {
+		synchronized (pointTimeLocsLock) {
+			if (pointTimeLocs == null) pointTimeLocs = new ArrayList<>();
+			pointTimeLocs.add(tl);
+		}
+	}
+	
+	/**
+	 * Draws a circle at the location of an audio trigger (mouseDown event).
+	 * @param x		x coordinate of circle
+	 * @param y		y coordinate of circle
+	 */
+	public void drawCircle(int x, int y) {
+		//float size = isRaining? random(10, 30) : 60;
+		fill(circleColor);
+		noStroke();
+		circle(x, y, 18);
+	}
+	
+	// ------------- PLAYBACK CURRENT BRUSHES IN CREATION ORDER AND TIME ------------- //
+
+	/*
+	 * TODO Future development: Treat brush playback timing as editable musical data.
+	 * A generated playback schedule could optionally be written back to each brush's
+	 * timestamp and saved. Longer term, brushes could be organized into independent
+	 * "flocks," each with its own local timing/rhythm, launch time, and potentially
+	 * migratory behavior.
+	 */
+	
+	/**
+	 * Replays brushstrokes in creation order, preserving the relative delay
+	 * between their {@link PACurveMaker#timeStamp} values. Calling this method
+	 * replaces any brush timeline replay already in progress; audio events that
+	 * have already been emitted by a brush are not cancelled.
+	 *
+	 * @param mode which brush instruments to include
+	 */
+	public void playBrushstrokes(BrushPlaybackMode mode) {
+		if (mode == null) throw new IllegalArgumentException("mode must not be null");
+		// get the brushes and sort them by time stamp
+		ArrayList<AudioBrush> selected = new ArrayList<>();
+		if (mode == BrushPlaybackMode.GRANULAR || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(granularBrushes);
+		}
+		if (mode == BrushPlaybackMode.SAMPLER || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(samplerBrushes);
+		}
+		selected.sort((a, b) -> Integer.compare(a.curve().timeStamp, b.curve().timeStamp));
+		// thread safe set up of brush playback events
+		synchronized (brushPlaybackEvents) {
+			brushPlaybackEvents.clear();
+			if (selected.isEmpty()) return;
+			int firstTimeStamp = selected.get(0).curve().timeStamp;
+			int playbackStart = millis() + 10;
+			for (AudioBrush brush : selected) {
+				int relativeTime = Math.max(0, brush.curve().timeStamp - firstTimeStamp);
+				brushPlaybackEvents.add(
+						new ScheduledBrushPlayback(brush, playbackStart + relativeTime));
+			}
+		}
+	}
+	
+	/**
+	 * Replays brushstrokes in creation order, spacing each brush relative to the
+	 * end of the previous brush.
+	 * A zero offset starts each brush when the previous brush ends. A positive
+	 * offset adds silence between brushes. A negative offset overlaps brushes,
+	 * but never schedules a brush before the preceding brush's start time.
+	 *
+	 * @param mode        which brush instruments to include
+	 * @param offsetMs    milliseconds between the end of one brush and the start of the next
+	 * @param rewriteTiming
+	 */
+	public void playBrushstrokes(BrushPlaybackMode mode, int offsetMs, boolean rewriteTiming) {
+		if (mode == null) throw new IllegalArgumentException("mode must not be null");
+		// get the brushes and sort them by time stamp
+		ArrayList<AudioBrush> selected = new ArrayList<>();
+		if (mode == BrushPlaybackMode.GRANULAR || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(granularBrushes);
+		}
+		if (mode == BrushPlaybackMode.SAMPLER || mode == BrushPlaybackMode.BOTH) {
+			selected.addAll(samplerBrushes);
+		}
+		// List.sort is stable, so equal timestamps retain their existing order.
+		selected.sort((a, b) -> Integer.compare(a.curve().timeStamp, b.curve().timeStamp));
+		// thread safe set up of brush playback events
+		synchronized (brushPlaybackEvents) {
+			brushPlaybackEvents.clear();
+			if (selected.isEmpty()) return;
+			int eventStart = millis() + 10;
+			for (AudioBrush brush : selected) {
+				brushPlaybackEvents.add(new ScheduledBrushPlayback(brush, eventStart));
+				if (rewriteTiming) brush.curve().setTimeStamp(eventStart);
+				GestureSchedule schedule = scheduleBuilder.build(
+						brush.curve(),
+						brush.snapshot(),
+						audioOut.sampleRate());
+				schedule = boundsPolicy.applySchedule(schedule);
+				int durationMs = (schedule == null || schedule.isEmpty())
+						? 0 : Math.max(0, Math.round(schedule.durationMs()));
+				long proposedStart = (long) eventStart + durationMs + offsetMs;
+				// Negative offsets may overlap events, but may not reverse their
+				// creation order by starting this event before the previous one.
+				eventStart = (int) Math.max(eventStart, proposedStart);
+			}
+		}
+	}
+	
+	public void playBrushstrokes(BrushPlaybackMode mode, int offsetMs) {
+		playBrushstrokes(mode, offsetMs, false);
+	}
+
+	/** Dispatches brushstrokes whose replay deadlines have arrived. */
+	void runBrushPlaybackEvents() {
+		int now = millis();
+		synchronized (brushPlaybackEvents) {
+			Iterator<ScheduledBrushPlayback> iter = brushPlaybackEvents.iterator();
+			while (iter.hasNext()) {
+				ScheduledBrushPlayback event = iter.next();
+				if (event.eventTimeMs > now) break;
+				AudioBrush brush = event.brush;
+				ArrayList<PVector> points = getPathPoints(brush);
+				if (points != null && !points.isEmpty()) {
+					PVector start = points.get(0);
+					int x = clipToWidth(Math.round(start.x));
+					int y = clipToHeight(Math.round(start.y));
+					if (brush instanceof GranularBrush gb) {
+						scheduleGranularBrushClick(gb, x, y);
+					} else if (brush instanceof SamplerBrush sb) {
+						scheduleSamplerBrushClick(sb, x, y);
+					}
+				}
+				iter.remove();
+			}
+		}
+	}
+
+
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                        NETWORKING                              */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+	
+	
+	// required by the PANetworkCLientINF interface
+	public PApplet getPApplet() {
+		return this;
+	}
+
+	// required by the PANetworkCLientINF interface
+	public PixelAudioMapper getMapper() {
+		return this.mapper;
+	}
+	
+	// required by the PANetworkCLientINF interface
+	public void controlMsg(String control, float val) {
+		if (control.equals("detune")) {
+		    println("--->> controlMsg is \"detune\" = "+ val +"; detune is not implemented.");
+		}
+	}
+
+	// required by the PANetworkCLientINF interface
+	public int playSample(int samplePos) {
+		int[] coords = mapper.lookupImageCoord(samplePos);
+		int x = coords[0];
+		int y = coords[1];
+		return handleClickOutsideBrush(x, y);
+	}
+
+	// required by the PANetworkCLientINF interface
+	public void playPoints(ArrayList<PVector> pts) {
+		float[] times = new float[pts.size()];
+		int interval = noteDuration / 4;
+		for (int i = 0; i < pts.size(); i++) {
+			times[i] = i * interval;
+		}
+		GestureSchedule sched = new GestureSchedule(pts, times);
+		// storeSamplerBrushEvents(GestureSchedule sched, GestureGranularConfig snap, int startTime, PAControlCurve gainCurve) 
+		// TODO verify that this works
+		storeSamplerBrushEvents(sched, gConfig.build(), millis() + 10, null);
+	}
+	
+	
+	
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                       NETWORK DELEGATE                         */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+
+	
+	/**
+	 * A class to handle network connections over UDP, for example, with a Max or Pd patch.
+	 * Used by applications that implement the PANetworkClientINF.
+	 * 
+	 * @see PANetworkClientINF
+	 */
+	public class NetworkDelegate {
+		private PApplet parent;
+		private PANetworkClientINF app;
+		private OscP5 osc;
+		private int inPort = 7401;
+		private int outPort = 7400;
+		private String remoteFromAddress = "127.0.0.1";
+		private String remoteToAddress = "127.0.0.1";
+		// 192.168.1.77
+		private NetAddress remoteFrom;
+		private NetAddress remoteTo;
+		private int drawCount = 0;
+		
+
+		public NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr, int inPort, int outPort) {
+			this.app = app;
+			this.parent = app.getPApplet();
+			this.osc = new OscP5(parent, inPort);
+			this.remoteFromAddress = remoteFromAddr;
+			this.remoteToAddress = remoteToAddr;
+			this.inPort = inPort;
+			this.outPort = outPort;
+			init();
+		}
+
+		public NetworkDelegate(PANetworkClientINF app, String remoteFromAddr, String remoteToAddr) {
+			this.app = app;
+			this.parent = app.getPApplet();
+			this.osc = new OscP5(parent, inPort);
+			this.remoteFromAddress = remoteFromAddr;
+			this.remoteToAddress = remoteToAddr;
+			init();
+		}
+		
+		public NetworkDelegate(PANetworkClientINF app) {
+			this.app = app;
+			this.parent = app.getPApplet();
+			this.osc = new OscP5(parent, inPort);
+			init();
+		}
+			
+		private void init() {
+			this.remoteFrom = new NetAddress(this.remoteFromAddress, this.inPort);
+			this.remoteTo = new NetAddress(this.remoteToAddress, this.outPort);
+			System.out.println("== remoteFromAddress "+ remoteFromAddress +", in port: "+ inPort);
+			System.out.println("== remoteToAddress "+ remoteToAddress +", out port: "+ outPort);
+			initOscPlugs();		
+		}
+		
+		/*----------------------------------------------------------------*/
+		/*                                                                */
+		/*                      GETTERS AND SETTERS                       */
+		/*                                                                */
+		/*----------------------------------------------------------------*/
+		
+		public int getInPort() {
+			return inPort;
+		}
+
+		public void setInPort(int inPort) {
+			this.inPort = inPort;
+		}
+
+		public int getOutPort() {
+			return outPort;
+		}
+
+		public void setOutPort(int outPort) {
+			this.outPort = outPort;
+		}
+
+		public NetAddress getRemoteFrom() {
+			return remoteFrom;
+		}
+
+		public void setRemoteFrom(NetAddress remoteFrom) {
+			this.remoteFrom = remoteFrom;
+		}
+
+		public NetAddress getRemoteTo() {
+			return remoteTo;
+		}
+
+		public void setRemoteTo(NetAddress remoteTo) {
+			this.remoteTo = remoteTo;
+		}
+
+		public int getDrawCount() {
+			return drawCount;
+		}
+
+		public void setDrawCount(int drawCount) {
+			this.drawCount = drawCount;
+		}
+
+		/*----------------------------------------------------------------*/
+		/*                                                                */
+		/*                  OscP5 PLUG & MESSAGE SETUP                    */
+		/*                                                                */
+		/*----------------------------------------------------------------*/	
+		
+		/**
+		 * SET UP RESPONSE TO INCOMING MESSAGES
+		 * Call the osc.plug(Object theObject, String the MethodName, String theAddrPattern)
+		 * or osc.plug(Object theObject, String the MethodName, String theAddrPattern, String the TypeTag)
+		 * to setup callbacks to methods in the current object ("this") or other object instance. 
+		 */
+		public void initOscPlugs() {
+			osc.plug(this, "sampleHit", "/sampleHit");
+			osc.plug(this, "drawHit", "/draw");
+			osc.plug(this, "multislider", "/multislider");
+			osc.plug(this, "parseKey", "/parseKey");
+			osc.plug(this, "controlMsg", "/controlMsg");
+		}
+
+
+		/** Post address pattern and typetag from incoming osc message to the console. 
+		 * @param theOscMessage  forwarded OscMessage
+		 */
+		void oscEvent(OscMessage theOscMessage) {
+		  /* print the address pattern and the typetag of the received OscMessage */
+		  PApplet.print("### received an osc message.");
+		  PApplet.print(" addrpattern: "+theOscMessage.addrPattern());
+		  PApplet.println(" typetag: "+theOscMessage.typetag());
+		}
+
+		
+		/*----------------------------------------------------------------*/
+		/*                                                                */
+		/*                   OUTGOING MESSAGE METHODS                     */
+		/*                                                                */
+		/*----------------------------------------------------------------*/
+		
+		/**
+		 * Sends display coordinates and audio buffer index associated with a mouse click.
+		 * @param sampleX
+		 * @param sampleY
+		 * @param sample
+		 */
+		public void oscSendMouseClicked(int sampleX, int sampleY, int sample) {
+		  OscMessage msg = new OscMessage("/click");
+		  msg.add(sample);
+		  msg.add(sampleX);
+		  msg.add(sampleY);
+		  osc.send(msg, this.remoteTo);
+		  // PApplet.println("---> msg: "+ msg);
+		}
+
+		/**
+		 * Sends a list of points as possible Max MultiSlider settings.
+		 * @param drawPoints
+		 */
+		public void oscSendMultiSlider(ArrayList<PVector> drawPoints) {
+		  int y0 = (int) drawPoints.get(0).y;
+		  int sliders = 12;
+		  int[] multi = new int[sliders];
+		  int i = 0;
+		  for (PVector vec : drawPoints) {
+		    if (i < sliders) {
+		      multi[i++] = ((int) PApplet.abs(y0 - vec.y)) % 128;
+		    }
+		  }
+		  OscMessage msg = new OscMessage("/multislider");
+		  for (i = 0; i < multi.length; i++) {
+		    msg.add(multi[i]);
+		  }
+		  osc.send(msg, this.remoteTo);
+		}  
+		
+		/**
+		 * Sends a list of points.
+		 * @param drawPoints
+		 */
+		public void oscSendDrawPoints(ArrayList<PVector> drawPoints) {
+			OscMessage msg = new OscMessage("/draw");
+			int i = 0;
+			msg.add(++this.drawCount);
+			for (PVector vec : drawPoints) {
+				msg.add(i++);
+				int x = (int) vec.x;
+				int y = (int) vec.y;
+				msg.add(this.app.getMapper().lookupSignalPos(x, y));
+				msg.add(x);
+				msg.add(y);
+			}
+			osc.send(msg, this.remoteTo);
+		}
+		
+		/**
+		 * Sends a "/time" message with a time stamp and offset.
+		 * @param timeStamp    milliseconds time stamp
+		 * @param timeOffset   milliseconds time offset
+		 */
+		public void oscSendTimeStamp(int timeStamp, int timeOffset) {
+			OscMessage msg = new OscMessage("/time");
+			msg.add(drawCount);
+			msg.add(timeStamp);
+			msg.add(timeOffset);
+			osc.send(msg, this.remoteTo);
+		}
+		  	
+		/**
+		 * Sends a trigger message, "/trig", with a numerical value.
+		 * @param index   number to send
+		 */
+		public void oscSendTrig(int index) {
+			OscMessage msg = new OscMessage("/trig");
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		/**
+		 * Sends an "/onoff" message with an index and state value.  
+		 * @param index
+		 * @param state
+		 */
+		public void oscSendOnOff(int index, boolean state) {
+			OscMessage msg = new OscMessage("/onoff");
+			msg.add(state ? 1 : 0);
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		/**
+		 * Sends a "/setnum" message with an index and value. 
+		 * @param index
+		 * @param value
+		 */
+		public void oscSendSetnum(int index, float value) {
+			OscMessage msg = new OscMessage("/setnum");
+			msg.add(value);
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		/**
+		 * Sends a "/del" message with an index.
+		 * @param index
+		 */
+		public void oscSendDelete(int index) {
+			OscMessage msg = new OscMessage("/del");
+			msg.add(index);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		/**
+		 * Sends a "/clear" message.
+		 */
+		public void oscSendClear() {
+			OscMessage msg = new OscMessage("/clear");
+			osc.send(msg, this.remoteTo);
+		}
+		
+		/** Sends a "/file" message with file path, file name, and file tag.
+		 * @param path
+		 * @param name
+		 * @param tag
+		 */
+		public void oscSendFileInfo(String path, String name, String tag) {
+			OscMessage msg = new OscMessage("/file");
+			msg.add(path);
+			msg.add(name);
+			msg.add(tag);
+			osc.send(msg, this.remoteTo);
+		}
+		
+		/*----------------------------------------------------------------*/
+		/*                                                                */
+		/*                      OscP5 PLUG METHODS                        */
+		/*                                                                */
+		/*----------------------------------------------------------------*/
+		
+		
+		/* 
+		 * OscP5 plug-in methods, which call methods on the client,
+		 * are implemented in this section. They take calls from 
+		 * the service (UDP, here) and pass them on to the client.
+		 * If you want to extend the available calls, modify the 
+		 * PANetworkClientINF interface to make the contracts
+		 * between client and delegate explicit. 
+		 */
+		
+		/**
+		 * Play an audio event at a position in the audio buffer.
+		 * @param sam   buffer index
+		 */
+		public void sampleHit(int sam) {
+			int[] xy = app.getMapper().lookupImageCoord(sam);
+			PApplet.println("---> sampleHit " + xy[0], xy[1]);
+			app.playSample(sam);
+		}
+
+		/**
+		 * Play audio/animation events using a supplied list of event points.
+		 * @param args
+		 */
+		public void drawHit(int... args) {
+			ArrayList<PVector> pts = new ArrayList<PVector>();
+			PApplet.println("---> drawHit "+ args.length);
+			for (int pos : args) {
+				int[] xy = app.getMapper().lookupImageCoord(pos);
+				pts.add(new PVector(xy[0], xy[1]));
+				// PApplet.println("  "+ xy[0] +", "+ xy[1]);
+			}
+			app.playPoints(pts);
+		}
+
+		/**
+		 * Receive Max MultiSlider data.
+		 * @param args   MultiSlider values
+		 */
+		public void multislider(int... args) {
+			PApplet.print("---> multislider: ");
+			for (int pos : args) {
+				PApplet.print(pos + ", ");
+			}
+			PApplet.println();
+		}
+		
+		/**
+		 * Interprets a received value as a char and uses it as an argument to {@code parseKey()}.
+		 * @param arg
+		 */
+		public void parseKey(int arg) {
+			char ch = PApplet.parseChar(arg);
+			PApplet.println("---> parseKey: "+ ch);
+			app.parseKey(ch, 0);
+		}
+		
+		public void controlMsg(String ctrl, float val) {
+			PApplet.println("---> control: "+ ctrl +", value: "+ val);		
+		}
+
+	}
+
+
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                          GUI METHODS                           */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+
+	// GUI Variable declarations 
+	GWindow controlWindow;
+	GPanel controlPanel; 
+	GLabel pathSourceLabel; 
+	GToggleGroup pathSourceGroup; 
+	GOption allOption; 
+	GOption rdpOption; 
+	GOption curveOption; 
+	GSlider rdpEpsilonSlider; 
+	GSlider curvePointsSlider; 
+	GLabel pitchLabel; 
+	GTextField pitchShiftText; 
+	// GLabel timingLabel; 
+	GLabel resampleLabel;
+	GSlider resampleSlider; 
+	GTextField resampleField; 
+	GLabel durationLabel;
+	GSlider durationSlider; 
+	GTextField durationField; 
+	GLabel burstLabel;
+	GSlider burstSlider;
+	GLabel hopModeLabel; 
+	GToggleGroup hopModeGroup; 
+	GOption gestureOption; 
+	GLabel grainLengthLabel; 
+	GSlider grainLengthSlider; 
+	GLabel hopLengthLabel; 
+	GSlider hopLengthSlider; 
+	GOption fixedOption; 
+	GLabel warpLabel;
+	GSlider warpSlider; 
+	GLabel epsilonSliderLabel; 
+	GLabel curvePointsLabel; 
+	GLabel gainLabel; 
+	GSlider gainSlider; 
+	GTextField grainLengthField; 
+	GTextField hopLengthField; 
+	GToggleGroup warpGroup;
+	GOption linearWarpOption;
+	GOption expWarpOption;
+	GOption squareRootOption;
+	GOption customWarpOption;
+	GOption arcLengthTimeOption;
+	GLabel envelopeLabel; 
+	GDropList envelopeMenu; 
+	GLabel envDurationLabel;
+	GSlider envDurationSlider;
+	GTextField envDurationField;
+	GLabel granDurationLabel;
+	GSlider granDurationSlider;
+	GTextField granDurationField;
+	GCheckbox envFitToBrushCheck;
+
+	
+
+	static final String ENV_CUSTOM = "Custom";
+	String[] envPresetItems = {"Pluck", "Soft", "Percussion", "Fade", "Swell", "Pad", ENV_CUSTOM};
+    int presetIndex = envPresetItems.length - 1;    // preset index
+	GLabel envelopeValuesLabel;
+	
+	GTextArea commentsField;    // testing
+
+	
+	/**
+	 * Create all the GUI controls. 
+	 */
+	public void createGUI(){
+	  createControlWindow();
+	  createControlPanel();
+	  createControls();
+	  addControlsToPanel();
+	}
+
+	/**
+	 * Create a separate window for the GUI control palette.
+	 */
+	public void createControlWindow() {
+		G4P.messagesEnabled(false);
+		G4P.setGlobalColorScheme(GCScheme.BLUE_SCHEME);
+		G4P.setMouseOverEnabled(false);
+		controlWindow = GWindow.getWindow(this, "Granular Synth", 960, 420, 460, 620, JAVA2D);
+		controlWindow.noLoop();
+		controlWindow.setActionOnClose(G4P.EXIT_APP);
+		controlWindow.addDrawHandler(this, "winDraw");
+		controlWindow.addKeyHandler(this, "winKey");
+		controlWindow.setAlwaysOnTop(true);
+	}
+
+	/**
+	 * Create the GUI control palette.
+	 */
+	public void createControlPanel() {
+		controlPanel = new GPanel(controlWindow, 5, 5, 470, 620, "Settings");
+		controlPanel.setCollapsible(false);
+		controlPanel.setCollapsed(false);
+		controlPanel.setDraggable(false);
+		controlPanel.setText("Settings");
+		controlPanel.setTextBold();
+		// http://lagers.org.uk/g4p/guides/g04-colorschemes.html
+		controlPanel.setLocalColor(2, color(254, 246, 233));
+		controlPanel.setOpaque(true);
+		controlPanel.addEventHandler(this, "controlPanel_hit");
+	}
+
+	// a test
+	public void createCommentsField() {
+		commentsField = new GTextArea(controlWindow, 5, 480, 470, 70, G4P.SCROLLBARS_NONE);
+		commentsField.setOpaque(true);
+		commentsField.setWrapWidth(460);
+		commentsField.addEventHandler(this, "comments_hit");
+		commentsField.setText("blah blah blah");
+	}
+	
+	/**
+	 * Create all the controls in the control palette.
+	 */
+	public void createControls() {
+		int yPos = 30;
+		int yInc = 30;
+		pathSourceLabel = new GLabel(controlWindow, 10, yPos, 80, 20);
+		pathSourceLabel.setText("Path Source");
+		pathSourceLabel.setOpaque(true);
+		pathSourceGroup = new GToggleGroup();
+		allOption = new GOption(controlWindow, 100, yPos, 100, 20);
+		allOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		allOption.setText("All Points");
+		allOption.setOpaque(false);
+		allOption.addEventHandler(this, "allOption_clicked");
+		rdpOption = new GOption(controlWindow, 210, yPos, 120, 20);
+		rdpOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		rdpOption.setText("Reduced Points");
+		rdpOption.setOpaque(false);
+		rdpOption.addEventHandler(this, "rdpOption_clicked");
+		curveOption = new GOption(controlWindow, 340, yPos, 100, 20);
+		curveOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		curveOption.setText("Curve Points");
+		curveOption.setOpaque(false);
+		curveOption.addEventHandler(this, "curveOption_clicked");
+		// epsilon and curvePoints
+		yPos += yInc;
+		rdpEpsilonSlider = new GSlider(controlWindow, 10, yPos, 200, 40, 10.0f);
+		rdpEpsilonSlider.setShowValue(true);
+		rdpEpsilonSlider.setShowLimits(true);
+		rdpEpsilonSlider.setLimits(2, 1, 50);
+		rdpEpsilonSlider.setNbrTicks(8);
+		rdpEpsilonSlider.setNumberFormat(G4P.INTEGER, 1);
+		rdpEpsilonSlider.setOpaque(false);
+		rdpEpsilonSlider.addEventHandler(this, "rdpEpsilonSlider_changed");
+		curvePointsSlider = new GSlider(controlWindow, 230, yPos, 200, 40, 10.0f);
+		curvePointsSlider.setShowValue(true);
+		curvePointsSlider.setShowLimits(true);
+		curvePointsSlider.setLimits(2, 2, 128);
+		curvePointsSlider.setNumberFormat(G4P.INTEGER, 0);
+		curvePointsSlider.setOpaque(false);
+		curvePointsSlider.addEventHandler(this, "curvePointsSlider_changed");
+		// epsilon and curve labels
+		yPos += (yInc + 10);
+		epsilonSliderLabel = new GLabel(controlWindow, 10, yPos, 80, 20);
+		epsilonSliderLabel.setText("RDP epsilon");
+		epsilonSliderLabel.setOpaque(true);
+		curvePointsLabel = new GLabel(controlWindow, 230, yPos, 80, 20);
+		curvePointsLabel.setTextAlign(GAlign.CENTER, GAlign.MIDDLE);
+		curvePointsLabel.setText("Curve Points");
+		curvePointsLabel.setOpaque(true);
+		// pitch
+		yPos += yInc + 10;
+		pitchLabel = new GLabel(controlWindow, 10, yPos, 140, 20);
+		pitchLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		pitchLabel.setText("Pitch shift (semitones)");
+		pitchLabel.setOpaque(true);
+		pitchShiftText = new GTextField(controlWindow, 160, yPos, 90, 24, G4P.SCROLLBARS_NONE);
+		pitchShiftText.setNumeric(-24.0f, 24.0f, 0.0f);
+		pitchShiftText.setText("0.0");
+		pitchShiftText.setPromptText("0.0");
+		pitchShiftText.setOpaque(true);
+		pitchShiftText.addEventHandler(this, "pitchShiftText_changed");
+		// gain
+		yPos += yInc;
+		gainLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		gainLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		gainLabel.setText("Gain (dB)");
+		gainLabel.setOpaque(true);
+		gainSlider = new GSlider(controlWindow, 100, yPos, 210, 40, 10.0f);
+		gainSlider.setShowValue(true);
+		gainSlider.setShowLimits(true);
+		gainSlider.setLimits(1, -60, 6);
+		gainSlider.setNbrTicks(24);
+		gainSlider.setNumberFormat(G4P.INTEGER, 0);
+		gainSlider.setOpaque(false);
+		gainSlider.addEventHandler(this, "gainSlider_changed");
+		// resampling
+		yPos += yInc + 10;
+		resampleLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		resampleLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		resampleLabel.setText("Resample");
+		resampleLabel.setOpaque(true);
+		resampleSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		resampleSlider.setShowValue(false);
+		resampleSlider.setLimits(gConfig.resampleCount, 2, 2048); 
+		resampleSlider.setNumberFormat(G4P.INTEGER, 0);
+		resampleSlider.setOpaque(false);
+		resampleSlider.addEventHandler(this, "resampleSlider_changed");
+		resampleField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		resampleField.setText("" + gConfig.resampleCount);
+		resampleField.setTextEditEnabled(false);
+		// duration
+		yPos += yInc;
+		durationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		durationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		durationLabel.setText("Duration (ms)");
+		durationLabel.setOpaque(true);
+		durationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		durationSlider.setShowValue(true);
+		durationSlider.setLimits(gConfig.targetDurationMs, 50, 16000);
+		durationSlider.setNumberFormat(G4P.INTEGER, 0);
+		durationSlider.setOpaque(false);
+		durationSlider.addEventHandler(this, "durationSlider_changed");
+		durationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		durationField.setText("" + gConfig.targetDurationMs);
+		durationField.setTextEditEnabled(false);
+		// hop mode
+		yPos += yInc + 20;
+		hopModeLabel = new GLabel(controlWindow, 10, yPos, 80, 20);
+		hopModeLabel.setText("Hop Mode");
+		hopModeLabel.setOpaque(true);
+		hopModeGroup = new GToggleGroup();
+		gestureOption = new GOption(controlWindow, 100, yPos, 100, 20);
+		gestureOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		gestureOption.setText("Gesture");
+		gestureOption.setOpaque(false);
+		gestureOption.addEventHandler(this, "gestureOption_clicked");
+		fixedOption = new GOption(controlWindow, 210, yPos, 100, 20);
+		fixedOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		fixedOption.setText("Fixed");
+		fixedOption.setOpaque(false);
+		fixedOption.addEventHandler(this, "fixedOption_clicked");
+		// burst grain count	
+		yPos += yInc;
+		burstLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		burstLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		burstLabel.setText("Burst count");
+		burstLabel.setOpaque(true);
+		burstSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		burstSlider.setShowValue(true);
+		burstSlider.setShowLimits(true);
+		burstSlider.setLimits(1, 1, 16);
+		burstSlider.setNumberFormat(G4P.INTEGER, 0);
+		burstSlider.setOpaque(false);
+		//burstSlider.setNbrTicks(16);
+		//burstSlider.setShowTicks(true);
+		//burstSlider.setStickToTicks(true);
+		burstSlider.addEventHandler(this, "burstSlider_changed");
+		// grain length
+		yPos += yInc + 8;
+		grainLengthLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		grainLengthLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		grainLengthLabel.setText("Grain length");
+		grainLengthLabel.setOpaque(true);
+		grainLengthSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		grainLengthSlider.setShowValue(false);
+		grainLengthSlider.setShowLimits(true);
+		grainLengthSlider.setLimits(2048, 64, 4096);
+		grainLengthSlider.setNumberFormat(G4P.INTEGER, 0);
+		grainLengthSlider.setOpaque(false);
+		grainLengthSlider.addEventHandler(this, "grainLengthSlider_changed");
+		grainLengthField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		grainLengthField.setText("2048");
+		grainLengthField.setOpaque(true);
+		grainLengthField.setTextEditEnabled(false);
+		grainLengthField.setText(""+ gConfig.grainLengthSamples);
+		// hop length
+		yPos += yInc;
+		hopLengthLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		hopLengthLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		hopLengthLabel.setText("Hop length");
+		hopLengthLabel.setOpaque(true);
+		hopLengthSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		hopLengthSlider.setShowValue(false);
+		hopLengthSlider.setShowLimits(true);
+		hopLengthSlider.setLimits(512, 64, 4096);
+		hopLengthSlider.setNumberFormat(G4P.INTEGER, 0);
+		hopLengthSlider.setOpaque(false);
+		hopLengthSlider.addEventHandler(this, "hopLengthSlider_changed");
+		hopLengthField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		hopLengthField.setText("512");
+		hopLengthField.setOpaque(true);
+		hopLengthField.setTextEditEnabled(false);
+		hopLengthField.setText(""+ gConfig.hopLengthSamples);
+		// warp
+		yPos += yInc + 10;
+		warpLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 20);
+		warpLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		warpLabel.setText("Warp");
+		warpLabel.setOpaque(true);
+		// warp options
+		yPos += 10;
+		warpGroup = new GToggleGroup();
+		linearWarpOption = new GOption(controlWindow, 100, yPos, 80, 20);
+		linearWarpOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		linearWarpOption.setText("Linear");
+		linearWarpOption.setOpaque(false);
+		linearWarpOption.setSelected(true);
+		linearWarpOption.addEventHandler(this, "linearWarpOption_clicked");
+		expWarpOption = new GOption(controlWindow, 190, yPos, 80, 20);
+		expWarpOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		expWarpOption.setText("Exp");
+		expWarpOption.setOpaque(false);
+		expWarpOption.addEventHandler(this, "expWarpOption_clicked");
+		squareRootOption = new GOption(controlWindow, 280, yPos, 80, 20);
+		squareRootOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		squareRootOption.setText("Root");
+		squareRootOption.setOpaque(false);
+		squareRootOption.addEventHandler(this, "squareRootOption_clicked");	
+		customWarpOption = new GOption(controlWindow, 370, yPos, 80, 20);
+		customWarpOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		customWarpOption.setText("Custom");
+		customWarpOption.setOpaque(false);
+		customWarpOption.addEventHandler(this, "customWarpOption_clicked");
+		// warp exponent
+		yPos += yInc;
+		warpSlider = new GSlider(controlWindow, 100, yPos - 10, 256, 40, 10.0f);
+		warpSlider.setShowValue(true);
+		warpSlider.setLimits(1f, 0.25f, 4f);
+		warpSlider.setNumberFormat(G4P.DECIMAL, 2);
+		warpSlider.setOpaque(false);
+		warpSlider.addEventHandler(this, "warpSlider_changed");
+		warpSlider.setVisible(true);
+		warpSlider.setEnabled(false); // only if LINEAR is selected option
+		// envelope menu
+		yPos += yInc;
+		envelopeLabel = new GLabel(controlWindow, 10, yPos, 80, 40);
+		envelopeLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		envelopeLabel.setText("Sampler\nEnvelope");
+		envelopeLabel.setOpaque(true);
+		envelopeMenu = new GDropList(controlWindow, 100, yPos, 120, 80, 4, 10);
+		envelopeMenu.setItems(envPresetItems, 0);
+		envelopeMenu.addEventHandler(this, "envelopeMenu_clicked");
+		// ADSR label
+		envelopeValuesLabel = new GLabel(controlWindow, 230, yPos, 210, 40);
+		envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
+		envelopeValuesLabel.setOpaque(false);
+		envelopeValuesLabel.setText("");
+		envFitToBrushCheck = new GCheckbox(controlWindow, 230, yPos + 16, 160, 40, "Fit to brush");
+		envFitToBrushCheck.setVisible(false);   // visible in Sampler editing
+		envFitToBrushCheck.addEventHandler(this, "fitToBrush_clicked");
+		// envelope duration
+		yPos += yInc + yInc/2;
+		envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
+		envDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		envDurationLabel.setText("Envelope Duration (ms)");
+		envDurationLabel.setOpaque(true);
+		envDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		envDurationSlider.setShowValue(true);
+		envDurationSlider.setLimits(gConfig.envDurationMs, 125, 5000);
+		envDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+		envDurationSlider.setOpaque(false);
+		envDurationSlider.addEventHandler(this, "envDuration_changed");
+		envDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		envDurationField.setText("" + gConfig.envDurationMs);
+		envDurationField.setTextEditEnabled(false);		
+		// granular point event duration (shares the sampler duration row)
+		granDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
+		granDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+		granDurationLabel.setText("Point Duration (ms)");
+		granDurationLabel.setOpaque(true);
+		granDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+		granDurationSlider.setShowValue(true);
+		granDurationSlider.setLimits(granPointDurationMs, 125, 5000);
+		granDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+		granDurationSlider.setOpaque(false);
+		granDurationSlider.addEventHandler(this, "granDuration_changed");
+		granDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+		granDurationField.setText("" + granPointDurationMs);
+		granDurationField.setTextEditEnabled(false);
+		// sampler envelope fit duration to gesture
+		
+		
+		// arc length time option3		
+		arcLengthTimeOption = new GOption(controlWindow, 280, yPos, 120, 20);
+		arcLengthTimeOption.setIconAlign(GAlign.LEFT, GAlign.MIDDLE);
+		arcLengthTimeOption.setText("Arc Length Time");
+		arcLengthTimeOption.setOpaque(false);
+		arcLengthTimeOption.setSelected(false);
+		arcLengthTimeOption.addEventHandler(this, "arcLengthTimeOption_clicked");
+		// not showing this option, which only applies to curves and has minimal effect
+		arcLengthTimeOption.setVisible(false);
+	}
+
+	/**
+	 * Add the controls to the control palette.
+	 */
+	public void addControlsToPanel() {
+		controlPanel.setVisible(true);
+		controlPanel.addControl(pathSourceLabel);
+		// add path source controls
+		pathSourceGroup.addControl(allOption);
+		allOption.setSelected(true);
+		controlPanel.addControl(allOption);
+		pathSourceGroup.addControl(rdpOption);
+		controlPanel.addControl(rdpOption);
+		pathSourceGroup.addControl(curveOption);
+		controlPanel.addControl(curveOption);	
+		// epsilon
+		controlPanel.addControl(epsilonSliderLabel);
+		controlPanel.addControl(rdpEpsilonSlider);
+		controlPanel.addControl(curvePointsLabel);
+		controlPanel.addControl(curvePointsSlider);
+		// hpp mode
+		controlPanel.addControl(hopModeLabel);
+		hopModeGroup.addControl(gestureOption);
+		gestureOption.setSelected(true);
+		controlPanel.addControl(gestureOption);
+		hopModeGroup.addControl(fixedOption);
+		controlPanel.addControl(fixedOption);
+		// burst count
+		controlPanel.addControl(burstLabel);
+		controlPanel.addControl(burstSlider);
+		// grain length
+		controlPanel.addControl(grainLengthLabel);
+		controlPanel.addControl(grainLengthSlider);
+		controlPanel.addControl(grainLengthField);
+		// hop length
+		controlPanel.addControl(hopLengthLabel);
+		controlPanel.addControl(hopLengthSlider);
+		controlPanel.addControl(hopLengthField);
+		// pitch shift
+		controlPanel.addControl(pitchLabel);
+		controlPanel.addControl(pitchShiftText);
+		// gain
+		controlPanel.addControl(gainLabel);
+		controlPanel.addControl(gainSlider);
+		// resample
+		controlPanel.addControl(resampleLabel);
+		controlPanel.addControl(resampleSlider);
+		controlPanel.addControl(resampleField);
+		// change duration
+		controlPanel.addControl(durationLabel);
+		controlPanel.addControl(durationSlider);
+		controlPanel.addControl(durationField);
+		// warp
+		controlPanel.addControl(warpLabel);
+		warpGroup.addControl(linearWarpOption);
+		warpGroup.addControl(expWarpOption);
+		warpGroup.addControl(squareRootOption);
+		warpGroup.addControl(customWarpOption);
+		linearWarpOption.setSelected(true);
+		controlPanel.addControl(linearWarpOption);
+		controlPanel.addControl(expWarpOption);
+		controlPanel.addControl(squareRootOption);
+		controlPanel.addControl(customWarpOption);
+		controlPanel.addControl(warpSlider);
+		// envelope
+		controlPanel.addControl(envelopeLabel);
+		controlPanel.addControl(envelopeMenu);
+		controlPanel.addControl(envelopeValuesLabel);
+		controlPanel.setCollapsed(false);
+		// envelope duration
+		controlPanel.addControl(envDurationLabel);
+		controlPanel.addControl(envDurationSlider);
+		controlPanel.addControl(envDurationField);
+		controlPanel.addControl(envFitToBrushCheck);
+		// granular point event duration
+		controlPanel.addControl(granDurationLabel);
+		controlPanel.addControl(granDurationSlider);
+		controlPanel.addControl(granDurationField);
+		// arcLengthTime
+		controlPanel.addControl(arcLengthTimeOption);
+	}
+
+
+	// GUI Handlers
+	/*
+	 * Conditional enabling of handlers
+	 * 
+	 * Every handler gets: "if (!isEditable()) return;" -- mode == Mode.PLAY_ONLY
+	 * Every handler gets: "if (guiSyncing) return;"    -- sync is active
+	 * 
+	 * Global granular defaults include: "if (mode != Mode.DRAW_EDIT_GRANULAR) return;"
+	 *   grainLengthSlider_changed, hopLengthSlider_changed
+	 *   gainSlider_changed
+	 *   pitchShiftText_changed
+	 *   linearWarpOption_clicked, expWarpOption_clicked, squareRootOption_clicked, customWarpOption_clicked
+	 *   warpSlider_changed
+	 *   envelopeMenu_clicked
+	 * 
+	 * Handlers for brushstroke parameters include: "if (activeGranularBrush == null) return;"
+	 *   Path mode options: allOption_clicked, rdpOption_clicked, curveOption_clicked
+	 *   Path params: rdpEpsilonSlider_changed, curvePointsSlider_changed
+	 *   Hop mode options: gestureOption_clicked, fixedOption_clicked
+	 *   Timing overrides: resampleSlider_changed, durationSlider_changed
+	 *  
+	 */
+	
+	// our draw method, call each time through the event loop
+	synchronized public void winDraw(PApplet appc, GWinData data) {
+	  appc.background(color(212, 220, 228));
+	}
+	
+	boolean isGuiTyping() {
+		if (pitchShiftText != null && pitchShiftText.hasFocus()) {
+			return true;
+		}
+	    return false;
+	}
+
+	// respond to key in window
+	public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
+	    if (evt.getAction() != KeyEvent.RELEASE) return;
+	    if (isGuiTyping()) return;
+	    parseKey(evt.getKey(), evt.getKeyCode());
+	}	
+
+	public void controlPanel_hit(GPanel source, GEvent event) { 
+		// println("controlPanel - GPanel >> GEvent." + event + " @ " + millis());
+	} 
+
+	public void allOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// if (activeBrush == null) return;
+		gConfig.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
+		recomputeUIBaselinesFromActiveBrush();
+		syncGuiFromConfig();
+		if (isVerbose) println("gConfig.pathMode = "+ gConfig.pathMode.toString());
+	} 
+
+	public void rdpOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// if (activeBrush == null) return;
+		gConfig.pathMode = GestureGranularConfig.PathMode.REDUCED_POINTS;
+		recomputeUIBaselinesFromActiveBrush();
+		syncGuiFromConfig();
+		if (isVerbose) println("gConfig.pathMode = "+ gConfig.pathMode.toString());
+	} 
+
+	public void curveOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// if (activeBrush == null) return;
+		gConfig.pathMode = GestureGranularConfig.PathMode.CURVE_POINTS;
+		recomputeUIBaselinesFromActiveBrush();
+		syncGuiFromConfig();
+		if (isVerbose) println("gConfig.pathMode = "+ gConfig.pathMode.toString());
+	} 
+
+	public void rdpEpsilonSlider_changed(GSlider source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// if (activeBrush == null) return;
+		gConfig.rdpEpsilon = source.getValueF();
+		if (event == GEvent.RELEASED) {
+			recomputeUIBaselinesFromActiveBrush();
+			syncGuiFromConfig();
+			if (isVerbose) println("gConfig.rdpEpsilon = "+ gConfig.rdpEpsilon);
+		}
+	} 
+
+	public void curvePointsSlider_changed(GSlider source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// if (activeBrush == null) return;
+		gConfig.curveSteps = source.getValueI();
+		if (event == GEvent.RELEASED) {
+			recomputeUIBaselinesFromActiveBrush();
+			syncGuiFromConfig();
+			if (isVerbose) println("gConfig.curveSteps = "+ gConfig.curveSteps);
+		}
+	} 
+
+	public void gestureOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		if (activeBrush == null) return;
+		gConfig.hopMode = GestureGranularConfig.HopMode.GESTURE;
+		recomputeUIBaselinesFromActiveBrush();
+		syncGuiFromConfig();
+		if (isVerbose) println("gConfig.hopMode = "+ gConfig.hopMode);
+	} 
+
+	public void fixedOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		// if (activeBrush == null) return;
+		gConfig.hopMode = GestureGranularConfig.HopMode.FIXED;
+		recomputeUIBaselinesFromActiveBrush();
+		syncGuiFromConfig();
+		if (isVerbose) println("gConfig.hopMode = "+ gConfig.hopMode);
+	} 
+	
+	public void burstSlider_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		// if (activeBrush == null) return;
+		int v = source.getValueI();
+		gConfig.burstGrains = v;
+		if (event == GEvent.RELEASED) {
+			if (isVerbose) println("gConfig.burstGrains = " + gConfig.burstGrains + " (slider=" + v + ")");
+		}
+		
+	}
+
+	public void resampleSlider_changed(GSlider source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// resample is set on an active brush, changing it without a brush will have no effect
+		// if (activeBrush == null) return;
+		int v = source.getValueI();
+		if (v == baselineCount) {
+			gConfig.resampleCount = 0;
+		} else {
+			gConfig.resampleCount = v;
+		}
+		resampleField.setText(""+ gConfig.resampleCount);
+		if (event == GEvent.RELEASED) {
+			if (isVerbose) println("gConfig.resampleCount = " + gConfig.resampleCount + " (slider=" + v + ")");
+		}
+	} 
+
+	public void durationSlider_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// gesture duration is set by the activeBrush, changing it without a brush will have no effect
+		if (activeBrush == null) return;
+		int v = source.getValueI();
+		if (v == baselineDurationMs) {
+			gConfig.targetDurationMs = 0;
+		} else {
+			gConfig.targetDurationMs = v;
+		}
+		durationField.setText("" + v);
+		if (event == GEvent.RELEASED) {
+			if (isVerbose) println("gConfig.targetDurationMs = " + gConfig.targetDurationMs + " (slider=" + v + ")");
+		}
+	}
+
+	public void grainLengthSlider_changed(GSlider source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 16);
+		if (quant != raw) source.setValue(quant);
+		gConfig.grainLengthSamples = quant;
+		grainLengthField.setText(""+ gConfig.grainLengthSamples);
+		if (event == GEvent.RELEASED) if (isVerbose) println("gConfig.grainLengthSamples = "+ gConfig.grainLengthSamples);
+	}
+	
+	public void hopLengthSlider_changed(GSlider source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 16);
+		source.setValue(quant);
+		gConfig.hopLengthSamples = quant;
+		hopLengthField.setText(""+ gConfig.hopLengthSamples);
+		if (event == GEvent.RELEASED) {
+			recomputeUIBaselinesFromActiveBrush();
+			syncGuiFromConfig();
+			if (isVerbose) println("gConfig.hopLengthSamples = "+ gConfig.hopLengthSamples);
+		}
+	} 
+
+	// this method was not linked to grainLengthField and will not be called
+	public void grainLengthField_changed(GTextField source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		gConfig.grainLengthSamples = source.getValueI();
+		if (isVerbose) println("grainLengthField - GTextField >> GEvent." + event + " @ " + millis());
+	}
+
+	// this method was not linked to hopLengthField and will not be called
+	public void hopLengthField_changed(GTextField source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		gConfig.hopLengthSamples = source.getValueI();
+		if (isVerbose) println("hopLengthField - GTextField >> GEvent." + event + " @ " + millis());
+	}
+
+	public void pitchShiftText_changed(GTextField source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		
+			
+		// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
+		float v = source.getValueF();
+		if (v != gConfig.pitchSemitones) {
+			gConfig.pitchSemitones = source.getValueF();
+			if (isVerbose) println("gConfig.pitchSemitones = "+ gConfig.pitchSemitones);
+		}
+	} 
+
+	public void gainSlider_changed(GSlider source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		// if (mode != Mode.DRAW_EDIT_GRANULAR) return;
+		gConfig.gainDb = source.getValueF();
+		if (event == GEvent.LOST_FOCUS) if (isVerbose) println("gConfig.gainDb = "+ gConfig.gainDb);
+	} 
+	
+	public void linearWarpOption_clicked(GOption source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		gConfig.warpShape = GestureGranularConfig.WarpShape.LINEAR;
+		warpSlider.setEnabled(gConfig.warpShape != GestureGranularConfig.WarpShape.LINEAR);
+		if (isVerbose) println("gConfig.warpShape = "+ gConfig.warpShape.toString());
+	}
+	
+	public void expWarpOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		gConfig.warpShape = GestureGranularConfig.WarpShape.EXP;
+		warpSlider.setEnabled(gConfig.warpShape != GestureGranularConfig.WarpShape.LINEAR);
+		if (isVerbose) println("gConfig.warpShape = "+ gConfig.warpShape.toString());
+	} 
+
+	public void squareRootOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		gConfig.warpShape = GestureGranularConfig.WarpShape.SQRT;
+		warpSlider.setEnabled(gConfig.warpShape != GestureGranularConfig.WarpShape.LINEAR);
+		if (isVerbose) println("gConfig.warpShape = "+ gConfig.warpShape.toString());
+	} 
+
+	public void customWarpOption_clicked(GOption source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		gConfig.warpShape = GestureGranularConfig.WarpShape.CUSTOM;
+		warpSlider.setEnabled(gConfig.warpShape != GestureGranularConfig.WarpShape.LINEAR);
+		if (isVerbose) println("gConfig.warpShape = "+ gConfig.warpShape.toString());
+	} 
+
+	public void warpSlider_changed(GSlider source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		gConfig.warpExponent = source.getValueF();
+		if (event == GEvent.RELEASED) println("gConfig.warpExponent = "+ gConfig.warpExponent);
+	} 
+
+	public void arcLengthTimeOption_clicked(GOption source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		gConfig.useArcLengthTime = source.isSelected();
+		// gConfig.useArcLengthTime = ;
+	}
+	
+	public void envelopeMenu_clicked(GDropList source, GEvent event) { 
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			return;
+		}
+		int itemHit = source.getSelectedIndex();
+		if (itemHit < 0 || itemHit >= envPresetItems.length) return;
+
+		String itemName = envPresetItems[itemHit];
+		if (ENV_CUSTOM.equals(itemName)) {
+			// Read-only sentinel for loaded / non-preset envelopes.
+			// Do not overwrite gConfig.env.
+			return;
+		}
+		println("-- envelope "+ itemName +" selected");
+		ADSRParams env = envPreset(itemName);
+		gConfig.env = env;
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = env;
+		if (envelopeValuesLabel != null) {
+			envelopeValuesLabel.setText(formatEnv(gConfig.env));
+		}
+		// println("envelopeMenu - GDropList >> GEvent." + event + " @ " + millis());
+	} 
+	
+	public void envDuration_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 5);
+		if (quant != raw) source.setValue(quant);
+		gConfig.envDurationMs = quant;
+		this.envDurationMs = gConfig.envDurationMs;
+		this.envDurationField.setText(""+ gConfig.envDurationMs);
+		if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ gConfig.envDurationMs);
+	}
+	
+	public void fitToBrush_clicked(GCheckbox source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) {
+			return;
+		}
+		isAdjustEnvelope = (source.isSelected());
+	}
+
+	public void granDuration_changed(GSlider source, GEvent event) {
+		if (!isEditable()) return;
+		if (guiSyncing) return;
+		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+		int raw = source.getValueI();
+		int quant = quantizeToStep(raw, 5);
+		if (quant != raw) source.setValue(quant);
+		granPointDurationMs = quant;
+		granDurationField.setText("" + granPointDurationMs);
+		if (event == GEvent.RELEASED) println("granPointDurationMs = " + granPointDurationMs);
+	}
+	
+	public void printGConfigStatus() {
+		// GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
+		String status = gConfig.build().toString();
+		if (isVerbose) println(status);
+	}
+
+	
+	// GUI Helpers
+	
+	/**
+	 * @param name   the name of the ADSRParams envelope to return
+	 * @return the specified ADSRParams envelope
+	 */
+	static ADSRParams envPreset(String name) {
+		switch (name) {
+        // sharp attack, fast decay to 0
+		case "Pluck"      : return new ADSRParams(1.0f, 0.005f, 0.18f, 0.0f, 0.12f);   
+        // medium fast attack, medium decay to 0.15, short tail 
+		case "Soft"       : return new ADSRParams(1.0f, 0.020f, 0.60f, 0.15f, 0.25f);   
+		// sharp attack, fast decay to 0.1, short tail
+        case "Percussion" : return new ADSRParams(1.0f, 0.002f, 0.20f, 0.10f, 0.18f);   
+        // trapezoid, medium tail
+		case "Fade"       : return new ADSRParams(1.0f, 0.05f, 0.0f, 1.0f, 0.50f);      
+        // soft attack, medium decay, medium long tail
+		case "Swell"      : return new ADSRParams(1.0f, 0.90f, 0.40f, 0.70f, 0.90f);    
+        // long attack, slight decay, long tail
+		case "Pad"        : return new ADSRParams(1.0f, 1.40f, 0.60f, 0.85f, 1.80f);    
+        // fast attack, fast decay to 0.75, medium tail
+		default           : return new ADSRParams(1.0f, 0.01f, 0.15f, 0.75f, 0.25f);    
+		}
+	}
+	
+	static boolean nearlyEqual(float a, float b) {
+		return Math.abs(a - b) < 0.0001f;
+	}
+
+	static boolean envEquals(ADSRParams a, ADSRParams b) {
+		if (a == b) return true;
+		if (a == null || b == null) return false;
+		return nearlyEqual(a.getMaxAmp(), b.getMaxAmp())
+			&& nearlyEqual(a.getAttack(),   b.getAttack())
+			&& nearlyEqual(a.getDecay(),    b.getDecay())
+			&& nearlyEqual(a.getSustain(), b.getSustain())
+			&& nearlyEqual(a.getRelease(),  b.getRelease());
+	}
+
+	String envNameFor(ADSRParams env) {
+		if (env == null) return ENV_CUSTOM;
+		for (int i = 0; i < envPresetItems.length; i++) {
+			String name = envPresetItems[i];
+			if (ENV_CUSTOM.equals(name)) continue;
+			if (envEquals(env, envPreset(name))) return name;
+		}
+		return ENV_CUSTOM;
+	}
+
+	int envMenuIndex(String name) {
+		for (int i = 0; i < envPresetItems.length; i++) {
+			if (envPresetItems[i].equals(name)) return i;
+		}
+		return envPresetItems.length - 1; // Custom
+	}
+
+	String formatEnv(ADSRParams env) {
+		if (env == null) return "A --   D --   S --   R --";
+		return "A " + nf(env.getAttack(),   0, 3)
+			 + "  D " + nf(env.getDecay(),    0, 3)
+			 + "  S " + nf(env.getSustain(), 0, 3)
+			 + "  R " + nf(env.getRelease(),  0, 3);
+	}
+
+	/** Quantize an integer to the nearest multiple of step. */
+	public static int quantizeToStep(int value, int step) {
+	    int half = step / 2;
+	    return ((value + half) / step) * step;
+	}
+
+	/**
+	 * Synchronize the control palette knobs to the current gConfig, probably
+	 * because a brush was selected and made active.
+	 */
+	void syncGuiFromConfig() {
+		guiSyncing = true;
+		try {
+			boolean hasStroke = (activeBrush != null);
+			boolean canEdit = hasStroke && (isEditable());
+			setControlsEnabled();
+
+			// PathMode radio
+			allOption.setSelected(gConfig.pathMode == GestureGranularConfig.PathMode.ALL_POINTS);
+			rdpOption.setSelected(gConfig.pathMode == GestureGranularConfig.PathMode.REDUCED_POINTS);
+			curveOption.setSelected(gConfig.pathMode == GestureGranularConfig.PathMode.CURVE_POINTS);
+
+			// epsilon / curveSteps
+			rdpEpsilonSlider.setValue(gConfig.rdpEpsilon);
+			curvePointsSlider.setValue(gConfig.curveSteps);
+
+			// hop mode radio
+			gestureOption.setSelected(gConfig.hopMode == GestureGranularConfig.HopMode.GESTURE);
+			fixedOption.setSelected(gConfig.hopMode == GestureGranularConfig.HopMode.FIXED);
+			
+			// burst count slider
+			burstSlider.setValue(gConfig.burstGrains);
+
+			// grain/hop length sliders + fields
+			grainLengthSlider.setValue(gConfig.grainLengthSamples);
+			grainLengthField.setText("" + gConfig.grainLengthSamples);
+
+			hopLengthSlider.setValue(gConfig.hopLengthSamples);
+			hopLengthField.setText("" + gConfig.hopLengthSamples);
+
+			// gain/pitch
+			gainSlider.setValue(gConfig.gainDb);
+			pitchShiftText.setText(String.format("%.2f", gConfig.pitchSemitones));
+
+			// ---- Resample & Duration: show baseline unless overridden ----
+			int baseCountSafe = Math.max(2, baselineCount);         // slider min is 2
+			int shownCount = (gConfig.resampleCount == 0) ? baseCountSafe : gConfig.resampleCount;
+			shownCount = clampInt(shownCount, 2, 2048);
+			resampleSlider.setLimits(shownCount, 2, 2048);
+			resampleField.setText("" + shownCount);
+
+			int baseDurSafe = Math.max(50, baselineDurationMs);     // slider min is 50
+			int shownDur = (gConfig.targetDurationMs == 0) ? baseDurSafe : gConfig.targetDurationMs;
+			shownDur = clampInt(shownDur, 50, 16000);
+			durationSlider.setLimits(shownDur, 50, 16000);
+			durationField.setText("" + shownDur);
+			
+			// envelope settings
+			ADSRParams envToShow = gConfig.env;
+			String envName = envNameFor(envToShow);
+			envelopeMenu.setSelected(envMenuIndex(envName));
+			if (envelopeValuesLabel != null) {
+				envelopeValuesLabel.setText(formatEnv(envToShow));
+			}
+			
+			// envelope durations (sampler)
+			int envDurSafe = Math.max(125, envDurationMs);
+			boolean isSamplerDefaultContext = activeBrush == null
+					&& drawingMode == DrawingMode.DRAW_EDIT_SAMPLER;
+			int envDurShown = isSamplerDefaultContext
+					? envDurSafe
+					: ((gConfig.envDurationMs == 0) ? envDurSafe : gConfig.envDurationMs);
+			envDurShown = clampInt(envDurShown, 125, 5000);
+			boolean isSamplerContext = activeBrush instanceof SamplerBrush
+					|| isSamplerDefaultContext;
+			if (isSamplerContext) {
+				envDurationMs = envDurShown;
+				gConfig.envDurationMs = envDurShown;
+			}
+			envDurationSlider.setLimits(envDurShown, 125, 5000);
+			envDurationField.setText(""+ envDurShown);
+			envFitToBrushCheck.setSelected(isAdjustEnvelope);
+
+			// granular point event duration
+			int granDurShown = clampInt(granPointDurationMs, 125, 5000);
+			granPointDurationMs = granDurShown;
+			granDurationSlider.setLimits(granDurShown, 125, 5000);
+			granDurationField.setText("" + granDurShown);
+			
+
+			// warp radio + exponent
+			linearWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.LINEAR);
+			expWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.EXP);
+			squareRootOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.SQRT);
+			customWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.CUSTOM);
+
+			warpSlider.setValue(gConfig.warpExponent);
+
+			// warp slider only editable when editEnabled AND warp is active
+			warpSlider.setEnabled(canEdit && gConfig.warpShape != GestureGranularConfig.WarpShape.LINEAR);
+
+			// (Optional) also disable warp radio buttons outside edit mode:
+			linearWarpOption.setEnabled(canEdit);
+			expWarpOption.setEnabled(canEdit);
+			squareRootOption.setEnabled(canEdit);
+			customWarpOption.setEnabled(canEdit);
+
+		}
+		finally {
+			guiSyncing = false;
+		}
+	}
+	
+	void syncEnvelopeMenu(ADSRParams env) {
+	    if (env == null || envelopeMenu == null) return;
+	    for (int i = 0; i < envPresetItems.length; i++) {
+	        String name = envPresetItems[i];
+	        if (ENV_CUSTOM.equals(name)) continue;
+	        ADSRParams preset = envPreset(name);
+	        if (preset.equals(env)) {
+	            envelopeMenu.setSelected(i);
+	            envelopeValuesLabel.setText(formatEnv(env));
+	            return;
+	        }
+	    }
+	    // no preset match → custom
+	    int customIndex = findCustomIndex();
+	    if (customIndex >= 0) envelopeMenu.setSelected(customIndex);
+	    envelopeValuesLabel.setText(formatEnv(env));
+	}
+	
+	int findCustomIndex() {
+	    for (int i = 0; i < envPresetItems.length; i++) {
+	        if (ENV_CUSTOM.equals(envPresetItems[i])) return i;
+	    }
+	    return -1;
+	}
+
+	static int clampInt(int v, int lo, int hi) {
+		return (v < lo) ? lo : (v > hi ? hi : v);
+	}
+
+	/**
+	 * Determine which controls to enable, based on the drawing mode.
+	 */
+	void setControlsEnabled() {
+		// ---- Mode flags ----
+		final boolean inGranularEdit = (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR);
+		final boolean inSamplerEdit  = (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER);
+		final boolean inPlayOnly     = (drawingMode == DrawingMode.PLAY_ONLY);
+		// Editable only in the two DRAW_EDIT modes
+		final boolean canEdit = inGranularEdit || inSamplerEdit;
+		// Brush selection
+		final boolean hasBrush = (activeBrush != null);
+		final boolean brushIsGranular = hasBrush && (activeBrush instanceof GranularBrush);
+		final boolean brushIsSampler  = hasBrush && (activeBrush instanceof SamplerBrush);
+		// PLAY_ONLY visibility rule:
+		// - if no brush selected: show everything (disabled)
+		// - if brush selected: show only relevant controls (disabled)
+		final boolean showGranular = inGranularEdit || (inPlayOnly && (!hasBrush || brushIsGranular));
+		final boolean showSampler  = inSamplerEdit  || (inPlayOnly && (!hasBrush || brushIsSampler));
+		// Stroke-dependent controls: only enabled when editing AND a brush is selected
+		final boolean strokeEditable = canEdit && hasBrush;
+
+		// ---------- Stroke-dependent controls (shared) ----------
+		allOption.setEnabled(strokeEditable);
+		rdpOption.setEnabled(strokeEditable);
+		curveOption.setEnabled(strokeEditable);
+		rdpEpsilonSlider.setEnabled(strokeEditable);
+		curvePointsSlider.setEnabled(strokeEditable);
+		// Gesture timing option is relevant for both brush types, but only editable with a selected brush
+		gestureOption.setEnabled(strokeEditable);
+		// Fixed timing is Granular-only *global* default (carried to next GranularBrush)
+		fixedOption.setVisible(showGranular);
+		fixedOption.setEnabled(inGranularEdit);
+		// If we're in Sampler context, ensure gesture timing is selected (sampler never uses fixed)
+		if (inSamplerEdit || (inPlayOnly && brushIsSampler)) {
+			gestureOption.setSelected(true);
+		}
+		// Schedule controls (shared)
+		resampleSlider.setEnabled(strokeEditable);
+		durationSlider.setEnabled(strokeEditable);
+		// Fields are display-only (non-editable). Keep enabled for legibility/select/select.
+		resampleField.setEnabled(true);
+		durationField.setEnabled(true);
+
+		// ---------- Granular-only synth controls ----------
+		burstSlider.setVisible(showGranular);
+		burstSlider.setEnabled(inGranularEdit);
+		grainLengthSlider.setVisible(showGranular);
+		grainLengthSlider.setEnabled(inGranularEdit);
+		hopLengthSlider.setVisible(showGranular);
+		hopLengthSlider.setEnabled(inGranularEdit);
+		grainLengthField.setVisible(showGranular);
+		grainLengthField.setEnabled(true);
+		hopLengthField.setVisible(showGranular);
+		hopLengthField.setEnabled(true);
+		// Warp options
+		linearWarpOption.setVisible(showGranular);
+		linearWarpOption.setEnabled(inGranularEdit);
+		expWarpOption.setVisible(showGranular);
+		expWarpOption.setEnabled(inGranularEdit);
+		squareRootOption.setVisible(showGranular);
+		squareRootOption.setEnabled(inGranularEdit);
+		customWarpOption.setVisible(showGranular);
+		customWarpOption.setEnabled(inGranularEdit);
+		warpSlider.setVisible(showGranular);
+		final boolean warpActive =
+				(gConfig != null && gConfig.warpShape != GestureGranularConfig.WarpShape.LINEAR);
+		warpSlider.setEnabled(inGranularEdit && warpActive);
+
+		// ---------- Sampler-only synth controls ----------
+		// Envelope menu is sampler-only in your current UX (visible in sampler edit and play-only sampler context).
+		envelopeMenu.setVisible(showSampler);
+		envelopeMenu.setEnabled(inSamplerEdit && canEdit);
+		envDurationSlider.setVisible(showSampler);
+		envDurationSlider.setEnabled(inSamplerEdit && canEdit);
+		envDurationField.setVisible(showSampler);
+		envDurationLabel.setVisible(showSampler);
+		envFitToBrushCheck.setVisible(showSampler);
+		envFitToBrushCheck.setEnabled(inSamplerEdit);
+		
+		// Granular point duration shares the same row, so show it only in Granular edit mode.
+		granDurationSlider.setVisible(inGranularEdit);
+		granDurationSlider.setEnabled(inGranularEdit);
+		granDurationField.setVisible(inGranularEdit);
+		granDurationField.setEnabled(true);
+		granDurationLabel.setVisible(inGranularEdit);
+
+		// ---------- Global synth controls (shared) ----------
+		// Gain/pitch are editable in either edit mode, read-only in play-only.
+		gainSlider.setEnabled(canEdit);
+		pitchShiftText.setEnabled(canEdit);
+
+		// If you have any other always-visible labels, they are intentionally not handled here.
+	}
+		
+	boolean isEditable() {
+	    return (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) || (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER);
+	}
+	
+	void resetConfigToDefaults() {
+		if (!isEditable()) return;
+		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) 
+			gConfig.copyFrom(defaultGranConfig);
+		else 
+			gConfig.copyFrom(defaultSampConfig);
+		// If a stroke is active, reset its per-stroke cfg too
+		if (activeBrush != null) {
+			activeBrush.cfg().copyFrom(gConfig);
+			recomputeUIBaselinesFromActiveBrush();
+		} 
+		else {
+			// no stroke: baselines don't apply
+			baselineCount = 0;
+			baselineDurationMs = 0;
+		}
+		syncGuiFromConfig();
+	}
+	
+	
+	/*----------------------------------------------------------------*/
+	/*                                                                */
+	/*                          EXPERIMENTS                           */
+	/*                                                                */
+	/*----------------------------------------------------------------*/
+	
+	
+	/**
+	 * Print suggested values for optimizing grain overlap for a brush. 
+	 * 
+	 * @param alpha
+	 */
+	void printGOptHints(float alpha) {
+		if (activeBrush == null) return;
+
+		GestureGranularConfig snap = activeBrush.snapshot();
+		GestureSchedule schedule = scheduleBuilder.build(activeBrush.curve(), snap, audioOut.sampleRate());
+		if (schedule == null || schedule.isEmpty()) {
+			//System.out.println("---- Granular OptHints [activeBrush] ----");
+			System.out.println("No schedule / empty schedule.");
+			//System.out.println("----------------------------------------");
+			return;
+		}
+
+		// Use the ACTUAL N and T produced by the builder
+		int Nactual = schedule.points.size();
+
+		// Duration from schedule times (robust to whether builder used drag time, target time, clamping, etc.)
+		float[] tMs = schedule.timesMs;
+		float t0 = tMs[0];
+		float t1 = tMs[tMs.length - 1];
+		float TactualMs = Math.max(0f, t1 - t0);
+
+		// If you normally normalize/enforce for playback, do the same here so the debug matches playback.
+		// (Optional but recommended)
+		float[] norm = GestureSchedule.normalizeTimesToStartAtZero(tMs);
+		GestureSchedule.enforceNonDecreasing(norm);
+		TactualMs = norm[norm.length - 1] - norm[0];
+		
+		float S = PACurveUtility.pathLength(schedule.points);
+		float Tsec = schedule.durationMs() / 1000f;
+		float hsec = snap.hopLengthSamples / audioOut.sampleRate();
+		float dHop = (S / Tsec) * hsec;   // px per hop
+		float targetSpacingPx = dHop * alpha;     // or 0.75*dHop, etc.
+		//if (isVerbose) {
+		//	println("-- path length px = "+ S);
+		//	println("-- dHop = "+ dHop +", alpha = "+ alpha);
+		//	println("-- targetSpacingPx = "+ targetSpacingPx);
+		//}
+		
+		StringBuffer info = new StringBuffer();
+		this.optGrainCount = calcGranularOptHints(
+				"activeBrush",
+				Nactual,
+				TactualMs,
+				snap.hopLengthSamples,
+				snap.grainLengthSamples,
+				audioOut.sampleRate(),
+				(ArrayList<PVector>) schedule.points,
+				targetSpacingPx,   // d0
+				1.0f,   // wt
+				0.25f,   // ws
+				info
+				);
+		//if (isVerbose) println(info.toString());
+	}
+
+	/**
+	 * Calculate optimal configuration settings for a granular brush. 
+	 * 
+	 * @return optimal number of samples if time duration is kept as is
+	 */
+	public int calcGranularOptHints(
+			String tag,
+			int N, float Tms,
+			int hopSamples, int grainLenSamples,
+			float sr,
+			List<PVector> scheduledPoints,   // the list you will actually schedule
+			float targetSpacingPx, float wt, float ws,
+			StringBuffer sb
+			) {
+		// ---- GUI ranges ----
+		final int   RESAMPLE_MIN = 2,    RESAMPLE_MAX = 2048;
+		final float DUR_MIN_MS   = 50f,  DUR_MAX_MS   = 16000f; // bump from 10000 -> 16000 if desired
+
+		// Path length in px
+		float S = PACurveUtility.pathLength(scheduledPoints);
+
+		// Guard rails
+		N = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, N));
+		Tms = Math.max(DUR_MIN_MS, Math.min(DUR_MAX_MS, Tms));
+
+		float T = Math.max(0.001f, Tms / 1000f);
+		float h = hopSamples / sr;        // seconds
+		float hopMs = 1000f * h;
+
+		int Nm1 = Math.max(1, N - 1);
+		float dtMs = Tms / Nm1;
+		float r = dtMs / hopMs;           // dt/hop ratio
+		float dsPx = (S > 0 ? S / Nm1 : Float.NaN);
+
+		// Time-opt formulas
+		float ToptRawMs = 1000f * (Nm1 * h);
+		int NoptRaw = 1 + Math.max(1, Math.round((T * sr) / hopSamples));
+
+		// Clamp to widget ranges
+		float ToptMs = Math.max(DUR_MIN_MS, Math.min(DUR_MAX_MS, ToptRawMs));
+		int Nopt = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, NoptRaw));
+
+		// Compromise N* (time+space)
+		int NstarRaw = -1, Nstar = -1;
+		if (S > 0 && targetSpacingPx > 0 && (wt > 0 || ws > 0)) {
+			float numer = wt * T * T + ws * S * S;
+			float denom = wt * T * h + ws * S * targetSpacingPx;
+			if (denom > 1e-9f) {
+				float xStar = numer / denom; // x = N-1
+				NstarRaw = 1 + Math.max(1, Math.round(xStar));
+				Nstar = Math.max(RESAMPLE_MIN, Math.min(RESAMPLE_MAX, NstarRaw));
+			}
+		}
+
+		float overlapPct = Float.NaN;
+		if (grainLenSamples > 0) overlapPct = 100f * (1f - hopSamples / (float)grainLenSamples);
+
+		String densityWord = (r > 1.25f) ? "SPARSE" : (r < 0.80f ? "DENSE" : "OK");
+		
+		// construct informative StringBuffer
+		sb.append("\n---- Granular OptHints" + (tag == null ? "" : " [" + tag + "]") + " ----\n");
+		sb.append("Current: N=" + N + "  Tms=" + fmt(Tms, 2) +
+				"  hop=" + hopSamples + " samp (" + fmt(hopMs, 3) + " ms)" +
+				"  grain=" + grainLenSamples + " samp  sr=" + fmt(sr, 1) +"\n");
+		sb.append("Timing:  avg dt≈" + fmt(dtMs, 3) + " ms  dt/hop≈" + fmt(r, 2) + "  => " + densityWord +"\n");
+		if (!Float.isNaN(dsPx)) sb.append("Space:   pathLen≈" + fmt(S, 2) + " px  avg ds≈" + fmt(dsPx, 3) + " px");
+		if (!Float.isNaN(overlapPct)) sb.append("Overlap: ≈" + fmt(overlapPct, 1) + "% (1 - H/L)\n");
+		sb.append("If keep N:  Topt≈" + fmt(ToptRawMs, 2) + " ms" +
+				(ToptMs != ToptRawMs ? "  (clamped→" + fmt(ToptMs, 2) + ")" : ""));
+		sb.append("\n");
+		sb.append("If keep T:  Nopt≈" + NoptRaw +
+				(Nopt != NoptRaw ? "  (clamped→" + Nopt + ")" : ""));
+		sb.append("\n");
+		if (Nstar > 0) {
+			sb.append("Compromise (wt=" + fmt(wt,3) + ", ws=" + fmt(ws,3) + ", d0=" + fmt(targetSpacingPx,2) + "px): N*≈" +
+					NstarRaw + (Nstar != NstarRaw ? " (clamped→" + Nstar + ")" : ""));
+			sb.append("\n");
+		}
+		// Extra guidance when clamped
+		if (NoptRaw > RESAMPLE_MAX && r > 1.25f) {
+			sb.append("Note: Nopt exceeds max; likely sparse even at max resample. Consider CURVE_POINTS, shorter T, or smaller hop.\n");
+		}
+		if (ToptRawMs > DUR_MAX_MS && r > 1.25f) {
+			sb.append("Note: Topt exceeds max; consider raising Duration max (you mentioned 16000ms), or increase N / use CURVE_POINTS.\n");
+		}
+		sb.append("-------------------------------------------");
+		
+		// optimal number of samples if time is kept as is
+		return Nstar;
+	}
+
+	static String fmt(float v, int decimals) {
+		return String.format("%." + decimals + "f", v);
+	}
+
+
+
+}
