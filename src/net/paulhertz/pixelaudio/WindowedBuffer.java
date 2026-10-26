@@ -33,8 +33,10 @@ public class WindowedBuffer {
      * 
 	 * @param buffer        the source audio data
 	 * @param windowSize    the number of samples in each window
-	 * @param hopSize       the number of samples to advance for each window (must be > 0)
-	 * @throws IllegalArgumentException if buffer is empty, or if windowSize or hopSize are not positive
+	 * @param hopSize       the signed number of samples to move after each window;
+	 *                      positive values move forward, negative values move backward,
+	 *                      and zero leaves the position unchanged
+	 * @throws IllegalArgumentException if buffer is empty or windowSize is not positive
 	 */
 	public WindowedBuffer(float[] buffer, int windowSize, int hopSize) {
         if (buffer.length == 0) {
@@ -43,9 +45,6 @@ public class WindowedBuffer {
         if (windowSize <= 0) {
             throw new IllegalArgumentException("Window size must be positive");
         }
-        if (hopSize <= 0) {
-            throw new IllegalArgumentException("Hop size must be positive");
-        }
         this.buffer = buffer;
         this.windowSize = windowSize;
         this.hopSize = hopSize;
@@ -53,7 +52,8 @@ public class WindowedBuffer {
     }
 
     /**
-     * Returns the next window, advancing the read index by hopSize.
+     * Returns the next window, then moves the read index by the signed hop size.
+     * A zero hop size returns the same window on successive calls.
      * Wraps around the buffer as needed.
 	 * 
 	 * @return a window of audio samples from the buffer, starting at the current 
@@ -70,7 +70,7 @@ public class WindowedBuffer {
             System.arraycopy(buffer, 0, window, firstCopyLen, remaining);
         }
         // Advance start index
-        index = (index + hopSize) % bufferLen;
+        index = (int) Math.floorMod((long) index + hopSize, bufferLen);
         return window;
     }
 
@@ -82,8 +82,6 @@ public class WindowedBuffer {
 	 * @return a window of audio samples from the buffer, starting at the normalized index and wrapping around if necessary
      */
     public float[] gettWindowAtIndex(int idx) {
-    	int len = buffer.length;
-    	idx = ((idx % len) + len) % len; // normalize to 0..len-1
     	setIndex(idx);
         return nextWindow();
     }
@@ -102,7 +100,7 @@ public class WindowedBuffer {
 	 * @param index the new index to set (can be any integer, will be normalized to buffer length)
 	 */
     public void setIndex(int index) {
-		this.index = index % buffer.length;
+		this.index = Math.floorMod(index, buffer.length);
 	}
 
 	/** 
@@ -122,23 +120,20 @@ public class WindowedBuffer {
     }
 
     /** 
-     * Expose hop size, the number of samples to advance for each window.
-	 * @return the number of samples to advance for each window, which determines 
-	 *         how much the index moves forward after each call to nextWindow()	
+	 * Expose hop size, the signed number of samples to move after each window.
+	 * @return the signed number of samples moved after each call to nextWindow();
+	 *         positive moves forward, negative moves backward, and zero pauses
 	 */
     public int getHopSize() {
         return hopSize;
     }
 
     /** 
-     * Set the hop size, the number of samples to advance for each window. 
-	 * @param    hopSize the new hop size to set (must be > 0)
-	 * @throws IllegalArgumentException if hopSize is not positive
+	 * Set the signed hop size. Positive values move forward through the buffer,
+	 * negative values move backward, and zero leaves the current position unchanged.
+	 * @param hopSize the new signed hop size
 	*/
 	public void setHopSize(int hopSize) {	
-		if (hopSize <= 0) {
-			throw new IllegalArgumentException("Hop size must be positive");
-		}
 		this.hopSize = hopSize;
 	}
 
