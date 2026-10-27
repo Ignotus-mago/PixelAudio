@@ -773,6 +773,7 @@ import ddf.minim.*;
 	 *                            usually obtained when reading an audio file
 	 */
 	void updateAudioChain(float[] sig, float bufferSampleRate) {
+		this.bufferSampleRate = bufferSampleRate;
 	    // Decide target length (make this a single source of truth)
 	    int targetSize = mapper.getSize();
 	    if (targetSize <= 0) return;

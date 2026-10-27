@@ -165,6 +165,7 @@ import com.hamoid.*;
  * Press 'm' to change the Sampler noise reduction profile.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
+ * Press 'D' to toggle between long and short Sampler point envelope duration.
  * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
  * Press 'd' to toggle play audio on new brush .
  * Press 'c' to apply color from image file to display image.
@@ -2236,6 +2237,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	 *                            usually obtained when reading from an audio file
 	 */
 	void updateAudioChain(float[] sig, float bufferSampleRate) {
+		this.bufferSampleRate = bufferSampleRate;
 	    // 0) Decide target length (make this a single source of truth)
 	    int targetSize = mapper.getSize();
 	    if (targetSize <= 0) return;

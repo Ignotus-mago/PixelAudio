@@ -669,7 +669,9 @@ import ddf.minim.*;
 	 */
 	public void writeImageToAudio(PImage img, PixelAudioMapper mapper, float[] sig, PixelAudioMapper.ChannelNames chan) {
 		// If img is the *display* (shifted) image, commit its phase into audio:
+		img.loadPixels();
 		sig = mapper.mapImgToSig(img.pixels, sig, chan);
+		img.updatePixels();
 	}
 	
 	/**
@@ -867,6 +869,7 @@ import ddf.minim.*;
 	 *                            usually obtained when reading an audio file
 	 */
 	void updateAudioChain(float[] sig, float bufferSampleRate) {
+		this.bufferSampleRate = bufferSampleRate;
 	    // Decide target length (make this a single source of truth)
 	    int targetSize = mapper.getSize();
 	    if (targetSize <= 0) return;

@@ -139,6 +139,7 @@ import com.hamoid.*;
  * Press 'm' to change the Sampler noise reduction profile.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.
+ * Press 'D' to toggle between long and short Sampler point envelope duration.
  * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
  * Press 'd' to toggle play audio on new brush .
  * Press 'c' to apply color from image file to display image.

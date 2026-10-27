@@ -3105,6 +3105,7 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 	 *                            usually obtained when reading from an audio file
 	 */
 	void updateAudioChain(float[] sig, float bufferSampleRate) {
+		this.bufferSampleRate = bufferSampleRate;
 		// *** WindowedBuffer support *** //
 		suspendWindowAudio();
 		installBackingSource(sig, bufferSampleRate);
