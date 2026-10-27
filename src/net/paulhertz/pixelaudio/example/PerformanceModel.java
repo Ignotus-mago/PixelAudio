@@ -483,8 +483,6 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 	        CueResult apply(GestureGranularConfig.Builder cfg, PACurveMaker curve, PerformanceModel app) {
 	        	int newDurationMs = (int)(PixelAudio.randomInRange(2, 5)) * 500;
 	        	println("---- new duration = "+ newDurationMs);
-				int curveColor = PixelAudioMapper.composeColor(233, 34, 34, 255);
-				curve.setBrushColor(curveColor);
 				cfg.targetDurationMs = newDurationMs;
 				cfg.rdpEpsilon = 2;
 				cfg.pathMode = GestureGranularConfig.PathMode.ALL_POINTS;
