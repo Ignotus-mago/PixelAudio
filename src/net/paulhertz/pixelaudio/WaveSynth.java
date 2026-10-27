@@ -648,11 +648,10 @@ public class WaveSynth {
 	 *  </p>
 	 * 
 	 * @param frame     number of the frame to render
-	 * @param pos       index position of the pixels
-	 * @param wdList    list of WaveData objects that calculate output value
+	 * @param pos       index position of the pixel
 	 * @return          the color of the pixel in RGBA format
 	 */
-	public int renderPixel(int frame, int pos, ArrayList<WaveData> wdList) {
+	public int renderPixel(int frame, int pos) {
 		// noisiness is an experiment, left for future development
 		// float freqShift = noisiness != 0.0f ? noiseAt(pos % mapper.width, (int) Math.floor(pos / mapper.width)) : 1;
 	    // if (pos == 0) System.out.println("==> freqShift = "+ freqShift);

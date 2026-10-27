@@ -27,7 +27,7 @@ import net.paulhertz.pixelaudio.PixelAudioMapper;
 import processing.core.*;
 
 // TODO time data output
-// TODO evaluate for deletion? KEEP for possible future development.
+// This is experimental code for possible future development.
 
 /**
  * Reduced set of Adobe Illustrator 3.0 (ancient but still useful) path operators for 

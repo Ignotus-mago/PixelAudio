@@ -4,6 +4,9 @@ import processing.core.PApplet;
 import processing.core.PImage;
 import net.paulhertz.pixelaudio.PixelAudio;
 import net.paulhertz.pixelaudio.BitmapTransform;
+
+import java.io.File;
+
 import net.paulhertz.pixelaudio.AffineTransformType;
 
 // TODO a version that uses window resizing for transforms that swap width and height.
@@ -77,12 +80,11 @@ public class TransformPImage extends PApplet {
 	}
 	
 	public void setup() {
-		pixelaudio = new PixelAudio(this);
+		dataPath = sketchPath("examples/TransformPImage/data") + File.separator;
 		// in Processing:
 		// dataPath = dataPath("");
 		// img = loadImage(imgFilename);    // points to the local "data" folder
-		// in Eclipse, hard-coded:
-		dataPath = "/Users/paulhz/Code/Workspace/TestProcessing/src/net/paulhertz/testpixelaudio/data";
+		pixelaudio = new PixelAudio(this);
 		img = loadImage(dataPath +"/"+ imgFilename);
 		println("-- data path: "+ dataPath);
 		showHelp();
