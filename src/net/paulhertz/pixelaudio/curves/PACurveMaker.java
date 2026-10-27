@@ -43,6 +43,8 @@ import net.paulhertz.pixelaudio.schedule.GestureSchedule;
 // TODO JSON I/O: essential variables are dragPoints, epsilon, dragTimes. It's useful to save bezierBias and eventSteps. 
 // One might also save curve data, but that is proper to PABezShape. When planting audio, the data used for the plant is critical. 
 // That would seem to include the curve, reconstructed, and the curve points. Finally, one might consider the drawing properties. 
+// TODO future use of PACurveMaker color fields for application brush drawing and interaction, 
+// coupled with {@code flockID} for grouping. 
 
 
 /**
@@ -255,7 +257,8 @@ public class PACurveMaker implements PAGesture {
 
 	/** The distance in pixels between the edges of the brush stroke, double the distance from the central line */
 	public float brushSize = 24.0f;
-	/** boolean value that determines whether curve  and brush shapes are weighted */
+	// TODO boolean value that determines whether curve  and brush shapes are weighted ?
+	/** color of line when drawn by dragging mouse or by other input device */
 	public int dragColor = PABezShape.composeColor(233, 199, 89, 128);   // tan
 	/** weight of lines drawn between PVectors in allPoints */
 	public float dragWeight = 8;
@@ -269,8 +272,12 @@ public class PACurveMaker implements PAGesture {
 	public float curveWeight = 4;
 	/** Color for simulated brushstroke fill and stroke, stored in brushShape */
 	public int brushColor = PABezShape.composeColor(76, 199, 144, 96);   // transparent green
+	/** Color for simulated brushstroke fill and stroke when hovering */
+	public int hoverBrushColor = PABezShape.composeColor(76, 199, 144, 144);   // less transparent green
 	/** Color for highlighted brush stroke, stored in brushShape */
-	public int activeBrushColor = PABezShape.composeColor(199, 89, 55, 192);   // transparent brick red
+	public int activeBrushColor = PABezShape.composeColor(199, 89, 55, 192);   // transparent orange red
+	/** Color for dimmed brush stroke */
+	public int dimmedBrushColor = PABezShape.composeColor(89, 136, 115, 96);   // dark low saturation transparent green
 	/** weight of stroke for brushStroke, set to 0 for no stroke */
 	public float brushWeight = 0;
 	/** color of eventPoints markers */
@@ -279,6 +286,9 @@ public class PACurveMaker implements PAGesture {
 	public float eventPointsSize = 8;
 	/** using a custom brush shape */
 	public boolean brushIsCustom = false;
+	
+	/** flock ID for grouping brushes */
+	public int flockID = -1;
 	
 	
 	/* ---------------------------------------------------------- */
@@ -475,6 +485,29 @@ public class PACurveMaker implements PAGesture {
 		this.brushColor = brushColor;
 		this.brushWeight = brushWeight;
 		this.activeBrushColor = activeBrushColor;
+	}
+
+	public void setDrawingProperties(int dragColor, float dragWeight, int rdpColor, float rdpWeight, 
+			int curveColor, float curveWeight, int brushColor, float brushWeight, 
+			int activeBrushColor, int hoverBrushColor, int dimmedBrushColor) {
+		this.dragColor = dragColor;
+		this.dragWeight = dragWeight;
+		this.rdpColor = rdpColor;
+		this.rdpWeight = rdpWeight;
+		this.curveColor = curveColor;
+		this.curveWeight = curveWeight;
+		this.brushColor = brushColor;
+		this.brushWeight = brushWeight;
+		this.activeBrushColor = activeBrushColor;
+		this.hoverBrushColor = hoverBrushColor;
+		this.dimmedBrushColor = dimmedBrushColor;
+	}
+	
+	public void setBrushColors(int brushColor, int activeBrushColor, int hoverBrushColor, int dimmedBrushColor) {
+		this.brushColor = brushColor;
+		this.activeBrushColor = activeBrushColor;
+		this.hoverBrushColor = hoverBrushColor;
+		this.dimmedBrushColor = dimmedBrushColor;
 	}
 
 	private static int[] normalizeOffsets(int[] t) {
@@ -1341,7 +1374,7 @@ public class PACurveMaker implements PAGesture {
 	/*                    DRAWING AND DISPLAY                     */
 	/* ---------------------------------------------------------- */
 	
-	/* ------------- drawing attributes for lines, curves, shapes ------------- */
+	/* ------------- drawing attributes for lines, curves, shapes, flockID ------------- */
 
 	public int getDragColor() {
 		return dragColor;
@@ -1399,12 +1432,12 @@ public class PACurveMaker implements PAGesture {
 		this.brushColor = brushColor;
 	}
 
-	public float getBrushWeight() {
-		return brushWeight;
+	public int getHoverBrushColor() {
+		return hoverBrushColor;
 	}
 
-	public void setBrushWeight(float brushWeight) {
-		this.brushWeight = brushWeight;
+	public void setHoverBrushColor(int hoverBrushColor) {
+		this.hoverBrushColor = hoverBrushColor;
 	}
 
 	public int getActiveBrushColor() {
@@ -1413,6 +1446,22 @@ public class PACurveMaker implements PAGesture {
 
 	public void setActiveBrushColor(int activeBrushColor) {
 		this.activeBrushColor = activeBrushColor;
+	}
+
+	public int getDimmedBrushColor() {
+		return dimmedBrushColor;
+	}
+
+	public void setDimmedBrushColor(int dimmedBrushColor) {
+		this.dimmedBrushColor = dimmedBrushColor;
+	}
+
+	public float getBrushWeight() {
+		return brushWeight;
+	}
+
+	public void setBrushWeight(float brushWeight) {
+		this.brushWeight = brushWeight;
 	}
 
 	public int getEventPointsColor() {
@@ -1429,6 +1478,14 @@ public class PACurveMaker implements PAGesture {
 
 	public void setEventPointsSize(float eventPointsSize) {
 		this.eventPointsSize = eventPointsSize;
+	}
+	
+	public int getFlockID() {
+		return flockID;
+	}
+
+	public void setFlockID(int flockID) {
+		this.flockID = flockID;
 	}
 	
 	/**
@@ -1448,6 +1505,8 @@ public class PACurveMaker implements PAGesture {
 	    sb.append("  curve points count = " + getCurvePoints().size() + "\n\n");
 	    return sb.toString();
 	}
+	
+	
 	/************************************************
 	 *                                              *
 	 * ------------- DRAWING METHODS -------------  *
