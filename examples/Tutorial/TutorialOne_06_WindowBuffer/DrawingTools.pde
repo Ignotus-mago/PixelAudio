@@ -145,7 +145,6 @@ PathMode defaultPathModeFor(BrushOutput out) {
 
 /**
  * Entry point for drawing brushstrokes on the screen.
- * TODO distinguish brush types by color.
  */
 public void drawBrushShapes() {
   if (brushes == null || brushes.isEmpty()) return;
@@ -494,16 +493,6 @@ public synchronized void runPointEvents() {
 public boolean mouseInPoly(ArrayList<PVector> poly) {
   return PABezShape.pointInPoly(poly, mouseX, mouseY);
 }
-
-
-/**
- * Reinitializes audio and clears event lists.
- * -- TODO drop, this used to be the "emergency off" switch for runaway audio processing
- */
-@Deprecated
-  public void reset() {
-}
-
 
 /**
  * Removes the current active AudioBrushLite instance.

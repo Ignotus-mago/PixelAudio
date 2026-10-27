@@ -3778,6 +3778,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 *                            usually obtained when reading from an audio file
 	 */
 	void updateAudioChain(float[] sig, float bufferSampleRate) {
+		this.bufferSampleRate = bufferSampleRate;
 	    // 0) Decide target length (make this a single source of truth)
 	    int targetSize = mapper.getSize();
 	    if (targetSize <= 0) return;

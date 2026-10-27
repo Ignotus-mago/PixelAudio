@@ -232,7 +232,7 @@ public int handleClickOutsideBrush(int x, int y) {
   if (!useGranularSynth) {
     ensureSamplerReady();
     float panning = map(x, 0, width, -0.8f, 0.8f);
-    int len = calcSampleLen();
+    int len = calcSampleLen(samplerPointDurationMs, 1.0, 0.0625);
     samplelen = playSample(samplePos, len, samplerPointGain, defaultEnv, panning);
     int durationMS = (int)(samplelen / sampleRate * 1000);
     pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
@@ -241,15 +241,13 @@ public int handleClickOutsideBrush(int x, int y) {
 
   ensureGranularReady();
   float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-  final int grainCount = useLongBursts
-    ? 2 * (int)Math.round(noteDuration / hopMsF)
-    : (int)Math.round(noteDuration / hopMsF);
-  println("-- granular point burst with grainCount = " + grainCount);
+  final int grainCount = Math.max(1, (int)Math.round(granPointDurationMs / hopMsF));
+  if (isDebugging) println("-- granular point burst with grainCount = " + grainCount);
 
   java.util.ArrayList<PVector> path = new java.util.ArrayList<>(grainCount);
   int[] timing = new int[grainCount];
   for (int i = 0; i < grainCount; i++) {
-    if (useLongBursts) {
+    if (useLongBurstGrains) {
       int local = PixelAudioMapper.wrap(localSamplePos + hopSamples * i, mapper.getSize());
       path.add(getCoordFromSignalPosLocal(local));
     } else {

@@ -129,6 +129,7 @@ public PVector getCoordFromSignalPos(int pos) {
  *                            usually obtained when reading from an audio file
  */
 void updateAudioChain(float[] sig, float bufferSampleRate) {
+  this.bufferSampleRate = bufferSampleRate;
   // 0) Decide target length (make this a single source of truth)
   int targetSize = mapper.getSize();
   if (targetSize <= 0) return;
@@ -172,7 +173,7 @@ void runSamplerPointEvent(int x, int y) {
   ensureSamplerReady();
   int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
   float panning = map(x, 0, width, -0.8f, 0.8f);
-  int len = calcSampleLen(noteDuration, 1.0f, 0.0625f);
+  int len = calcSampleLen(envDuration, 1.0f, 0.0625f);
   samplelen = playSample(signalPos, len, samplerPointGain, samplerEnv, panning);
   int durationMS = (int)(samplelen / sampleRate * 1000);
   pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
@@ -187,13 +188,13 @@ void runSamplerPointEvent(int x, int y) {
 void runGranularPointEvent(int x, int y) {
   ensureGranularReady();
   float hopMsF = Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-  final int grainCount = useLongBursts ?  8 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
+  final int grainCount = Math.max(1, (int) Math.round(granPointDurationMs / hopMsF));
   if (isVerbose) println("-- granular point burst with grainCount = "+ grainCount);
   ArrayList<PVector> path = new ArrayList<>(grainCount);
   int[] timing = new int[grainCount];
   int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
   for (int i = 0; i < grainCount; i++) {
-    if (useLongBursts) {
+    if (useLinearPointTraversal) {
       path.add(getCoordFromSignalPos(signalPos + hopSamples * i));
     } else {
       path.add(this.jitterCoord(x, y, 3));
@@ -412,7 +413,32 @@ public int calcSampleLen(int dur, float mean, float variance) {
 }
 
 public int calcSampleLen() {
-  return calcSampleLen(noteDuration, 1.0f, 0.0625f);
+  return calcSampleLen(envDuration, 1.0f, 0.0625f);
+}
+
+/** Calculates a Sampler event duration from the average interval between scheduled points. */
+int computeEnvDurationMs(GestureSchedule sched, String envName, int fallbackMs) {
+  int n = sched.points.size();
+  if (n < 2) return fallbackMs;
+  float avgStepMs = sched.durationMs() / (float)(n - 1);
+  float factor;
+  switch (envName) {
+  case "Pluck":
+  case "Percussion":
+    factor = 4.0f;
+    break;
+  case "Soft":
+  case "Fade":
+    factor = 3.0f;
+    break;
+  case "Swell":
+  case "Pad":
+    factor = 2.0f;
+    break;
+  default:
+    factor = 3.0f;
+  }
+  return constrain(Math.round(avgStepMs * factor), envMinDurationMs, envMaxDurationMs);
 }
 
 /**

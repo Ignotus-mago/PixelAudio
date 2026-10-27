@@ -111,6 +111,7 @@
  * Press 'y' to select granular or sampler synth for click response.
  * Press 'r' to select long or short grain duration .
  * Press 'b' to toggle between long burst grains and short burst grains.
+ * Press 'B' to toggle between long and short granular point event duration.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'P' to adjust pitch of current brushstroke.
  * Press '.' to increment epsilon value of current brush (reduced points decrease).
@@ -120,6 +121,7 @@
  * Press 'm' to change the Sampler noise reduction profile.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
+ * Press 'D' to toggle between long and short Sampler point envelope duration.
  * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
  * Press 'd' to toggle play audio on new brush .
  * Press 'c' to apply color from image file to display image.
@@ -137,10 +139,10 @@
  * Press 'X' to delete the most recent brush shape.
  * Press 'u' to mute audio.
  * Press 'V' to record a video.
- * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
- * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
- * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.
- * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '=' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.
+ * Press '-' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.
+ * Press '+' to send UDP message to Max (simpleAudioIO.maxpat): unused.
+ * Press '_' to send UDP message to Max (simpleAudioIO.maxpat): unused.
  * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.
  * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.
  * Press 'h' or 'H' to show help message in the console.
@@ -257,6 +259,10 @@ int audioLength;        // length of the audioSignal, same as the number of pixe
 // Sampler Instrument duration and envelopes
 final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
 int envDuration;                // current envelope duration
+final int shortPointDurationMs = 250;
+final int longPointDurationMs = noteDuration;
+boolean useLongSamplerPointDuration = true;
+int samplerPointDurationMs = longPointDurationMs;
 boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
 String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
 int presetIndex = envPresets.length - 1;    // current preset index
@@ -308,6 +314,8 @@ boolean useLongBursts = true;               // controls the number of burst grai
 int maxBurstGrains = 8;
 int minBurstGrains = 1;
 int burstGrains = useLongBursts ? maxBurstGrains : minBurstGrains;
+boolean useLongGranularPointDuration = true;
+int granPointDurationMs = longPointDurationMs;
 boolean usePitchedGrains = false;           // detune a granular gesture, if true
 
 
@@ -938,6 +946,11 @@ public void parseKey(char key, int keyCode) {
     msg = useLongBursts ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
     println("-- Granular synth uses "+ msg +" grains.");
     break;
+  case 'B': // toggle between long and short granular point event duration
+    useLongGranularPointDuration = !useLongGranularPointDuration;
+    granPointDurationMs = useLongGranularPointDuration ? longPointDurationMs : shortPointDurationMs;
+    println("-- granular point duration = " + granPointDurationMs + " ms");
+    break;
   case 'p': // jitter the pitch of granular gestures
     usePitchedGrains = !usePitchedGrains;
     msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -1003,6 +1016,11 @@ public void parseKey(char key, int keyCode) {
   case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
     isAdjustEnvelope = !isAdjustEnvelope;
     println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+    break;
+  case 'D': // toggle between long and short Sampler point envelope duration
+    useLongSamplerPointDuration = !useLongSamplerPointDuration;
+    samplerPointDurationMs = useLongSamplerPointDuration ? longPointDurationMs : shortPointDurationMs;
+    println("-- Sampler point envelope duration = " + samplerPointDurationMs + " ms");
     break;
   case 'a': //  start or stop animation (bitmap rotation along the signal path)
     isAnimating = !isAnimating;
@@ -1091,16 +1109,16 @@ public void parseKey(char key, int keyCode) {
     isAnimating = true;
     break;
     // *****]]] NETWORKING [[[***** // key commands for networking
-  case ']': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
+  case '=': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
     if (nd != null) nd.oscSendOnOff(1, true);
     break;
-  case '[': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
+  case '-': // send UDP message to Max (simpleAudioIO.maxpat): reverb OFF
     if (nd != null) nd.oscSendOnOff(1, false);
     break;
-  case '}': // send UDP message to Max (simpleAudioIO.maxpat): unused
+  case '+': // send UDP message to Max (simpleAudioIO.maxpat): unused
     if (nd != null) nd.oscSendOnOff(2, true);
     break;
-  case '{': // send UDP message to Max (simpleAudioIO.maxpat): unused
+  case '_': // send UDP message to Max (simpleAudioIO.maxpat): unused
     if (nd != null) nd.oscSendOnOff(2, false);
     break;
   case 'q': // send UDP message to Max (simpleAudioIO.maxpat): small reverb settings
@@ -1150,6 +1168,7 @@ public void showHelp() {
   println(" * Press 'y' to select granular or sampler synth for click response.");
   println(" * Press 'r' to select long or short grain duration .");
   println(" * Press 'b' to toggle between long burst grains and short burst grains.");
+  println(" * Press 'B' to toggle between long and short granular point event duration.");
   println(" * Press 'p' to jitter the pitch of granular gestures.");
   println(" * Press 'P' to adjust pitch of current brushstroke.");
   println(" * Press '.' to increment epsilon value of current brush (reduced points decrease).");
@@ -1159,6 +1178,7 @@ public void showHelp() {
   println(" * Press 'm' to change the Sampler noise reduction profile.");
   println(" * Press 'e' to change the envelope we're using .");
   println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
+  println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
   println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
   println(" * Press 'd' to toggle play audio on new brush .");
   println(" * Press 'c' to apply color from image file to display image.");
@@ -1176,10 +1196,10 @@ public void showHelp() {
   println(" * Press 'X' to delete the most recent brush shape.");
   println(" * Press 'u' to mute audio.");
   println(" * Press 'V' to record a video.");
-  println(" * Press ']' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
-  println(" * Press '[' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
-  println(" * Press '}' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
-  println(" * Press '{' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+  println(" * Press '=' to send UDP message to Max (simpleAudioIO.maxpat): reverb ON.");
+  println(" * Press '-' to send UDP message to Max (simpleAudioIO.maxpat): reverb OFF.");
+  println(" * Press '+' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
+  println(" * Press '_' to send UDP message to Max (simpleAudioIO.maxpat): unused.");
   println(" * Press 'q' to send UDP message to Max (simpleAudioIO.maxpat): small reverb settings.");
   println(" * Press 'Q' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
   println(" * Press 'h' or 'H' to show help message in the console.");

@@ -30,7 +30,10 @@
  * 5. The controls for the Sampler are fairly simple. You can change the number of points in the curve
  * with the geometry controls. You can also change the duration of the gesture and the number of
  * points in it with the Resample and Duration sliders. Finally, there's a Sampler Envelope menu
- * that will change the ADSR envelope of each sampler event point.
+ * that will change the ADSR envelope of each sampler event point. The Duration (ms) control below
+ * it sets the duration of a single click event. When isAdjustEnvelope is true (the default,
+ * toggled with the 'E' key), brush event durations are calculated from the gesture timing. When it
+ * is false, the Duration (ms) control sets both click and brush event durations.
  *
  * 6. The Granular Synth has all the controls of the Sampler synth except for the envelopes, plus
  * many controls for granular synthesis:
@@ -137,7 +140,7 @@
  * getPathPoints(sb) and then use sb.snapshot() and scheduleBuilder.build() to
  * build a GestureSchedule
  *
- * Finally, we pass the schedule and a small time offset to storeSamplerCurveTL(),
+ * Finally, we pass the schedule, configuration snapshot, and a small time offset to storeSamplerCurveTL(),
  * an array of TimedLocation objects that is checked at every pass through the
  * draw() loop and posts both Sampler instrument triggers and animation events.
  * Unlike the Granular instrument, which requires very accurate timing, the
@@ -156,6 +159,7 @@
  * Press 't' to switch between Granular and Sampler editing and playing.
  * Press 'z' to change the drawing mode of the hover brush.
  * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.
+ * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDuration.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
@@ -294,6 +298,10 @@ int grainDuration = 120;        // granular envelope duration in milliseconds
 
 // SampleInstrument setup
 int noteDuration = 1000;        // average sample synth note duration, milliseconds
+int envDuration = noteDuration; // current Sampler envelope duration
+boolean isAdjustEnvelope = true;
+int envMinDurationMs = 40;
+int envMaxDurationMs = 1280;
 int samplelen;                  // calculated sample synth note length, samples
 float samplerGain = 0.95f;      // linear gain setting for Sampler instrument
 float samplerPointGain = 0.75f;   // linear gain for Sampler instrument point events
@@ -325,9 +333,10 @@ int shortSample = 512;                      // number of samples for a relativel
 int granSamples = useShortGrain ? shortSample : longSample;    // number of samples in a grain window
 int hopSamples = granSamples/4;             // number of samples between each grain in a granular burst
 GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED, for granular point event
-boolean useLongBursts = false;              // controls the number of burst grain in a point event or gesture event
+boolean useLinearPointTraversal = false;    // controls traversal in a granular point event
 int maxBurstGrains = 4;
 int burstGrains = 1;
+int granPointDurationMs = noteDuration;
 boolean usePitchedGrains = false;
 
 
@@ -924,6 +933,11 @@ public void parseKey(char key, int keyCode) {
 		doPlayOnDraw = !doPlayOnDraw;
 		println("-- play on draw is "+ doPlayOnDraw);
 		break;
+	case 'E': // toggle calculating envelope duration from brush points or setting it to envDuration
+		isAdjustEnvelope = !isAdjustEnvelope;
+		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) envFitToBrushCheck.setSelected(isAdjustEnvelope);
+		println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+		break;
 	case 'p': // jitter the pitch of granular gestures
 		usePitchedGrains = !usePitchedGrains;
 		msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -1008,6 +1022,7 @@ public void showHelp() {
   println(" * Press 't' to switch between Granular and Sampler editing and playing.");
   println(" * Press 'z' to change the drawing mode of the hover brush.");
   println(" * Press 'd' to toggle doPlayOnDraw to play when a drawing gesture ends or not.");
+  println(" * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDuration.");
   println(" * Press 'p' to jitter the pitch of granular gestures.");
   println(" * Press 'j' to turn audio and image blending on or off.");
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");

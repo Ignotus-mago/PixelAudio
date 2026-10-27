@@ -19,13 +19,12 @@
  * See Tutorial_03_Drawing for information about drawing, audio synthesis,
  * audio events and animation. Here we'll document just the new features.
  *
- * See {@link net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing TutorialOne_03_Drawing}
+ * See TutorialOne_03_Drawing.
  *
  * NEW FEATURES
  *
  * This sketch adds a windowed audio buffer to the drawing, interaction and audio
- * synthesis tools of {@link  * net.paulhertz.pixelaudio.example.TutorialOne_03_Drawing
- * TutorialOne_03_Drawing}. A windowed audio buffer combines an audio buffer
+ * synthesis tools of TutorialOne_03_Drawing. A windowed audio buffer combines an audio buffer
  * with a method that positions a "window" within a larger source or "backing"
  * buffer and reads data from it to a separate data structure.
  * TutorialOne_06_WindowBuffer uses PixelAudio's WindowedBuffer class to store a
@@ -93,6 +92,7 @@
  * Press 'y' to select granular or sampler synth for click response.
  * Press 'r' to select long or short grain duration .
  * Press 'b' to toggle between long burst grains and short burst grains.
+ * Press 'B' to toggle between long and short granular point event duration.
  * Press 'p' to jitter the pitch of granular gestures.
  * Press 'P' to adjust pitch of current brushstroke.
  * Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).
@@ -101,7 +101,8 @@
  * Press '[' to decrement curve steps value of current brush.
  * Press 'm' to change the Sampler noise reduction profile.
  * Press 'e' to change the envelope we're using .
- * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
+ * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.
+ * Press 'D' to toggle between long and short Sampler point envelope duration.
  * Press 'a' to  start or stop animation (bitmap rotation along the signal path).
  * Press 'd' to toggle play audio on new brush .
  * Press 'c' to apply color from image file to display image.
@@ -230,6 +231,10 @@ int audioLength;        // length of the audioSignal, same as the number of pixe
 // Sampler Instrument duration and envelopes
 final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
 int envDuration;                // current envelope duration
+final int shortPointDurationMs = 250;
+final int longPointDurationMs = noteDuration;
+boolean useLongSamplerPointDuration = true;
+int samplerPointDurationMs = longPointDurationMs;
 boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
 String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
 int presetIndex = envPresets.length - 1;    // current preset index
@@ -277,10 +282,12 @@ GestureGranularParams gParamsGesture;       // granular parameters when hopMode 
 GestureGranularParams gParamsFixed;         // granular parameters when hopMode == HopMode.FIXED
 public int curveSteps = 8;                  // number of steps in curve representation of a brushstroke path
 public int gMaxVoices = 256;                // number of voices managed by a PAGranularInstrument (gSynth)
-boolean useLongBursts = true;               // controls the number of burst grains in a point event or gesture event
+boolean useLongBurstGrains = true;           // controls the number of burst grains in a point event or gesture event
 int maxBurstGrains = 8;
 int minBurstGrains = 1;
-int burstGrains = useLongBursts ? maxBurstGrains : minBurstGrains;
+int burstGrains = useLongBurstGrains ? maxBurstGrains : minBurstGrains;
+boolean useLongGranularPointDuration = true;
+int granPointDurationMs = longPointDurationMs;
 boolean usePitchedGrains = false;           // detune a granular gesture, if true
 
 
@@ -496,8 +503,8 @@ float samplerSourceRateRef = -1;
 // Using samplerMaxVoices = 256 resulted in noise artifacts whose
 // origin I have not tracked down yet. You can probably set poolSize = 8
 // and samplerMaxVoices = 128 without difficulty. I tested these values and
-// didn't have any problems. TODO resolve the issue with noise when
-// samplerMaxVoices is comparatively large. I regard the issue as minor,
+// didn't have any problems. Resolved the issue with noise when samplerMaxVoices
+// is comparatively large, Issue #45 in github. I regard the issue as minor,
 // as 128 voices should be entirely adequate for most uses of the Sampler.
 
 /* ------------------------------------------------------------------ */
@@ -941,11 +948,16 @@ public void parseKey(char key, int keyCode) {
     println("-- Granular synth grain length = "+ granSamples +" samples with "+ hopSamples +" samples hop length");
     break;
   case 'b': // toggle between long burst grains and short burst grains
-    useLongBursts = !useLongBursts;
-    burstGrains = useLongBursts ? maxBurstGrains : 1;
+    useLongBurstGrains = !useLongBurstGrains;
+    burstGrains = useLongBurstGrains ? maxBurstGrains : 1;
     initGranularParams();
-    msg = useLongBursts ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
+    msg = useLongBurstGrains ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
     println("-- Granular synth uses "+ msg +" grains.");
+    break;
+  case 'B': // toggle between long and short granular point event duration
+    useLongGranularPointDuration = !useLongGranularPointDuration;
+    granPointDurationMs = useLongGranularPointDuration ? longPointDurationMs : shortPointDurationMs;
+    println("-- granular point duration = " + granPointDurationMs + " ms");
     break;
   case 'p': // jitter the pitch of granular gestures
     usePitchedGrains = !usePitchedGrains;
@@ -1014,9 +1026,14 @@ public void parseKey(char key, int keyCode) {
     defaultEnv = envPreset(envPresets[presetIndex]);
     println("-- default envelope is "+ envPresets[presetIndex] +", "+ defaultEnv.toString());
     break;
-  case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
+  case 'E': // toggle calculating envelope duration from brush points or setting it to envDurationMs
     isAdjustEnvelope = !isAdjustEnvelope;
     println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+    break;
+  case 'D': // toggle between long and short Sampler point envelope duration
+    useLongSamplerPointDuration = !useLongSamplerPointDuration;
+    samplerPointDurationMs = useLongSamplerPointDuration ? longPointDurationMs : shortPointDurationMs;
+    println("-- Sampler point envelope duration = " + samplerPointDurationMs + " ms");
     break;
   case 'a': //  start or stop animation (bitmap rotation along the signal path)
     isAnimating = !isAnimating;
@@ -1168,6 +1185,7 @@ public void showHelp() {
   println(" * Press 'y' to select granular or sampler synth for click response.");
   println(" * Press 'r' to select long or short grain duration .");
   println(" * Press 'b' to toggle between long burst grains and short burst grains.");
+  println(" * Press 'B' to toggle between long and short granular point event duration.");
   println(" * Press 'p' to jitter the pitch of granular gestures.");
   println(" * Press 'P' to adjust pitch of current brushstroke.");
   println(" * Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).");
@@ -1176,7 +1194,8 @@ public void showHelp() {
   println(" * Press '[' to decrement curve steps value of current brush.");
   println(" * Press 'm' to change the Sampler noise reduction profile.");
   println(" * Press 'e' to change the envelope we're using .");
-  println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
+  println(" * Press 'E' to toggle calculating envelope duration from brush points or setting it to envDurationMs.");
+  println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
   println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
   println(" * Press 'd' to toggle play audio on new brush .");
   println(" * Press 'c' to apply color from image file to display image.");

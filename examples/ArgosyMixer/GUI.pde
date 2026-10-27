@@ -103,6 +103,7 @@ int inc = 28;
 	  controlWindow = GWindow.getWindow(this, "Argosy Settings", 0, 0, 480, 540, JAVA2D);
 	  controlWindow.noLoop();
 	  controlWindow.setActionOnClose(G4P.KEEP_OPEN);
+	  controlWindow.setAlwaysOnTop(true);
 	  controlWindow.addDrawHandler(this, "drawControlWindow");
 	  /* ----->>> argosy01 controls <<<----- */
       ypos = 10;

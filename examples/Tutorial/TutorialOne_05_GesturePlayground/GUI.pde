@@ -50,6 +50,13 @@ GOption arcLengthTimeOption;
 GLabel envelopeLabel;
 GDropList envelopeMenu;
 GLabel envelopeValuesLabel;
+GLabel envDurationLabel;
+GSlider envDurationSlider;
+GTextField envDurationField;
+GLabel granDurationLabel;
+GSlider granDurationSlider;
+GTextField granDurationField;
+GCheckbox envFitToBrushCheck;
 
 
 GTextArea commentsField;    // testing
@@ -74,7 +81,7 @@ public void createControlWindow() {
   G4P.messagesEnabled(false);
   G4P.setGlobalColorScheme(GCScheme.BLUE_SCHEME);
   G4P.setMouseOverEnabled(false);
-  controlWindow = GWindow.getWindow(this, "Granular Synth", 60, 420, 460, 600, JAVA2D);
+  controlWindow = GWindow.getWindow(this, "Granular Synth", 60, 420, 460, 620, JAVA2D);
   controlWindow.noLoop();
   controlWindow.setActionOnClose(G4P.EXIT_APP);
   controlWindow.addDrawHandler(this, "winDraw");
@@ -85,7 +92,7 @@ public void createControlWindow() {
  * Create the GUI control palette.
  */
 public void createControlPanel() {
-  controlPanel = new GPanel(controlWindow, 5, 5, 470, 600, "Settings");
+  controlPanel = new GPanel(controlWindow, 5, 5, 470, 620, "Settings");
   controlPanel.setCollapsible(false);
   controlPanel.setCollapsed(false);
   controlPanel.setDraggable(false);
@@ -335,6 +342,38 @@ public void createControls() {
   envelopeValuesLabel.setTextAlign(GAlign.LEFT, GAlign.TOP);
   envelopeValuesLabel.setOpaque(false);
   envelopeValuesLabel.setText("");
+  envFitToBrushCheck = new GCheckbox(controlWindow, 230, yPos + 16, 160, 40, "Fit to brush");
+  envFitToBrushCheck.setVisible(false);
+  envFitToBrushCheck.addEventHandler(this, "fitToBrush_clicked");
+
+  yPos += yInc + yInc/2;
+  envDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
+  envDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+  envDurationLabel.setText("Envelope Duration (ms)");
+  envDurationLabel.setOpaque(true);
+  envDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+  envDurationSlider.setShowValue(true);
+  envDurationSlider.setLimits(gConfig.envDurationMs, 125, 5000);
+  envDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+  envDurationSlider.setOpaque(false);
+  envDurationSlider.addEventHandler(this, "envDuration_changed");
+  envDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+  envDurationField.setText("" + gConfig.envDurationMs);
+  envDurationField.setTextEditEnabled(false);
+
+  granDurationLabel = new GLabel(controlWindow, 10, yPos + 10, 80, 40);
+  granDurationLabel.setTextAlign(GAlign.RIGHT, GAlign.MIDDLE);
+  granDurationLabel.setText("Point Duration (ms)");
+  granDurationLabel.setOpaque(true);
+  granDurationSlider = new GSlider(controlWindow, 100, yPos, 256, 40, 10.0f);
+  granDurationSlider.setShowValue(true);
+  granDurationSlider.setLimits(granPointDurationMs, 125, 5000);
+  granDurationSlider.setNumberFormat(G4P.INTEGER, 0);
+  granDurationSlider.setOpaque(false);
+  granDurationSlider.addEventHandler(this, "granDuration_changed");
+  granDurationField = new GTextField(controlWindow, 366, yPos + 10, 70, 24, G4P.SCROLLBARS_NONE);
+  granDurationField.setText("" + granPointDurationMs);
+  granDurationField.setTextEditEnabled(false);
 
   // arc length time option3
 
@@ -415,6 +454,13 @@ public void addControlsToPanel() {
   controlPanel.addControl(envelopeLabel);
   controlPanel.addControl(envelopeMenu);
   controlPanel.addControl(envelopeValuesLabel);
+  controlPanel.addControl(envDurationLabel);
+  controlPanel.addControl(envDurationSlider);
+  controlPanel.addControl(envDurationField);
+  controlPanel.addControl(envFitToBrushCheck);
+  controlPanel.addControl(granDurationLabel);
+  controlPanel.addControl(granDurationSlider);
+  controlPanel.addControl(granDurationField);
   controlPanel.setCollapsed(false);
   // arcLengthTime
   controlPanel.addControl(arcLengthTimeOption);
@@ -735,6 +781,34 @@ public void envelopeMenu_clicked(GDropList source, GEvent event) {
   // println("envelopeMenu - GDropList >> GEvent." + event + " @ " + millis());
 }
 
+public void envDuration_changed(GSlider source, GEvent event) {
+  if (!isEditable() || guiSyncing) return;
+  int raw = source.getValueI();
+  int quant = quantizeToStep(raw, 5);
+  if (quant != raw) source.setValue(quant);
+  gConfig.envDurationMs = quant;
+  envDuration = quant;
+  envDurationField.setText("" + quant);
+  if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ quant);
+}
+
+public void fitToBrush_clicked(GCheckbox source, GEvent event) {
+  if (!isEditable() || guiSyncing) return;
+  if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR) return;
+  isAdjustEnvelope = source.isSelected();
+}
+
+public void granDuration_changed(GSlider source, GEvent event) {
+  if (!isEditable() || guiSyncing) return;
+  if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
+  int raw = source.getValueI();
+  int quant = quantizeToStep(raw, 5);
+  if (quant != raw) source.setValue(quant);
+  granPointDurationMs = quant;
+  granDurationField.setText("" + granPointDurationMs);
+  if (event == GEvent.RELEASED) println("granPointDurationMs = " + granPointDurationMs);
+}
+
 public void printGConfigStatus() {
   // GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
   String status = gConfig.build().toString();
@@ -878,6 +952,19 @@ void syncGuiFromConfig() {
       envelopeValuesLabel.setText(formatEnv(envToShow));
     }
 
+    int envDurSafe = Math.max(125, envDuration);
+    int envDurShown = (gConfig.envDurationMs == 0) ? envDurSafe : gConfig.envDurationMs;
+    envDurShown = clampInt(envDurShown, 125, 5000);
+    envDuration = envDurShown;
+    envDurationSlider.setLimits(envDurShown, 125, 5000);
+    envDurationField.setText("" + envDurShown);
+    envFitToBrushCheck.setSelected(isAdjustEnvelope);
+
+    int granDurShown = clampInt(granPointDurationMs, 125, 5000);
+    granPointDurationMs = granDurShown;
+    granDurationSlider.setLimits(granDurShown, 125, 5000);
+    granDurationField.setText("" + granDurShown);
+
     // warp radio + exponent
     linearWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.LINEAR);
     expWarpOption.setSelected(gConfig.warpShape == GestureGranularConfig.WarpShape.EXP);
@@ -977,6 +1064,17 @@ void setControlsEnabled() {
   // Envelope menu is sampler-only in your current UX (visible in sampler edit and play-only sampler context).
   envelopeMenu.setVisible(showSampler);
   envelopeMenu.setEnabled(inSamplerEdit && canEdit);
+  envDurationSlider.setVisible(showSampler);
+  envDurationSlider.setEnabled(inSamplerEdit && canEdit);
+  envDurationField.setVisible(showSampler);
+  envDurationLabel.setVisible(showSampler);
+  envFitToBrushCheck.setVisible(showSampler);
+  envFitToBrushCheck.setEnabled(inSamplerEdit);
+  granDurationSlider.setVisible(inGranularEdit);
+  granDurationSlider.setEnabled(inGranularEdit);
+  granDurationField.setVisible(inGranularEdit);
+  granDurationField.setEnabled(true);
+  granDurationLabel.setVisible(inGranularEdit);
 
   // ---------- Global synth controls (shared) ----------
   // Gain/pitch are editable in either edit mode, read-only in play-only.

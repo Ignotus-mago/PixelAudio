@@ -1,4 +1,6 @@
 /**
+ * Introduces drawing, curve modeling and brushstroke creation, with interactive
+ * triggering of audio events using the Sampler and Granular synthesis engines.
  *
  * NEW FEATURES
  *
@@ -61,17 +63,23 @@
  * Draw fast and slow, right to left or left to right (forwards or backwards in time),
  * vertically, horizontally, or diagonally.
 
- * 7. Noise: As with any polyphonic instrument, the number of overlapping audio events affects Sampler
- * clipping and noise level. Instrument gain, envelope shape and duration, and low level noise
- * reduction all influence output. Your audio source also matters: sources with greater RMS energy
- * will be more likely to distort than sources with lower energy. A sample of street sounds has
- * more energy than most instrumental samples and will distort more easily.
+ * 7. Sampler Noise and Distortion: As with any polyphonic instrument, the number of
+ * overlapping audio events affects Sampler clipping and noise level. In addition to
+ * setting the number of points in a brushstroke, you can adjust the number of instruments
+ * and voices. See PASamplerInstrumentPool or Issue #45, "Noise in Sampler Instruments,"
+ * for suggested poolSize and maxVoices usage. Downstream processing such as reverb can
+ * also create distortion.
  *
  * 8. To adjust Sampler audio output:
  *   -- RIGHT ARROW and LEFT ARROW change Sampler gain.
  *   -- 'e' steps through available envelope shapes.
  *   -- 'E' toggles automatic envelope duration based on gesture event density.
  *   -- 'm' steps through the low level noise reduction profiles.
+ *
+ * Your audio source also matters. We recommend normalizing audio files to -6.0 dB
+ * to provide adequate headroom for amplification. Sources with greater RMS energy
+ * are more likely to distort than sources with lower energy. AudioUtility provides
+ * methods for normalizing audio sources when they are loaded into a buffer.
  *
  * Granular Instrument
  * ===================
@@ -173,7 +181,7 @@
  * pan settings for individual grains can also be passed as arrays to overloaded
  * playGestureNow(...) methods.
  *
- * Here's an outline of the granular synbthesis chain, which you can feel free to skip:
+ * Here's an outline of the granular synthesis chain, which you can feel free to skip:
  * PAGranularInstrumentDirector sets up the PABurstGranularSource
  * and passes it to the granular synth processing chain, first to PAGranularInstrument
  * and then to PAGranularSampler, where the PABurstGranularSource is
@@ -211,6 +219,7 @@
  *   Press 'y' to select granular or sampler synth for click response.
  *   Press 'r' to select long or short grain duration .
  *   Press 'b' to toggle between long burst grains and short burst grains.
+ *   Press 'B' to toggle between long and short granular point event duration.
  *   Press 'p' to jitter the pitch of granular gestures.
  *   Press 'P' to adjust pitch of current brushstroke.
  *   Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).
@@ -220,6 +229,7 @@
  *   Press 'm' to change the Sampler noise reduction profile.
  *   Press 'e' to change the envelope we're using .
  *   Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
+ *   Press 'D' to toggle between long and short Sampler point envelope duration.
  *   Press 'a' to  start or stop animation (bitmap rotation along the signal path).
  *   Press 'd' to toggle play audio on new brush .
  *   Press 'c' to apply color from image file to display image.
@@ -340,6 +350,10 @@ int audioLength;                // length of the audioSignal, same as the number
 // Sampler Instrument duration and envelopes
 final int noteDuration = 1000;  // average sample synth note duration, milliseconds, for reference
 int envDuration;                // current envelope duration
+final int shortPointDurationMs = 250;
+final int longPointDurationMs = noteDuration;
+boolean useLongSamplerPointDuration = true;
+int samplerPointDurationMs = longPointDurationMs;
 boolean isAdjustEnvelope = true;    // if true, adjust envelope duration based on gesture duration
 String[] envPresets = {"Soft", "Percussion", "Pad", "default"};    // envelope presets
 int presetIndex = envPresets.length - 1;    // current preset index
@@ -391,6 +405,8 @@ boolean useLongBursts = true;               // controls the number of burst grai
 int maxBurstGrains = 8;
 int minBurstGrains = 1;
 int burstGrains = useLongBursts ? maxBurstGrains : minBurstGrains;
+boolean useLongGranularPointDuration = true;
+int granPointDurationMs = longPointDurationMs;
 boolean usePitchedGrains = false;           // detune a granular gesture, if true
 
 
@@ -991,6 +1007,11 @@ public void parseKey(char key, int keyCode) {
     msg = useLongBursts ? "long bursts of "+ maxBurstGrains : "short bursts of "+ minBurstGrains ;
     println("-- Granular synth uses "+ msg +" grains.");
     break;
+  case 'B': // toggle between long and short granular point event duration
+    useLongGranularPointDuration = !useLongGranularPointDuration;
+    granPointDurationMs = useLongGranularPointDuration ? longPointDurationMs : shortPointDurationMs;
+    println("-- granular point duration = " + granPointDurationMs + " ms");
+    break;
   case 'p': // jitter the pitch of granular gestures
     usePitchedGrains = !usePitchedGrains;
     msg = (usePitchedGrains) ? " jitter granular pitch." : " steady granular pitch.";
@@ -1058,6 +1079,11 @@ public void parseKey(char key, int keyCode) {
   case 'E': // toggle whether we adjust envelope duration in relation to gesture duration
     isAdjustEnvelope = !isAdjustEnvelope;
     println("-- isAdjustEnvelope is "+ isAdjustEnvelope);
+    break;
+  case 'D': // toggle between long and short Sampler point envelope duration
+    useLongSamplerPointDuration = !useLongSamplerPointDuration;
+    samplerPointDurationMs = useLongSamplerPointDuration ? longPointDurationMs : shortPointDurationMs;
+    println("-- Sampler point envelope duration = " + samplerPointDurationMs + " ms");
     break;
   case 'a': //  start or stop animation (bitmap rotation along the signal path)
     isAnimating = !isAnimating;
@@ -1176,6 +1202,7 @@ public void showHelp() {
   println(" * Press 'y' to select granular or sampler synth for click response.");
   println(" * Press 'r' to select long or short grain duration .");
   println(" * Press 'b' to toggle between long burst grains and short burst grains.");
+  println(" * Press 'B' to toggle between long and short granular point event duration.");
   println(" * Press 'p' to jitter the pitch of granular gestures.");
   println(" * Press 'P' to adjust pitch of current brushstroke.");
   println(" * Press '>' or '.' to increment epsilon value of current brush (reduced points decrease).");
@@ -1185,6 +1212,7 @@ public void showHelp() {
   println(" * Press 'm' to change the Sampler noise reduction profile.");
   println(" * Press 'e' to change the envelope we're using .");
   println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
+  println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
   println(" * Press 'a' to  start or stop animation (bitmap rotation along the signal path).");
   println(" * Press 'd' to toggle play audio on new brush .");
   println(" * Press 'c' to apply color from image file to display image.");

@@ -101,7 +101,7 @@ public int handleClickOutsideBrush(int x, int y) {
     // use Sampler synthesis instrument
     ensureSamplerReady();
     float panning = map(x, 0, width, -0.8f, 0.8f);
-    int len = calcSampleLen();
+    int len = calcSampleLen(samplerPointDurationMs, 1.0, 0.0625);
     samplelen = playSample(samplePos, len, samplerPointGain, defaultEnv, panning);
     int durationMS = (int)(samplelen / sampleRate * 1000);
     pointTimeLocs.add(new TimedLocation(x, y, durationMS + millis() + 50));
@@ -110,7 +110,7 @@ public int handleClickOutsideBrush(int x, int y) {
   // use Granular synthesis instrument
   ensureGranularReady();
   float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
-  final int grainCount = useLongBursts ?  2 * (int) Math.round(noteDuration/hopMsF) : (int) Math.round(noteDuration/hopMsF);
+  final int grainCount = Math.max(1, (int) Math.round(granPointDurationMs / hopMsF));
   println("-- granular point burst with grainCount = "+ grainCount);
   ArrayList<PVector> path = new ArrayList<>(grainCount);
   int[] timing = new int[grainCount];
@@ -296,6 +296,7 @@ static ADSRParams envPreset(String name) {
  *                            usually obtained when reading from an audio file
  */
 void updateAudioChain(float[] sig, float bufferSampleRate) {
+  this.bufferSampleRate = bufferSampleRate;
   // 0) Decide target length (make this a single source of truth)
   int targetSize = mapper.getSize();
   if (targetSize <= 0) return;

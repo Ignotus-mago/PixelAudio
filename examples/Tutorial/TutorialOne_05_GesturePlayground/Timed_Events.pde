@@ -14,23 +14,25 @@ void scheduleSamplerBrushClick(SamplerBrush sb, int clickX, int clickY) {
   GestureGranularConfig snap = sb.snapshot();
   GestureSchedule sched = scheduleBuilder.build(sb.curve(), snap, audioOut.sampleRate());
   sched = boundsPolicy.applySchedule(sched);
-  storeSamplerCurveTL(sched, millis() + 10);
+  storeSamplerCurveTL(sched, snap, millis() + 10);
   PVector startPoint = sched.points.get(0);
   int clickPos = mapper.lookupSignalPos(clickX, clickY);
   int signalPos = mapper.lookupSignalPos((int)startPoint.x, (int)startPoint.y);
   if (isVerbose) println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 }
 
-public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTime) {
+public synchronized void storeSamplerCurveTL(
+  GestureSchedule sched, GestureGranularConfig snap, int startTime) {
   int i = 0;
-  startTime = millis() + 5;
+  int eventDuration = isAdjustEnvelope
+    ? computeEnvDurationMs(sched, envNameFor(snap.env), noteDuration)
+    : snap.envDurationMs;
   // we store the point and the current time + time offset, where timesMs[0] == 0
   for (PVector loc : sched.points) {
     int x = Math.round(loc.x);
     int y = Math.round(loc.y);
     int t = startTime + Math.round(sched.timesMs[i++]);
-    int d = 200;
-    this.samplerTimeLocs.add(new TimedLocation(x, y, t, d));
+    this.samplerTimeLocs.add(new TimedLocation(x, y, t, eventDuration));
   }
   Collections.sort(samplerTimeLocs);
 }
@@ -44,7 +46,7 @@ public synchronized void storeSamplerCurveTL(GestureSchedule sched, int startTim
 	            int sampleY = PixelAudio.constrain(Math.round(tl.getY()), 0, height - 1);
 	            float panning = map(sampleX, 0, width, -0.8f, 0.8f);
 	            int pos = getSamplePos(sampleX, sampleY);
-                playSample(pos, calcSampleLen(), samplerGain, panning);
+            playSample(pos, calcSampleLen(tl.getDurationMs(), 1.0f, 0.0625f), samplerGain, panning);
 		pointTimeLocs.add(new TimedLocation(sampleX, sampleY, tl.getDurationMs() + millis()));
 	            tl.setStale(true);
 	        }
