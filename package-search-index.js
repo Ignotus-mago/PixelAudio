@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"net.paulhertz.pixelaudio"},{"l":"net.paulhertz.pixelaudio.curves"},{"l":"net.paulhertz.pixelaudio.example"},{"l":"net.paulhertz.pixelaudio.granular"},{"l":"net.paulhertz.pixelaudio.io"},{"l":"net.paulhertz.pixelaudio.sampler"},{"l":"net.paulhertz.pixelaudio.schedule"}];updateSearchResults();
