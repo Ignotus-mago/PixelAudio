@@ -1,16 +1,17 @@
 ## PixelAudio
 
 The PixelAudio library for Processing supports the integration of sounds and images to create visual music and gesture-driven multi-media performances. Here are its core features:
-- maps arrays of audio samples onto arrays of pixel values, 
-- captures and transforms drawing gestures and represents them on screen as brushstrokes, 
-- creates interactive audio and image events for live performance,
-- provides polyphonic audio instruments for sampling and granular synthesis.
+- maps audio signals to bitmaps, 
+- transcodes audio to images and images to audio
+- captures edits gestures, 
+- turns gestures into interactive brushstrokes to generate multimedia events,
+- provides code-driven instruments for sampler and granular synthesis.
 
 You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a curve and record its timing information and then replay it with animation using the audio sampler or granular synthesis engine. You can create presets for drawing and audio synthesis and cue them in live performance. Access to the audio file is non-linear, determined by the captured gesture and the mapping between the signal and the image.
 
-PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. To support live performance, it added file i/o for curves, timing information, and audio configuration. The color organ morphed into the WaveSynth class and its supporting classes, with its own file i/o features. The live performance applet Bagatelle.java supports presets for drawing and audio synthesis and can cue them in live performance. There are several video demos here: https://vimeo.com/showcase/12305064, and an early performance/installation work, Campos | Temporales, here: https://vimeo.com/767814419. Now there's a demo reel: https://vimeo.com/ignotus/pxaudemo?share=copy&fl=sv&fe=ci. The JavaDocs are now available as GitHub Pages: https://ignotus-mago.github.io/PixelAudio/.
+PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. To support live performance, it added file i/o for curves, timing information, and audio configuration. The color organ morphed into the WaveSynth class and its supporting classes, with its own file i/o features. Two sketches, Bagatelle.java and PerformanceModel, support presets for drawing and audio synthesis and can cue them in live performance. Now there's a [demo reel](https://vimeo.com/ignotus/pxaudemo?share=copy&fl=sv&fe=ci "demo reel") . The [JavaDocs](https://ignotus-mago.github.io/PixelAudio/ "JavaDocs") are now available as GitHub Pages. There are also several [video demos](https://vimeo.com/showcase/12305064 "video demos"), and an early performance/installation work, [Campos | Temporales](https://vimeo.com/767814419 "Campos | Temporales").
 
-PixelAudio is a toolkit rather than a performance application, so I hope that people will play with it and create capabilities that go far beyond the sample code that I have provided.
+PixelAudio is a toolkit rather than a performance application, so I hope that people will play with it and create capabilities that go far beyond the sample code that I have provided. If you just want to use it as a performance instrument, PerformanceModel is practically plug-and-play: just supply your own audio files (though rolling your own presets will give you many more possibilities).
 
 ### Installing and Running PixelAudio
 
@@ -22,7 +23,7 @@ Some PixelAudio classes use the **Minim** audio library. PixelAudio has no other
 
 ### Dependencies
 
-I use the [Minim Audio Library](https://code.compartmental.net/tools/minim/ "Minim Audio Library") for working with audio signals and audio files. I rely on [Video Export](https://funprogramming.org/VideoExport-for-Processing/ "Video Export") to save animations to a video file. Video Export depends on **ffmpeg**. If you don't have ffmpeg installed, see the **Video Export** page or the [official ffmpeg site](https://ffmpeg.org/ "official ffmpeg site") for more information. MacOS Silicon binaries can be found [here](https://osxexperts.net/). Instructions for installation on MacOS with Homebrew, MacPorts, or manually can be found [here](https://phoenixnap.com/kb/ffmpeg-mac). I use [G4P](http://www.lagers.org.uk/g4p/ "G4P") wherever I have a GUI: `TutorialOne_05_GesturePlayground`, `WaveSynthEditor`, `ArgosyMixer`, `Bagatelle`. I use [oscP5](https://www.sojamo.de/libraries/oscP5/ "oscP5") in the `Bagatelle` and `TutorialOne_04_Network` examples to communicate over a network with the UDP protocol. My UDP clients are created with [Max](https://en.wikipedia.org/wiki/Max_(software)). 
+I use the [Minim Audio Library](https://code.compartmental.net/tools/minim/ "Minim Audio Library") for working with audio signals and audio files. I rely on [Video Export](https://funprogramming.org/VideoExport-for-Processing/ "Video Export") to save animations to a video file. Video Export depends on **ffmpeg**. If you don't have ffmpeg installed, see the **Video Export** page or the [official ffmpeg site](https://ffmpeg.org/ "official ffmpeg site") for more information. MacOS Silicon binaries can be found [here](https://osxexperts.net/). Instructions for installation on MacOS with Homebrew, MacPorts, or manually can be found [here](https://phoenixnap.com/kb/ffmpeg-mac). I use [G4P](http://www.lagers.org.uk/g4p/ "G4P") wherever I have a GUI: `TutorialOne_05_GesturePlayground`, `WaveSynthEditor`, `ArgosyMixer`, `Bagatelle`, and `PerformanceModel`. I use [oscP5](https://www.sojamo.de/libraries/oscP5/ "oscP5") in the `PerformanceModel`, `Bagatelle`, and `TutorialOne_04_Network` examples to communicate over a network with the UDP protocol. My UDP clients are created with [Max](https://en.wikipedia.org/wiki/Max_(software)). 
 
 ### How PixelAudio Works
 
@@ -30,11 +31,11 @@ In PixelAudio classes, 1D signals and 2D bitmaps are related to each other throu
 
 [![LUT Diagram](https://paulhertz.net/images/pixelaudio/LUT-diagram_3.png "LUT Diagram")](https://paulhertz.net/images/pixelaudio/LUT-diagram_3.png "LUT Diagram")
 
-The `PixelAudioMapper` class and the `PixelMapGen` class and its subclasses provide the core functionality of the library and are abundantly commented. `PixelMapGen` provides a lightweight framework for creating mappings between audio sample and pixel data arrays. A `PixelMapGen` subclass ("gen" for short) generates the (x,y) coordinates of the signal path over the image, and creates the LUTs from the coordinates. `PixelMapGen` subclasses plug in to `PixelAudioMapper`, which can transcode pixel and audio data and write it to pixel or audio sample arrays while remaining independent of the actual audio and image formats. The one restriction (at the moment) is that color is encoded in RGB or RGBA format and audio is encoded as 16-bit floating point values over the interval (-1.0, 1.0). Audio values can exceed these limits in calculations, but should be normalized to the interval for playing audio or saving to file. `PixelAudioMapper` includes a trove of methods for color space operations, array shifting, LUT mapping, and transcoding. While it should be relatively easy to write your own `PixelMapGen` child class (you only need a list of coordinates for the signal map), there are many built-in child classes that can get you up and running.
+The `PixelAudioMapper` class and the `PixelMapGen` class and its subclasses provide the core functionality of the library and are abundantly commented. `PixelMapGen` provides a lightweight framework for creating mappings between audio sample and pixel data arrays. A `PixelMapGen` subclass ("gen" for short) generates the (x,y) coordinates of the signal path over the image, and creates the LUTs from the coordinates. `PixelMapGen` subclasses plug in to `PixelAudioMapper`, which can transcode pixel and audio data and write it to pixel or audio sample arrays while remaining independent of the actual audio and image formats. Color is encoded in RGB or RGBA format and audio is encoded as 16-bit floating point values over the interval (-1.0, 1.0). Audio values can exceed these limits in calculations, but should be normalized for playing audio or saving it to file. The audio and bitmap arrays must be the same length: in the example sketches, this restriction is handled by file IO methods. `PixelAudioMapper` includes a trove of methods for color space operations, array shifting, LUT mapping, and transcoding. While it should be relatively easy to write your own `PixelMapGen` child class (you only need a list of coordinates for the signal map), there are many built-in child classes that can get you up and running.
 
 Other core classes include the `WaveSynth` class, which uses `WaveData` objects for additive audio synthesis to create both a playable audio signal and an animated image that are generated in parallel. Some of the coding examples show how you can read and write JSON files of `WaveSynth` configurations. The `Argosy` and `Lindenmayer` classes provide pattern-generation tools that can be used to create visual or audible rhythms, textures, and signals. An OpenSimplex implementation, `ScaledSimplex`, provides scaled random noise. 
 
-The library includes packages for:
+The library includes packages and classes for:
 - Curve-modeling
 - Gesture capture and transformation
 - Sampler-based audio synthesis
@@ -43,6 +44,7 @@ The library includes packages for:
 - Polyphonic granular instruments
 - Event scheduling
 - File IO for curve and gesture data and audio synthesis settings
+- Windowed audio file traversal
 
 Example sketches in Processing and Java provide a survey of PixelAudio features, particularly for:
 - mapping audio signals and bitmaps
@@ -58,6 +60,8 @@ Some sketches include graphical user interfaces and can be used directly in live
 ### Release Notes
 
 See [Issue #42 ](https://github.com/Ignotus-mago/PixelAudio/issues/42#issue-4736996032) for my checklist of tasks to complete before publication. Some ideas for the next release beyond 1.0 are listed in [issue #43](https://github.com/Ignotus-mago/PixelAudio/issues/43).  
+
+Release 0.9.9.3-beta, arriving after Halloween 2026, will provide a new live performance sketch, PerformanceModel, intended as a full-featured live performance application where you supply your own audio files and (ideally) write your own presets. It includes numerous small code fixes and features. 
 
 Release 0.9.9.0-beta, July 12, 2026: includes a light-weight [test suite](https://github.com/Ignotus-mago/PixelAudio/tree/master/test/net/paulhertz/pixelaudio). A new example sketch, `SampleAccurateDemo`, presents methods for sample-accurate audio scheduling. I've also implemented wrap-around audio buffers for both synths and updated example sketches to toggle wrap-around on and off. 
 
