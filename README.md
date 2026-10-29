@@ -61,7 +61,7 @@ Some sketches include graphical user interfaces and can be used directly in live
 
 See [Issue #42 ](https://github.com/Ignotus-mago/PixelAudio/issues/42#issue-4736996032) for my checklist of tasks to complete before publication. Some ideas for the next release beyond 1.0 are listed in [issue #43](https://github.com/Ignotus-mago/PixelAudio/issues/43).  
 
-Release 0.9.9.3-beta, arriving after Halloween 2026, will provide a new live performance sketch, PerformanceModel, intended as a full-featured live performance application where you supply your own audio files and (ideally) write your own presets. It includes numerous small code fixes and features. 
+Release 0.9.9.3-beta, arriving after Halloween 2026, includes numerous small code fixes and features a new live performance sketch, PerformanceModel, intended as a full-featured live performance application where you supply your own audio files and (ideally) write your own presets. 
 
 Release 0.9.9.0-beta, July 12, 2026: includes a light-weight [test suite](https://github.com/Ignotus-mago/PixelAudio/tree/master/test/net/paulhertz/pixelaudio). A new example sketch, `SampleAccurateDemo`, presents methods for sample-accurate audio scheduling. I've also implemented wrap-around audio buffers for both synths and updated example sketches to toggle wrap-around on and off. 
 
