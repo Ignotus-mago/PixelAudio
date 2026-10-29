@@ -2,7 +2,7 @@
 
 The PixelAudio library for Processing supports the integration of sounds and images to create visual music and gesture-driven multi-media performances. Here are its core features:
 - maps audio signals to bitmaps, 
-- transcodes audio to images and images to audio
+- transcodes audio to images and images to audio,
 - captures and edits drawing gestures, 
 - turns gestures into interactive brushstrokes to generate multimedia events,
 - provides code-driven instruments for sampler and granular synthesis.
