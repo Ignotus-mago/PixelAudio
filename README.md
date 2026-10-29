@@ -11,7 +11,9 @@ You can turn a 2D image into an audio signal or turn a 1D signal (including live
 
 PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. To support live performance, it added file i/o for curves, timing information, and audio configuration. The color organ morphed into the WaveSynth class and its supporting classes, with its own file i/o features. Two sketches, Bagatelle and PerformanceModel, support presets for drawing and audio synthesis and can cue them in live performance. 
 
-There's a demo reel of PixelAudio features here: [PixelAudio Demo](https://vimeo.com/ignotus/pxaudemo "PixelAudio Demo"). You can find videos produced with PixelAudio here: [PixelAudio Showcase](https://vimeo.com/showcase/12305064 "PixelAudio Showcase"). There's also an early performance/installation work created with PixelAudio's WaveSynth and Argosy algorithms here: [Campos | Temporales](https://vimeo.com/767814419 "Campos | Temporales").
+- Video of PixelAudio features: [PixelAudio Demo](https://vimeo.com/ignotus/pxaudemo "PixelAudio Demo"). 
+- Videos created with PixelAudio : [PixelAudio Showcase](https://vimeo.com/showcase/12305064 "PixelAudio Showcase"). 
+- A performance/installation work created with PixelAudio's WaveSynth and Argosy algorithms: [Campos | Temporales](https://vimeo.com/767814419 "Campos | Temporales").
 
 PixelAudio is a toolkit rather than a performance application, so I hope that people will play with it and create capabilities that go far beyond the sample code that I have provided. If you just want to use it as a performance instrument, PerformanceModel is practically plug-and-play: just supply your own audio files (though rolling your own presets will give you many more possibilities).
 
