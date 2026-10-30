@@ -376,7 +376,8 @@ public final class AudioUtility {
      * Softsign limiting curve used by the sampler mix protection path.
      *
      * @param sample   input sample
-     * @param drive    positive pre-limiter drive; values <= 0 return the input sample unchanged
+     * @param drive    positive pre-limiter drive; values less than or equal to 0 
+     *                 return the input sample unchanged
      * @return softly limited sample in the interval (-1, 1)
      */
     public static float softClipSoftsign(float sample, float drive) {
@@ -465,7 +466,7 @@ public final class AudioUtility {
      * </p>
      * @param signal       audio samples to modify in place
      * @param ceilingDB    peak ceiling in dBFS
-     * @param drive        soft limiter drive; values <= 0 skip soft limiting
+     * @param drive        soft limiter drive; values less than or equal to 0 skip soft limiting
      * @param removeDC     true to remove DC offset before limiting
      * @return gain applied during peak protection
      */
@@ -489,7 +490,7 @@ public final class AudioUtility {
      * </p>
      * @param buffer       audio buffer to modify in place
      * @param ceilingDB    peak ceiling in dBFS
-     * @param drive        soft limiter drive; values <= 0 skip soft limiting
+     * @param drive        soft limiter drive; values less than or equal to 0 skip soft limiting
      * @param removeDC     true to remove DC offset before limiting
      * @return gain applied during peak protection
      */

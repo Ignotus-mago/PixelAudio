@@ -285,7 +285,7 @@ public final class GestureGranularConfig {
     /**
      * Makes explicit to the caller that the envelope duration is being set for SAMPLER synthesis.
      *
-     * @param edurationMs   the envelope duration in milliseconds
+     * @param durationMs   the envelope duration in milliseconds
      * @return this builder
      */
     public Builder samplerEnvDurationMs(int durationMs) {
