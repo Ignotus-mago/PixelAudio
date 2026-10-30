@@ -13,7 +13,7 @@ PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve 
 
 - Video of PixelAudio features: [PixelAudio Demo](https://vimeo.com/ignotus/pxaudemo "PixelAudio Demo"). 
 - Videos created with PixelAudio : [PixelAudio Showcase](https://vimeo.com/showcase/12305064 "PixelAudio Showcase"). 
-- A performance/installation work created with PixelAudio's WaveSynth and Argosy algorithms: [Campos | Temporales](https://vimeo.com/767814419 "Campos | Temporales").
+- An intermedia work created with PixelAudio's WaveSynth and Argosy algorithms: [Campos | Temporales](https://vimeo.com/767814419 "Campos | Temporales").
 
 PixelAudio is a toolkit rather than a performance application, so I hope that people will play with it and create capabilities that go far beyond the sample code that I have provided. If you just want to use it as a performance instrument, PerformanceModel is practically plug-and-play: just supply your own audio files (though rolling your own presets will give you many more possibilities).
 
