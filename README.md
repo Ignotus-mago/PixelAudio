@@ -31,7 +31,7 @@ I use the [Minim Audio Library](https://code.compartmental.net/tools/minim/ "Min
 
 ## How PixelAudio Works
 
-The two core concepts in PixelAudio are **lookup table (LUT) mapping** and **gesture capture**. LUT mapping is the core functionality that joins audio and image data, while gesture capture is the core functionality for user **interaction** and **audio synthesis**. Gestures are represented on screen as brushstrokes. The geometric points determined by a brushstroke map to indices in the corresponding audio signal. Activating a brushstroke triggers the playback of the audio sample with the sampling or granular synthesis engines.
+The two core concepts in PixelAudio are **lookup table (LUT) mapping** and **gesture capture**. LUT mapping is the core functionality that joins audio and image data, while gesture capture is a core functionality for user **interaction** and **audio synthesis**. Gestures are represented on screen as brushstrokes. The geometric points determined by a brushstroke map to indices in the corresponding audio signal. Activating a brushstroke triggers the playback of the audio sample with the sampling or granular synthesis engines.
 
 ### Lookup Tables
 
