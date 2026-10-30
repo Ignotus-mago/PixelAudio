@@ -46,6 +46,8 @@ The `PixelAudioMapper` class and the `PixelMapGen` class and its subclasses prov
 
 Gestures are represented as brushstrokes, the UI element that provides interaction with the underlying audio file. The GUI examples `GesturePlayground`, `Bagatelle`, and `PerformanceModel` provide tools to edit brushstrokes and determine their interactions with audio synthesis engines for traditional sampling synthesis and granular synthesis.
 
+[![LUT Diagram](https://paulhertz.net/images/pixelaudio/gesture.png "Gesture")](https://paulhertz.net/images/pixelaudio/gesture.png "Gesture")
+
 ### Interaction
 
 Gestures are represented as brushstrokes, the UI element that provides interaction with the underlying audio file. The GUI examples [`GesturePlayground`](net/paulhertz/pixelaudio/example/TutorialOne_05_GesturePlayground.html) and [`Bagatelle`](net/paulhertz/pixelaudio/example/Bagatelle.html) provide tools to edit brushstrokes and determine their interactions with audio synthesis engines for traditional sampling synthesis and granular synthesis.
