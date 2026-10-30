@@ -31,7 +31,7 @@ I use the [Minim Audio Library](https://code.compartmental.net/tools/minim/ "Min
 
 ## How PixelAudio Works
 
-The two core concepts in PixelAudio are **lookup table (LUT) mapping** and **gesture capture**. LUT mapping is the core functionality that joins audio and image data, while gesture capture is the core functionality for user interaction. Gestures are represented on screen as brushstrokes. The geometric points determined by a brushstroke map to indices in the corresponding audio signal. Activating a brushstroke triggers the playback of the audio sample with the sampling or granular synthesis engines.
+The two core concepts in PixelAudio are **lookup table (LUT) mapping** and **gesture capture**. LUT mapping is the core functionality that joins audio and image data, while gesture capture is the core functionality for user **interaction** and **audio synthesis**. Gestures are represented on screen as brushstrokes. The geometric points determined by a brushstroke map to indices in the corresponding audio signal. Activating a brushstroke triggers the playback of the audio sample with the sampling or granular synthesis engines.
 
 ### Lookup Tables
 
@@ -46,7 +46,15 @@ The `PixelAudioMapper` class and the `PixelMapGen` class and its subclasses prov
 
 Gestures are represented as brushstrokes, the UI element that provides interaction with the underlying audio file. The GUI examples `GesturePlayground`, `Bagatelle`, and `PerformanceModel` provide tools to edit brushstrokes and determine their interactions with audio synthesis engines for traditional sampling synthesis and granular synthesis.
 
-### Other Features
+### Interaction
+
+Gestures are represented as brushstrokes, the UI element that provides interaction with the underlying audio file. The GUI examples [`GesturePlayground`](net/paulhertz/pixelaudio/example/TutorialOne_05_GesturePlayground.html) and [`Bagatelle`](net/paulhertz/pixelaudio/example/Bagatelle.html) provide tools to edit brushstrokes and determine their interactions with audio synthesis engines for traditional sampling synthesis and granular synthesis.
+
+### Audio Synthesis
+
+PixelAudio provides two types of audio synthesis: traditional sampling synthesis with ADSR-style envelopes and granular synthesis with windowed granular samples. A mouse click typically triggers a single sample or granular burst. A brushstroke triggers multiple samples or grains. The points in the brushstroke access the audio file indices in non-linear order. The two synthesis engines and their supporting methods provide polyphonic instruments with a number of advanced features for real-time performance.
+
+## Other Features
 
 Other core classes include the `WaveSynth` class, which uses `WaveData` objects for additive audio synthesis to create both a playable audio signal and an animated image that are generated in parallel. Some of the coding examples show how you can read and write JSON files of `WaveSynth` configurations. The `Argosy` and `Lindenmayer` classes provide pattern-generation tools that can be used to create visual or audible rhythms, textures, and signals. An OpenSimplex implementation, `ScaledSimplex`, provides scaled random noise. 
 
