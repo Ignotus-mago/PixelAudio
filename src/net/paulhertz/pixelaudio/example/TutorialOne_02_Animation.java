@@ -275,7 +275,13 @@ public class TutorialOne_02_Animation extends PApplet {
 	boolean isRaining = false;           // toggle to true to run random "raindrop" audio events ('d' key)
 	boolean isShowOverlay = false;       // toggle for overlay of text in display ('w' key)
 	boolean isPlayMusicBox = false;      // toggle to show how audio events can be tied to frame rate ('m' key)
+	
+	// feedback and debugging output to console
 
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
+
+	/* ------------- BEGIN APPLICATION METHODS ------------- */
 
 	
 	public static void main(String[] args) {
@@ -388,7 +394,7 @@ public class TutorialOne_02_Animation extends PApplet {
 	        videx.startMovie();
 	      }
 	      videx.saveFrame();
-	      println("-- video recording frame " + step + " of " + animSteps);
+	      if (isVerbose) println("-- video recording frame " + step + " of " + animSteps);
 	    }
 	  }
 	}

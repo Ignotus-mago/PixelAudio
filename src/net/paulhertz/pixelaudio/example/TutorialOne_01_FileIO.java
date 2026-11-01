@@ -248,6 +248,11 @@ import ddf.minim.*;
 
 	 /* ---------------- end audio variables ---------------- */
 	 
+	 boolean isVerbose = true;       // set to true to get application feedback in console
+	 boolean isDebugging = false;    // set to true to get debugging output to console
+	 
+	 /* ------------- BEGIN APPLICATION METHODS ------------- */
+	 
 
 	/**
 	 * @param args
@@ -905,8 +910,8 @@ import ddf.minim.*;
 		if (isRandomADSR) {
 			ADSRParams env = adsrList.get((int)random(adsrList.size()));
 			int len = calcSampleLen();
-			print("-- envelope: "+ env.toString());
-			println("; pos = "+ samplePos +", length = "+ len);
+			if (isVerbose) print("-- envelope: "+ env.toString());
+			if (isVerbose) println("; pos = "+ samplePos +", length = "+ len);
 			playSample(samplePos, len, 0.8f, env);
 		}
 		else {
@@ -999,7 +1004,8 @@ import ddf.minim.*;
 		}
 		// playSample() takes a note-window length in source-buffer samples.
 		int samplelen = (int)(abs((vary * this.noteDuration) * bufferSampleRate / 1000.0f));
-		// println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ bufferSampleRate +"Hz buffer rate");
+		if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen
+				+ " source samples at "+ bufferSampleRate +"Hz buffer rate");
 		return samplelen;
 	}
 	

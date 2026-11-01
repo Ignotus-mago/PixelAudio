@@ -69,8 +69,9 @@ import com.hamoid.*;
  *   <li>Open simpleAudioIO.maxpat</li>
  *   <li>Open MacOS System Settings control panel and select the Sound tab.</li>
  *   <li>In the Input and Output section, select BlackHole 16ch as the Output.</li>
+ *   <li>If you have an external audio input device, set that to you Input.</li>
  *   <li>In the Max Audio Status control panel, set Input Device to BlackHole 16ch.</li>
- *   <li>In Max, if you have external audio hardware, set that to your output.</li> 
+ *   <li>In Max, if you have an external audio output device, set that to your Output Device.</li> 
  *   <li>In simpleAudioIO.maxpat in Max, turn on audio processing.</li>
  *   <li>Run TutorialOne_04_Network and play some sounds.</li>
  * </ol>
@@ -2291,7 +2292,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				.build();
 		// call playGestureNow() with eventParams and return
 		gDir.playGestureNow(buf, sched, params, eventParams);
-		println("-- pitch jitter -- "+ pitch[0]);
+		// debugging: println("-- pitch jitter -- "+ pitch[0]);
 		// if we aren't using a pitch array, we can call playGestureNow() with a different signature
 		// gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 	}
@@ -2640,7 +2641,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    if (b.output == BrushOutput.SAMPLER) {
 	    	// divide gesture duration by number of gesture intervals and multiply result a fixed value
 	    	envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
-	    	println("-- envelope duration = "+ envDuration);
+	    	// println("-- envelope duration = "+ envDuration);   // debugging
 	    }
 	    return boundsPolicy.applySchedule(sched);
 	}
