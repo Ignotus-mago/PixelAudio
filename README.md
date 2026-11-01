@@ -17,6 +17,8 @@ PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve 
 
 PixelAudio is a toolkit rather than a performance application, so I hope that people will play with it and create capabilities that go far beyond the sample code that I have provided. If you just want to use it as a performance instrument, PerformanceModel is practically plug-and-play: just supply your own audio files (though rolling your own presets will give you many more possibilities).
 
+For detailed information see: [PixelAudio Javadocs](https://ignotus-mago.github.io/PixelAudio/ "PixelAudio Javadocs")
+
 ## Installing and Running PixelAudio
 
 To start with, you'll need to have Processing installed and configured. If this is all new to you, go to the [Download webpage](https://processing.org/download "Download webpage") for Processing and install it. Then check out the [Environment documentation](https://processing.org/environment "Environment documentation") with particular attention to setting the location of your [Sketchbook folder](https://processing.org/environment/#sketches-and-sketchbook "Sketchbook folder"). The path to the Sketchbook folder is typically something like "/Users/_your_home_directory_/Documents/Processing/". Once you have the path configured, navigate to the Sketchbook folder. It contains a number of folders, including one called "libraries." 
