@@ -26,7 +26,7 @@
  *   1. Open MacOS System Settings control panel and select the Sound tab.
  *   2. In the Input and Output section, select BlackHole 16ch as the Output.
  *   3. In the Max Audio Status control panel, set Input Device to BlackHole 16ch.
- *   4. If you have external audio hardware, set that to your output.
+ *   4. If you have external audio hardware, set that to your Output Device.
  *   5. Turn on audio processing in Max.
  *   6. Run TutorialOne_04_Network and play some sounds.
  *

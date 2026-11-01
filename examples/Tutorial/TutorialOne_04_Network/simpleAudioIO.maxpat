@@ -3,13 +3,13 @@
         "fileversion": 1,
         "appversion": {
             "major": 9,
-            "minor": 1,
-            "revision": 4,
+            "minor": 2,
+            "revision": 0,
             "architecture": "x64",
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 1539.0, -691.0, 611.0, 629.0 ],
+        "rect": [ 1540.0, -1345.0, 611.0, 629.0 ],
         "boxes": [
             {
                 "box": {
@@ -212,7 +212,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 394.0, 536.0, 116.0, 22.0 ],
-                    "text": "/sampleHit 1205770"
+                    "text": "/sampleHit 1205692"
                 }
             },
             {
@@ -368,8 +368,8 @@
                         "fileversion": 1,
                         "appversion": {
                             "major": 9,
-                            "minor": 1,
-                            "revision": 4,
+                            "minor": 2,
+                            "revision": 0,
                             "architecture": "x64",
                             "modernui": 1
                         },
@@ -481,7 +481,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "patching_rect": [ 136.0, 91.0, 163.0, 22.0 ],
-                                    "text": "1205770 563 627"
+                                    "text": "1205692 206 888"
                                 }
                             },
                             {
@@ -617,6 +617,9 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 58.0, 19.0, 192.0, 22.0 ],
+                    "saved_object_attributes": {
+                        "port": 7400
+                    },
                     "style": "newobjBlue",
                     "text": "udpreceive 7400"
                 }
@@ -761,8 +764,8 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "signal" ],
-                    "patching_rect": [ 95.0, 327.0, 84.0, 22.0 ],
-                    "text": "*~ 0.1"
+                    "patching_rect": [ 95.0, 327.0, 54.0, 22.0 ],
+                    "text": "*~ 0.025"
                 }
             },
             {

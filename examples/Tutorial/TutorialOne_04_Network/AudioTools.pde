@@ -350,7 +350,6 @@ public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranu
     .build();
   // call playGestureNow() with eventParams and return
   gDir.playGestureNow(buf, sched, params, eventParams);
-  println("-- pitch jitter -- "+ pitch[0]);
   // if we aren't using a pitch array, we can call playGestureNow() with a different signature
   // gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 }
