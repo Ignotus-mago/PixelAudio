@@ -1173,8 +1173,13 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 			break;
 		case 'a': // toggle animation
 			isAnimating = !isAnimating;
-			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
-			break;
+		    if (isAnimating) {
+		        isWindowing = false;
+		    }
+		    println(isAnimating
+		        ? "-- animation is ON; window traversal is OFF"
+		        : "-- animation is OFF");
+		    break;
 		case 'A': // change animation shift  or automatic window traversal rate
 			// animation is synchronized with the audio when we trigger an audio event once every frame
 			// we can calculate with the actual rate, frameRate, or our requested rate, videoFrameRate
@@ -1182,7 +1187,8 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 			shift = (shift == defaultShift) 
 				? Math.round(audioOut.sampleRate() / rate)
 				: defaultShift;
-			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
+			windowHopSize = (int) shift;
+			println(isAnimating ? "-- shift = windowHopSize = "+ shift : "-- shift = windowHopSize = "+ shift);
 			if (isWindowing) {
 				windowHopSize = (int) shift;
 				windowBuff.setHopSize(windowHopSize);
@@ -1443,9 +1449,13 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 			break;
 		case '|': // toggle automatic WindowedBuffer traversal
 			isWindowing = !isWindowing;
-			if (isWindowing) isAnimating = false;
-			totalShift = 0;
-			println("---- WindowBuffer traversal is " + (isWindowing ? "ON" : "OFF"));
+			if (isWindowing) {
+				isAnimating = false;
+				totalShift = 0;
+			}
+			println(isWindowing
+					? "-- WindowBuffer traversal is ON; animation is OFF"
+					: "-- WindowBuffer traversal is OFF");
 			break;
 		case '=': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
 			if (nd != null) nd.oscSendOnOff(1, true);
@@ -1717,7 +1727,7 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 		if (applyColorMapOnLoad) applyColorMapToDisplay(true);
 	}
 
-	// *** WindowedBuffer support *** //
+	// *** WindowedBuffer support *** //a |\
 	/** @param delta signed number of backing-source samples to move the window */
 	public void moveAudioWindow(int delta) {
 		if (windowBuff == null || backingSignal == null || backingSignal.length == 0) return;
@@ -3240,24 +3250,27 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 	 * @param animate       use TimedLocation animation (not used in method, true by default, TODO clarify)
 	 * @return              an InstrumentLoop object
 	 */
-	public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
+	public synchronized InstrumentLoop startGranularLoop(
+			GranularBrush gb,
 			float[] buf, 
 			GestureSchedule sched,
 			GestureGranularParams params,
-			GestureEventParams eventParams,
 			int repeats,
 			int gapMs,
 			boolean animate) {
-		if (gb == null || buf == null || sched == null || params == null || eventParams == null) return null;
+		if (gb == null || buf == null || sched == null || params == null) return null;
 		int durationMs = estimateLoopDurationMs(sched, params);
 		long startMs = millis();
 
-		Runnable playAction = () -> {
-			playGranularGesture(buf, sched, params, eventParams);
-			if (animate) {
-				storeGranularCurveTL(sched, millis() + 10, false);
-			}
-		};
+	    Runnable playAction = () -> {
+	        // Capture the current totalShift and, in PerformanceModel,
+	        // the current WindowedBuffer position for this iteration.
+	        GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+	        playGranularGesture(buf, sched, params, eventParams);
+	        if (animate) {
+	            storeGranularCurveTL(sched, millis() + 10, false);
+	        }
+	    };
 
 		Runnable stopAction = () -> {
 			if (grainTimeLocs != null) {
@@ -3271,7 +3284,8 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 			}
 		};
 
-		InstrumentLoop loop = new InstrumentLoop(gb, playAction, stopAction, 
+		InstrumentLoop loop = new InstrumentLoop(
+				gb, playAction, stopAction, 
 				durationMs, gapMs, repeats, startMs);
 		activeLoops.add(loop);
 		return loop;
@@ -3294,8 +3308,7 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 	    if (sched == null || sched.size() == 0) return null;
 	    GestureGranularParams params = snap.toParams();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
-	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
+	    return startGranularLoop(gb, buf, sched, params, repeats, gapMs, true);
 	}
 	
 	/**
@@ -4505,9 +4518,13 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(samplerBrushes.indexOf(sb)); 
 	    if (isDebugging) {
 	    	PVector startPoint = sched.points.get(0);
-	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
-	    	int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
-	    	println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
+	    	int clickPos = backingIndexFromLocal(
+	    		    mapper.lookupSignalPosShifted(clickX, clickY, totalShift)
+	    		);
+	    		int signalPos = backingIndexFromLocal(
+	    		    mapper.lookupSignalPosShifted((int) startPoint.x, (int) startPoint.y, totalShift)
+	    		);
+	    		println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	    }
 	}
 	
@@ -4547,7 +4564,7 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 	            PVector loc = sched.points.get(i);
 	            int x = Math.round(loc.x);
 	            int y = Math.round(loc.y);
-	            int pos = backingIndexFromLocal(mapper.lookupSignalPos(x, y));
+	            int pos = backingIndexFromLocal(mapper.lookupSignalPosShifted(x, y, totalShift));
 	            int eventDuration = isAdjustEnvelope
 	                    ? computeEnvDurationMs(sched, envNameFor(baseEnv), noteDuration)
 	                    : snap.envDurationMs;

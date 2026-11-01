@@ -324,8 +324,8 @@ import net.paulhertz.pixelaudio.sampler.*;
  * Then in Max Audio Status control panel:<br>
  *   Set Input Device to BlackHole 16ch<br>
  *   Set Output Device to your external audio hardware, e.g. Volt2<br>
- *   Create a patcher that gets signals from an adc~, route the adc~ to some sort of effects 
- *   and out to a dac~.<br>
+ *   To receive audio from Processing, create a patcher that gets signals 
+ *   from an adc~, route the adc~ to some sort of effects and out to a dac~.<br>
  * 
  * </DIV>
  * 
@@ -1339,6 +1339,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			return HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
 		case OK_USER_PRESETS:
 			return(BoustropheGen.boustrophRowOriented(3, 2, width/3, height/2, PixelMapGen.nada));
+			// return HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		}
@@ -3921,7 +3922,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @param buf           buffer to play from
 	 * @param sched         a GestureSchedule
 	 * @param params        runtime parameters for gesture playback
-	 * @param eventParams   optional pan, gain, and pitch modifiers per grain
 	 * @param repeats       number of times to loop
 	 * @param gapMs         time between loop events
 	 * @param animate       use TimedLocation animation (not used in method, true by default, TODO clarify)
@@ -3931,15 +3931,16 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			float[] buf, 
 			GestureSchedule sched,
 			GestureGranularParams params,
-			GestureEventParams eventParams,
 			int repeats,
 			int gapMs,
 			boolean animate) {
-		if (gb == null || buf == null || sched == null || params == null || eventParams == null) return null;
+		if (gb == null || buf == null || sched == null || params == null) return null;
 		int durationMs = estimateLoopDurationMs(sched, params);
 		long startMs = millis();
 
 		Runnable playAction = () -> {
+			// Capture the current totalShift for this iteration.
+			GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
 			playGranularGesture(buf, sched, params, eventParams);
 			if (animate) {
 				storeGranularCurveTL(sched, millis() + 10, false);
@@ -3981,8 +3982,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    if (sched == null || sched.size() == 0) return null;
 	    GestureGranularParams params = snap.toParams();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
-	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
+	    return startGranularLoop(gb, buf, sched, params, repeats, gapMs, true);
 	}
 	
 	/**
@@ -5241,8 +5241,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(samplerBrushes.indexOf(sb)); 
 	    if (isDebugging) {
 	    	PVector startPoint = sched.points.get(0);
-	    	int clickPos = mapper.lookupSignalPos(clickX, clickY);
-	    	int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+	    	int clickPos = mapper.lookupSignalPosShifted(clickX, clickY, totalShift);
+	    	int signalPos = mapper.lookupSignalPosShifted((int)startPoint.x,  (int)startPoint.y, totalShift);
 	    	println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	    }
 	}
@@ -5283,7 +5283,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            PVector loc = sched.points.get(i);
 	            int x = Math.round(loc.x);
 	            int y = Math.round(loc.y);
-	            int pos = mapper.lookupSignalPos(x, y);
+	            int pos = mapper.lookupSignalPosShifted(x, y, totalShift); // mapper.lookupSignalPos(x, y);
 	            int eventDuration = isAdjustEnvelope
 	                    ? computeEnvDurationMs(sched, envNameFor(baseEnv), noteDuration)
 	                    : snap.envDurationMs;
