@@ -250,7 +250,7 @@ import net.paulhertz.pixelaudio.sampler.*;
  * <br>
  * Note that animation is not enabled in this tutorial. 
  * See {@link Bagatelle} for a performance-oriented application with a GUI, presets, and networking.<br>
- * 
+ * See (@link PerformanceModel) for a shell application version of Bagatelle ready for you to modify. 
  * 
  * 
  * 
@@ -539,28 +539,27 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	/* ------------------------------------------------------------------ */
 	/*                       DEBUGGING & LOCAL SETTINGS                   */
 	/* ------------------------------------------------------------------ */
-	
+
 	// PABoundsPolicy: CLIP, WRAP, REFLECT, SKIP_TIME, KEEP_TIME. CLIP may be 
 	// the most versatile if you are drawing with a mouse or other device.
 	// Exercise: draw a curve that strikes the display bounds. Increase epsilon. 
 	// Set Path Source to Curve Points in the GUI control panel. Play the brushstroke. 
 	// Brush points will likely extend beyond the display bounds, but be clipped
 	// to it for playback. 
-    PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
-    PABoundsPolicy boundsPolicy;
-	
-	boolean isVerbose = true;
-	boolean isDebugging = false;
-	
+	PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
+	PABoundsPolicy boundsPolicy;
+
 	boolean isRunWordGame = false;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
 	boolean doPlayOnDraw = false;     // play audio when a curve is drawn
-	
+
 	// path to the shared example files data
 	String daPath;
 	String daFile = "audioBlend.wav";
 
-	
-	//------------- APPLICATION CODE -------------//
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
+
+	/* ------------- BEGIN APPLICATION METHODS ------------- */
 	
 	/**
 	 * @param args
@@ -901,7 +900,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			}
 			return;
 		}
-		if (isVerbose) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
+		if (isDebugging) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
 		handleClickOutsideBrush(x, y);
 	}
 	
@@ -1039,6 +1038,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 				return;
 			}
 			printGOptHints(hopScale);
+			println("-- optimized grain count is "+ this.optGrainCount);
 			if (activeBrush != null) {
 				activeBrush.cfg().resampleCount = optGrainCount;
 				syncGuiFromConfig();
@@ -1255,7 +1255,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 				bufferSampleRate = fileSampleRate;
 			}
 			this.audioFileLength = buff.getBufferSize();
-			println("---- file sample rate = "+ this.fileSampleRate 
+			if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate 
 					+", buffer sample rate = "+ bufferSampleRate
 					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
@@ -1273,7 +1273,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		}
 		// if loadToBoth is true, transcode the audio to RGB pixel data and write it to mapImagej
 		if (isLoadToBoth) {
-		    println("-- loading transcoded audio to display image\n");
+		    if (isVerbose) println("-- loading transcoded audio to display image\n");
 		    renderAudioToMapImage(chan, 0);   // or writeAudioToImage(audioSignal, mapper, mapImage, chan)
 		    commitMapImageToBaseImage();
 		}		
@@ -1744,7 +1744,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	    float[] canonical = new float[targetSize];
 	    if (sig != null) {
 	    	System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
-	    	println("**** copied sig to canonical");
+	    	if (isDebugging) println("**** copied sig to canonical");
 	    }
 	    // 3) Set audioSignal and other audio arrays
 	    audioSignal = canonical;
@@ -1753,13 +1753,13 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 	    // 4) Store signal in playBuffer
 	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
 	        playBuffer = new MultiChannelBuffer(targetSize, 1);
-	        println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
+	        if (isDebugging) println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
 	    }
 	    playBuffer.setChannel(0, canonical);
 	    // 5) Propagate into synths (adjust to your actual API)
 	    if (pool != null) {
 	    	pool.setBuffer(playBuffer, bufferSampleRate);
-	    	println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
+	    	if (isDebugging) println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
 	    }
 	}
 	
@@ -1796,7 +1796,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		ensureGranularReady();
 		float hopMsF = Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
 		final int grainCount = useLinearPointTraversal ?  (int) Math.round(granPointDurationMs/hopMsF) : (int) Math.round(granPointDurationMs/hopMsF);
-		if (isVerbose) println("-- granular point burst with grainCount = "+ grainCount);
+		if (isDebugging) println("-- granular point burst with grainCount = "+ grainCount);
 		ArrayList<PVector> path = new ArrayList<>(grainCount);
 		int[] timing = new int[grainCount];
 		int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);		
@@ -1840,10 +1840,12 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		    // use the x-coordinate for left to right stereo field mapping
 		    panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
 		}
-		println("\n----->>> playGranularGesture()");
-		//debugIndexHeadroom(buf, startIndices, params);
-		//debugTimesMs(sched);
-		//println("\n");
+		if(isDebugging) { 
+			println("\n----->>> playGranularGesture()");
+			// debugIndexHeadroom(buf, startIndices, params);
+			// debugTimesMs(sched);
+			// println("\n");
+		}
 		// we can can set start pitch and gain for each grain, but we need to create a GestureEventParams
 		// object to do that. We don't both with a gain array here. 
 		if (usePitchedGrains) {
@@ -1855,7 +1857,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
                 .build();
             // this is the playGestureNow() command with maximum control over individual grains
 			gDir.playGestureNow(buf, sched, params, eventParams);
-			println("-- pitch jitter -- "+ pitch[0]);
+			// if (isDebugging) println("-- pitch jitter -- "+ pitch[0]);
 			return;
 		}
 		// there's a version of playGestureNow that accepts a array of buffer indices and and array panning values
@@ -2016,7 +2018,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			vary = (float) PixelAudio.gauss(mean, variance);
 		}
 		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
-		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		// if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 	
@@ -3902,7 +3904,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		if (guiSyncing) return;
 		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
 		gConfig.warpExponent = source.getValueF();
-		if (event == GEvent.RELEASED) println("gConfig.warpExponent = "+ gConfig.warpExponent);
+		if (event == GEvent.RELEASED) if (isVerbose) println("gConfig.warpExponent = "+ gConfig.warpExponent);
 	} 
 
 	// currently not used
@@ -3928,7 +3930,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 			// Do not overwrite gConfig.env.
 			return;
 		}
-		println("-- envelope "+ itemName +" selected");
+		if (isVerbose) println("-- envelope "+ itemName +" selected");
 		ADSRParams env = envPreset(itemName);
 		gConfig.env = env;
 		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = env;
@@ -3947,7 +3949,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		gConfig.envDurationMs = quant;
 		envDuration = quant;
 		envDurationField.setText("" + quant);
-		if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ quant);
+		if (event == GEvent.RELEASED) if (isVerbose) println("gConfig.envDurationMs = "+ quant);
 	}
 
 	public void fitToBrush_clicked(GCheckbox source, GEvent event) {
@@ -3966,13 +3968,13 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		if (quant != raw) source.setValue(quant);
 		granPointDurationMs = quant;
 		granDurationField.setText("" + granPointDurationMs);
-		if (event == GEvent.RELEASED) println("granPointDurationMs = " + granPointDurationMs);
+		if (event == GEvent.RELEASED) if (isVerbose) println("granPointDurationMs = " + granPointDurationMs);
 	}
 	
 	public void printGConfigStatus() {
 		// GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
 		String status = gConfig.build().toString();
-		if (isVerbose) println(status);
+		println(status);
 	}
 
 	
@@ -4306,7 +4308,7 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 		float hsec = snap.hopLengthSamples / audioOut.sampleRate();
 		float dHop = (S / Tsec) * hsec;   // px per hop
 		float targetSpacingPx = dHop * alpha;     // or 0.75*dHop, etc.
-		if (isVerbose) {
+		if (isDebugging) {
 			println("-- path length px = "+ S);
 			println("-- dHop = "+ dHop +", alpha = "+ alpha);
 			println("-- targetSpacingPx = "+ targetSpacingPx);
@@ -4326,7 +4328,8 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 				0.25f,   // ws
 				info
 				);
-		if (isVerbose) println(info.toString());
+		if (isDebugging) println(info.toString());
+		println("-- optimized grain count is "+ this.optGrainCount);
 	}
 
 	/**

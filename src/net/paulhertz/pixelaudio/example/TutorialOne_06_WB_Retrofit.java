@@ -336,7 +336,7 @@ public class TutorialOne_06_WB_Retrofit extends TutorialOne_03_Drawing {
         ensureGranularReady();
         float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
 	        final int grainCount = Math.max(1, (int)Math.round(granPointDurationMs / hopMsF));
-        println("-- granular point burst with grainCount = " + grainCount);
+        if (isVerbose) println("-- granular point burst with grainCount = " + grainCount);
 
         java.util.ArrayList<PVector> path = new java.util.ArrayList<>(grainCount);
         int[] timing = new int[grainCount];
@@ -425,7 +425,7 @@ public class TutorialOne_06_WB_Retrofit extends TutorialOne_03_Drawing {
         int pos = PixelAudioMapper.wrap(samplePos, anthemBuffer.getBufferSize());
         int len = Math.min(samplelen, anthemBuffer.getBufferSize() - pos);
 
-        println("---- 06 playSample pos=" + pos
+        if (isDebugging) println("---- 06 playSample pos=" + pos
             + " len=" + len
             + " anthemBuffer=" + anthemBuffer.getBufferSize()
             + " windowIndex=" + windowBuff.getIndex());

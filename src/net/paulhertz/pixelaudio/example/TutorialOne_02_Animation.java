@@ -866,7 +866,7 @@ public class TutorialOne_02_Animation extends PApplet {
 				bufferSampleRate = fileSampleRate;
 			}
 			this.audioFileLength = buff.getBufferSize();
-			println("---- file sample rate = "+ this.fileSampleRate 
+			if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate 
 					+", buffer sample rate = "+ bufferSampleRate
 					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
@@ -1178,7 +1178,7 @@ public class TutorialOne_02_Animation extends PApplet {
 			ADSRParams env = adsrList.get((int)random(adsrList.size()));
 			int len = calcSampleLen();
 			// don't output envelope information for automated events
-			if (!isPlayMusicBox || isRaining) {
+			if ((!isPlayMusicBox || isRaining) && isVerbose) {
 				print("-- envelope: "+ env.toString());
 				println("; pos = "+ samplePos +", length = "+ len);
 			}

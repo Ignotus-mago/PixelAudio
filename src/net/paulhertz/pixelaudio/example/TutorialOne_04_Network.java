@@ -511,8 +511,12 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	boolean shiftIsDown = false;
 
 
-    // ---------------- APPLICATION ---------------- //
-	
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
+
+	/* ------------- BEGIN APPLICATION METHODS ------------- */
+
+
 	public static void main(String[] args) {
 		PApplet.main(new String[] { TutorialOne_04_Network.class.getName() });
 	}
@@ -679,7 +683,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 					videx.startMovie();
 				}
 				videx.saveFrame();
-				println("-- video recording frame " + step + " of " + videoSteps);
+				if (isVerbose) println("-- video recording frame " + step + " of " + videoSteps);
 			}
 		}
 	}
@@ -837,7 +841,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     public void keyPressed() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = true;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
             return;
         }
     	if (key != CODED) {
@@ -877,7 +881,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
     public void keyReleased() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = false;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
         }
     }
     
@@ -1615,7 +1619,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				bufferSampleRate = fileSampleRate;
 			}
 			this.audioFileLength = buff.getBufferSize();
-			println("---- file sample rate = "+ this.fileSampleRate 
+			if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate
 					+", buffer sample rate = "+ bufferSampleRate
 					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
@@ -2056,7 +2060,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    ensureGranularReady();
 	    float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
 	    final int grainCount = Math.max(1, (int) Math.round(granPointDurationMs / hopMsF));
-	    println("-- granular point burst with grainCount = "+ grainCount);
+	    if (isDebugging) println("-- granular point burst with grainCount = "+ grainCount);
 	    ArrayList<PVector> path = new ArrayList<>(grainCount);
 	    int[] timing = new int[grainCount];
 	    for (int i = 0; i < grainCount; i++) {
@@ -2175,7 +2179,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 			vary = (float) PixelAudio.gauss(mean, variance);
 		}
 		samplelen = (int)(abs((vary * durMs) * sampleRate / 1000.0f));
-		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		// if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 
@@ -2292,8 +2296,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				.build();
 		// call playGestureNow() with eventParams and return
 		gDir.playGestureNow(buf, sched, params, eventParams);
-		// debugging: println("-- pitch jitter -- "+ pitch[0]);
-		// if we aren't using a pitch array, we can call playGestureNow() with a different signature
+		if (isDebugging) println("-- pitch jitter -- "+ pitch[0]);
+		// if we aren't using a pitch array, we could call playGestureNow() instead
 		// gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 	}
 
@@ -2641,7 +2645,7 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 	    if (b.output == BrushOutput.SAMPLER) {
 	    	// divide gesture duration by number of gesture intervals and multiply result a fixed value
 	    	envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
-	    	// println("-- envelope duration = "+ envDuration);   // debugging
+	    if (isDebugging) println("-- envelope duration = "+ envDuration);
 	    }
 	    return boundsPolicy.applySchedule(sched);
 	}

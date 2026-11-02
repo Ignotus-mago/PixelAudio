@@ -591,7 +591,7 @@ import ddf.minim.*;
 				bufferSampleRate = fileSampleRate;
 			}
 			this.audioFileLength = buff.getBufferSize();
-			println("---- file sample rate = "+ this.fileSampleRate 
+			if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate 
 					+", buffer sample rate = "+ bufferSampleRate
 					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
@@ -910,8 +910,10 @@ import ddf.minim.*;
 		if (isRandomADSR) {
 			ADSRParams env = adsrList.get((int)random(adsrList.size()));
 			int len = calcSampleLen();
-			if (isVerbose) print("-- envelope: "+ env.toString());
-			if (isVerbose) println("; pos = "+ samplePos +", length = "+ len);
+			if (isVerbose) {
+				print("-- envelope: "+ env.toString());
+				println("; pos = "+ samplePos +", length = "+ len);
+			}
 			playSample(samplePos, len, 0.8f, env);
 		}
 		else {

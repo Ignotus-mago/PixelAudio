@@ -506,18 +506,19 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
     // as 128 voices should be entirely adequate for most uses of the Sampler. 
 	
     /* ------------------------------------------------------------------ */
-	/*                 APPLICATION SPECIFIC VARIABLES                     */
-	/* ------------------------------------------------------------------ */
-    
-	// path to the shared example files data
-	String daPath;
+    /*                 APPLICATION SPECIFIC VARIABLES                     */
+    /* ------------------------------------------------------------------ */
+
+    // path to the shared example files data
+    String daPath;
     String daFile = "_sonic/FullMoonTonight_22050Hz.mp3";    // _sonic/FullMoonTonight_22050Hz.mp3, Saucer_mixdown.wav
-    
-    boolean isDebugging = false;
+
+    boolean isVerbose = true;       // set to true to get application feedback in console
+    boolean isDebugging = false;    // set to true to get debugging output to console
+
+    /* ------------- BEGIN APPLICATION METHODS ------------- */
 
 
-    // ---------------- APPLICATION ---------------- //
-	
 	public static void main(String[] args) {
 		PApplet.main(new String[] { TutorialOne_06_WindowBuffer.class.getName() });
 	}
@@ -676,7 +677,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 					videx.startMovie();
 				}
 				videx.saveFrame();
-				println("-- video recording frame " + step + " of " + videoSteps);
+				if (isVerbose) println("-- video recording frame " + step + " of " + videoSteps);
 			}
 		}
 	}
@@ -835,7 +836,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
     public void keyPressed() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = true;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
             return;
         }
     	if (key != CODED) {
@@ -875,7 +876,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
     public void keyReleased() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = false;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
         }
     }
     
@@ -1469,7 +1470,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param audFile    an audio file
 	 */
 	public void loadAudioFile(File audFile) {
-        println("-- local loadAudioFile ");
+        if (isDebugging) println("-- local loadAudioFile ");
         boolean wasAnimating = isAnimating;
         boolean wasWindowing = isWindowing;
         boolean wasBlending = isBlending;
@@ -1493,7 +1494,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 				bufferSampleRate = fileSampleRate;
 			}
 			this.audioFileLength = buff.getBufferSize();
-			println("---- file sample rate = "+ this.fileSampleRate 
+			if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate
 					+", buffer sample rate = "+ bufferSampleRate
 					+", audio output sample rate = "+ audioOut.sampleRate());
 		}
@@ -1512,7 +1513,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 		}
 		// update dependent audio sources
 		if (isLoadToBoth) {
-		    println("-- loading transcoded audio to display image\n");
+		    if (isVerbose) println("-- loading transcoded audio to display image\n");
 		    renderAudioToMapImage(chan, 0);   // or writeAudioToImage(audioSignal, mapper, mapImage, chan)
 		    commitMapImageToBaseImage();
 		}
@@ -2210,17 +2211,18 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	 * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
 	 * @return
 	 */
-	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
+	public int playSample(int samplePos, int samplelen, float amplitude, 
+			              ADSRParams env, float pitch, float pan) {
         if (anthemBuffer == null || pool == null) {
         	return 0;
             // return playSample(samplePos, samplelen, amplitude, env, pitch, pan);
         }
         // debugging
-        // println("-- retrofit playSample() call ");
+        // if (isDebugging) println("-- retrofit playSample() call ");
         int pos = PixelAudioMapper.wrap(samplePos, anthemBuffer.getBufferSize());
         int len = Math.min(samplelen, anthemBuffer.getBufferSize() - pos);
         // debugging information for windowed buffer
-        // println("---- 06 playSample pos=" + pos + " len=" + len
+        // if (isDebugging) println("---- 06 playSample pos=" + pos + " len=" + len
         //    + " anthemBuffer=" + anthemBuffer.getBufferSize() 
         //    + " windowIndex=" + windowBuff.getIndex());
 		return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
@@ -2237,7 +2239,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 			vary = (float) PixelAudio.gauss(mean, variance);
 		}
 		samplelen = (int)(abs((vary * durMs) * sampleRate / 1000.0f));
-		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		// if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 
@@ -2703,7 +2705,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 	    if (b.output == BrushOutput.SAMPLER) {
 	        // divide gesture duration by number of gesture intervals and multiply result a fixed value
 	        envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
-	        println("-- envelope duration = "+ envDuration);
+	        if (isDebugging) println("-- envelope duration = "+ envDuration);
 	    }
 	    return boundsPolicy.applySchedule(sched);
 	}
