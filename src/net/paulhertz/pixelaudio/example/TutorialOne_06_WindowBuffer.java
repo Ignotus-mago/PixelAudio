@@ -1034,6 +1034,7 @@ public class TutorialOne_06_WindowBuffer extends PApplet {
 			break;
 		case 'a': //  start or stop animation (bitmap rotation along the signal path)
 			isAnimating = !isAnimating;
+			if (isAnimating) isWindowing = false;
 			println("-- animation is " + isAnimating);
 			break;
 		case '/': // turn drawing on or off

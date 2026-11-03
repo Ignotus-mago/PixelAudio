@@ -4329,7 +4329,6 @@ public class TutorialOne_05_GesturePlayground extends PApplet {
 				info
 				);
 		if (isDebugging) println(info.toString());
-		println("-- optimized grain count is "+ this.optGrainCount);
 	}
 
 	/**

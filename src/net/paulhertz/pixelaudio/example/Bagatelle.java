@@ -1071,9 +1071,10 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	/*                    DEBUGGING + PERFORMANCE SETTINGS                */
 	/* ------------------------------------------------------------------ */
 	
-	boolean isVerbose = true;
-	boolean isDebugging = false;
-	boolean isTrackSamplerVoices = false;
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
+
+	boolean isTrackSamplerVoices = false;   // special debugging flag for playSample(...)
 	
 	boolean shiftIsDown = false;         // flag for shift key down
 	
@@ -1443,7 +1444,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 					videx.startMovie();
 				}
 				videx.saveFrame();
-				println("-- video recording frame " + step + " of " + videoSteps);
+				if (isVerbose) println("-- video recording frame " + step + " of " + videoSteps);
 			}
 		}
 	}
@@ -1579,7 +1580,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		r[1] = y1;
 		r[2] = x2;
 		r[3] = y2;
-		// println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		if (isDebugging) {
+			println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		}
 		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
 			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
 				GranularBrush b = granularBrushes.get(i);
@@ -1694,7 +1697,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     public void keyPressed() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = true;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
             return;
         }
     	if (key != CODED) {
@@ -1728,7 +1731,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
     public void keyReleased() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = false;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
         }
     }
 
@@ -1897,6 +1900,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				return;
 			}
 			optimizeActiveBrush();
+			println("-- optimized grain count is "+ this.optGrainCount);
 			break;
 		case 'u': // toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation
 			isAutoOptimize = !isAutoOptimize;
@@ -2065,18 +2069,9 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			applyColorMapOnLoad = !applyColorMapOnLoad;
 			println("-- applyColorMapOnLoad = "+ applyColorMapOnLoad);
 			break;
-		case 'h': // show help message
+		case 'h': case 'H': // show help message
 			showHelp();
 			break; 
-		case 'H': // for testing
-			float[] values = ((PAKeyframeControlCurve) dynamics).getValues();
-			float[] times = ((PAKeyframeControlCurve) dynamics).getTimes01();
-			StringBuffer sb = new StringBuffer();
-			for (int i = 0; i < times.length; i++) {
-				sb.append(times[i]+": "+values[i]+"; ");
-			}
-    		println("---- dynamics = "+ sb.toString());
-			break;
 		default:
 			break;
 		}
@@ -2860,13 +2855,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	        bufferSampleRate = fileSampleRate;
 		}		
 		this.audioFileLength = sig.length;
-		println("---- file sample rate = "+ this.fileSampleRate 
+		if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate
 				+", buffer sample rate = "+ bufferSampleRate
 				+", audio output sample rate = "+ audioOut.sampleRate());
 		ensureSamplerReady();
 		updateAudioChain(sig, bufferSampleRate);
 		if (isLoadToBoth) {
-			println("---- loading to both ----");
+			if (isVerbose) println("---- loading to both ----");
 			writeAudioToImage(audioSignal, mapper, mapImage, chan);
 			commitMapImageToBaseImage();
 			if (applyColorMapOnLoad) applyColorMapToDisplay(true);
@@ -3643,7 +3638,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			vary = (float) PixelAudio.gauss(mean, variance);
 		}
 		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
-		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		// if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 	
@@ -3793,13 +3788,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    audioLength = targetSize;
 	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
 	        playBuffer = new MultiChannelBuffer(targetSize, 1);
-	        // println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
+	        // if (isDebugging) println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
 	    }
 	    playBuffer.setChannel(0, canonical);
 	    // Propagate into synths (adjust to your actual API)
 	    if (pool != null) {
 	        pool.setBuffer(playBuffer, bufferSampleRate);
-	    	// println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
+	        // if (isDebugging) println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
 	    }
 	}
 
@@ -5247,10 +5242,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	    }
 	}
 	
-	void debugSched(GestureSchedule sched) {
-		println("-- schedule number of points= "+ sched.points.size());
-	}
-	
 	/**
 	 * Adds audio/animation events to {@code samplerBrushEvents}
 	 * @param sched       schedule of audio/animation events
@@ -5276,8 +5267,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            (gainCurve != null) ? PAKeyframeControlCurve.expandToSchedule(gainCurve, sched) : null;
 	    final float pitch = snap.pitchRatio();
 	    final ADSRParams baseEnv = (snap.env != null) ? snap.env.copy() : samplerEnv;
-        float lenSum = 0;
-        isDebugging = true;
 	    synchronized (samplerBrushEventsLock) {
 	        for (int i = 0; i < n; i++) {
 	            PVector loc = sched.points.get(i);
@@ -5297,25 +5286,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	            samplerBrushEvents.add(
 	                new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, baseEnv.copy(), pan)
 	            );
-	            if (isDebugging) {
-	            	/*
-	                println("-- sampler evt i=" + i
-	                    + " dt=" + sched.timesMs[i]
-	                    + " eventTime=" + t
-	                    + " pos=" + pos
-	                    + " len=" + len
-	                    + " gain=" + gain
-	                    + " pitch=" + pitch
-	                    + " pan=" + pan);
-	            	*/
-	            	lenSum += len;
-	            }
 	        }
-	        if (isDebugging) {
-	        	double durMs = AudioUtility.samplesToMillis((Math.round(lenSum)/n), sampleRate);
-	        	println("average length = "+ durMs +" mS for "+ (n) +" events, gain = "+ baseGain);
-	        }
-	        isDebugging = false;
 	        samplerBrushEvents.sort((a, b) -> Integer.compare(a.eventTimeMs, b.eventTimeMs));
 	    }
 	}
@@ -6774,7 +6745,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		if (guiSyncing) return;
 		if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
 		gConfig.warpExponent = source.getValueF();
-		if (event == GEvent.RELEASED) println("gConfig.warpExponent = "+ gConfig.warpExponent);
+		if (event == GEvent.RELEASED) if (isVerbose) println("gConfig.warpExponent = "+ gConfig.warpExponent);
 	} 
 
 	public void arcLengthTimeOption_clicked(GOption source, GEvent event) {
@@ -6799,7 +6770,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 			// Do not overwrite gConfig.env.
 			return;
 		}
-		println("-- envelope "+ itemName +" selected");
+		if (isVerbose) println("-- envelope "+ itemName +" selected");
 		ADSRParams env = envPreset(itemName);
 		gConfig.env = env;
 		if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = env;
@@ -6818,7 +6789,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		gConfig.envDurationMs = quant;
 		this.envDurationMs = gConfig.envDurationMs;
 		this.envDurationField.setText(""+ gConfig.envDurationMs);
-		if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ gConfig.envDurationMs);
+		if (event == GEvent.RELEASED) if (isVerbose) println("gConfig.envDurationMs = "+ gConfig.envDurationMs);
 	}
 	
 	public void fitToBrush_clicked(GCheckbox source, GEvent event) {
@@ -6839,13 +6810,13 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		if (quant != raw) source.setValue(quant);
 		granPointDurationMs = quant;
 		granDurationField.setText("" + granPointDurationMs);
-		if (event == GEvent.RELEASED) println("granPointDurationMs = " + granPointDurationMs);
+		if (event == GEvent.RELEASED) if (isVerbose) println("granPointDurationMs = " + granPointDurationMs);
 	}
 	
 	public void printGConfigStatus() {
 		// GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
 		String status = gConfig.build().toString();
-		if (isVerbose) println(status);
+		println(status);
 	}
 
 	
@@ -7218,11 +7189,11 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 		float hsec = snap.hopLengthSamples / audioOut.sampleRate();
 		float dHop = (S / Tsec) * hsec;   // px per hop
 		float targetSpacingPx = dHop * alpha;     // or 0.75*dHop, etc.
-		//if (isVerbose) {
-		//	println("-- path length px = "+ S);
-		//	println("-- dHop = "+ dHop +", alpha = "+ alpha);
-		//	println("-- targetSpacingPx = "+ targetSpacingPx);
-		//}
+		if (isDebugging) {
+			println("-- path length px = "+ S);
+			println("-- dHop = "+ dHop +", alpha = "+ alpha);
+			println("-- targetSpacingPx = "+ targetSpacingPx);
+		}
 		
 		StringBuffer info = new StringBuffer();
 		this.optGrainCount = calcGranularOptHints(
@@ -7238,7 +7209,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 				0.25f,   // ws
 				info
 				);
-		//if (isVerbose) println(info.toString());
+		if (isDebugging) println(info.toString());
 	}
 
 	/**
