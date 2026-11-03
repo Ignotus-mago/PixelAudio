@@ -327,6 +327,12 @@ import net.paulhertz.pixelaudio.sampler.*;
  *   To receive audio from Processing, create a patcher that gets signals 
  *   from an adc~, route the adc~ to some sort of effects and out to a dac~.<br>
  * 
+ * <h2>New Features</h2>
+ * <p>
+ * A new method, {@code playBrushstrokes()}, can play the current brushstrokes automatically,
+ * using a used selected gap between events or using the times recorded in the brushstrokes. 
+ * </p>
+ * 
  * </DIV>
  * 
  */
@@ -1074,8 +1080,6 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	boolean isVerbose = true;       // set to true to get application feedback in console
 	boolean isDebugging = false;    // set to true to get debugging output to console
 
-	boolean isTrackSamplerVoices = false;   // special debugging flag for playSample(...)
-	
 	boolean shiftIsDown = false;         // flag for shift key down
 	
 	// performance state
@@ -1136,7 +1140,8 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	ArrayList<String> daFilelist = new ArrayList<>();
 
 	
-	//------------- APPLICATION CODE -------------//
+	/* ------------- BEGIN APPLICATION METHODS ------------- */
+
 	
 	/**
 	 * @param args
@@ -3604,24 +3609,7 @@ public class Bagatelle extends PApplet implements PANetworkClientINF {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		int beforeCount = 0;
-		int afterCount = 0;
-    	int voiceCount = 0;
-		// tracking Sampler voice count for possible problems, which we discovered and fixed
-		if (isTrackSamplerVoices) {
-			voiceCount = gDir.activeOrReleasingVoiceCount();
-	    	println("-- gDir voice count = "+ voiceCount);
-			// println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
-			beforeCount = pool.samplerActiveVoiceCount();
-			// println("-- sampler voices BEFORE: "+ beforeCount);
-		}
 		int sampleLen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-		if (isTrackSamplerVoices) {
-			afterCount = pool.samplerActiveVoiceCount();
-			if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
-			if (afterCount > 256) println("-- high sampler voice count "+ afterCount);
-			// println("-- sampler voices AFTER: "+ afterCount);
-		}
 		return sampleLen;
 	}
 

@@ -45,8 +45,12 @@ import net.paulhertz.pixelaudio.schedule.AudioUtility;
  *   <li>Compensation for differing buffer vs. output sample rates.</li>
  *   <li>Cached buffer size for efficiency.</li>
  * </ul>
- *
- * Implements both PAPlayable and PASamplerPlayable for full compatibility.
+ * <p>
+ * Implements both PAPlayable and PASamplerPlayable for full compatibility. 
+ * For recommended {@code maxVoices} settings, see {@link PASamplerInstrumentPool} comments and
+ * Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45">Noise in Sampler Instruments</a>
+ * </p>
+ * 
  */
 public class PASamplerInstrument implements PASamplerPlayable, AudioSampleClock {
 

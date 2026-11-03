@@ -289,7 +289,6 @@ public class WaveSynthEditor extends PApplet {
 	int startTime;                          // set when animation starts
 	int stopTime;                           // used to calculate animation time until finish and duration
 
-	boolean isVerbose = true;               // if true, post lots of debugging messages to console
 	boolean isSecondScreen = false;         // for a two screen display
 	int screen2x;                           // second screen x-coord, will be set by setScaling()
 	int screen2y;                           // second window y-coord, will be set by setScaling()
@@ -350,6 +349,10 @@ public class WaveSynthEditor extends PApplet {
 	
 	String screenMsg = "";
 	boolean showAnimationStatus = false;
+	
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
+
 	
 	/* ------------------------------------------------------------------ */
 	/*                           APPLICATION                              */
@@ -548,7 +551,7 @@ public class WaveSynthEditor extends PApplet {
 		image(mapImage, 0, 0, width, height);
 		if (isRecordingVideo && videx != null) {
 			videx.saveFrame();
-			println("-- video recording frame " + step + " of " + animStop);
+			if (isVerbose) println("-- video recording frame " + step + " of " + animStop);
 		}
 		runTimeArray();           // audio playback animation won't be recorded 
 		if (showAnimationStatus) {
@@ -707,10 +710,12 @@ public class WaveSynthEditor extends PApplet {
 		scaledWindowHeight += (scaledWindowHeight % 2 != 0) ? 1 : 0;
 		isOversize = (mapImage.width > scaledWindowWidth || mapImage.height > scaledWindowHeight);
 		windowScale = (1.0f * mapImage.width) / scaledWindowWidth;
-		println("maxWindowWidth " + maxWindowWidth + ", maxWindowHeight " + maxWindowHeight);
-		println("image width " + mapImage.width + ", image height " + mapImage.height);
-		println("scaled width " + scaledWindowWidth + ", scaled height " + scaledWindowHeight + ", "
-				+ "oversize image is " + isOversize);
+		if (isVerbose) {
+			println("maxWindowWidth " + maxWindowWidth + ", maxWindowHeight " + maxWindowHeight);
+			println("image width " + mapImage.width + ", image height " + mapImage.height);
+			println("scaled width " + scaledWindowWidth + ", scaled height " + scaledWindowHeight + ", "
+					+ "oversize image is " + isOversize);
+		}
 	}
 
 	public void resizeWindow() {
@@ -1168,12 +1173,12 @@ public class WaveSynthEditor extends PApplet {
 			// prepareAnimation();
 			runVideoBtn.setText("Pause");
 			startTime = millis();
-			println("-----> start time is " + startTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
+			println("-----> animation start time is " + startTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
 		} 
 		else {
 			runVideoBtn.setText("Run");
 			stopTime = millis();
-			println("-----> stop time is " + stopTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
+			println("-----> animation stop time is " + stopTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
 		}
 	}
 	
@@ -1249,7 +1254,7 @@ public class WaveSynthEditor extends PApplet {
 			}
 			wd.setAmp(wd.amp * scale);
 			wd.invalidateFrameState();
-			if (isVerbose) println("----- set amplitude " + i + " to " + wd.amp);
+			println("----- set amplitude " + i + " to " + wd.amp);
 			i++;
 		}
 	}
@@ -1266,6 +1271,9 @@ public class WaveSynthEditor extends PApplet {
 				continue;
 			wd.setWaveColor(WaveSynthBuilder.colorShift(wd.waveColor, shift, hsb));
 		}
+		// although this is called from parseKey() and our policy is to respond to 
+		// parseKey() unconditionally, the end user can see the color change, so this 
+		// is flagged with isVerbose
 		if (isVerbose) println("----->>> shift colors " + shift);
 	}
 	
@@ -1276,6 +1284,9 @@ public class WaveSynthEditor extends PApplet {
 				continue;
 			wd.setWaveColor(WaveSynthBuilder.saturationScale(wd.waveColor, scale, hsb));
 		}
+		// although this is called from parseKey() and our policy is to respond to 
+		// parseKey() unconditionally, the end user can see the color change, so this 
+		// is flagged with isVerbose
 		if (isVerbose) println("----->>> scale color saturation " + scale);		
 	}
 	
@@ -1293,6 +1304,9 @@ public class WaveSynthEditor extends PApplet {
 			}
 			wd.setFreq(wd.freq * scale);
 			wd.invalidateFrameState();
+			// although this is called from parseKey() and our policy is to respond to 
+			// parseKey() unconditionally, the end user can see the frequency change, so this 
+			// is flagged with isVerbose
 			if (isVerbose) println("----- set frequency " + i + " to " + wd.freq);
 			i++;
 		}
@@ -1311,6 +1325,9 @@ public class WaveSynthEditor extends PApplet {
 			wd.setPhase(wd.phase + shift);
 			wd.invalidateFrameState();
 		}
+		// although this is called from parseKey() and our policy is to respond to 
+		// parseKey() unconditionally, the end user can *usually* see the phase change, 
+		// so this is flagged with isVerbose
 		if (isVerbose) println("----->>> shiftPhase " + shift);
 	}
 	
@@ -1689,10 +1706,9 @@ public class WaveSynthEditor extends PApplet {
 	 */
 	public void renderSignal() {
 		mapImage = renderFrame(step);		
-		float[] sig = wavesynth.renderAudioRaw(step);           // get the signal "as is" from WaveSynth
-		sig = WaveSynth.normalize(sig, 0.9f);        // normalize samples to the range (-0.9f, 0.9f) 
+		float[] sig = wavesynth.renderAudioRaw(step);   // get the signal "as is" from WaveSynth
+		sig = WaveSynth.normalize(sig, 0.9f);           // normalize samples to the range (-0.9f, 0.9f) 
 		this.updateAudioChain(sig);
-		// println("--->> copied audio signal to audio buffer");
 	}
 	    
 	/**
@@ -1731,7 +1747,7 @@ public class WaveSynthEditor extends PApplet {
 	    vary = (float) PixelAudio.gauss(1.0, 0.0625);
 	  }
 	  samplelen = (int)(abs((vary * this.noteDuration * wavesynth.getSampleRate()) / 1000.0f));
-	  println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
+	  if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
 	  return samplelen;
 	}
 
@@ -2321,55 +2337,7 @@ public class WaveSynthEditor extends PApplet {
 	  appc.background(color(254, 233, 178));
 	}
 	
-/*
-	// respond to key in window
-	// not loaded
-	// old method under development, the new one below is better
-	public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
-		if (!evt.isControlDown()) {
-			println("-- exit winKey");
-			return;
-		}
-		if (evt.getAction() == KeyEvent.RELEASE) {
-			println("-- continue winKey");
-			parseKey(evt.getKey(), evt.getKeyCode());
-		}
-		
-	}
-*/
-
-/*	
-    // validate all text entry fields...
-	boolean isGuiTyping() {
-		if (pitchShiftText != null && pitchShiftText.hasFocus()) {
-			return true;
-		}
-	    return false;
-	}
-
-	// respond to key in window (new method)
-	public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
-	    if (evt.getAction() != KeyEvent.RELEASE) return;
-	    if (isGuiTyping()) return;
-	    parseKey(evt.getKey(), evt.getKeyCode());
-	}	
-
-	public void globalPanel_hit(GPanel panel, GEvent event) { 
-	  // nothing doing
-	}
-*/
-	
-	/*
-	  Dropped:
-	  synchronized public void winMouse(PApplet appc, GWinData data, processing.event.MouseEvent mevent)
-	  synchronized public void winKey(PApplet appc, GWinData data, processing.event.KeyEvent kevent)
-	  synchronized public void winPre(PApplet appc, GWinData data)
-	  synchronized public void winPost(PApplet appc, GWinData data) 
-	  public void winClose(GWindow window)
-	*/
-
 	public void comments_hit(GTextArea source, GEvent event) {
-		// println("commentsField - GTextField >> GEvent." + event + " @ " + millis() + " value: " + commentsField.getText());
 		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
 			final String comment = commentsField.getText();
 			pendingWaveEdits.add(() -> {
@@ -2466,7 +2434,7 @@ public class WaveSynthEditor extends PApplet {
 	public void fpsMenu_hit(GDropList source, GEvent event) { 
 		if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
 			wavesynth.setVideoFrameRate(Integer.valueOf(fpsMenu.getSelectedText()));
-			println("----->>> videoFPS = "+ wavesynth.videoFrameRate);  
+			if (isVerbose) println("----->>> videoFPS = "+ wavesynth.videoFrameRate);  
 		}
 	} 
 
@@ -2481,7 +2449,7 @@ public class WaveSynthEditor extends PApplet {
 			}
 		}
 		refreshGlobalPanel();
-		println("----->>> isRecordingVideo = "+ isRecordingVideo);
+		if (isVerbose) println("----->>> isRecordingVideo = "+ isRecordingVideo);
 	} 
 
 	// prob want a refresh call in WaveSynth
@@ -2501,7 +2469,7 @@ public class WaveSynthEditor extends PApplet {
 	// stays global
 	public void capCheck_hit(GCheckbox source, GEvent event) {
 		isCaptureFrames = capCheck.isSelected();
-		println("----->>> isCaptureFrames = "+ isCaptureFrames);
+		if (isVerbose) println("----->>> isCaptureFrames = "+ isCaptureFrames);
 	}
 
 	// handled globally with calls on wavesynth or list of WaveAnimators, when relevant
@@ -2593,7 +2561,6 @@ public class WaveSynthEditor extends PApplet {
 	 * @param event
 	 */
 	public void handleColorChooser(GButton button, GEvent event) {
-		// println("btnColor - GButton >> GEvent." + event + " @ " + millis());
 		sel_col = G4P.selectColor(currentWD.waveColor);
 		colorTitle.setText("Color: "+ (sel_col >> 16 & 0xFF) +", "+ (sel_col >> 8 & 0xFF) +", "+ (sel_col & 0xFF));
 		colorPG.beginDraw();
@@ -2615,17 +2582,14 @@ public class WaveSynthEditor extends PApplet {
 	}
 	
 	public void prev_hit(GButton source, GEvent event) { 
-	  //println("prevBtn - GButton >> GEvent." + event + " @ " + millis());
 	  decWaveData();
 	} 
 	
 	public void next_hit(GButton source, GEvent event) { 
-	  //println("nextBtn - GButton >> GEvent." + event + " @ " + millis());
 	  incWaveData();
 	} 
 	
 	public void newWave_hit(GButton source, GEvent event) { 
-	  // println("newWaveBtn - GButton >> GEvent." + event + " @ " + millis());
 	  WaveData wd = new WaveData();
 	  wavesynth.waveDataList.add(++waveDataIndex, wd);
 	  currentWD = wavesynth.waveDataList.get(waveDataIndex);
@@ -2635,7 +2599,6 @@ public class WaveSynthEditor extends PApplet {
 	} 
 	
 	public void dupWave_hit(GButton source, GEvent event) { 
-	  // println("dupWaveBtn - GButton >> GEvent." + event + " @ " + millis());
 	  WaveData wd = currentWD.clone();
 	  wavesynth.waveDataList.add(++waveDataIndex, wd);
 	  currentWD = wavesynth.waveDataList.get(waveDataIndex);
@@ -2657,7 +2620,6 @@ public class WaveSynthEditor extends PApplet {
 	
 	// see enum WaveData.WaveState {ACTIVE, SOLO, MUTE, SUSPENDED};
 	public void muteWave_hit(GCheckbox source, GEvent event) { 
-	  //println("muteWave - GCheckbox >> GEvent." + event + " @ " + millis());
 	  currentWD.isMuted = muteWave.isSelected();
 	  currentWD.waveState = muteWave.isSelected() ? WaveData.WaveState.MUTE : WaveData.WaveState.ACTIVE;
 	  loadWaveDataPanelValues(currentWD);
@@ -2665,7 +2627,6 @@ public class WaveSynthEditor extends PApplet {
 	
 	// see enum WaveData.WaveState {ACTIVE, SOLO, MUTE, SUSPENDED};
 	public void soloWave_hit(GCheckbox source, GEvent event) { 
-	  //println("soloWave - GCheckbox >> GEvent." + event + " @ " + millis());
 	  // if the soloWave checkbox is selected, set currentWD WaveState to SOLO, otherwise, to ACTIVE
 	  currentWD.waveState = soloWave.isSelected() ? WaveData.WaveState.SOLO : WaveData.WaveState.ACTIVE ;
 	  if (currentWD.waveState == WaveData.WaveState.SOLO) {

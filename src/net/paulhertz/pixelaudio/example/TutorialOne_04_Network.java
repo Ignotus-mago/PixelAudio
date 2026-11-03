@@ -163,7 +163,8 @@ import com.hamoid.*;
  * Press ',' to decrement epsilon value of current brush (reduced points increase).
  * Press '&gt;' to increment curve steps value of current brush.
  * Press '&lt;' to decrement curve steps value of current brush.
- * Press 'm' to change the Sampler noise reduction profile.
+ * Press 'n' to change the Sampler noise reduction profile.
+ * Press 'N' to normalize the audio buffer to -6.0dB.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  * Press 'D' to toggle between long and short Sampler point envelope duration.
@@ -173,7 +174,6 @@ import com.hamoid.*;
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  * Press 'j' to turn audio and image blending on or off.
- * Press 'n' to normalize the audio buffer to -6.0dB.
  * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.
  * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
  * Press 's' to save display image to a PNG file.
@@ -1021,9 +1021,17 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 				println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
 			}
 			break;
-		case 'm': // change the Sampler noise reduction profile
+		case 'n': // change the Sampler noise reduction profile
 			pool.cycleMixProfile();
 			println("-- mix profile is "+ pool.getMixProfile().name());
+			break;
+		case 'N': // normalize the audio buffer to -6.0dB
+			audioSignal = playBuffer.getChannel(0);
+			normalize(audioSignal, -6.0f);
+			updateAudioChain(audioSignal);
+			ensureSamplerReady();
+			ensureGranularReady();
+		    println("---- normalized");
 			break;
 		case 'e': // change the envelope we're using 
 			presetIndex = (presetIndex + 1) % envPresets.length;
@@ -1065,14 +1073,6 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		case 'j': // turn audio and image blending on or off
 			isBlending = !isBlending;
 			println("-- isBlending is "+ isBlending);
-			break;
-		case 'n': // normalize the audio buffer to -6.0dB
-			audioSignal = playBuffer.getChannel(0);
-			normalize(audioSignal, -6.0f);
-			updateAudioChain(audioSignal);
-			ensureSamplerReady();
-			ensureGranularReady();
-		    println("---- normalized");
 			break;
 		case 'L': case 'l': // determine whether to load a new file to both image and audio or not
 			isLoadToBoth = !isLoadToBoth;
@@ -1190,7 +1190,8 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		println(" * Press ',' to decrement epsilon value of current brush (reduced points increase).");
 		println(" * Press '>' to increment curve steps value of current brush.");
 		println(" * Press '<' to decrement curve steps value of current brush.");
-		println(" * Press 'm' to change the Sampler noise reduction profile.");
+		println(" * Press 'n' to change the Sampler noise reduction profile.");
+		println(" * Press 'N' to normalize the audio buffer to -6.0dB.");
 		println(" * Press 'e' to change the envelope we're using .");
 		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
 		println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
@@ -1200,7 +1201,6 @@ public class TutorialOne_04_Network extends PApplet implements PANetworkClientIN
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
 		println(" * Press 'j' to turn audio and image blending on or off.");
-		println(" * Press 'n' to normalize the audio buffer to -6.0dB.");
 		println(" * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.");
 		println(" * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.");
 		println(" * Press 's' to save display image to a PNG file.");

@@ -580,8 +580,6 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 	boolean isVerbose = true;       // set to true to get application feedback in console
 	boolean isDebugging = false;    // set to true to get debugging output to console
 	
-	boolean isTrackSamplerVoices = false;   // special debugging flag for playSample(...)
-	
 	boolean shiftIsDown = false;         // flag for shift key down
 	
 	// performance state
@@ -2937,25 +2935,7 @@ public class PerformanceModel extends PApplet implements PANetworkClientINF {
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		int beforeCount = 0;
-		int afterCount = 0;
-    	int voiceCount = 0;
-		// tracking Sampler voice count for possible problems, which we discovered and fixed
-    	// leaving this in for the first release, shows how to count active voices and allocation
-		if (isTrackSamplerVoices) { // debugging
-			voiceCount = gDir.activeOrReleasingVoiceCount();
-	    	println("-- gDir voice count = "+ voiceCount);
-			// println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
-			beforeCount = pool.samplerActiveVoiceCount();
-			// println("-- sampler voices BEFORE: "+ beforeCount);
-		}
 		int sampleLen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-		if (isTrackSamplerVoices) { // debugging
-			afterCount = pool.samplerActiveVoiceCount();
-			if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
-			if (afterCount > 256) println("-- high sampler voice count "+ afterCount);
-			// println("-- sampler voices AFTER: "+ afterCount);
-		}
 		return sampleLen;
 	}
 

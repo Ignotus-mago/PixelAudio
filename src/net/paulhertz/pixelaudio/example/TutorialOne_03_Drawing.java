@@ -136,7 +136,7 @@ import com.hamoid.*;
  *   <li>RIGHT ARROW and LEFT ARROW change Sampler instrument gain.</li>
  *   <li>'e' steps through available envelope shapes.</li> 
  *   <li>'E' toggles automatic envelope duration based on gesture event density.</li>
- *   <li>'m' steps through the low level noise reduction profiles.</li>
+ *   <li>'n' steps through the low level noise reduction profiles.</li>
  * </ul>
  * 
  * <p>Your audio source also matters. <b>We recommend that you normalize
@@ -146,6 +146,8 @@ import com.hamoid.*;
  * and will distort more easily. The {@link net.paulhertz.pixelaudio.schedule.AudioUtility AudioUtility}
  * class provides some methods you can use on-the-fly to normalize audio sources when you load
  * them to a buffer.</p>
+ * <p>See Issue #45 <a href="https://github.com/Ignotus-mago/PixelAudio/issues/45" target="_blank">Noise in Sampler Instruments</a>
+ * in PixelAudio's GitHub repository. </p>
  * 
  * <h3>Granular Instrument</h3>
  * <ol>
@@ -312,7 +314,8 @@ import com.hamoid.*;
  * Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).
  * Press ']' to increment curve steps value of current brush.
  * Press '[' to decrement curve steps value of current brush.
- * Press 'm' to change the Sampler noise reduction profile.
+ * Press 'n' to change the Sampler noise reduction profile.
+ * Press 'N' to normalize the audio buffer to -6.0dB.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  * Press 'D' to toggle between long and short Sampler point envelope duration.
@@ -322,7 +325,6 @@ import com.hamoid.*;
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  * Press 'j' to turn audio and image blending on or off.
- * Press 'n' to normalize the audio buffer to -6.0dB.
  * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.
  * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
  * Press 's' to save display image to a PNG file.
@@ -1127,9 +1129,17 @@ public class TutorialOne_03_Drawing extends PApplet {
 				println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
 			}
 			break;
-		case 'm': // change the Sampler noise reduction profile
+		case 'n': // change the Sampler noise reduction profile
 			pool.cycleMixProfile();
 			println("-- mix profile is "+ pool.getMixProfile().name());
+			break;
+		case 'N': // normalize the audio buffer to -6.0dB
+			audioSignal = playBuffer.getChannel(0);
+			normalize(audioSignal, -6.0f);
+			updateAudioChain(audioSignal);
+			ensureSamplerReady();
+			ensureGranularReady();
+		    println("---- normalized");
 			break;
 		case 'e': // change the envelope we're using 
 			presetIndex = (presetIndex + 1) % envPresets.length;
@@ -1171,14 +1181,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 		case 'j': // turn audio and image blending on or off
 			isBlending = !isBlending;
 			println("-- isBlending is "+ isBlending +" (images blend only if chan = ChannelNames.ALL)");
-			break;
-		case 'n': // normalize the audio buffer to -6.0dB
-			audioSignal = playBuffer.getChannel(0);
-			normalize(audioSignal, -6.0f);
-			updateAudioChain(audioSignal);
-			ensureSamplerReady();
-			ensureGranularReady();
-		    println("---- normalized");
 			break;
 		case 'L': case 'l': // determine whether to load a new file to both image and audio or not
 			isLoadToBoth = !isLoadToBoth;
@@ -1267,7 +1269,8 @@ public class TutorialOne_03_Drawing extends PApplet {
 		println(" * Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).");
 		println(" * Press ']' to increment curve steps value of current brush.");
 		println(" * Press '[' to decrement curve steps value of current brush.");
-		println(" * Press 'm' to change the Sampler noise reduction profile.");
+		println(" * Press 'n' to change the Sampler noise reduction profile.");
+		println(" * Press 'N' to normalize the audio buffer to -6.0dB.");
 		println(" * Press 'e' to change the envelope we're using .");
 		println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
 		println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
@@ -1277,7 +1280,6 @@ public class TutorialOne_03_Drawing extends PApplet {
 		println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
 		println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
 		println(" * Press 'j' to turn audio and image blending on or off.");
-		println(" * Press 'n' to normalize the audio buffer to -6.0dB.");
 		println(" * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.");
 		println(" * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.");
 		println(" * Press 's' to save display image to a PNG file.");

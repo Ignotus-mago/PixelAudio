@@ -347,6 +347,11 @@ public class ArgosyMixer extends PApplet {
 	
 	/* ---------------- end audio variables ---------------- */
 	
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
+
+	/* ------------ BEGIN APPLICATION METHODS -------------- */
+	
 	
 
 	public static void main(String[] args) {
@@ -624,7 +629,7 @@ public class ArgosyMixer extends PApplet {
 				holdCount1 = animClose;
 				holdCount2 = animClose;
 			}
-			println("-- video recording frame " + currentFrame + " of " + animDuration);
+			if (isVerbose) println("-- video recording frame " + currentFrame + " of " + animDuration);
 		}
 	}
 
@@ -632,7 +637,6 @@ public class ArgosyMixer extends PApplet {
 	 * The built-in mouseClicked handler for Processing, forwards clipped mouse coords to audioMouseClick().
 	 */
 	public void mouseClicked() {
-		// println("mouseClicked:", mouseX, mouseY);
 		// handle audio generation in response to a mouse click
 		audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
 	}
@@ -1099,7 +1103,6 @@ public class ArgosyMixer extends PApplet {
 			int x = locs[i][0] * genW;
 			int y = locs[i][1] * genH;
 			offsetList.add(new int[] {x,y});
-			// println("locs: ", locs[i][0], locs[i][1]);
 			if (cues[i] == 'H') {
 				genList.add(new HilbertGen(genW, genH, att));		
 			}
@@ -1271,7 +1274,6 @@ public class ArgosyMixer extends PApplet {
 		    int x = locs[i][0] * genW;
 		    int y = locs[i][1] * genH;
 		    offsetList.add(new int[] {x,y});
-		    // println("locs: ", locs[i][0], locs[i][1]);
 		    genList.add(new DiagonalZigzagGen(genW, genH, att));
 		    i++;
 		}
@@ -2143,7 +2145,6 @@ public class ArgosyMixer extends PApplet {
 		int val = source.getValueI();
 		if (argo1Gap != val) {
 			argo1Gap = val;
-			//println("--->> new argo1 gap = "+ argo1Gap);
 			int shift = argo1.getArgosyPixelShift();
 			argo1.setArgosyGap(argo1Gap);
 			if (shift != 0) {
@@ -2192,7 +2193,7 @@ public class ArgosyMixer extends PApplet {
 	
 	public void argo1FreezeCheck_hit(GCheckbox source, GEvent event) {
 		this.isArgo1Freeze = source.isSelected();
-		println("isArgo1Freeze is "+ isArgo1Freeze);
+		if (isVerbose) println("isArgo1Freeze is "+ isArgo1Freeze);
 	}
 	
 	public void argo1InitAndShift() {
@@ -2277,7 +2278,6 @@ public class ArgosyMixer extends PApplet {
 		int val = source.getValueI();
 		if (argo2Gap != val) {
 			argo2Gap = val;
-			//println("--->> new argo2 gap = "+ argo2Gap);
 			int shift = argo2.getArgosyPixelShift();
 			argo2.setArgosyGap(argo2Gap);
 			if (shift != 0) {
@@ -2325,7 +2325,7 @@ public class ArgosyMixer extends PApplet {
 	
 	public void argo2FreezeCheck_hit(GCheckbox source, GEvent event) {
 		this.isArgo2Freeze = source.isSelected();
-		println("isArgo2Freeze is "+ isArgo2Freeze);
+		if (isVerbose) println("isArgo2Freeze is "+ isArgo2Freeze);
 	}
 
 	public void argo2InitAndShift() {
@@ -2352,7 +2352,6 @@ public class ArgosyMixer extends PApplet {
 	    int val = source.getValueI();
 	    if (animRun1 != val) {
 	        animRun1 = val;
-	        //println("--->> animRun1 = "+ animRun1);
 	    }
 	}
 	
@@ -2360,15 +2359,13 @@ public class ArgosyMixer extends PApplet {
 	    int val = source.getValueI();
 	    if (animHold1 != val) {
 	        animHold1 = val;
-	        //println("--->> animHold1 = "+ animHold1);
 	    }
 	}
 	
 	public void animRun2_change(GTextField source, GEvent event) {
 	    int val = source.getValueI();
 	    if (animRun2 != val) {
-	        animRun2 = val;
-	        //println("--->> animRun2 = "+ animRun2);
+	        animRun2 = val;	        //println("--->> animRun2 = "+ animRun2);
 	    }
 	}
 	
@@ -2376,7 +2373,6 @@ public class ArgosyMixer extends PApplet {
 	    int val = source.getValueI();
 	    if (animHold2 != val) {
 	        animHold2 = val;
-	        //println("--->> animHold2 = "+ animHold2);
 	    }
 	}
 
@@ -2488,7 +2484,6 @@ public class ArgosyMixer extends PApplet {
 		argo2Buffer.setChannel(0, argo2Signal);						
 		argo1Synth.setBuffer(argo1Buffer);
 		argo2Synth.setBuffer(argo2Buffer);
-		// println("--->> generated new audio signals");
 	}
 
 	/**
@@ -2528,7 +2523,6 @@ public class ArgosyMixer extends PApplet {
 	public int playSample(PASamplerInstrument synth, int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
 		synth.playSample(samplePos, samplelen, amplitude, env, pitchScaling, pan);
 		int durationMS = (int)(samplelen/sampleRate * 1000);
-		// println("---->> adding event to timeLocsArray "+  samplelen, durationMS, millis());
 		timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
 		// return the length of the sample
 		return samplelen;
@@ -2541,7 +2535,7 @@ public class ArgosyMixer extends PApplet {
 			vary = (float) PixelAudio.gauss(1.0, 0.0625);
 		}
 		samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-		// println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 	
