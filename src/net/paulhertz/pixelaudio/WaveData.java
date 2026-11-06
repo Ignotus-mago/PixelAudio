@@ -56,9 +56,10 @@ public class WaveData {
 	public int animSteps = WaveData.defaultAnimSteps;
 	/** convenience variable, 30 seconds of animation at 24 frames per second, also context dependent */
 	public static int defaultAnimSteps = 720; 	//  24 * 30 = 720
-	/** support for old JSON format where phase was already scaled by TWO_PI 
-	 *  in the new format phase ranges over the open interval (0, 1), so we
+	/** Support for old JSON format where phase was already scaled by TWO_PI. 
+	 *  In the new format, phase ranges over the open interval (0, 1), so we
 	 *  scale it by TWO_PI and store the result in phaseTwoPi, which tracks phase information.
+	 *  You can safely ignore this variable. 
 	 */
 	public static final boolean phaseScalesTwoPI = true;
 	

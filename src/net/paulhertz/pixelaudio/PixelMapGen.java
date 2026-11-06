@@ -394,11 +394,19 @@ public abstract class PixelMapGen {
 
 	// ------------- STATIC METHODS FOR POWERS OF TWO ------------- //
 	   
+	/**
+	 * @param n   number to test
+	 * @return    true if n is a power of 2, false otherwise
+	 */
 	public static boolean isPowerOfTwo(int n) {
 		// n must be greater than 0 and n & (n - 1) should be 0
 		return n > 0 && (n & (n - 1)) == 0;
 	}
 	
+	/**
+	 * @param n   number to test
+	 * @return    exponent of the number n as a power of 2, up to 30
+	 */
 	public static int findPowerOfTwo(int n) {
         if (n <= 0 || (n & (n - 1)) != 0) {
             throw new IllegalArgumentException("The number must be a positive power of 2. n = "+ n);
@@ -406,6 +414,10 @@ public abstract class PixelMapGen {
         return Integer.numberOfTrailingZeros(n);
     }
 
+    /**
+     * @param n   number to test
+     * @return    nearest power of 2 less than the specified number
+     */
     public static int findNearestPowerOfTwoLessThan(int n) {
         if (n <= 1) {
             throw new IllegalArgumentException("There is no power of 2 less than the given number.");

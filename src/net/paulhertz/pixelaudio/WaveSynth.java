@@ -27,18 +27,21 @@ import java.util.ArrayList;
  * Animates pixels using phase shifting of audio generators in {@code waveDataList}. 
  * <p>
  * {@code WaveSynth} is organized around properties, such as gain (i.e. loudness or brightness) 
- * and gamma (a sort of contrast setting), and data objects. The data objects include a 
- * a bitmap, mapImage, that is a Processing PImage instance for the image representation
- * of the WaveSynth, a {@code PixelAudioMapper} that allows the WaveSynth to mediate between audio 
- * data and image data, arrays for the WaveSynth's audio signal and the image data ordered 
- * by the PixelAudioMapper signal path, and an array of {@code WaveData} objects, waveDataList,
- * that holds the individual sine wave components of the WaveSynth with their frequency,
- * amplitude, phase, and other properties. There are also a series of properties concerned 
- * with animation and video output. 
+ * and gamma (a sort of contrast setting), and data objects. Data objects include:</p>
+ *    <ul>
+ *    <li>{@code mapImage}, a PImage used as the image representation of the WaveSynth,</li> 
+ *    <li>{@code mapper}, a {@code PixelAudioMapper} that allows the WaveSynth to mediate between audio 
+ *    data and image data,</li>  
+ *    <li>{@code colorSignal}, {@code audioSignal}, and {@code renderSignal}, arrays for the WaveSynth's 
+ *    audio signal and the image data ordered by the PixelAudioMapper signal path,</li>
+ *    <li>{@code WaveDataList}, an array of {@link WaveData}  objects that holds the individual sine wave
+ *    components of the WaveSynth with their frequency, amplitude, phase, and other properties.</li> 
+ *    </ul>
+ * <p>There are also a series of properties concerned with animation and video output. 
  * </p><p>
  * When a WaveSynth is used to produce color patterns, each WaveData object in the waveDataList
  * controls a color. The colors of the various WaveData objects are added together, much 
- * as the audio sine waves are to produce audio, with the brightness of each color determined
+ * as the audio sine waves are summed to produce audio, with the brightness of each color determined
  * by the amplitude of the controlling sine wave. 
  * The {@link net.paulhertz.pixelaudio.example.WaveSynthEditor WaveSynthEditor} example code 
  * provides a graphical user interface for editing the WaveSynth properties and the individual
@@ -46,8 +49,8 @@ import java.util.ArrayList;
  * produce patterns and additive audio synth waveforms.  
  * </p><p>
  * Gamma and histogram scaling are intended primarily for still-image
- * grading and offline rendering. For realtime animation, prefer adjusting
- * operator amplitudes and DC offsets to control brightness/contrast,
+ * grading and offline rendering. For realtime animation, it is prefereable to
+ * adjust operator amplitudes and DC offsets to control brightness/contrast,
  * and leave gamma = 1.0 and isScaleHisto = false for best performance.
  * </p>
  */
@@ -75,7 +78,7 @@ public class WaveSynth {
 	private int h;
 	/** The size of the image */
 	public int mapSize;
-	/** The length of the audio and image pixeldata, w * h */
+	/** The length of the audio and image pixel data, w * h */
 	public int dataLength;
 
 	// ------ WaveSynth control variable attributes ----- //
@@ -106,12 +109,17 @@ public class WaveSynth {
 	
 	// ----- animation variables ----- //
 	/** 
-	 *  The sampling frequency, the number of samples read in one second of sound.
+	 *  The sampling frequency, governing the image and potentially the audio output.
 	 *  By default, for WaveSynth instances that are intended to be primarily visual,
-	 *  mapSize is the sampling frequency. This makes one period of a 1.0 Hz wave fill 
-	 *  the entire signal curve. OTOH, if we want the image to represent an audio signal
-	 *  that is also produced by additive synthesis, we should set samplingFrequency to
-	 *  a standard such as 44100 or 48000. 
+	 *  {@code sampleRate = mapSize}. This makes one period of a 1.0 Hz wave fill 
+	 *  the entire signal curve. OTOH, if you want the image to represent an audio signal
+	 *  that is also produced by additive synthesis, you might set samplingFrequency to
+	 *  a standard such as 44100 or 48000 so you can save the audio to a file with a
+	 *  standard audio sample rate. Audio output to the speaker is unaffected, as long
+	 *  as the audio is rendered using the WaveSynth sample rate.
+	 *  {@link net.paulhertz.pixelaudio.example.SimpleWaveSynth} 
+	 *  and {@link net.paulhertz.pixelaudio.example.WaveSynthEditor} 
+	 *  allow you to compare different settings of sampleRate.  
 	 */
 	public float sampleRate;
 	/** the increment in phase over the image pixels, typically TWO_PI / image size */

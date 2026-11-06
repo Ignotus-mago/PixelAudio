@@ -242,9 +242,9 @@ import processing.core.PVector;
  * for the first release of PixelAudio, I have sometimes automated synchronization of buffers
  * and sometimes left it up to the user, via key commands.
  * </p><p>
- * In most of the examples that accompany this library, audio data uses the Lightness channel of an
- * HSL representation of the image's  RGB data, but this is by no means the only way of doing things.
- * Using the Lightness channel restricts audio data to 8 bits, apt for glitch aesthetics, but noisy.
+ * In most of the examples that accompany this library, audio data uses the Brightness channel of an
+ * HSB representation of the image's  RGB data, but this is by no means the only way of doing things.
+ * Using the Brightness channel restricts audio data to 8 bits, apt for glitch aesthetics, but noisy.
  * It's also possible to  maintain high resolution data in the signal by processing image and audio
  * data separately, and writing audio data to the image but not in the other direction. The live
  * performance example sketch {@link net.paulhertz.pixelaudio.example.Bagatelle Bagatelle} uses this
@@ -276,13 +276,13 @@ public class PixelAudioMapper {
 	/** Lookup table to go from the image to the signal: index values over {0..(h * w - 1)}
 	 * point to a corresponding index position in the signal array sig[] */
 	protected int imageToSignalLUT[];
-	/** PixelMapGenINF instance to generate LUTs */
+	/** {@link PixelMapGen} instance to generate LUTs */
 	protected PixelMapGen generator;
 	/** container for HSB pixel values */
 	//private float[] hsbPixel = new float[3];
 
 	/** 
-	 * List of available color channels, "L" for lightness, since "B" for brightness is taken.
+	 * List of available color channels, using "L" for lightness, since "B" for brightness is taken.
 	 * The expanded enum type allows me to provide some additional information, including extraction
 	 * methods for each channel. These all require a float[3] hsbPixel argument. Because of the 
 	 * overhead involved in allocation of the hsbPixel array, callers are advised to make it 
@@ -340,7 +340,7 @@ public class PixelAudioMapper {
 
 	/**
 	 * Basic constructor for PixelAudio, sets up all variables.
-	 * @param gen 	A PixelMapGenINF instance -- should be initialized already.
+	 * @param gen 	A {@link PixelMapGen} instance -- should be initialized already.
 	 */
 	public PixelAudioMapper(PixelMapGen gen) {
 		this.setGenerator(gen);
