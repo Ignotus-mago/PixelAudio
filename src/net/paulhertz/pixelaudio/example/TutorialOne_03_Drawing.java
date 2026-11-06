@@ -73,7 +73,8 @@ import com.hamoid.*;
  * </p>
  * <figure>
  * <img src="doc-files/tutorialone_03_drawing.png" alt="TutorialOne_03_Drawing Screen" width="768" height="526"/>
- * <figcaption>Playable brushstrokes for Sampler and Granular synths overlaid on visualization of audio data.</figcaption>
+ * <figcaption>Playable brushstrokes for Sampler and Granular synths overlaid on visualization of audio data.
+ * Audio is encoded as grayscale "texture", the rainbow spectrum reveals the signal path.</figcaption>
  * </figure>
  * <p>
  * PixelAudio provides two types of audio synthesis: Sampler intruments, introduced in
