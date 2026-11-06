@@ -745,7 +745,7 @@ public void warpSlider_changed(GSlider source, GEvent event) {
   if (guiSyncing) return;
   if (drawingMode != DrawingMode.DRAW_EDIT_GRANULAR) return;
   gConfig.warpExponent = source.getValueF();
-  if (event == GEvent.RELEASED) println("gConfig.warpExponent = "+ gConfig.warpExponent);
+  if (event == GEvent.RELEASED) if (isVerbose) println("gConfig.warpExponent = "+ gConfig.warpExponent);
 }
 
 // currently not used
@@ -771,7 +771,7 @@ public void envelopeMenu_clicked(GDropList source, GEvent event) {
     // Do not overwrite gConfig.env.
     return;
   }
-  println("-- envelope "+ itemName +" selected");
+  if (isVerbose) println("-- envelope "+ itemName +" selected");
   ADSRParams env = envPreset(itemName);
   gConfig.env = env;
   if (drawingMode == DrawingMode.DRAW_EDIT_SAMPLER) samplerEnv = env;
@@ -789,7 +789,7 @@ public void envDuration_changed(GSlider source, GEvent event) {
   gConfig.envDurationMs = quant;
   envDuration = quant;
   envDurationField.setText("" + quant);
-  if (event == GEvent.RELEASED) println("gConfig.envDurationMs = "+ quant);
+  if (event == GEvent.RELEASED) if (isVerbose) println("gConfig.envDurationMs = "+ quant);
 }
 
 public void fitToBrush_clicked(GCheckbox source, GEvent event) {
@@ -806,13 +806,13 @@ public void granDuration_changed(GSlider source, GEvent event) {
   if (quant != raw) source.setValue(quant);
   granPointDurationMs = quant;
   granDurationField.setText("" + granPointDurationMs);
-  if (event == GEvent.RELEASED) println("granPointDurationMs = " + granPointDurationMs);
+  if (event == GEvent.RELEASED) if (isVerbose) println("granPointDurationMs = " + granPointDurationMs);
 }
 
 public void printGConfigStatus() {
   // GestureGranularConfig has a toString() method, so far GestureGranularConfig.Builder does not
   String status = gConfig.build().toString();
-  if (isVerbose) println(status);
+  println(status);
 }
 
 

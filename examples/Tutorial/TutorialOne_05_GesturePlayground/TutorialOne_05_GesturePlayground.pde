@@ -175,7 +175,8 @@
  * Press 'h' or 'H' to print help.
  *
  *
- * See also: Bagatelle.java for a performance-oriented application with a GUI, presets, and networking.
+ * See also: Bagatelle for a performance-oriented application with a GUI, presets, and networking.
+ * See PerformanceModel for a shell application version of Bagatelle ready for you to modify.
  *
  */
 
@@ -499,9 +500,6 @@ int eventStep = 90;    // milliseconds between events, formerly used by Sampler 
 PABoundsPolicy.PABoundaryMode boundaryMode = PABoundsPolicy.PABoundaryMode.CLIP;
 PABoundsPolicy boundsPolicy;
 
-boolean isVerbose = true;
-boolean isDebugging = false;
-
 boolean isRunWordGame = false;    // load DeadBodyWorkFlow audio at 48KHz sampleRate
 boolean doPlayOnDraw = false;     // play audio when a curve is drawn
 
@@ -511,8 +509,10 @@ boolean doPlayOnDraw = false;     // play audio when a curve is drawn
 String daPath;
 String daFile = "audioBlend.wav";
 
+boolean isVerbose = true;       // set to true to get application feedback in console
+boolean isDebugging = false;    // set to true to get debugging output to console
 
-//------------- APPLICATION CODE -------------//
+/* ------------- BEGIN APPLICATION METHODS ------------- */
 
 public void settings() {
   size(3 * genWidth, 2 * genHeight);
@@ -845,7 +845,7 @@ public void mouseClicked() {
     }
     return;
   }
-  if (isVerbose) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
+  if (isDebugging) println(" in mouseClicked, calling handleClickOutsideBrush, drawing mode is "+ drawingMode.toString());
   handleClickOutsideBrush(x, y);
 }
 
@@ -979,6 +979,7 @@ public void parseKey(char key, int keyCode) {
 			return;
 		}
 		printGOptHints(hopScale);
+		println("-- optimized grain count is "+ this.optGrainCount);
 		if (activeBrush != null) {
 			activeBrush.cfg().resampleCount = optGrainCount;
 			syncGuiFromConfig();

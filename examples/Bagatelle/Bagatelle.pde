@@ -51,6 +51,12 @@ import netP5.NetAddress;
 import oscP5.OscMessage;
 import oscP5.OscP5;
 
+import net.paulhertz.pixelaudio.granular.*;
+import net.paulhertz.pixelaudio.granular.GestureGranularConfig.*;
+import net.paulhertz.pixelaudio.io.*;
+import net.paulhertz.pixelaudio.sampler.*;
+
+
 	/* ------------------------------------------------------------------ */
 	/*                       PIXELAUDIO VARIABLES                         */
 	/* ------------------------------------------------------------------ */
@@ -790,9 +796,8 @@ import oscP5.OscP5;
 	/*                    DEBUGGING + PERFORMANCE SETTINGS                */
 	/* ------------------------------------------------------------------ */
 
-	boolean isVerbose = true;
-	boolean isDebugging = false;
-	boolean isTrackSamplerVoices = false;
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
 
 	boolean shiftIsDown = false;         // flag for shift key down
 
@@ -854,7 +859,7 @@ import oscP5.OscP5;
 	ArrayList<String> daFilelist = new ArrayList<>();
 
 
-	//------------- APPLICATION CODE -------------//
+	/* ------------- BEGIN APPLICATION METHODS ------------- */
 
 	/**
 	 * @param args
@@ -1053,6 +1058,7 @@ import oscP5.OscP5;
 			return HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
 		case OK_USER_PRESETS:
 			return(BoustropheGen.boustrophRowOriented(3, 2, width/3, height/2, PixelMapGen.nada));
+			// return HilbertGen.hilbertRowOrtho(6, 4, width/6, height/4);
 		default:
 			throw new IllegalStateException("Unhandled performance mode: " + pMode);
 		}
@@ -1156,7 +1162,7 @@ import oscP5.OscP5;
 					videx.startMovie();
 				}
 				videx.saveFrame();
-				println("-- video recording frame " + step + " of " + videoSteps);
+				if (isVerbose) println("-- video recording frame " + step + " of " + videoSteps);
 			}
 		}
 	}
@@ -1292,7 +1298,9 @@ import oscP5.OscP5;
 		r[1] = y1;
 		r[2] = x2;
 		r[3] = y2;
-		// println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		if (isDebugging) {
+			println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		}
 		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
 			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
 				GranularBrush b = granularBrushes.get(i);
@@ -1409,7 +1417,7 @@ import oscP5.OscP5;
     public void keyPressed() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = true;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
             return;
         }
 	if (key != CODED) {
@@ -1443,7 +1451,7 @@ import oscP5.OscP5;
     public void keyReleased() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = false;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
         }
     }
 
@@ -1614,6 +1622,7 @@ import oscP5.OscP5;
 				return;
 			}
 			optimizeActiveBrush();
+			println("-- optimized grain count is "+ this.optGrainCount);
 			break;
 		case 'u': // toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation
 			isAutoOptimize = !isAutoOptimize;
@@ -1790,17 +1799,8 @@ import oscP5.OscP5;
 			applyColorMapOnLoad = !applyColorMapOnLoad;
 			println("-- applyColorMapOnLoad = "+ applyColorMapOnLoad);
 			break;
-		case 'h': // show help message
+		case 'h': case 'H': // show help message
 			showHelp();
-			break;
-		case 'H': // for testing
-			float[] values = ((PAKeyframeControlCurve) dynamics).getValues();
-			float[] times = ((PAKeyframeControlCurve) dynamics).getTimes01();
-			StringBuffer sb = new StringBuffer();
-			for (int i = 0; i < times.length; i++) {
-				sb.append(times[i]+": "+values[i]+"; ");
-			}
-		println("---- dynamics = "+ sb.toString());
 			break;
 		default:
 			break;

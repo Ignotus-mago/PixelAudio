@@ -221,6 +221,11 @@ ArrayList<TimedLocation> timeLocsArray;
 int count = 0;
 int fileIndex = 0;
 
+boolean isVerbose = true;       // set to true to get application feedback in console
+boolean isDebugging = false;    // set to true to get debugging output to console
+
+/* ------------- BEGIN APPLICATION METHODS ------------- */
+
 
 public void settings() {
   size(3 * genWidth, 2 * genHeight);

@@ -336,24 +336,7 @@
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		int beforeCount = 0;
-		int afterCount = 0;
-	int voiceCount = 0;
-		// tracking Sampler voice count for possible problems, which we discovered and fixed
-		if (isTrackSamplerVoices) {
-			voiceCount = gDir.activeOrReleasingVoiceCount();
-		println("-- gDir voice count = "+ voiceCount);
-			// println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
-			beforeCount = pool.samplerActiveVoiceCount();
-			// println("-- sampler voices BEFORE: "+ beforeCount);
-		}
 		int sampleLen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-		if (isTrackSamplerVoices) {
-			afterCount = pool.samplerActiveVoiceCount();
-			if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
-			if (afterCount > 256) println("-- high sampler voice count "+ afterCount);
-			// println("-- sampler voices AFTER: "+ afterCount);
-		}
 		return sampleLen;
 	}
 
@@ -370,7 +353,7 @@
 			vary = (float) PixelAudio.gauss(mean, variance);
 		}
 		samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
-		// if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+		// if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
 		return samplelen;
 	}
 
@@ -520,13 +503,13 @@
 	    audioLength = targetSize;
 	    if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
 	        playBuffer = new MultiChannelBuffer(targetSize, 1);
-	        // println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
+	        // if (isDebugging) println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
 	    }
 	    playBuffer.setChannel(0, canonical);
 	    // Propagate into synths (adjust to your actual API)
 	    if (pool != null) {
 	        pool.setBuffer(playBuffer, bufferSampleRate);
-		// println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
+	        // if (isDebugging) println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
 	    }
 	}
 
@@ -649,7 +632,6 @@
 	 * @param buf           buffer to play from
 	 * @param sched         a GestureSchedule
 	 * @param params        runtime parameters for gesture playback
-	 * @param eventParams   optional pan, gain, and pitch modifiers per grain
 	 * @param repeats       number of times to loop
 	 * @param gapMs         time between loop events
 	 * @param animate       use TimedLocation animation (not used in method, true by default, TODO clarify)
@@ -659,15 +641,16 @@
 			float[] buf,
 			GestureSchedule sched,
 			GestureGranularParams params,
-			GestureEventParams eventParams,
 			int repeats,
 			int gapMs,
 			boolean animate) {
-		if (gb == null || buf == null || sched == null || params == null || eventParams == null) return null;
+		if (gb == null || buf == null || sched == null || params == null) return null;
 		int durationMs = estimateLoopDurationMs(sched, params);
 		long startMs = millis();
 
 		Runnable playAction = () -> {
+			// Capture the current totalShift for this iteration.
+			GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
 			playGranularGesture(buf, sched, params, eventParams);
 			if (animate) {
 				storeGranularCurveTL(sched, millis() + 10, false);
@@ -709,8 +692,7 @@
 	    if (sched == null || sched.size() == 0) return null;
 	    GestureGranularParams params = snap.toParams();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
-	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
+	    return startGranularLoop(gb, buf, sched, params, repeats, gapMs, true);
 	}
 
 	/**

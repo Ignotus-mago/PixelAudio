@@ -253,6 +253,13 @@ boolean isRaining = false;           // toggle to true to run random "raindrop" 
 boolean isShowOverlay = false;       // toggle for overlay of text in display ('w' key)
 boolean isPlayMusicBox = false;      // toggle to show how audio events can be tied to frame rate ('m' key)
 
+// feedback and debugging output to console
+
+boolean isVerbose = true;       // set to true to get application feedback in console
+boolean isDebugging = false;    // set to true to get debugging output to console
+
+/* ------------- BEGIN APPLICATION METHODS ------------- */
+
 
 public void settings() {
   size(3 * genWidth, 2 * genHeight);
@@ -358,7 +365,7 @@ public void stepAnimation() {
         videx.startMovie();
       }
       videx.saveFrame();
-      println("-- video recording frame " + step + " of " + animSteps);
+      if (isVerbose) println("-- video recording frame " + step + " of " + animSteps);
     }
   }
 }

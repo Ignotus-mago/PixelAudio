@@ -303,7 +303,7 @@ GestureSchedule getPlaybackScheduleForBrush(AudioBrushLite b) {
   if (b.output == BrushOutput.SAMPLER) {
     // divide gesture duration by number of gesture intervals and multiply result a fixed value
     envDuration = isAdjustEnvelope ? computeEnvDurationMs(sched, defaultEnv.toString(), noteDuration ) : noteDuration;
-    println("-- envelope duration = "+ envDuration);
+    if (isDebugging) println("-- envelope duration = "+ envDuration);
   }
   return boundsPolicy.applySchedule(sched);
 }

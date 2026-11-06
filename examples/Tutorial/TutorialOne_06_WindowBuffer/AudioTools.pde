@@ -382,17 +382,18 @@ public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams 
  * @param pan          position of sound in the stereo audio field (-1.0 = left, 0.0 = center, 1.0 = right)
  * @return
  */
-public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
+public int playSample(int samplePos, int samplelen, float amplitude,
+                      ADSRParams env, float pitch, float pan) {
   if (anthemBuffer == null || pool == null) {
     return 0;
     // return playSample(samplePos, samplelen, amplitude, env, pitch, pan);
   }
   // debugging
-  // println("-- retrofit playSample() call ");
+  // if (isDebugging) println("-- retrofit playSample() call ");
   int pos = PixelAudioMapper.wrap(samplePos, anthemBuffer.getBufferSize());
   int len = Math.min(samplelen, anthemBuffer.getBufferSize() - pos);
   // debugging information for windowed buffer
-  // println("---- 06 playSample pos=" + pos + " len=" + len
+  // if (isDebugging) println("---- 06 playSample pos=" + pos + " len=" + len
   //    + " anthemBuffer=" + anthemBuffer.getBufferSize()
   //    + " windowIndex=" + windowBuff.getIndex());
   return pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
@@ -409,7 +410,7 @@ public int calcSampleLen(int durMs, double mean, double variance) {
     vary = (float) PixelAudio.gauss(mean, variance);
   }
   samplelen = (int)(abs((vary * durMs) * sampleRate / 1000.0f));
-  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  // if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 

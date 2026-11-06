@@ -151,7 +151,7 @@ public void loadAudioFile(File audFile) {
       bufferSampleRate = fileSampleRate;
     }
     this.audioFileLength = buff.getBufferSize();
-    println("---- file sample rate = "+ this.fileSampleRate
+    if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate
       +", buffer sample rate = "+ bufferSampleRate
       +", audio output sample rate = "+ audioOut.sampleRate());
   } else {

@@ -111,7 +111,7 @@ public int handleClickOutsideBrush(int x, int y) {
   ensureGranularReady();
   float hopMsF = (int)Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
   final int grainCount = Math.max(1, (int) Math.round(granPointDurationMs / hopMsF));
-  println("-- granular point burst with grainCount = "+ grainCount);
+  if (isDebugging) println("-- granular point burst with grainCount = "+ grainCount);
   ArrayList<PVector> path = new ArrayList<>(grainCount);
   int[] timing = new int[grainCount];
   for (int i = 0; i < grainCount; i++) {
@@ -229,7 +229,7 @@ public int calcSampleLen(int durMs, double mean, double variance) {
     vary = (float) PixelAudio.gauss(mean, variance);
   }
   samplelen = (int)(abs((vary * durMs) * sampleRate / 1000.0f));
-  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  // if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 
@@ -350,7 +350,8 @@ public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranu
     .build();
   // call playGestureNow() with eventParams and return
   gDir.playGestureNow(buf, sched, params, eventParams);
-  // if we aren't using a pitch array, we can call playGestureNow() with a different signature
+  if (isDebugging) println("-- pitch jitter -- "+ pitch[0]);
+  // if we aren't using a pitch array, we could call playGestureNow() instead
   // gDir.playGestureNow(buf, sched, params, startIndices, panPerGrain);
 }
 

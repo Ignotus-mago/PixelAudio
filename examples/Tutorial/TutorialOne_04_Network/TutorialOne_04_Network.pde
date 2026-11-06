@@ -25,10 +25,11 @@
  * Open simpleAudioIO.maxpat in Max
  *   1. Open MacOS System Settings control panel and select the Sound tab.
  *   2. In the Input and Output section, select BlackHole 16ch as the Output.
- *   3. In the Max Audio Status control panel, set Input Device to BlackHole 16ch.
- *   4. If you have external audio hardware, set that to your Output Device.
- *   5. Turn on audio processing in Max.
- *   6. Run TutorialOne_04_Network and play some sounds.
+ *   3. If you have an external audio input device, set that as your Input.
+ *   4. In the Max Audio Status control panel, set Input Device to BlackHole 16ch.
+ *   5. If you have an external audio output device, set that as your Output Device in Max.
+ *   6. Turn on audio processing in Max.
+ *   7. Run TutorialOne_04_Network and play some sounds.
  *
  * UDP: User Datagram Protocol
  * ===========================
@@ -118,7 +119,8 @@
  * Press ',' to decrement epsilon value of current brush (reduced points increase).
  * Press '>' to increment curve steps value of current brush.
  * Press '<' to decrement curve steps value of current brush.
- * Press 'm' to change the Sampler noise reduction profile.
+ * Press 'n' to change the Sampler noise reduction profile.
+ * Press 'N' to normalize the audio buffer to -6.0dB.
  * Press 'e' to change the envelope we're using .
  * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  * Press 'D' to toggle between long and short Sampler point envelope duration.
@@ -128,7 +130,6 @@
  * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  * Press 'j' to turn audio and image blending on or off.
- * Press 'n' to normalize the audio buffer to -6.0dB.
  * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.
  * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
  * Press 's' to save display image to a PNG file.
@@ -508,8 +509,10 @@ boolean isNetSendGestures = false;
 boolean doPlayOnNewBrush = true;
 boolean shiftIsDown = false;
 
+boolean isVerbose = true;       // set to true to get application feedback in console
+boolean isDebugging = false;    // set to true to get debugging output to console
 
-// ---------------- APPLICATION ---------------- //
+/* ------------- BEGIN APPLICATION METHODS ------------- */
 
 public void settings() {
   size(3 * genWidth, 2 * genHeight);
@@ -672,7 +675,7 @@ public void stepAnimation() {
         videx.startMovie();
       }
       videx.saveFrame();
-      println("-- video recording frame " + step + " of " + videoSteps);
+      if (isVerbose) println("-- video recording frame " + step + " of " + videoSteps);
     }
   }
 }
@@ -829,7 +832,7 @@ public void sendCoordsUDP(int x, int y) {
   public void keyPressed() {
   if (key == CODED && keyCode == SHIFT) {
     shiftIsDown = true;
-    // println("-->> shiftIsDown " + shiftIsDown);
+    // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
     return;
   }
   if (key != CODED) {
@@ -865,7 +868,7 @@ public void sendCoordsUDP(int x, int y) {
   public void keyReleased() {
   if (key == CODED && keyCode == SHIFT) {
     shiftIsDown = false;
-    // println("-->> shiftIsDown " + shiftIsDown);
+    // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
   }
 }
 
@@ -1004,9 +1007,17 @@ public void parseKey(char key, int keyCode) {
       println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
     }
     break;
-  case 'm': // change the Sampler noise reduction profile
+  case 'n': // change the Sampler noise reduction profile
     pool.cycleMixProfile();
     println("-- mix profile is "+ pool.getMixProfile().name());
+    break;
+  case 'N': // normalize the audio buffer to -6.0dB
+    audioSignal = playBuffer.getChannel(0);
+    normalize(audioSignal, -6.0f);
+    updateAudioChain(audioSignal);
+    ensureSamplerReady();
+    ensureGranularReady();
+    println("---- normalized");
     break;
   case 'e': // change the envelope we're using
     presetIndex = (presetIndex + 1) % envPresets.length;
@@ -1048,14 +1059,6 @@ public void parseKey(char key, int keyCode) {
   case 'j': // turn audio and image blending on or off
     isBlending = !isBlending;
     println("-- isBlending is "+ isBlending);
-    break;
-  case 'n': // normalize the audio buffer to -6.0dB
-    audioSignal = playBuffer.getChannel(0);
-    normalize(audioSignal, -6.0f);
-    updateAudioChain(audioSignal);
-    ensureSamplerReady();
-    ensureGranularReady();
-    println("---- normalized");
     break;
   case 'L':
   case 'l': // determine whether to load a new file to both image and audio or not
@@ -1175,7 +1178,8 @@ public void showHelp() {
   println(" * Press ',' to decrement epsilon value of current brush (reduced points increase).");
   println(" * Press '>' to increment curve steps value of current brush.");
   println(" * Press '<' to decrement curve steps value of current brush.");
-  println(" * Press 'm' to change the Sampler noise reduction profile.");
+  println(" * Press 'n' to change the Sampler noise reduction profile.");
+  println(" * Press 'N' to normalize the audio buffer to -6.0dB.");
   println(" * Press 'e' to change the envelope we're using .");
   println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
   println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
@@ -1185,7 +1189,6 @@ public void showHelp() {
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
   println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
   println(" * Press 'j' to turn audio and image blending on or off.");
-  println(" * Press 'n' to normalize the audio buffer to -6.0dB.");
   println(" * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.");
   println(" * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.");
   println(" * Press 's' to save display image to a PNG file.");

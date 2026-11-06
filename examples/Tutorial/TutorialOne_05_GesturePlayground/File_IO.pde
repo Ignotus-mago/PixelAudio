@@ -79,7 +79,7 @@ public void loadAudioFile(File audFile) {
       bufferSampleRate = fileSampleRate;
     }
     this.audioFileLength = buff.getBufferSize();
-    println("---- file sample rate = "+ this.fileSampleRate
+    if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate
       +", buffer sample rate = "+ bufferSampleRate
       +", audio output sample rate = "+ audioOut.sampleRate());
   } else {
@@ -95,7 +95,7 @@ public void loadAudioFile(File audFile) {
   }
   // if loadToBoth is true, transcode the audio to RGB pixel data and write it to mapImagej
   if (isLoadToBoth) {
-    println("-- loading transcoded audio to display image\n");
+    if (isVerbose) println("-- loading transcoded audio to display image\n");
     renderAudioToMapImage(chan, 0);   // or writeAudioToImage(audioSignal, mapper, mapImage, chan)
     commitMapImageToBaseImage();
   }

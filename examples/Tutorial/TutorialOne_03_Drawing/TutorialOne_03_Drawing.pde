@@ -74,12 +74,14 @@
  *   -- RIGHT ARROW and LEFT ARROW change Sampler gain.
  *   -- 'e' steps through available envelope shapes.
  *   -- 'E' toggles automatic envelope duration based on gesture event density.
- *   -- 'm' steps through the low level noise reduction profiles.
+ *   -- 'n' steps through the low level noise reduction profiles.
  *
  * Your audio source also matters. We recommend normalizing audio files to -6.0 dB
  * to provide adequate headroom for amplification. Sources with greater RMS energy
  * are more likely to distort than sources with lower energy. AudioUtility provides
  * methods for normalizing audio sources when they are loaded into a buffer.
+ * See Issue #45, "Noise in Sampler Instruments":
+ * https://github.com/Ignotus-mago/PixelAudio/issues/45
  *
  * Granular Instrument
  * ===================
@@ -226,7 +228,8 @@
  *   Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).
  *   Press ']' to increment curve steps value of current brush.
  *   Press '[' to decrement curve steps value of current brush.
- *   Press 'm' to change the Sampler noise reduction profile.
+ *   Press 'n' to change the Sampler noise reduction profile.
+ *   Press 'N' to normalize the audio buffer to -6.0dB.
  *   Press 'e' to change the envelope we're using .
  *   Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.
  *   Press 'D' to toggle between long and short Sampler point envelope duration.
@@ -236,7 +239,6 @@
  *   Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).
  *   Press 'K' to apply hue and saturation in colors to baseImage and mapImage.
  *   Press 'j' to turn audio and image blending on or off.
- *   Press 'n' to normalize the audio buffer to -6.0dB.
  *   Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.
  *   Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.
  *   Press 's' to save display image to a PNG file.
@@ -599,8 +601,10 @@ boolean shiftIsDown = false;        // shift key state
 String daPath;
 String daFile = "Saucer_mixdown.wav";    // _sonic/FullMoonTonight_22050Hz.mp3
 
+boolean isVerbose = true;       // set to true to get application feedback in console
+boolean isDebugging = false;    // set to true to get debugging output to console
 
-// ---------------- APPLICATION ---------------- //
+/* ------------- BEGIN APPLICATION METHODS ------------- */
 public void settings() {
   size(3 * genWidth, 2 * genHeight);
 }
@@ -748,7 +752,7 @@ public void stepAnimation() {
         videx.startMovie();
       }
       videx.saveFrame();
-      println("-- video recording frame " + step + " of " + videoSteps);
+      if (isVerbose) println("-- video recording frame " + step + " of " + videoSteps);
     }
   }
 }
@@ -892,7 +896,7 @@ public void mouseClicked() {
   public void keyPressed() {
   if (key == CODED && keyCode == SHIFT) {
     shiftIsDown = true;
-    // println("-->> shiftIsDown " + shiftIsDown);
+    // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
     return;
   }
   if (key != CODED) {
@@ -928,7 +932,7 @@ public void mouseClicked() {
   public void keyReleased() {
   if (key == CODED && keyCode == SHIFT) {
     shiftIsDown = false;
-    // println("-->> shiftIsDown " + shiftIsDown);
+    // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
   }
 }
 
@@ -1067,9 +1071,17 @@ public void parseKey(char key, int keyCode) {
       println("-- curveSteps for current brush is "+ hoverBrush.curve.getCurveSteps());
     }
     break;
-  case 'm': // change the Sampler noise reduction profile
+  case 'n': // change the Sampler noise reduction profile
     pool.cycleMixProfile();
     println("-- mix profile is "+ pool.getMixProfile().name());
+    break;
+  case 'N': // normalize the audio buffer to -6.0dB
+    audioSignal = playBuffer.getChannel(0);
+    normalize(audioSignal, -6.0f);
+    updateAudioChain(audioSignal);
+    ensureSamplerReady();
+    ensureGranularReady();
+    println("---- normalized");
     break;
   case 'e': // change the envelope we're using
     presetIndex = (presetIndex + 1) % envPresets.length;
@@ -1111,14 +1123,6 @@ public void parseKey(char key, int keyCode) {
   case 'j': // turn audio and image blending on or off
     isBlending = !isBlending;
     println("-- isBlending is "+ isBlending +" (images blend only if chan = ChannelNames.ALL)");
-    break;
-  case 'n': // normalize the audio buffer to -6.0dB
-    audioSignal = playBuffer.getChannel(0);
-    normalize(audioSignal, -6.0f);
-    updateAudioChain(audioSignal);
-    ensureSamplerReady();
-    ensureGranularReady();
-    println("---- normalized");
     break;
   case 'L':
   case 'l': // determine whether to load a new file to both image and audio or not
@@ -1209,7 +1213,8 @@ public void showHelp() {
   println(" * Press '<' or ',' to decrement epsilon value of current brush (reduced points increase).");
   println(" * Press ']' to increment curve steps value of current brush.");
   println(" * Press '[' to decrement curve steps value of current brush.");
-  println(" * Press 'm' to change the Sampler noise reduction profile.");
+  println(" * Press 'n' to change the Sampler noise reduction profile.");
+  println(" * Press 'N' to normalize the audio buffer to -6.0dB.");
   println(" * Press 'e' to change the envelope we're using .");
   println(" * Press 'E' to toggle whether we adjust envelope duration in relation to gesture duration.");
   println(" * Press 'D' to toggle between long and short Sampler point envelope duration.");
@@ -1219,7 +1224,6 @@ public void showHelp() {
   println(" * Press 'k' to apply the hue and saturation in the colors array to mapImage (not to baseImage).");
   println(" * Press 'K' to apply hue and saturation in colors to baseImage and mapImage.");
   println(" * Press 'j' to turn audio and image blending on or off.");
-  println(" * Press 'n' to normalize the audio buffer to -6.0dB.");
   println(" * Press 'L' or 'l' to determine whether to load a new file to both image and audio or not.");
   println(" * Press 'o' or 'O' to open an audio or image file and load to image or audio buffer or both.");
   println(" * Press 's' to save display image to a PNG file.");

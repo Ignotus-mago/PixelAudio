@@ -137,7 +137,7 @@ void updateAudioChain(float[] sig, float bufferSampleRate) {
   float[] canonical = new float[targetSize];
   if (sig != null) {
     System.arraycopy(sig, 0, canonical, 0, Math.min(sig.length, targetSize));
-    println("**** copied sig to canonical");
+    if (isDebugging) println("**** copied sig to canonical");
   }
   // 3) Set audioSignal and other audio arrays
   audioSignal = canonical;
@@ -146,13 +146,13 @@ void updateAudioChain(float[] sig, float bufferSampleRate) {
   // 4) Store signal in playBuffer
   if (playBuffer == null || playBuffer.getBufferSize() != targetSize) {
     playBuffer = new MultiChannelBuffer(targetSize, 1);
-    println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
+    if (isDebugging) println("**** playBuffer initialized, length = "+ playBuffer.getBufferSize());
   }
   playBuffer.setChannel(0, canonical);
   // 5) Propagate into synths (adjust to your actual API)
   if (pool != null) {
     pool.setBuffer(playBuffer, bufferSampleRate);
-    println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
+    if (isDebugging) println("**** playBuffer updated, length = "+ playBuffer.getBufferSize());
   }
 }
 
@@ -189,7 +189,7 @@ void runGranularPointEvent(int x, int y) {
   ensureGranularReady();
   float hopMsF = Math.round(AudioUtility.samplesToMillis(hopSamples, sampleRate));
   final int grainCount = Math.max(1, (int) Math.round(granPointDurationMs / hopMsF));
-  if (isVerbose) println("-- granular point burst with grainCount = "+ grainCount);
+  if (isDebugging) println("-- granular point burst with grainCount = "+ grainCount);
   ArrayList<PVector> path = new ArrayList<>(grainCount);
   int[] timing = new int[grainCount];
   int signalPos = mapper.lookupSignalPosShifted(x, y, totalShift);
@@ -232,10 +232,12 @@ public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranu
     // use the x-coordinate for left to right stereo field mapping
     panPerGrain[i] = map(p.x, 0, width-1, -0.875f, 0.875f);
   }
-  println("\n----->>> playGranularGesture()");
-  //debugIndexHeadroom(buf, startIndices, params);
-  //debugTimesMs(sched);
-  //println("\n");
+  if (isDebugging) {
+    println("\n----->>> playGranularGesture()");
+    // debugIndexHeadroom(buf, startIndices, params);
+    // debugTimesMs(sched);
+    // println("\n");
+  }
   // we can can set start pitch and gain for each grain, but we need to create a GestureEventParams
   // object to do that. We don't both with a gain array here.
   if (usePitchedGrains) {
@@ -247,7 +249,7 @@ public void playGranularGesture(float buf[], GestureSchedule sched, GestureGranu
       .build();
     // this is the playGestureNow() command with maximum control over individual grains
     gDir.playGestureNow(buf, sched, params, eventParams);
-    println("-- pitch jitter -- "+ pitch[0]);
+    // if (isDebugging) println("-- pitch jitter -- "+ pitch[0]);
     return;
   }
   // there's a version of playGestureNow that accepts a array of buffer indices and and array panning values
@@ -408,7 +410,7 @@ public int calcSampleLen(int dur, float mean, float variance) {
     vary = (float) PixelAudio.gauss(mean, variance);
   }
   samplelen = (int)(abs((vary * dur) * sampleRate / 1000.0f));
-  // if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  // if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 

@@ -37,14 +37,10 @@
 		if (nd != null && isNetSendBrushTriggers) nd.oscSendTrig(samplerBrushes.indexOf(sb));
 	    if (isDebugging) {
 		PVector startPoint = sched.points.get(0);
-		int clickPos = mapper.lookupSignalPos(clickX, clickY);
-		int signalPos = mapper.lookupSignalPos((int)startPoint.x,  (int)startPoint.y);
+		int clickPos = mapper.lookupSignalPosShifted(clickX, clickY, totalShift);
+		int signalPos = mapper.lookupSignalPosShifted((int)startPoint.x,  (int)startPoint.y, totalShift);
 		println("-- sampler brush event, signalPos = "+ signalPos +", clickPos = "+ clickPos);
 	    }
-	}
-
-	void debugSched(GestureSchedule sched) {
-		println("-- schedule number of points= "+ sched.points.size());
 	}
 
 	/**
@@ -72,14 +68,12 @@
 	            (gainCurve != null) ? PAKeyframeControlCurve.expandToSchedule(gainCurve, sched) : null;
 	    final float pitch = snap.pitchRatio();
 	    final ADSRParams baseEnv = (snap.env != null) ? snap.env.copy() : samplerEnv;
-        float lenSum = 0;
-        isDebugging = true;
 	    synchronized (samplerBrushEventsLock) {
 	        for (int i = 0; i < n; i++) {
 	            PVector loc = sched.points.get(i);
 	            int x = Math.round(loc.x);
 	            int y = Math.round(loc.y);
-	            int pos = mapper.lookupSignalPos(x, y);
+	            int pos = mapper.lookupSignalPosShifted(x, y, totalShift);
 	            int eventDuration = isAdjustEnvelope
 	                    ? computeEnvDurationMs(sched, envNameFor(baseEnv), noteDuration)
 	                    : snap.envDurationMs;
@@ -93,25 +87,7 @@
 	            samplerBrushEvents.add(
 	                new SamplerBrushEvent(x, y, t, pos, len, gain, pitch, baseEnv.copy(), pan)
 	            );
-	            if (isDebugging) {
-		/*
-	                println("-- sampler evt i=" + i
-	                    + " dt=" + sched.timesMs[i]
-	                    + " eventTime=" + t
-	                    + " pos=" + pos
-	                    + " len=" + len
-	                    + " gain=" + gain
-	                    + " pitch=" + pitch
-	                    + " pan=" + pan);
-		*/
-		lenSum += len;
-	            }
 	        }
-	        if (isDebugging) {
-		double durMs = AudioUtility.samplesToMillis((Math.round(lenSum)/n), sampleRate);
-		println("average length = "+ durMs +" mS for "+ (n) +" events, gain = "+ baseGain);
-	        }
-	        isDebugging = false;
 	        samplerBrushEvents.sort((a, b) -> Integer.compare(a.eventTimeMs, b.eventTimeMs));
 	    }
 	}

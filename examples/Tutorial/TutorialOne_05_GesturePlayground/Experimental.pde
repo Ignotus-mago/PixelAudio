@@ -46,7 +46,7 @@ void printGOptHints(float alpha) {
   float hsec = snap.hopLengthSamples / audioOut.sampleRate();
   float dHop = (S / Tsec) * hsec;   // px per hop
   float targetSpacingPx = dHop * alpha;     // or 0.75*dHop, etc.
-  if (isVerbose) {
+  if (isDebugging) {
     println("-- path length px = "+ S);
     println("-- dHop = "+ dHop +", alpha = "+ alpha);
     println("-- targetSpacingPx = "+ targetSpacingPx);
@@ -66,7 +66,7 @@ void printGOptHints(float alpha) {
     0.25f, // ws
     info
     );
-  if (isVerbose) println(info.toString());
+  if (isDebugging) println(info.toString());
 }
 
 /**

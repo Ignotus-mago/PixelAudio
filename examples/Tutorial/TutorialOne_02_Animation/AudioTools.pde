@@ -85,7 +85,7 @@ public void audioMouseClick(int x, int y) {
 		ADSRParams env = adsrList.get((int)random(adsrList.size()));
 		int len = calcSampleLen();
 		// don't output envelope information for automated events
-		if (!isPlayMusicBox || isRaining) {
+		if ((!isPlayMusicBox || isRaining) && isVerbose) {
 			print("-- envelope: "+ env.toString());
 			println("; pos = "+ samplePos +", length = "+ len);
 		}

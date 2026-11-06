@@ -132,8 +132,10 @@ public void audioMouseClick(int x, int y) {
   if (isRandomADSR) {
     ADSRParams env = adsrList.get((int)random(adsrList.size()));
     int len = calcSampleLen();
-    print("-- envelope: "+ env.toString());
-    println("; pos = "+ samplePos +", length = "+ len);
+    if (isVerbose) {
+      print("-- envelope: "+ env.toString());
+      println("; pos = "+ samplePos +", length = "+ len);
+    }
     playSample(samplePos, len, 0.8f, env);
   } else {
     playSample(samplePos, calcSampleLen(), 0.6f);
@@ -225,7 +227,8 @@ public int calcSampleLen() {
   }
   // playSample() takes a note-window length in source-buffer samples.
   int samplelen = (int)(abs((vary * this.noteDuration) * bufferSampleRate / 1000.0f));
-  // println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ bufferSampleRate +"Hz buffer rate");
+  if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen
+    + " source samples at "+ bufferSampleRate +"Hz buffer rate");
   return samplelen;
 }
 
