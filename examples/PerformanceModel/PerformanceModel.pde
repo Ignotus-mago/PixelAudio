@@ -550,9 +550,8 @@ import oscP5.OscP5;
 	/*                    DEBUGGING + PERFORMANCE SETTINGS                */
 	/* ------------------------------------------------------------------ */
 
-	boolean isVerbose = true;
-	boolean isDebugging = false;
-	boolean isTrackSamplerVoices = false;
+	boolean isVerbose = true;       // set to true to get application feedback in console
+	boolean isDebugging = false;    // set to true to get debugging output to console
 
 	boolean shiftIsDown = false;         // flag for shift key down
 
@@ -601,6 +600,7 @@ import oscP5.OscP5;
 	String daFilename = "audioBlend.wav";    // "audioBlend.wav";
 	ArrayList<String> daFilelist = new ArrayList<>();
 
+	/* ------------- BEGIN APPLICATION METHODS ------------- */
 
 	public void settings() {
 		size(3 * genWidth, 2 * genHeight);
@@ -806,7 +806,7 @@ import oscP5.OscP5;
 					videx.startMovie();
 				}
 				videx.saveFrame();
-				println("-- video recording frame " + step + " of " + videoSteps);
+				if (isVerbose) println("-- video recording frame " + step + " of " + videoSteps);
 			}
 		}
 	}
@@ -942,7 +942,9 @@ import oscP5.OscP5;
 		r[1] = y1;
 		r[2] = x2;
 		r[3] = y2;
-		// println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		if (isDebugging) {
+			println("-- [", x1, y1, x2, y2, "] contains ", x, y, " == ", containsPoint(x, y, r));
+		}
 		if (drawingMode == DrawingMode.DRAW_EDIT_GRANULAR || drawingMode == DrawingMode.PLAY_ONLY) {
 			for (int i = granularBrushes.size() - 1; i >= 0; i--) {
 				GranularBrush b = granularBrushes.get(i);
@@ -1059,7 +1061,7 @@ import oscP5.OscP5;
     public void keyPressed() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = true;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
             return;
         }
 	if (key != CODED) {
@@ -1093,7 +1095,7 @@ import oscP5.OscP5;
     public void keyReleased() {
         if (key == CODED && keyCode == SHIFT) {
             shiftIsDown = false;
-            // println("-->> shiftIsDown " + shiftIsDown);
+            // if (isDebugging) println("-->> shiftIsDown " + shiftIsDown);
         }
     }
 
@@ -1140,7 +1142,12 @@ import oscP5.OscP5;
 			break;
 		case 'a': // toggle animation
 			isAnimating = !isAnimating;
-			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
+			if (isAnimating) {
+				isWindowing = false;
+			}
+			println(isAnimating
+				? "-- animation is ON; window traversal is OFF"
+				: "-- animation is OFF");
 			break;
 		case 'A': // change animation shift  or automatic window traversal rate
 			// animation is synchronized with the audio when we trigger an audio event once every frame
@@ -1149,9 +1156,10 @@ import oscP5.OscP5;
 			shift = (shift == defaultShift)
 				? Math.round(audioOut.sampleRate() / rate)
 				: defaultShift;
-			println(isAnimating ? "-- animation is ON, shift = "+ shift : "-- animation is OFF, shift = "+ shift);
+			windowHopSize = (int) shift;
+			println("-- shift = windowHopSize = "+ shift);
+			println("   windowing is "+ isWindowing +", animating is "+ isAnimating);
 			if (isWindowing) {
-				windowHopSize = (int) shift;
 				windowBuff.setHopSize(windowHopSize);
 			}
 			break;
@@ -1187,7 +1195,7 @@ import oscP5.OscP5;
 			    syncDrawingModeToBrush(changed);
 		    }
 		    else {
-		        // handleClickOutsideBrush(clipToWidth(mouseX), clipToHeight(mouseY));
+		        // no action
 		    }
 		    break;
 		case 'd': // toggle doPlayOnNewBrush: if true, audio plays when a new brush is created
@@ -1268,6 +1276,7 @@ import oscP5.OscP5;
 				return;
 			}
 			optimizeActiveBrush();
+			println("-- optimized grain count is "+ this.optGrainCount);
 			break;
 		case 'u': // toggle granular sample optimization: same as the 'q' command, applied on brushstroke creation
 			isAutoOptimize = !isAutoOptimize;
@@ -1418,9 +1427,13 @@ import oscP5.OscP5;
 			break;
 		case '|': // toggle automatic WindowedBuffer traversal
 			isWindowing = !isWindowing;
-			if (isWindowing) isAnimating = false;
-			totalShift = 0;
-			println("---- WindowBuffer traversal is " + (isWindowing ? "ON" : "OFF"));
+			if (isWindowing) {
+				isAnimating = false;
+				totalShift = 0;
+			}
+			println(isWindowing
+					? "-- WindowBuffer traversal is ON; animation is OFF"
+					: "-- WindowBuffer traversal is OFF");
 			break;
 		case '=': // send UDP message to Max (simpleAudioIO.maxpat): reverb ON
 			if (nd != null) nd.oscSendOnOff(1, true);
@@ -1457,14 +1470,7 @@ import oscP5.OscP5;
 		case 'h': // show help message
 			showHelp();
 			break;
-		case 'H': // for testing
-			float[] values = ((PAKeyframeControlCurve) dynamics).getValues();
-			float[] times = ((PAKeyframeControlCurve) dynamics).getTimes01();
-			StringBuffer sb = new StringBuffer();
-			for (int i = 0; i < times.length; i++) {
-				sb.append(times[i]+": "+values[i]+"; ");
-			}
-		println("---- dynamics = "+ sb.toString());
+		case 'H': // reserved for testing, write your own result for the 'H' key
 			break;
 		default:
 			break;
@@ -1554,7 +1560,7 @@ import oscP5.OscP5;
 		println(" * Press 'V' to send UDP message to Max (simpleAudioIO.maxpat): big reverb settings.");
 
 		println(" * ----- Help -----");
-		println(" * Press 'h' or 'H' to show help message.");
+		println(" * Press 'h' to show help message.");
 	}
 
 

@@ -114,7 +114,6 @@ public void renderSignal() {
   float[] sig = wavesynth.renderAudioRaw(step);           // get the signal "as is" from WaveSynth
   sig = WaveSynth.normalize(sig, 0.9f);        // normalize samples to the range (-0.9f, 0.9f)
   this.updateAudioChain(sig);
-  // println("--->> copied audio signal to audio buffer");
 }
 
 /**
@@ -154,7 +153,7 @@ public int calcSampleLen() {
   }
   // playSample() takes a note-window length in source-buffer samples.
   samplelen = (int)(abs((vary * this.noteDuration) * wavesynth.getSampleRate() / 1000.0f));
-  println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
+  if (isVerbose) println("---- calcSampleLen samplelen = "+ samplelen +" source samples at "+ wavesynth.getSampleRate() +"Hz buffer rate");
   return samplelen;
 }
 

@@ -542,7 +542,6 @@ public void gap1_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo1Gap != val) {
     argo1Gap = val;
-    //println("--->> new argo1 gap = "+ argo1Gap);
     int shift = argo1.getArgosyPixelShift();
     argo1.setArgosyGap(argo1Gap);
     if (shift != 0) {
@@ -591,7 +590,7 @@ public void argo1ShowCheck_hit(GCheckbox source, GEvent event) {
 
 public void argo1FreezeCheck_hit(GCheckbox source, GEvent event) {
   this.isArgo1Freeze = source.isSelected();
-  println("isArgo1Freeze is "+ isArgo1Freeze);
+  if (isVerbose) println("isArgo1Freeze is "+ isArgo1Freeze);
 }
 
 public void argo1InitAndShift() {
@@ -676,7 +675,6 @@ public void gap2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (argo2Gap != val) {
     argo2Gap = val;
-    //println("--->> new argo2 gap = "+ argo2Gap);
     int shift = argo2.getArgosyPixelShift();
     argo2.setArgosyGap(argo2Gap);
     if (shift != 0) {
@@ -724,7 +722,7 @@ public void argo2ShowCheck_hit(GCheckbox source, GEvent event) {
 
 public void argo2FreezeCheck_hit(GCheckbox source, GEvent event) {
   this.isArgo2Freeze = source.isSelected();
-  println("isArgo2Freeze is "+ isArgo2Freeze);
+  if (isVerbose) println("isArgo2Freeze is "+ isArgo2Freeze);
 }
 
 public void argo2InitAndShift() {
@@ -751,7 +749,6 @@ public void animRun1_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (animRun1 != val) {
     animRun1 = val;
-    //println("--->> animRun1 = "+ animRun1);
   }
 }
 
@@ -759,7 +756,6 @@ public void animHold1_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (animHold1 != val) {
     animHold1 = val;
-    //println("--->> animHold1 = "+ animHold1);
   }
 }
 
@@ -767,7 +763,6 @@ public void animRun2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (animRun2 != val) {
     animRun2 = val;
-    //println("--->> animRun2 = "+ animRun2);
   }
 }
 
@@ -775,7 +770,6 @@ public void animHold2_change(GTextField source, GEvent event) {
   int val = source.getValueI();
   if (animHold2 != val) {
     animHold2 = val;
-    //println("--->> animHold2 = "+ animHold2);
   }
 }
 

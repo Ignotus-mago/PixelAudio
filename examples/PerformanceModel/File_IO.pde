@@ -89,12 +89,12 @@
 	        bufferSampleRate = fileSampleRate;
 		}
 		this.audioFileLength = sig.length;
-		println("---- file sample rate = "+ this.fileSampleRate
+		if (isVerbose) println("---- file sample rate = "+ this.fileSampleRate
 				+", buffer sample rate = "+ bufferSampleRate
 				+", audio output sample rate = "+ audioOut.sampleRate());
 		updateAudioChain(sig, bufferSampleRate);
 		if (isLoadToBoth) {
-			println("---- loading to both ----");
+			if (isVerbose) println("---- loading to both ----");
 			writeAudioToImage(audioSignal, mapper, mapImage, chan);
 			commitMapImageToBaseImage();
 			if (applyColorMapOnLoad) applyColorMapToDisplay(true);

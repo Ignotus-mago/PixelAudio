@@ -56,12 +56,7 @@ public class WaveData {
 	public int animSteps = WaveData.defaultAnimSteps;
 	/** convenience variable, 30 seconds of animation at 24 frames per second, also context dependent */
 	public static int defaultAnimSteps = 720; 	//  24 * 30 = 720
-	/** Support for old JSON format where phase was already scaled by TWO_PI. 
-	 *  In the new format, phase ranges over the open interval (0, 1), so we
-	 *  scale it by TWO_PI and store the result in phaseTwoPi, which tracks phase information.
-	 *  You can safely ignore this variable. 
-	 */
-	public static final boolean phaseScalesTwoPI = true;
+
 	
     // --------------------------------------------------------------------
     // Per-frame oscillator state for fast recurrence
@@ -87,28 +82,6 @@ public class WaveData {
     private static final int RENORM_PERIOD = 1024;
 
 	
-    // TODO remove references to phaseScalesTwoPi and this method. phaseScalesTwoPi was used in early JSON WaveSynth data. 
-    // Once we're sure it is gone from that context, the method can be dropped. 
-    /**
-     * Legacy code, to be dropped in later releases. 
-     */
-	private WaveData(float f, float a, float p, float dc, float cycles, int c, int animSteps, boolean phaseScalesTwoPi) {
-		this.freq = f;
-		this.amp = a;
-		this.phase = p;
-		if (phaseScalesTwoPi) {
-			this.phaseTwoPi = p * PConstants.TWO_PI;
-		} else {
-			this.phaseTwoPi = p;
-		}
-		this.setDc(dc);
-		this.phaseCycles = cycles;
-		this.animSteps = animSteps;
-		this.phaseInc = (cycles * PConstants.TWO_PI) / animSteps;
-		this.waveColor = c;
-		this.waveState = WaveState.ACTIVE;
-	}
-
 	/**
 	 * Preferred constructor for WaveData
 	 * 
@@ -120,10 +93,20 @@ public class WaveData {
 	 * @param c			color associated with this WaveData object
 	 * @param steps		number of frames for animation
 	 */
-	public WaveData(float f, float a, float p, float dc, float cycles, int c, int steps) {
-		this(f, a, p, dc, cycles, c, steps, WaveData.phaseScalesTwoPI);
+	public WaveData(float f, float a, float p, float dc,
+			float cycles, int c, int steps) {
+		this.freq = f;
+		this.amp = a;
+		this.phase = p;
+		this.phaseTwoPi = p * PConstants.TWO_PI;
+		this.setDc(dc);
+		this.phaseCycles = cycles;
+		this.animSteps = steps;
+		this.phaseInc = (cycles * PConstants.TWO_PI) / steps;
+		this.waveColor = c;
+		this.waveState = WaveState.ACTIVE;
 	}
-
+	
 	/**
 	 * Constructor for WaveData when animation steps are not known
 	 * 
@@ -135,14 +118,14 @@ public class WaveData {
 	 * @param c			color associated with this WaveData object
 	 */
 	public WaveData(float f, float a, float p, float dc, float cycles, int c) {
-		this(f, a, p, dc, cycles, c, WaveData.defaultAnimSteps, WaveData.phaseScalesTwoPI);
+		this(f, a, p, dc, cycles, c, WaveData.defaultAnimSteps);
 	}
 
 	/**
 	 * A default WaveData instance, initialized at 440Hz, 0.5 amplitude, etc. 
 	 */
 	public WaveData() {
-		this(440.0f, 0.5f, 0.5f, 0.0f, 1.0f, PixelAudioMapper.composeColor(127, 127, 127), WaveData.defaultAnimSteps, WaveData.phaseScalesTwoPI);
+		this(440.0f, 0.5f, 0.5f, 0.0f, 1.0f, PixelAudioMapper.composeColor(127, 127, 127), WaveData.defaultAnimSteps);
 	}
 
 	/**
@@ -181,29 +164,14 @@ public class WaveData {
 		this.amp = a;
 	}
 
-	/**
-	 * Set new phase value for WaveData, with option to specify whether the input phase is already scaled by TWO_PI.
-	 * This method is deprecated because we want to move towards a consistent format where phase is always a fraction
-	 * of TWO_PI, and we handle the scaling internally.
-	 * @param p
-	 * @param phaseScalesTwoPi
-	 */
-	 @Deprecated
-	 void setPhase(float p, boolean phaseScalesTwoPi) {
-		this.phase = p;
-		if (phaseScalesTwoPi) {
-			this.phaseTwoPi = p * PConstants.TWO_PI;
-		} else {
-			this.phaseTwoPi = p;
-		}
-	}
 
 	/**
-	 * Set new phase value for WaveData, assuming the input phase is a fraction of TWO_PI (the preferred format).
+	 * Set new phase value for WaveData, where the input phase is a fraction of TWO_PI.
 	 * @param p   new phase value for WaveData
 	 */
 	public void setPhase(float p) {
-		setPhase(p, WaveData.phaseScalesTwoPI);
+		this.phase = p;
+		this.phaseTwoPi = p * PConstants.TWO_PI;
 	}
 
 	/**
@@ -306,7 +274,6 @@ public class WaveData {
 	
 	
 	
-	
     // --------------------------------------------------------------------
     // NEW: fast oscillator-based API
     // --------------------------------------------------------------------
@@ -385,7 +352,7 @@ public class WaveData {
     }
 
     /**
-     * If you ever need to force this oscillator to be rebuilt next frame.
+     * Method to call if you ever need to force this oscillator to be rebuilt next frame.
      */
     public void invalidateFrameState() {
         this.framePrepared = false;

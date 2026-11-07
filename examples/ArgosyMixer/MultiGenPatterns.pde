@@ -111,7 +111,6 @@ public MultiGen hilbertZigzagLoop6x4(int genW, int genH) {
     int x = locs[i][0] * genW;
     int y = locs[i][1] * genH;
     offsetList.add(new int[] {x, y});
-    // println("locs: ", locs[i][0], locs[i][1]);
     if (cues[i] == 'H') {
       genList.add(new HilbertGen(genW, genH, att));
     } else {
@@ -279,7 +278,6 @@ public MultiGen zigzagLoop6x4(int genW, int genH) {
     int x = locs[i][0] * genW;
     int y = locs[i][1] * genH;
     offsetList.add(new int[] {x, y});
-    // println("locs: ", locs[i][0], locs[i][1]);
     genList.add(new DiagonalZigzagGen(genW, genH, att));
     i++;
   }

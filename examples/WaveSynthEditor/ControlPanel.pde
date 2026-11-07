@@ -561,55 +561,7 @@ synchronized public void winDraw(PApplet appc, GWinData data) {
   appc.background(color(254, 233, 178));
 }
 
-/*
-// respond to key in window
- // not loaded
- // old method under development, the new one below is better
- public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
- if (!evt.isControlDown()) {
- println("-- exit winKey");
- return;
- }
- if (evt.getAction() == KeyEvent.RELEASE) {
- println("-- continue winKey");
- parseKey(evt.getKey(), evt.getKeyCode());
- }
-
- }
- */
-
-/*
- // validate all text entry fields...
- boolean isGuiTyping() {
- if (pitchShiftText != null && pitchShiftText.hasFocus()) {
- return true;
- }
- return false;
- }
-
- // respond to key in window (new method)
- public void winKey(PApplet appc, GWinData data, KeyEvent evt) {
- if (evt.getAction() != KeyEvent.RELEASE) return;
- if (isGuiTyping()) return;
- parseKey(evt.getKey(), evt.getKeyCode());
- }
-
- public void globalPanel_hit(GPanel panel, GEvent event) {
- // nothing doing
- }
- */
-
-/*
-    Dropped:
- synchronized public void winMouse(PApplet appc, GWinData data, processing.event.MouseEvent mevent)
- synchronized public void winKey(PApplet appc, GWinData data, processing.event.KeyEvent kevent)
- synchronized public void winPre(PApplet appc, GWinData data)
- synchronized public void winPost(PApplet appc, GWinData data)
- public void winClose(GWindow window)
- */
-
 public void comments_hit(GTextArea source, GEvent event) {
-  // println("commentsField - GTextField >> GEvent." + event + " @ " + millis() + " value: " + commentsField.getText());
   if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
     final String comment = commentsField.getText();
     pendingWaveEdits.add(() -> {
@@ -707,7 +659,7 @@ public void videoNameField_hit(GTextField source, GEvent event) {
 public void fpsMenu_hit(GDropList source, GEvent event) {
   if (event == GEvent.ENTERED || event == GEvent.LOST_FOCUS) {
     wavesynth.setVideoFrameRate(Integer.valueOf(fpsMenu.getSelectedText()));
-    println("----->>> videoFPS = "+ wavesynth.videoFrameRate);
+    if (isVerbose) println("----->>> videoFPS = "+ wavesynth.videoFrameRate);
   }
 }
 
@@ -722,7 +674,7 @@ public void recordCheck_hit(GCheckbox source, GEvent event) {
     }
   }
   refreshGlobalPanel();
-  println("----->>> isRecordingVideo = "+ isRecordingVideo);
+  if (isVerbose) println("----->>> isRecordingVideo = "+ isRecordingVideo);
 }
 
 // prob want a refresh call in WaveSynth
@@ -742,7 +694,7 @@ public void capSpinner_hit(GSpinner source, GEvent event) {
 // stays global
 public void capCheck_hit(GCheckbox source, GEvent event) {
   isCaptureFrames = capCheck.isSelected();
-  println("----->>> isCaptureFrames = "+ isCaptureFrames);
+  if (isVerbose) println("----->>> isCaptureFrames = "+ isCaptureFrames);
 }
 
 // handled globally with calls on wavesynth or list of WaveAnimators, when relevant
@@ -833,7 +785,6 @@ public void dc_hit(GTextField source, GEvent event) {
  * @param event
  */
 public void handleColorChooser(GButton button, GEvent event) {
-	// println("btnColor - GButton >> GEvent." + event + " @ " + millis());
 	sel_col = G4P.selectColor(currentWD.waveColor);
 	colorTitle.setText("Color: "+ (sel_col >> 16 & 0xFF) +", "+ (sel_col >> 8 & 0xFF) +", "+ (sel_col & 0xFF));
 	colorPG.beginDraw();
@@ -855,17 +806,14 @@ public void handleColorChooser(GButton button, GEvent event) {
 }
 
 public void prev_hit(GButton source, GEvent event) {
-  //println("prevBtn - GButton >> GEvent." + event + " @ " + millis());
   decWaveData();
 }
 
 public void next_hit(GButton source, GEvent event) {
-  //println("nextBtn - GButton >> GEvent." + event + " @ " + millis());
   incWaveData();
 }
 
 public void newWave_hit(GButton source, GEvent event) {
-  // println("newWaveBtn - GButton >> GEvent." + event + " @ " + millis());
   WaveData wd = new WaveData();
   wavesynth.waveDataList.add(++waveDataIndex, wd);
   currentWD = wavesynth.waveDataList.get(waveDataIndex);
@@ -875,7 +823,6 @@ public void newWave_hit(GButton source, GEvent event) {
 }
 
 public void dupWave_hit(GButton source, GEvent event) {
-  // println("dupWaveBtn - GButton >> GEvent." + event + " @ " + millis());
   WaveData wd = currentWD.clone();
   wavesynth.waveDataList.add(++waveDataIndex, wd);
   currentWD = wavesynth.waveDataList.get(waveDataIndex);
@@ -897,7 +844,6 @@ public void delWave_hit(GButton source, GEvent event) {
 
 // see enum WaveData.WaveState {ACTIVE, SOLO, MUTE, SUSPENDED};
 public void muteWave_hit(GCheckbox source, GEvent event) {
-  //println("muteWave - GCheckbox >> GEvent." + event + " @ " + millis());
   currentWD.isMuted = muteWave.isSelected();
   currentWD.waveState = muteWave.isSelected() ? WaveData.WaveState.MUTE : WaveData.WaveState.ACTIVE;
   loadWaveDataPanelValues(currentWD);
@@ -905,7 +851,6 @@ public void muteWave_hit(GCheckbox source, GEvent event) {
 
 // see enum WaveData.WaveState {ACTIVE, SOLO, MUTE, SUSPENDED};
 public void soloWave_hit(GCheckbox source, GEvent event) {
-  //println("soloWave - GCheckbox >> GEvent." + event + " @ " + millis());
   // if the soloWave checkbox is selected, set currentWD WaveState to SOLO, otherwise, to ACTIVE
   currentWD.waveState = soloWave.isSelected() ? WaveData.WaveState.SOLO : WaveData.WaveState.ACTIVE ;
   if (currentWD.waveState == WaveData.WaveState.SOLO) {

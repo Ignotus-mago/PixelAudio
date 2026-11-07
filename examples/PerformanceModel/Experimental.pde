@@ -42,11 +42,11 @@
 		float hsec = snap.hopLengthSamples / audioOut.sampleRate();
 		float dHop = (S / Tsec) * hsec;   // px per hop
 		float targetSpacingPx = dHop * alpha;     // or 0.75*dHop, etc.
-		//if (isVerbose) {
-		//	println("-- path length px = "+ S);
-		//	println("-- dHop = "+ dHop +", alpha = "+ alpha);
-		//	println("-- targetSpacingPx = "+ targetSpacingPx);
-		//}
+		if (isDebugging) {
+			println("-- path length px = "+ S);
+			println("-- dHop = "+ dHop +", alpha = "+ alpha);
+			println("-- targetSpacingPx = "+ targetSpacingPx);
+		}
 
 		StringBuffer info = new StringBuffer();
 		this.optGrainCount = calcGranularOptHints(
@@ -62,7 +62,7 @@
 				0.25f,   // ws
 				info
 				);
-		//if (isVerbose) println(info.toString());
+		if (isDebugging) println(info.toString());
 	}
 
 	/**

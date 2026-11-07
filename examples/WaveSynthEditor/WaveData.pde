@@ -15,7 +15,7 @@ public void scaleAmps(ArrayList<WaveData> waveDataList, float scale) {
     }
     wd.setAmp(wd.amp * scale);
     wd.invalidateFrameState();
-    if (isVerbose) println("----- set amplitude " + i + " to " + wd.amp);
+    println("----- set amplitude " + i + " to " + wd.amp);
     i++;
   }
 }
@@ -32,6 +32,9 @@ public void shiftColors(ArrayList<WaveData> waveDataList, float shift) {
       continue;
     wd.setWaveColor(WaveSynthBuilder.colorShift(wd.waveColor, shift, hsb));
   }
+  // although this is called from parseKey() and our policy is to respond to
+  // parseKey() unconditionally, the end user can see the color change, so this
+  // is flagged with isVerbose
   if (isVerbose) println("----->>> shift colors " + shift);
 }
 
@@ -42,6 +45,9 @@ public void scaleSaturation(ArrayList<WaveData> waveDataList, float scale) {
       continue;
     wd.setWaveColor(WaveSynthBuilder.saturationScale(wd.waveColor, scale, hsb));
   }
+  // although this is called from parseKey() and our policy is to respond to
+  // parseKey() unconditionally, the end user can see the color change, so this
+  // is flagged with isVerbose
   if (isVerbose) println("----->>> scale color saturation " + scale);
 }
 
@@ -59,6 +65,9 @@ public void scaleFreqs(ArrayList<WaveData> waveDataList, float scale) {
     }
     wd.setFreq(wd.freq * scale);
     wd.invalidateFrameState();
+    // although this is called from parseKey() and our policy is to respond to
+    // parseKey() unconditionally, the end user can see the frequency change, so this
+    // is flagged with isVerbose
     if (isVerbose) println("----- set frequency " + i + " to " + wd.freq);
     i++;
   }
@@ -77,6 +86,9 @@ public void shiftPhases(ArrayList<WaveData> waveDataList, float shift) {
     wd.setPhase(wd.phase + shift);
     wd.invalidateFrameState();
   }
+  // although this is called from parseKey() and our policy is to respond to
+  // parseKey() unconditionally, the end user can *usually* see the phase change,
+  // so this is flagged with isVerbose
   if (isVerbose) println("----->>> shiftPhase " + shift);
 }
 

@@ -277,7 +277,6 @@ int step;                               // number of current step in animation l
 int startTime;                          // set when animation starts
 int stopTime;                           // used to calculate animation time until finish and duration
 
-boolean isVerbose = true;               // if true, post lots of debugging messages to console
 boolean isSecondScreen = false;         // for a two screen display
 int screen2x;                           // second screen x-coord, will be set by setScaling()
 int screen2y;                           // second window y-coord, will be set by setScaling()
@@ -339,6 +338,9 @@ boolean audioDirty = true;
 
 String screenMsg = "";
 boolean showAnimationStatus = false;
+
+boolean isVerbose = true;       // set to true to get application feedback in console
+boolean isDebugging = false;    // set to true to get debugging output to console
 
 
 
@@ -529,7 +531,7 @@ public void draw() {
   image(mapImage, 0, 0, width, height);
   if (isRecordingVideo && videx != null) {
     videx.saveFrame();
-    println("-- video recording frame " + step + " of " + animStop);
+    if (isVerbose) println("-- video recording frame " + step + " of " + animStop);
   }
   runTimeArray();           // audio playback animation won't be recorded
   if (showAnimationStatus) {
@@ -1040,11 +1042,11 @@ public void toggleAnimation() {
     // prepareAnimation();
     runVideoBtn.setText("Pause");
     startTime = millis();
-    println("-----> start time is " + startTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
+    println("-----> animation start time is " + startTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
   } else {
     runVideoBtn.setText("Run");
     stopTime = millis();
-    println("-----> stop time is " + stopTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
+    println("-----> animation stop time is " + stopTime / 1000.0 + " seconds at frame "+ step +" of "+ animSteps);
   }
 }
 

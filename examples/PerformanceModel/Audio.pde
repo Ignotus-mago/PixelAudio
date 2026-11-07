@@ -65,6 +65,19 @@
 	}
 
 	/**
+	 * Print the values of this.dynamics PAKeyframeControlCurve to the console.
+	 */
+	public void printDynamicsValues() {
+		float[] values = ((PAKeyframeControlCurve) dynamics).getValues();
+		float[] times = ((PAKeyframeControlCurve) dynamics).getTimes01();
+		StringBuffer sb = new StringBuffer();
+		for (int i = 0; i < times.length; i++) {
+			sb.append(times[i]+": "+values[i]+"; ");
+		}
+		println("---- dynamics = "+ sb.toString());
+	}
+
+	/**
 	 * Plays a sample and animates a point
 	 * @param x    x-coordinate of event
 	 * @param y    y-coordinate of event
@@ -320,24 +333,7 @@
 	 * @return the calculated sample length in samples
 	 */
 	public int playSample(int samplePos, int samplelen, float amplitude, ADSRParams env, float pitch, float pan) {
-		int beforeCount = 0;
-		int afterCount = 0;
-	int voiceCount = 0;
-		// tracking Sampler voice count for possible problems, which we discovered and fixed
-		if (isTrackSamplerVoices) {
-			voiceCount = gDir.activeOrReleasingVoiceCount();
-		println("-- gDir voice count = "+ voiceCount);
-			// println("-- playSample: gain = "+ amplitude +", length = "+ samplelen +", time = "+ millis());
-			beforeCount = pool.samplerActiveVoiceCount();
-			// println("-- sampler voices BEFORE: "+ beforeCount);
-		}
 		int sampleLen = pool.playSample(samplePos, samplelen, amplitude, env, pitch, pan);
-		if (isTrackSamplerVoices) {
-			afterCount = pool.samplerActiveVoiceCount();
-			if (afterCount - beforeCount > 1) println("-- sampler voice jump BEFORE "+ beforeCount +" AFTER "+ afterCount);
-			if (afterCount > 256) println("-- high sampler voice count "+ afterCount);
-			// println("-- sampler voices AFTER: "+ afterCount);
-		}
 		return sampleLen;
 	}
 
@@ -636,30 +632,31 @@
 	 * @param buf           buffer to play from
 	 * @param sched         a GestureSchedule
 	 * @param params        runtime parameters for gesture playback
-	 * @param eventParams   optional pan, gain, and pitch modifiers per grain
 	 * @param repeats       number of times to loop
 	 * @param gapMs         time between loop events
 	 * @param animate       use TimedLocation animation (not used in method, true by default, TODO clarify)
 	 * @return              an InstrumentLoop object
 	 */
-	public synchronized InstrumentLoop startGranularLoop(GranularBrush gb,
+	public synchronized InstrumentLoop startGranularLoop(
+			GranularBrush gb,
 			float[] buf,
 			GestureSchedule sched,
 			GestureGranularParams params,
-			GestureEventParams eventParams,
 			int repeats,
 			int gapMs,
 			boolean animate) {
-		if (gb == null || buf == null || sched == null || params == null || eventParams == null) return null;
+		if (gb == null || buf == null || sched == null || params == null) return null;
 		int durationMs = estimateLoopDurationMs(sched, params);
 		long startMs = millis();
 
-		Runnable playAction = () -> {
-			playGranularGesture(buf, sched, params, eventParams);
-			if (animate) {
-				storeGranularCurveTL(sched, millis() + 10, false);
-			}
-		};
+	    Runnable playAction = () -> {
+	        // Capture the current totalShift and the current WindowedBuffer position for this iteration.
+	        GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
+	        playGranularGesture(buf, sched, params, eventParams);
+	        if (animate) {
+	            storeGranularCurveTL(sched, millis() + 10, false);
+	        }
+	    };
 
 		Runnable stopAction = () -> {
 			if (grainTimeLocs != null) {
@@ -673,7 +670,8 @@
 			}
 		};
 
-		InstrumentLoop loop = new InstrumentLoop(gb, playAction, stopAction,
+		InstrumentLoop loop = new InstrumentLoop(
+				gb, playAction, stopAction,
 				durationMs, gapMs, repeats, startMs);
 		activeLoops.add(loop);
 		return loop;
@@ -696,8 +694,7 @@
 	    if (sched == null || sched.size() == 0) return null;
 	    GestureGranularParams params = snap.toParams();
 	    float[] buf = (granSignal != null) ? granSignal : audioSignal;
-	    GestureEventParams eventParams = prepareGranularGesture(buf, sched, params);
-	    return startGranularLoop(gb, buf, sched, params, eventParams, repeats, gapMs, true);
+	    return startGranularLoop(gb, buf, sched, params, repeats, gapMs, true);
 	}
 
 	/**

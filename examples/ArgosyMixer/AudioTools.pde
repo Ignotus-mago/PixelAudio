@@ -71,7 +71,6 @@ public void audioMouseClick(int x, int y) {
 public int playSample(PASamplerInstrument synth, int samplePos, int samplelen, float amplitude, ADSRParams env, float pan) {
   synth.playSample(samplePos, samplelen, amplitude, env, pitchScaling, pan);
   int durationMS = (int)(samplelen/sampleRate * 1000);
-  // println("---->> adding event to timeLocsArray "+  samplelen, durationMS, millis());
   timeLocsArray.add(new TimedLocation(sampleX, sampleY, durationMS + millis()));
   // return the length of the sample
   return samplelen;
@@ -84,7 +83,7 @@ public int calcSampleLen() {
     vary = (float) PixelAudio.gauss(1.0, 0.0625);
   }
   samplelen = (int)(abs((vary * this.noteDuration) * sampleRate / 1000.0f));
-  // println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
+  if (isDebugging) println("---- calcSampleLen samplelen = "+ samplelen +" samples at "+ sampleRate +"Hz sample rate");
   return samplelen;
 }
 

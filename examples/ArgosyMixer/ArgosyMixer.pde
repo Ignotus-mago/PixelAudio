@@ -171,6 +171,11 @@ boolean isRecordingVideo = false;
 // image export
 boolean isSavePatterns = false;   // for future use
 
+boolean isVerbose = true;       // set to true to get application feedback in console
+boolean isDebugging = false;    // set to true to get debugging output to console
+
+/* ------------ BEGIN APPLICATION METHODS -------------- */
+
 /* ------------------------------------------------------------------ */
 /*                           AUDIO VARIABLES                          */
 /* ------------------------------------------------------------------ */
@@ -487,7 +492,7 @@ public void recordVideo() {
       holdCount1 = animClose;
       holdCount2 = animClose;
     }
-    println("-- video recording frame " + currentFrame + " of " + animDuration);
+    if (isVerbose) println("-- video recording frame " + currentFrame + " of " + animDuration);
   }
 }
 
@@ -495,7 +500,6 @@ public void recordVideo() {
  * The built-in mouseClicked handler for Processing, forwards clipped mouse coords to audioMouseClick().
  */
 public void mouseClicked() {
-  // println("mouseClicked:", mouseX, mouseY);
   // handle audio generation in response to a mouse click
   audioMouseClick(clipToWidth(mouseX), clipToHeight(mouseY));
 }
@@ -814,7 +818,6 @@ public void renderSignals() {
   argo2Buffer.setChannel(0, argo2Signal);
   argo1Synth.setBuffer(argo1Buffer);
   argo2Synth.setBuffer(argo2Buffer);
-  // println("--->> generated new audio signals");
 }
 
 

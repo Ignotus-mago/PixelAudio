@@ -2059,6 +2059,9 @@ public class ArgosyMixer extends PApplet {
 	  controlWindow.loop();
 	}
 
+	// TODO: In some GUI examples we conditionally output changes to the console, for example:
+	//    if (isVerbose) println("--->> animRun2 = "+ animRun2);
+	// We are not doing that here, but maybe it's a Good Idea? 
 
 	/* ----->>> EVENT HANDLERS <<<----- */  
 	/* ----->>>   ARGOSY ONE   <<<----- */  

@@ -61,10 +61,12 @@ public void setScaling() {
   scaledWindowHeight += (scaledWindowHeight % 2 != 0) ? 1 : 0;
   isOversize = (mapImage.width > scaledWindowWidth || mapImage.height > scaledWindowHeight);
   windowScale = (1.0f * mapImage.width) / scaledWindowWidth;
-  println("maxWindowWidth " + maxWindowWidth + ", maxWindowHeight " + maxWindowHeight);
-  println("image width " + mapImage.width + ", image height " + mapImage.height);
-  println("scaled width " + scaledWindowWidth + ", scaled height " + scaledWindowHeight + ", "
-    + "oversize image is " + isOversize);
+  if (isVerbose) {
+    println("maxWindowWidth " + maxWindowWidth + ", maxWindowHeight " + maxWindowHeight);
+    println("image width " + mapImage.width + ", image height " + mapImage.height);
+    println("scaled width " + scaledWindowWidth + ", scaled height " + scaledWindowHeight + ", "
+      + "oversize image is " + isOversize);
+  }
 }
 
 public void resizeWindow() {
