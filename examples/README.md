@@ -26,6 +26,7 @@ As of July 18, 2026, we have these examples, in the suggested order for learning
 - **AudioCapture**: capture streaming or live audio and turn it into a bitmap.
 - **SampleAccurateDemo**: compare sample-accurate sampler and granular scheduling.
 - **Bagatelle**: a live performance application with a GUI, presets, JSON i/o, UDP networking, etc.
+- **PerformanceModel**: all the features of Bagatelle plus windowed audio file traversal in a shell application.
 
 The [Javadocs reference](https://paulhertz.net/PixelAudio/reference/net/paulhertz/pixelaudio/example/package-summary.html) for the example sketches will guide you through each sketch. Most sketch javadocs are illustrated. The **TutorialOne** sequence is designed to get you up and running with creating your own sampling and granular audio synths, where you draw on an image to generate non-linear samples from an audio file. You can load your own audio and image files instead of the ones in the examples. Outside the tutorial sequence, the `ArgosyMixer` and `WaveSynthEditor` can also be used without digging into the code. Each provides a GUI for exploring additive audio synthesis that also acts as a color organ (`WaveSynth`) and pattern generation that can produce both control pulses and audio (`Argosy`). `ArgosyMixer` and `WaveSynthEditor` can also output video animation files. 
 
