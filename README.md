@@ -1,13 +1,14 @@
 # PixelAudio Library for Processing
 
-The PixelAudio library for Processing supports the integration of sounds and images to create visual music and gesture-driven multi-media performances. Here are its core features:
-- maps audio signals to bitmaps, 
-- transcodes audio to images and images to audio,
-- captures and edits drawing gestures, 
-- turns gestures into interactive brushstrokes to generate multimedia events,
-- provides code-driven instruments for sampler and granular synthesis.
+The PixelAudio library for Processing supports the integration of sounds and images to create visual music and gesture-driven intermedia performances. PixelAudio classes allow you to:
+- map audio signals to bitmaps, 
+- transcode audio to images and images to audio,
+- capture and edit drawing gestures, 
+- turn gestures into interactive brushstrokes to generate multimedia events,
+- play code-driven musical instruments for sampler and granular synthesis,
+- save gesture and audio synth settings to JSON files for later use.
 
-You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a brushstroke on the display image, which may be a visualization of an audio signal, and record its timing information. When you have loaded an audio file, you can click on the curve to replay the recorded gesture with animation while triggering the audio sampler or granular synthesis engine. Access to the audio file is non-linear, determined by the captured gesture and the mapping between the signal and the image. You can create presets for drawing and audio synthesis and cue them in live performance.
+You can turn a 2D image into an audio signal or turn a 1D signal (including live or recorded audio) into a 2D image. You can draw a brushstroke on the display image, which may be a visualization of an audio signal, and record its timing information. When you have loaded an audio file, you can click on the curve to replay the recorded gesture with animation while triggering the audio sampler or granular synthesis engine. Access to the audio file is non-linear, determined by the captured gesture and the mapping between the signal and the image. 
 
 PixelAudio began as a _color organ_, where sine waves mapped to a Hilbert curve determined the pixel values (RGB colors) in a bitmap traversed by the curve. It later added sampling and granular synthesis instruments that can be played by drawing lines. To support live performance, it added file i/o for curves, timing information, and audio configuration. The color organ morphed into the WaveSynth class and its supporting classes, with its own file i/o features. Two sketches, Bagatelle and PerformanceModel, support presets for drawing and audio synthesis and can cue them in live performance. 
 
